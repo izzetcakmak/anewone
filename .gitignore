@@ -1,0 +1,8 @@
+out/
+cache/
+broadcast/
+.env
+node_modules/
+monitor/state.json
+monitor/scan.log
+monitor/scan.pid
