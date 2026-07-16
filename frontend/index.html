@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCADE — Insert Coin. Launch a Legend.</title>
+<meta name="description" content="The meme arcade built on Arc Network. Launch and trade meme tokens on a rug-proof bonding curve, priced in USDC.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a12;
+    --panel: #121222;
+    --panel2: #1a1a30;
+    --neon: #00ffd5;
+    --neon2: #ff2bd6;
+    --neon3: #ffe600;
+    --text: #d7fff7;
+    --dim: #7a8fa0;
+    --red: #ff4d6d;
+    --green: #3dffa2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% -10%, rgba(255,43,214,.15), transparent 50%),
+      radial-gradient(ellipse at 80% -10%, rgba(0,255,213,.12), transparent 50%);
+  }
+  /* CRT scanlines */
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 999;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.12) 0 1px, transparent 1px 3px);
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 80px; }
+  header { text-align: center; padding: 28px 0 8px; }
+  .logo {
+    font-family: 'Press Start 2P', monospace; font-size: clamp(26px, 6vw, 48px);
+    color: var(--neon);
+    text-shadow: 0 0 8px var(--neon), 0 0 30px rgba(0,255,213,.5), 4px 4px 0 var(--neon2);
+    letter-spacing: 4px;
+  }
+  .tagline { color: var(--neon3); margin-top: 14px; font-size: 22px; letter-spacing: 2px; }
+  .tagline::before, .tagline::after { content: " ✦ "; color: var(--neon2); }
+  .netbar { display: flex; justify-content: center; gap: 10px; margin: 18px 0 6px; flex-wrap: wrap; align-items: center; }
+  .badge {
+    font-family: 'Press Start 2P', monospace; font-size: 10px; padding: 8px 12px;
+    border: 2px solid var(--neon2); color: var(--neon2); background: rgba(255,43,214,.08);
+  }
+  .badge.live { border-color: var(--green); color: var(--green); background: rgba(61,255,162,.08);
+    animation: blink 1.2s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .55; } }
+  button {
+    font-family: 'Press Start 2P', monospace; font-size: 11px; cursor: pointer;
+    background: var(--panel2); color: var(--neon); border: 2px solid var(--neon);
+    padding: 10px 16px; text-transform: uppercase;
+    box-shadow: 3px 3px 0 rgba(0,255,213,.35);
+    transition: transform .05s;
+  }
+  button:hover { background: var(--neon); color: #001510; }
+  button:active { transform: translate(2px,2px); box-shadow: none; }
+  button.alt { border-color: var(--neon2); color: var(--neon2); box-shadow: 3px 3px 0 rgba(255,43,214,.35); }
+  button.alt:hover { background: var(--neon2); color: #180012; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .marquee {
+    overflow: hidden; border-top: 2px solid var(--panel2); border-bottom: 2px solid var(--panel2);
+    margin: 18px 0; white-space: nowrap; color: var(--dim);
+  }
+  .marquee span { display: inline-block; padding: 6px 0; animation: scroll 25s linear infinite; }
+  @keyframes scroll { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 18px; }
+  .cab {
+    background: var(--panel); border: 2px solid var(--panel2); padding: 16px; cursor: pointer;
+    position: relative; transition: border-color .15s, transform .1s;
+  }
+  .cab:hover { border-color: var(--neon); transform: translateY(-3px); }
+  .cab .sym { font-family: 'Press Start 2P', monospace; font-size: 16px; color: var(--neon3); }
+  .cab .nm { color: var(--dim); margin: 6px 0 10px; }
+  .cab .px { color: var(--text); font-size: 18px; }
+  .cab .grad { position: absolute; top: 10px; right: 10px; font-size: 14px; color: var(--green); }
+  .bar { height: 10px; background: #0c0c18; border: 1px solid var(--panel2); margin-top: 10px; }
+  .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--neon), var(--neon2)); }
+  .bar-label { font-size: 14px; color: var(--dim); margin-top: 4px; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(3,3,8,.85); display: none; z-index: 1000;
+    align-items: center; justify-content: center; padding: 16px; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--panel); border: 3px solid var(--neon); box-shadow: 0 0 40px rgba(0,255,213,.25);
+    max-width: 520px; width: 100%; padding: 24px; max-height: 92vh; overflow-y: auto; }
+  .modal h2 { font-family: 'Press Start 2P', monospace; font-size: 14px; color: var(--neon); margin-bottom: 18px; }
+  label { display: block; color: var(--dim); margin: 12px 0 4px; }
+  input {
+    width: 100%; background: #0c0c18; border: 2px solid var(--panel2); color: var(--text);
+    font-family: 'VT323', monospace; font-size: 20px; padding: 10px;
+  }
+  input:focus { outline: none; border-color: var(--neon); }
+  .row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .stat { background: var(--panel2); padding: 8px 12px; font-size: 16px; color: var(--dim); }
+  .stat b { color: var(--text); }
+  .tabs { display: flex; gap: 0; margin: 14px 0 0; }
+  .tabs button { flex: 1; box-shadow: none; }
+  .tabs button.on-buy { background: var(--green); color: #002211; border-color: var(--green); }
+  .tabs button.on-sell { background: var(--red); color: #200008; border-color: var(--red); }
+  .quote { color: var(--neon3); margin-top: 8px; min-height: 24px; }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--panel); border: 2px solid var(--neon3); color: var(--neon3);
+    padding: 12px 20px; display: none; z-index: 2000; max-width: 90vw;
+  }
+  .empty { text-align: center; color: var(--dim); padding: 60px 0; font-size: 24px; }
+  .footer { text-align: center; color: var(--dim); margin-top: 60px; font-size: 16px; }
+  .footer a { color: var(--neon); }
+  .hint { font-size: 15px; color: var(--dim); margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">ARCADE</div>
+    <div class="tagline">INSERT COIN &nbsp;·&nbsp; LAUNCH A LEGEND</div>
+    <div class="netbar">
+      <span class="badge" style="border-color:var(--neon3);color:var(--neon3);background:rgba(255,230,0,.06)">BUILT ON ARC NETWORK</span>
+      <span id="netBadge" class="badge">TESTNET</span>
+      <button id="connectBtn">Connect</button>
+      <button id="createBtn" class="alt">+ Insert Coin</button>
+    </div>
+  </header>
+
+  <div class="marquee"><span id="ticker">Loading the arcade floor…</span></div>
+
+  <div class="row" style="justify-content:center">
+    <div class="stat">TOKENS <b id="statCount">–</b></div>
+    <div class="stat">FEE <b>1%</b> (½ to creator)</div>
+    <div class="stat">ANTI-SNIPE <b>2% cap / 20 blocks</b></div>
+    <div class="stat">GRADUATION <b id="statGrad">–</b></div>
+  </div>
+
+  <div id="grid" class="grid"></div>
+  <div id="empty" class="empty" style="display:none">NO CABINETS YET — INSERT THE FIRST COIN</div>
+
+  <div class="footer">
+    Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc Network</a> — gas is USDC.
+    Curve reserves are locked in the contract: no LP to rug. <br>
+    Platform: <span id="footPlatform">–</span>
+  </div>
+</div>
+
+<!-- create modal -->
+<div id="createModal" class="modal-bg">
+  <div class="modal">
+    <h2>&gt; NEW CABINET</h2>
+    <label>Name</label><input id="cName" placeholder="Noah's Arc" maxlength="48">
+    <label>Symbol</label><input id="cSymbol" placeholder="NOAH" maxlength="12">
+    <label>Image / metadata URL (optional)</label><input id="cUri" placeholder="https://…">
+    <label>Initial dev buy in USDC (optional, ≤2% supply early)</label><input id="cBuy" placeholder="0" type="number" min="0" step="0.01">
+    <div class="hint">Launching is free — you pay only gas. 1B supply, all on the curve.</div>
+    <div class="row">
+      <button id="cGo" class="alt">Launch</button>
+      <button onclick="closeModals()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- trade modal -->
+<div id="tradeModal" class="modal-bg">
+  <div class="modal">
+    <h2 id="tTitle">&gt; TOKEN</h2>
+    <div class="row">
+      <div class="stat">PRICE <b id="tPrice">–</b></div>
+      <div class="stat">RAISED <b id="tRaised">–</b></div>
+      <div class="stat">YOU HOLD <b id="tHold">–</b></div>
+    </div>
+    <div class="bar" style="margin-top:14px"><i id="tBar" style="width:0%"></i></div>
+    <div class="bar-label" id="tBarLabel">0% to graduation</div>
+    <div class="tabs">
+      <button id="tabBuy" class="on-buy">BUY</button>
+      <button id="tabSell">SELL</button>
+    </div>
+    <label id="amtLabel">USDC in</label><input id="tAmt" type="number" min="0" step="0.0001" placeholder="1.0">
+    <div class="quote" id="tQuote"></div>
+    <div class="row">
+      <button id="tGo" class="alt">BUY</button>
+      <button onclick="closeModals()">Close</button>
+    </div>
+    <div class="hint" id="tLinks"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script src="config.js"></script>
+<script>
+const ABI = [
+  "function tokensCount() view returns (uint256)",
+  "function allTokens(uint256) view returns (address)",
+  "function info(address) view returns (address creator, uint64 createdBlock, bool graduated, uint256 vUsdc, uint256 tReserve, uint256 raised, string metadataURI)",
+  "function gradTarget() view returns (uint256)",
+  "function createToken(string,string,string) payable returns (address)",
+  "function buy(address,uint256) payable",
+  "function sell(address,uint256,uint256)"
+];
+const ERC20 = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function balanceOf(address) view returns (uint256)",
+  "function approve(address,uint256) returns (bool)",
+  "function allowance(address,address) view returns (uint256)"
+];
+
+const CFG = window.ARCADE_CONFIG.mainnet.live ? window.ARCADE_CONFIG.mainnet : window.ARCADE_CONFIG.testnet;
+const NET_NAME = window.ARCADE_CONFIG.mainnet.live ? "ARC MAINNET" : "ARC TESTNET";
+// batchMaxCount 1: the public Arc RPC counts every entry of a JSON-RPC batch against
+// its rate limit, so batching hurts. We space single calls out instead.
+const readProvider = new ethers.JsonRpcProvider(CFG.rpc, undefined, { batchMaxCount: 1 });
+const arcade = new ethers.Contract(CFG.platform, ABI, readProvider);
+
+const FEE_BPS = 100n, BPS = 10_000n, WAD = 10n ** 18n;
+let signer = null, userAddr = null, currentToken = null, isBuy = true;
+let gradTarget = null, loading = false;
+const tokenMeta = {}; // addr -> {name, symbol} — immutable, fetched once
+const tokenInfo = {}; // addr -> latest curve state — refreshed each cycle
+
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const fmt = (v, dp = 4) => Number(ethers.formatEther(v)).toLocaleString("en-US", { maximumFractionDigits: dp });
+const toast = (msg) => { const t = $("toast"); t.textContent = msg; t.style.display = "block"; setTimeout(() => t.style.display = "none", 5000); };
+
+// ---- local curve math (mirrors Arcade.sol exactly; saves RPC calls)
+const ceilDiv = (a, b) => (a + b - 1n) / b;
+function localQuoteBuy(inf, usdcIn) {
+  const net = usdcIn - (usdcIn * FEE_BPS) / BPS;
+  const k = inf.vUsdc * inf.tReserve;
+  return inf.tReserve - ceilDiv(k, inf.vUsdc + net);
+}
+function localQuoteSell(inf, amount) {
+  const k = inf.vUsdc * inf.tReserve;
+  let gross = inf.vUsdc - ceilDiv(k, inf.tReserve + amount);
+  if (gross > inf.raised) gross = inf.raised;
+  return gross - (gross * FEE_BPS) / BPS;
+}
+const priceOf = (inf) => (inf.vUsdc * WAD) / inf.tReserve;
+const progBps = (inf) => inf.graduated ? 10_000n : (inf.raised * BPS) / gradTarget;
+const normInfo = (r) => ({
+  creator: r.creator, createdBlock: r.createdBlock, graduated: r.graduated,
+  vUsdc: BigInt(r.vUsdc), tReserve: BigInt(r.tReserve), raised: BigInt(r.raised),
+  metadataURI: r.metadataURI
+});
+
+$("netBadge").textContent = NET_NAME;
+if (window.ARCADE_CONFIG.mainnet.live) $("netBadge").classList.add("live");
+$("footPlatform").textContent = CFG.platform;
+
+async function connect() {
+  if (!window.ethereum) return toast("No wallet found — install MetaMask");
+  const bp = new ethers.BrowserProvider(window.ethereum);
+  await bp.send("eth_requestAccounts", []);
+  const net = await bp.getNetwork();
+  if (Number(net.chainId) !== CFG.chainId) {
+    try {
+      await bp.send("wallet_switchEthereumChain", [{ chainId: CFG.chainIdHex }]);
+    } catch (e) {
+      await bp.send("wallet_addEthereumChain", [{
+        chainId: CFG.chainIdHex, chainName: NET_NAME,
+        nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+        rpcUrls: [CFG.rpc], blockExplorerUrls: CFG.explorer ? [CFG.explorer] : []
+      }]);
+    }
+  }
+  signer = await bp.getSigner();
+  userAddr = await signer.getAddress();
+  $("connectBtn").textContent = userAddr.slice(0, 6) + "…" + userAddr.slice(-4);
+  toast("READY PLAYER ONE");
+}
+
+async function loadTokens() {
+  if (loading) return;
+  loading = true;
+  try {
+    if (gradTarget === null) {
+      gradTarget = BigInt(await arcade.gradTarget());
+      $("statGrad").textContent = fmt(gradTarget, 0) + " USDC";
+      await sleep(150);
+    }
+    const count = Number(await arcade.tokensCount());
+    $("statCount").textContent = String(count);
+    $("empty").style.display = count === 0 ? "block" : "none";
+    const cards = [];
+    for (let i = 0; i < count; i++) {
+      await sleep(150);
+      const addr = await arcade.allTokens(i);
+      if (!tokenMeta[addr]) {
+        const t = new ethers.Contract(addr, ERC20, readProvider);
+        await sleep(150);
+        const name = await t.name();
+        await sleep(150);
+        const symbol = await t.symbol();
+        tokenMeta[addr] = { name, symbol };
+      }
+      await sleep(150);
+      tokenInfo[addr] = normInfo(await arcade.info(addr));
+      cards.push(cardHtml(addr));
+    }
+    $("grid").innerHTML = cards.join("");
+    $("ticker").textContent = tickerText(count);
+  } catch (e) {
+    console.error(e);
+    $("ticker").textContent = "RPC busy — retrying shortly…";
+  } finally {
+    loading = false;
+  }
+}
+
+function cardHtml(addr) {
+  const { name, symbol } = tokenMeta[addr];
+  const inf = tokenInfo[addr];
+  const pct = Number(progBps(inf)) / 100;
+  return `<div class="cab" onclick="openTrade('${addr}')">
+    ${inf.graduated ? '<span class="grad">★ GRADUATED</span>' : ""}
+    <div class="sym">$${symbol}</div>
+    <div class="nm">${name}</div>
+    <div class="px">${Number(ethers.formatEther(priceOf(inf))).toExponential(3)} USDC</div>
+    <div class="bar"><i style="width:${Math.min(pct, 100)}%"></i></div>
+    <div class="bar-label">${pct.toFixed(1)}% · raised ${fmt(inf.raised, 2)} USDC</div>
+  </div>`;
+}
+
+function tickerText(n) {
+  const names = Object.values(tokenMeta).map(t => "$" + t.symbol).join("  ·  ");
+  return `${n} CABINET${n === 1 ? "" : "S"} ON THE FLOOR  ·  ${names}  ·  1% FEE — HALF GOES TO CREATORS  ·  NO LP, NO RUG — RESERVES LOCKED IN CURVE  ·  GAS IS USDC — BUILT ON ARC NETWORK`;
+}
+
+// ------- create
+$("createBtn").onclick = () => { if (!signer) return toast("Connect first"); $("createModal").classList.add("open"); };
+$("cGo").onclick = async () => {
+  try {
+    const name = $("cName").value.trim(), sym = $("cSymbol").value.trim().toUpperCase();
+    if (!name || !sym) return toast("Name and symbol required");
+    const buyVal = parseFloat($("cBuy").value || "0");
+    const c = arcade.connect(signer);
+    const tx = await c.createToken(name, sym, $("cUri").value.trim(), { value: ethers.parseEther(String(buyVal || 0)) });
+    toast("Launching…");
+    await tx.wait();
+    toast(`$${sym} IS LIVE!`);
+    closeModals();
+    await sleep(800);
+    loadTokens();
+  } catch (e) { toast(e.shortMessage || e.message); }
+};
+
+// ------- trade
+async function openTrade(addr) {
+  currentToken = addr; isBuy = true;
+  setTabs();
+  const { name, symbol } = tokenMeta[addr] || {};
+  $("tTitle").textContent = `> $${symbol} — ${name}`;
+  $("tAmt").value = ""; $("tQuote").textContent = "";
+  $("tLinks").innerHTML = CFG.explorer ? `<a href="${CFG.explorer}/address/${addr}" target="_blank" rel="noopener" style="color:var(--neon)">token on explorer ↗</a> · ${addr}` : addr;
+  $("tradeModal").classList.add("open");
+  refreshTrade();
+}
+async function refreshTrade() {
+  tokenInfo[currentToken] = normInfo(await arcade.info(currentToken));
+  const inf = tokenInfo[currentToken];
+  $("tPrice").textContent = Number(ethers.formatEther(priceOf(inf))).toExponential(3);
+  $("tRaised").textContent = fmt(inf.raised, 2) + " USDC";
+  const pct = Number(progBps(inf)) / 100;
+  $("tBar").style.width = Math.min(pct, 100) + "%";
+  $("tBarLabel").textContent = inf.graduated ? "★ GRADUATED — trading continues" : pct.toFixed(1) + "% to graduation";
+  if (userAddr) {
+    await sleep(150);
+    const bal = await new ethers.Contract(currentToken, ERC20, readProvider).balanceOf(userAddr);
+    $("tHold").textContent = fmt(bal, 2);
+  }
+}
+function setTabs() {
+  $("tabBuy").className = isBuy ? "on-buy" : "";
+  $("tabSell").className = isBuy ? "" : "on-sell";
+  $("tGo").textContent = isBuy ? "BUY" : "SELL";
+  $("amtLabel").textContent = isBuy ? "USDC in" : "Tokens in";
+  $("tQuote").textContent = "";
+}
+$("tabBuy").onclick = () => { isBuy = true; setTabs(); };
+$("tabSell").onclick = () => { isBuy = false; setTabs(); };
+$("tAmt").oninput = () => {
+  const v = parseFloat($("tAmt").value || "0");
+  const inf = tokenInfo[currentToken];
+  if (!v || !inf) return $("tQuote").textContent = "";
+  const wei = ethers.parseEther(String(v));
+  const q = isBuy ? localQuoteBuy(inf, wei) : localQuoteSell(inf, wei);
+  $("tQuote").textContent = "≈ " + fmt(q, 4) + (isBuy ? ` $${tokenMeta[currentToken]?.symbol}` : " USDC");
+};
+$("tGo").onclick = async () => {
+  if (!signer) return toast("Connect first");
+  const v = parseFloat($("tAmt").value || "0");
+  if (!v) return toast("Enter an amount");
+  try {
+    const wei = ethers.parseEther(String(v));
+    const inf = tokenInfo[currentToken];
+    const c = arcade.connect(signer);
+    if (isBuy) {
+      const q = localQuoteBuy(inf, wei);
+      const tx = await c.buy(currentToken, q * 98n / 100n, { value: wei });
+      toast("Buying…"); await tx.wait(); toast("GET! +" + fmt(q, 2));
+    } else {
+      const t = new ethers.Contract(currentToken, ERC20, signer);
+      const allowance = await t.allowance(userAddr, CFG.platform);
+      if (allowance < wei) { toast("Approving…"); await (await t.approve(CFG.platform, ethers.MaxUint256)).wait(); }
+      const q = localQuoteSell(inf, wei);
+      const tx = await c.sell(currentToken, wei, q * 98n / 100n);
+      toast("Selling…"); await tx.wait(); toast("SOLD! +" + fmt(q, 4) + " USDC");
+    }
+    await sleep(800);
+    refreshTrade(); loadTokens();
+  } catch (e) { toast(e.shortMessage || e.message); }
+};
+
+function closeModals() { document.querySelectorAll(".modal-bg").forEach(m => m.classList.remove("open")); }
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) closeModals(); }));
+$("connectBtn").onclick = connect;
+
+loadTokens();
+setInterval(loadTokens, 60_000);
+</script>
+</body>
+</html>

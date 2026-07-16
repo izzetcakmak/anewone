@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a0a2e"/>
+      <stop offset="1" stop-color="#16214a"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#00ffd5"/>
+      <stop offset="1" stop-color="#005e63"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#sky)"/>
+  <!-- rainbow arc -->
+  <path d="M60 240 A140 140 0 0 1 340 240" fill="none" stroke="#ff2bd6" stroke-width="10"/>
+  <path d="M75 240 A125 125 0 0 1 325 240" fill="none" stroke="#ffe600" stroke-width="10"/>
+  <path d="M90 240 A110 110 0 0 1 310 240" fill="none" stroke="#00ffd5" stroke-width="10"/>
+  <!-- flood -->
+  <rect y="280" width="400" height="120" fill="url(#sea)"/>
+  <path d="M0 285 Q25 275 50 285 T100 285 T150 285 T200 285 T250 285 T300 285 T350 285 T400 285 V400 H0 Z" fill="#003c42" opacity=".6"/>
+  <!-- ark hull -->
+  <path d="M110 270 L290 270 L265 320 L135 320 Z" fill="#8b4513" stroke="#5a2d0c" stroke-width="6"/>
+  <rect x="150" y="230" width="100" height="45" fill="#a0522d" stroke="#5a2d0c" stroke-width="6"/>
+  <rect x="185" y="243" width="30" height="20" fill="#0a0a2e"/>
+  <!-- USDC coin as sun -->
+  <circle cx="200" cy="150" r="42" fill="#2775ca" stroke="#ffe600" stroke-width="6"/>
+  <text x="200" y="167" font-family="monospace" font-size="48" font-weight="bold" fill="#fff" text-anchor="middle">$</text>
+  <!-- pixel animals: two by two -->
+  <text x="165" y="265" font-size="24">🦒🦒</text>
+  <text x="212" y="265" font-size="24">🐘🐘</text>
+  <text x="20" y="45" font-family="monospace" font-size="26" font-weight="bold" fill="#00ffd5">NOAH'S ARC</text>
+  <text x="20" y="380" font-family="monospace" font-size="16" fill="#ffe600">EVERYONE'S BOARDING. TWO BY TWO.</text>
+</svg>
