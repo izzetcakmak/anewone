@@ -6,3 +6,4 @@ node_modules/
 monitor/state.json
 monitor/scan.log
 monitor/scan.pid
+monitor/scan.lock
