@@ -202,7 +202,7 @@
   <div class="footer">
     Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc Network</a> — gas is USDC.
     Curve reserves are locked in the contract: no LP to rug. <br>
-    Platform: <span id="footPlatform">–</span> <br>
+    <span id="footPlatformLine" style="display:none">Platform: <span id="footPlatform">–</span> <br></span>
     Contact: <a href="mailto:contact@anewone.xyz">contact@anewone.xyz</a>
   </div>
 </div>
@@ -381,13 +381,17 @@ async function refreshFees() {
     await sleep(150);
     cfDeadlineTs = Number(await platform.creatorFeeDeadline(userAddr));
     renderCreatorFee();
-    if (userAddr.toLowerCase() === ownerAddr) {
+    // owner-only UI: platform address (footer) + platform-fee controls. Re-evaluated each
+    // refresh so switching to a non-owner account hides them again.
+    const isOwner = userAddr.toLowerCase() === ownerAddr;
+    $("footPlatformLine").style.display = isOwner ? "inline" : "none";
+    $("pfStat").style.display = isOwner ? "block" : "none";
+    $("pfClaim").style.display = isOwner ? "inline-block" : "none";
+    $("pfSweep").style.display = isOwner ? "inline-block" : "none";
+    if (isOwner) {
       await sleep(150);
       const pf = await platform.platformFees();
       $("pfAmt").textContent = fmt(pf, 4) + " USDC";
-      $("pfStat").style.display = "block";
-      $("pfClaim").style.display = "inline-block";
-      $("pfSweep").style.display = "inline-block";
       $("pfClaim").disabled = pf === 0n;
     }
   } catch (e) { console.error(e); }
