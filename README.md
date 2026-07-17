@@ -4,7 +4,7 @@
 
 A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablecoin L1, gas = USDC) — with quality upgrades pump.fun doesn't have. Every token on the floor is… a new one.
 
-**First token on the platform: [$NOAH — Noah's Arc](frontend/meta/noah.json).** Everyone's boarding the Arc. Two by two. 🦒🦒
+**First token on the platform: [$NOAH — Noah's Arc](docs/meta/noah.json).** Everyone's boarding the Arc. Two by two. 🦒🦒
 
 ## Why it's better than pump.fun
 
@@ -36,10 +36,10 @@ A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablec
 
 - `src/ANewOne.sol` — platform + minimal ERC20 (no external deps), 10/10 forge tests
 - `script/Deploy.s.sol` — deploys platform and launches $NOAH
-- `frontend/` — static retro UI (Pages/anewone.xyz ready), rate-limit-friendly RPC usage
+- `docs/` — static retro UI served at anewone.xyz via GitHub Pages, rate-limit-friendly RPC usage
 - `monitor/scan.mjs` — runs every minute via Windows Task Scheduler (`AnewoneMainnetScan`):
   probes candidate Arc mainnet RPCs + the chainid.network registry; on detection checks
-  deployer gas, auto-deploys, updates `frontend/config.js`, and pings Telegram
+  deployer gas, auto-deploys, updates `docs/config.js`, and pings Telegram
 
 ## Dev
 

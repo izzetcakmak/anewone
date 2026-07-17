@@ -19,7 +19,7 @@ const MON = path.join(ROOT, "monitor");
 const STATE_FILE = path.join(MON, "state.json");
 const LOCK_FILE = path.join(MON, "scan.lock");
 const LOG_FILE = path.join(MON, "scan.log");
-const CONFIG_JS = path.join(ROOT, "frontend", "config.js");
+const CONFIG_JS = path.join(ROOT, "docs", "config.js");
 const FORGE = "C:/Users/Monster/.foundry/bin/forge.exe";
 
 const TESTNET_CHAIN_ID = 5042002; // 0x4cef52 — never treat as mainnet
@@ -169,6 +169,19 @@ function updateFrontendConfig(rpcUrl, chainId, platform, noah) {
   writeFileSync(CONFIG_JS, src.replace(/mainnet:\s*\{[^}]*\}/, block));
 }
 
+/** Commit + push docs/config.js so GitHub Pages flips anewone.xyz to mainnet. Best-effort. */
+function publishConfig() {
+  const git = (args) => spawnSync("git", args, { cwd: ROOT, encoding: "utf8", timeout: 60_000 });
+  git(["add", "docs/config.js"]);
+  git(["commit", "-m", "feat: mainnet is live — flip anewone.xyz to Arc mainnet\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>"]);
+  const push = git(["push", "origin", "main"]);
+  if (push.status !== 0) {
+    log(`git push failed: ${(push.stderr || "").slice(0, 400)}`);
+    return false;
+  }
+  return true;
+}
+
 // ---------------------------------------------------------------- main
 
 async function main() {
@@ -252,13 +265,17 @@ async function main() {
     }
 
     updateFrontendConfig(found.url, found.chainId, dep.platform, dep.noah);
+    const published = publishConfig();
     state.phase = "deployed";
     state.platform = dep.platform;
     state.noah = dep.noah;
     state.deployedAt = new Date().toISOString();
     saveState(state);
     await notify(env,
-      `🎉 ANEWONE.XYZ IS LIVE ON ARC MAINNET!\nPlatform: ${dep.platform}\n$NOAH: ${dep.noah}\nRPC: ${found.url} (chainId ${found.chainId})\nfrontend/config.js updated — push to GitHub Pages to go public.`);
+      `🎉 ANEWONE.XYZ IS LIVE ON ARC MAINNET!\nPlatform: ${dep.platform}\n$NOAH: ${dep.noah}\nRPC: ${found.url} (chainId ${found.chainId})\n` +
+      (published
+        ? "docs/config.js pushed — anewone.xyz switches to mainnet as soon as Pages rebuilds (~1 min)."
+        : "docs/config.js updated locally but git push FAILED — push manually to flip anewone.xyz to mainnet."));
     log(`DEPLOYED platform=${dep.platform} noah=${dep.noah}`);
   } finally {
     try { unlinkSync(LOCK_FILE); } catch {}
