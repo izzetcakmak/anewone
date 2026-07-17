@@ -174,7 +174,13 @@
     <div class="netbar">
       <span class="badge" style="border-color:var(--neon3);color:var(--neon3);background:rgba(255,230,0,.06)">BUILT ON ARC NETWORK</span>
       <span id="netBadge" class="badge">TESTNET</span>
-      <button id="connectBtn">Connect</button>
+      <span id="walletWrap" style="position:relative;display:inline-block">
+        <button id="connectBtn">Connect</button>
+        <div id="walletMenu" style="display:none;position:absolute;top:100%;left:0;margin-top:6px;background:var(--panel);border:2px solid var(--neon);z-index:50;min-width:170px;box-shadow:0 0 20px rgba(0,255,213,.3)">
+          <button id="switchBtn" style="display:block;width:100%;box-shadow:none;border:none;border-bottom:2px solid var(--panel2);text-align:left">Switch account</button>
+          <button id="disconnectBtn" class="alt" style="display:block;width:100%;box-shadow:none;border:none;text-align:left">Disconnect</button>
+        </div>
+      </span>
       <button id="createBtn" class="alt">+ Insert Coin</button>
     </div>
   </header>
@@ -348,10 +354,19 @@ if (window.ANEWONE_CONFIG.mainnet.live) {
 }
 $("footPlatform").textContent = CFG.platform;
 
-async function connect() {
+async function connect(forcePicker) {
   if (!window.ethereum) return toast("No wallet found — install MetaMask");
   const bp = new ethers.BrowserProvider(window.ethereum);
-  await bp.send("eth_requestAccounts", []);
+  try {
+    if (forcePicker) {
+      // forces the wallet's account-selection dialog even when already connected,
+      // so the user can pick a different account/wallet
+      await window.ethereum.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] });
+    }
+    await bp.send("eth_requestAccounts", []);
+  } catch (e) {
+    return toast(e.shortMessage || e.message || "Connection cancelled");
+  }
   const net = await bp.getNetwork();
   if (Number(net.chainId) !== CFG.chainId) {
     try {
@@ -367,8 +382,39 @@ async function connect() {
   signer = await bp.getSigner();
   userAddr = await signer.getAddress();
   $("connectBtn").textContent = userAddr.slice(0, 6) + "…" + userAddr.slice(-4);
+  $("walletMenu").style.display = "none";
   toast("READY PLAYER ONE");
   refreshFees();
+}
+
+// clears all local wallet state; the wallet extension keeps its own permission,
+// but the site forgets the account and resets owner/creator UI
+function disconnect() {
+  signer = null; userAddr = null;
+  userNativeBal = 0n; userTokenBal = 0n; exactWei = null;
+  $("connectBtn").textContent = "Connect";
+  $("walletMenu").style.display = "none";
+  $("footPlatformLine").style.display = "none";
+  $("pfStat").style.display = "none";
+  $("pfClaim").style.display = "none";
+  $("pfSweep").style.display = "none";
+  $("cfAmt").textContent = "—"; $("cfNote").textContent = ""; $("cfClaim").disabled = true;
+  $("balHint").textContent = "";
+  toast("Wallet disconnected");
+}
+
+async function switchAccount() {
+  $("walletMenu").style.display = "none";
+  await connect(true);
+}
+
+// react to changes made directly in the wallet extension
+if (window.ethereum && window.ethereum.on) {
+  window.ethereum.on("accountsChanged", (accs) => {
+    if (!accs || accs.length === 0) disconnect();
+    else if (signer || userAddr) connect();
+  });
+  window.ethereum.on("chainChanged", () => { if (signer || userAddr) connect(); });
 }
 
 // ------- fees (creator claim for everyone-but-active-only-for-creators, platform claim for owner)
@@ -703,7 +749,20 @@ $("tGo").onclick = async () => {
 
 function closeModals() { document.querySelectorAll(".modal-bg").forEach(m => m.classList.remove("open")); }
 document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) closeModals(); }));
-$("connectBtn").onclick = connect;
+$("connectBtn").onclick = () => {
+  if (userAddr) {
+    const m = $("walletMenu");
+    m.style.display = m.style.display === "none" ? "block" : "none";
+  } else {
+    connect();
+  }
+};
+$("switchBtn").onclick = switchAccount;
+$("disconnectBtn").onclick = disconnect;
+// close the wallet menu when clicking outside it
+document.addEventListener("click", (e) => {
+  if (!$("walletWrap").contains(e.target)) $("walletMenu").style.display = "none";
+});
 
 loadTokens();
 setInterval(loadTokens, 60_000);
