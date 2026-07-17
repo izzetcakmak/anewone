@@ -1,12 +1,14 @@
-# 🕹 ARCADE — Insert Coin. Launch a Legend.
+# 🕹 A NEW ONE — anewone.xyz
 
-A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablecoin L1, gas = USDC) — with quality upgrades pump.fun doesn't have.
+**Insert Coin. Launch a New One.**
+
+A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablecoin L1, gas = USDC) — with quality upgrades pump.fun doesn't have. Every token on the floor is… a new one.
 
 **First token on the platform: [$NOAH — Noah's Arc](frontend/meta/noah.json).** Everyone's boarding the Arc. Two by two. 🦒🦒
 
 ## Why it's better than pump.fun
 
-| Feature | pump.fun | ARCADE |
+| Feature | pump.fun | A NEW ONE |
 |---|---|---|
 | Trade fee | 1% to platform | 1% — **half goes to the token creator** |
 | Sniping | bots eat launches | **anti-snipe: 2% max per wallet for the first 20 blocks** (creator included) |
@@ -28,12 +30,14 @@ A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablec
 | Arc Testnet (5042002) | `0x21BC50350e89A3B71E81445245Ac1c6B6f4Dc000` | `0xfF3800de41059A1E7980eAcF14147D8aEf31115d` |
 | Arc Mainnet | ⏳ auto-deploys the minute mainnet is detected | ⏳ |
 
+*(Testnet was deployed under the project's former working name; bytecode is identical.)*
+
 ## Layout
 
-- `src/Arcade.sol` — platform + minimal ERC20 (no external deps), 10/10 forge tests
+- `src/ANewOne.sol` — platform + minimal ERC20 (no external deps), 10/10 forge tests
 - `script/Deploy.s.sol` — deploys platform and launches $NOAH
-- `frontend/` — static retro-arcade UI (GitHub Pages ready), rate-limit-friendly RPC usage
-- `monitor/scan.mjs` — runs every minute via Windows Task Scheduler (`ArcadeMainnetScan`):
+- `frontend/` — static retro UI (Pages/anewone.xyz ready), rate-limit-friendly RPC usage
+- `monitor/scan.mjs` — runs every minute via Windows Task Scheduler (`AnewoneMainnetScan`):
   probes candidate Arc mainnet RPCs + the chainid.network registry; on detection checks
   deployer gas, auto-deploys, updates `frontend/config.js`, and pings Telegram
 
@@ -47,4 +51,4 @@ node monitor/scan.mjs                                               # one scan p
 
 Built on [Arc Network](https://www.arc.network) — this project follows the
 [Arc brand guidelines](https://www.arc.io/brand-guidelines-and-partner-toolkit): text-only
-"Built on Arc" references, no Arc logo usage.
+"Built on Arc" references, no Arc logo usage, no "Arc" in the product name.

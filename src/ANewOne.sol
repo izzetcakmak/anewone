@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/// @notice Minimal ERC20 minted entirely to the Arcade curve at creation.
-contract ArcadeToken {
+/// @notice Minimal ERC20 minted entirely to the ANewOne curve at creation.
+contract ANewOneToken {
     string public name;
     string public symbol;
     uint8 public constant decimals = 18;
@@ -54,13 +54,13 @@ contract ArcadeToken {
     }
 }
 
-/// @title Arcade — meme token launchpad with a bonding curve, native-USDC denominated (Arc L1).
+/// @title ANewOne — meme token launchpad with a bonding curve, native-USDC denominated (Arc L1).
 /// @notice pump.fun-style constant-product curve with quality upgrades:
 ///         - creator earns half of every trade fee (0.5% of 1%)
 ///         - anti-snipe: per-wallet cap during the first blocks after launch
 ///         - rug-proof: curve reserves can never be withdrawn, only traded against;
 ///           fees are segregated from reserves.
-contract Arcade {
+contract ANewOne {
     uint256 public constant TOTAL_SUPPLY = 1_000_000_000e18; // 1B tokens per launch
     uint16 public constant FEE_BPS = 100; // 1% total trade fee
     uint16 public constant CREATOR_FEE_BPS = 50; // 0.5% of trade goes to token creator
@@ -129,7 +129,7 @@ contract Arcade {
         nonReentrant
         returns (address token)
     {
-        token = address(new ArcadeToken(name_, symbol_, TOTAL_SUPPLY, address(this)));
+        token = address(new ANewOneToken(name_, symbol_, TOTAL_SUPPLY, address(this)));
         info[token] = TokenInfo({
             creator: msg.sender,
             createdBlock: uint64(block.number),
@@ -182,7 +182,7 @@ contract Arcade {
             emit Graduated(token, t.raised);
         }
 
-        require(ArcadeToken(token).transfer(to, tokensOut), "transfer");
+        require(ANewOneToken(token).transfer(to, tokensOut), "transfer");
         emit Trade(token, to, true, value, tokensOut, _priceWad(t));
     }
 
@@ -191,7 +191,7 @@ contract Arcade {
         require(t.creator != address(0), "unknown token");
         require(tokenAmount > 0, "no amount");
 
-        require(ArcadeToken(token).transferFrom(msg.sender, address(this), tokenAmount), "transferFrom");
+        require(ANewOneToken(token).transferFrom(msg.sender, address(this), tokenAmount), "transferFrom");
 
         uint256 k = t.vUsdc * t.tReserve;
         uint256 newVUsdc = _ceilDiv(k, t.tReserve + tokenAmount);

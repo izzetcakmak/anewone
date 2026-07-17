@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ARCADE — Insert Coin. Launch a Legend.</title>
-<meta name="description" content="The meme arcade built on Arc Network. Launch and trade meme tokens on a rug-proof bonding curve, priced in USDC.">
+<title>A NEW ONE — Insert Coin. Launch a New One. | anewone.xyz</title>
+<meta name="description" content="anewone.xyz — launch a new one. Meme token launchpad built on Arc Network: rug-proof bonding curve, priced in USDC.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
@@ -119,8 +119,8 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="logo">ARCADE</div>
-    <div class="tagline">INSERT COIN &nbsp;·&nbsp; LAUNCH A LEGEND</div>
+    <div class="logo">A NEW ONE</div>
+    <div class="tagline">INSERT COIN &nbsp;·&nbsp; LAUNCH A NEW ONE</div>
     <div class="netbar">
       <span class="badge" style="border-color:var(--neon3);color:var(--neon3);background:rgba(255,230,0,.06)">BUILT ON ARC NETWORK</span>
       <span id="netBadge" class="badge">TESTNET</span>
@@ -129,7 +129,7 @@
     </div>
   </header>
 
-  <div class="marquee"><span id="ticker">Loading the arcade floor…</span></div>
+  <div class="marquee"><span id="ticker">Loading the floor…</span></div>
 
   <div class="row" style="justify-content:center">
     <div class="stat">TOKENS <b id="statCount">–</b></div>
@@ -211,12 +211,12 @@ const ERC20 = [
   "function allowance(address,address) view returns (uint256)"
 ];
 
-const CFG = window.ARCADE_CONFIG.mainnet.live ? window.ARCADE_CONFIG.mainnet : window.ARCADE_CONFIG.testnet;
-const NET_NAME = window.ARCADE_CONFIG.mainnet.live ? "ARC MAINNET" : "ARC TESTNET";
+const CFG = window.ANEWONE_CONFIG.mainnet.live ? window.ANEWONE_CONFIG.mainnet : window.ANEWONE_CONFIG.testnet;
+const NET_NAME = window.ANEWONE_CONFIG.mainnet.live ? "ARC MAINNET" : "ARC TESTNET";
 // batchMaxCount 1: the public Arc RPC counts every entry of a JSON-RPC batch against
 // its rate limit, so batching hurts. We space single calls out instead.
 const readProvider = new ethers.JsonRpcProvider(CFG.rpc, undefined, { batchMaxCount: 1 });
-const arcade = new ethers.Contract(CFG.platform, ABI, readProvider);
+const platform = new ethers.Contract(CFG.platform, ABI, readProvider);
 
 const FEE_BPS = 100n, BPS = 10_000n, WAD = 10n ** 18n;
 let signer = null, userAddr = null, currentToken = null, isBuy = true;
@@ -229,7 +229,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const fmt = (v, dp = 4) => Number(ethers.formatEther(v)).toLocaleString("en-US", { maximumFractionDigits: dp });
 const toast = (msg) => { const t = $("toast"); t.textContent = msg; t.style.display = "block"; setTimeout(() => t.style.display = "none", 5000); };
 
-// ---- local curve math (mirrors Arcade.sol exactly; saves RPC calls)
+// ---- local curve math (mirrors ANewOne.sol exactly; saves RPC calls)
 const ceilDiv = (a, b) => (a + b - 1n) / b;
 function localQuoteBuy(inf, usdcIn) {
   const net = usdcIn - (usdcIn * FEE_BPS) / BPS;
@@ -251,7 +251,7 @@ const normInfo = (r) => ({
 });
 
 $("netBadge").textContent = NET_NAME;
-if (window.ARCADE_CONFIG.mainnet.live) $("netBadge").classList.add("live");
+if (window.ANEWONE_CONFIG.mainnet.live) $("netBadge").classList.add("live");
 $("footPlatform").textContent = CFG.platform;
 
 async function connect() {
@@ -281,17 +281,17 @@ async function loadTokens() {
   loading = true;
   try {
     if (gradTarget === null) {
-      gradTarget = BigInt(await arcade.gradTarget());
+      gradTarget = BigInt(await platform.gradTarget());
       $("statGrad").textContent = fmt(gradTarget, 0) + " USDC";
       await sleep(150);
     }
-    const count = Number(await arcade.tokensCount());
+    const count = Number(await platform.tokensCount());
     $("statCount").textContent = String(count);
     $("empty").style.display = count === 0 ? "block" : "none";
     const cards = [];
     for (let i = 0; i < count; i++) {
       await sleep(150);
-      const addr = await arcade.allTokens(i);
+      const addr = await platform.allTokens(i);
       if (!tokenMeta[addr]) {
         const t = new ethers.Contract(addr, ERC20, readProvider);
         await sleep(150);
@@ -301,7 +301,7 @@ async function loadTokens() {
         tokenMeta[addr] = { name, symbol };
       }
       await sleep(150);
-      tokenInfo[addr] = normInfo(await arcade.info(addr));
+      tokenInfo[addr] = normInfo(await platform.info(addr));
       cards.push(cardHtml(addr));
     }
     $("grid").innerHTML = cards.join("");
@@ -340,7 +340,7 @@ $("cGo").onclick = async () => {
     const name = $("cName").value.trim(), sym = $("cSymbol").value.trim().toUpperCase();
     if (!name || !sym) return toast("Name and symbol required");
     const buyVal = parseFloat($("cBuy").value || "0");
-    const c = arcade.connect(signer);
+    const c = platform.connect(signer);
     const tx = await c.createToken(name, sym, $("cUri").value.trim(), { value: ethers.parseEther(String(buyVal || 0)) });
     toast("Launching…");
     await tx.wait();
@@ -363,7 +363,7 @@ async function openTrade(addr) {
   refreshTrade();
 }
 async function refreshTrade() {
-  tokenInfo[currentToken] = normInfo(await arcade.info(currentToken));
+  tokenInfo[currentToken] = normInfo(await platform.info(currentToken));
   const inf = tokenInfo[currentToken];
   $("tPrice").textContent = Number(ethers.formatEther(priceOf(inf))).toExponential(3);
   $("tRaised").textContent = fmt(inf.raised, 2) + " USDC";
@@ -400,7 +400,7 @@ $("tGo").onclick = async () => {
   try {
     const wei = ethers.parseEther(String(v));
     const inf = tokenInfo[currentToken];
-    const c = arcade.connect(signer);
+    const c = platform.connect(signer);
     if (isBuy) {
       const q = localQuoteBuy(inf, wei);
       const tx = await c.buy(currentToken, q * 98n / 100n, { value: wei });

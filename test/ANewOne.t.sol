@@ -2,10 +2,10 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {Arcade, ArcadeToken} from "../src/Arcade.sol";
+import {ANewOne, ANewOneToken} from "../src/ANewOne.sol";
 
-contract ArcadeTest is Test {
-    Arcade arcade;
+contract ANewOneTest is Test {
+    ANewOne arcade;
     address creator = address(0xC0FFEE);
     address alice = address(0xA11CE);
     address bob = address(0xB0B);
@@ -14,7 +14,7 @@ contract ArcadeTest is Test {
     uint256 constant GRAD = 5_000e18; // graduation target
 
     function setUp() public {
-        arcade = new Arcade(V0, GRAD);
+        arcade = new ANewOne(V0, GRAD);
         vm.deal(creator, 100_000e18);
         vm.deal(alice, 100_000e18);
         vm.deal(bob, 100_000e18);
@@ -28,7 +28,7 @@ contract ArcadeTest is Test {
     function test_createToken() public {
         address token = _create();
         assertEq(arcade.tokensCount(), 1);
-        assertEq(ArcadeToken(token).balanceOf(address(arcade)), arcade.TOTAL_SUPPLY());
+        assertEq(ANewOneToken(token).balanceOf(address(arcade)), arcade.TOTAL_SUPPLY());
         (address c,,, uint256 vUsdc, uint256 tReserve, uint256 raised,) = arcade.info(token);
         assertEq(c, creator);
         assertEq(vUsdc, V0);
@@ -44,7 +44,7 @@ contract ArcadeTest is Test {
         vm.prank(alice);
         arcade.buy{value: 100e18}(token, quoted);
 
-        assertEq(ArcadeToken(token).balanceOf(alice), quoted);
+        assertEq(ANewOneToken(token).balanceOf(alice), quoted);
         assertGt(quoted, 0);
         // 1% fee split: 0.5 creator / 0.5 platform
         assertEq(arcade.creatorFees(creator), 0.5e18);
@@ -69,17 +69,17 @@ contract ArcadeTest is Test {
 
         vm.prank(alice);
         arcade.buy{value: 1_000e18}(token, 0);
-        uint256 aliceTokens = ArcadeToken(token).balanceOf(alice);
+        uint256 aliceTokens = ANewOneToken(token).balanceOf(alice);
 
         vm.startPrank(alice);
-        ArcadeToken(token).approve(address(arcade), aliceTokens);
+        ANewOneToken(token).approve(address(arcade), aliceTokens);
         arcade.sell(token, aliceTokens, 0);
         vm.stopPrank();
 
         (,,, uint256 vUsdc, uint256 tReserve, uint256 raised,) = arcade.info(token);
         assertLe(raised, 1); // dust only
         assertGe(vUsdc, V0); // virtual floor intact
-        assertEq(tReserve + ArcadeToken(token).balanceOf(alice), arcade.TOTAL_SUPPLY());
+        assertEq(tReserve + ANewOneToken(token).balanceOf(alice), arcade.TOTAL_SUPPLY());
         // contract still solvent for fees
         assertGe(address(arcade).balance, arcade.platformFees() + arcade.creatorFees(creator));
     }
@@ -97,13 +97,13 @@ contract ArcadeTest is Test {
         // small buy under cap succeeds
         vm.prank(alice);
         arcade.buy{value: 50e18}(token, 0);
-        assertLe(ArcadeToken(token).balanceOf(alice), cap);
+        assertLe(ANewOneToken(token).balanceOf(alice), cap);
 
         // after window, big buys allowed
         vm.roll(block.number + 21);
         vm.prank(bob);
         arcade.buy{value: 150e18}(token, 0);
-        assertGt(ArcadeToken(token).balanceOf(bob), 0);
+        assertGt(ANewOneToken(token).balanceOf(bob), 0);
     }
 
     function test_graduationAtTarget() public {
@@ -136,7 +136,7 @@ contract ArcadeTest is Test {
         // dev buy at creation is allowed but still subject to the anti-snipe cap (fair launch)
         vm.prank(creator);
         address token = arcade.createToken{value: 50e18}("Test", "TST", "");
-        uint256 got = ArcadeToken(token).balanceOf(creator);
+        uint256 got = ANewOneToken(token).balanceOf(creator);
         assertGt(got, 0);
         assertLe(got, arcade.ANTI_SNIPE_MAX());
 
@@ -161,10 +161,10 @@ contract ArcadeTest is Test {
 
         vm.prank(alice);
         arcade.buy{value: buyAmount}(token, 0);
-        uint256 got = ArcadeToken(token).balanceOf(alice);
+        uint256 got = ANewOneToken(token).balanceOf(alice);
 
         vm.startPrank(alice);
-        ArcadeToken(token).approve(address(arcade), got);
+        ANewOneToken(token).approve(address(arcade), got);
         arcade.sell(token, got, 0);
         vm.stopPrank();
 

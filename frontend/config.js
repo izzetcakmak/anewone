@@ -1,6 +1,6 @@
-// ARCADE network config. The mainnet block is filled automatically by monitor/scan.mjs
+// ANEWONE (anewone.xyz) network config. The mainnet block is filled automatically by monitor/scan.mjs
 // the moment Arc mainnet is detected and the platform is deployed.
-window.ARCADE_CONFIG = {
+window.ANEWONE_CONFIG = {
   mainnet: {
     live: false,
     chainId: null,

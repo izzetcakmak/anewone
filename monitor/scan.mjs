@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ARCADE mainnet scanner — runs once per invocation (scheduled every minute).
+ * ANEWONE (anewone.xyz) mainnet scanner — runs once per invocation (scheduled every minute).
  *
  * Phase machine (monitor/state.json):
  *   scanning        -> probe candidate RPCs + chainid.network registry for Arc mainnet
@@ -93,7 +93,7 @@ async function notify(env, text) {
     await fetch(`https://api.telegram.org/bot${tok}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chat, text: `🕹 ARCADE\n${text}` }),
+      body: JSON.stringify({ chat_id: chat, text: `🕹 ANEWONE\n${text}` }),
     });
   } catch (e) { log(`telegram failed: ${e.message}`); }
 }
@@ -149,7 +149,7 @@ function runDeploy(env, rpcUrl) {
     }
   );
   const out = (res.stdout || "") + (res.stderr || "");
-  const platform = out.match(/ARCADE_PLATFORM:\s*(0x[0-9a-fA-F]{40})/)?.[1];
+  const platform = out.match(/ANEWONE_PLATFORM:\s*(0x[0-9a-fA-F]{40})/)?.[1];
   const noah = out.match(/NOAH_TOKEN:\s*(0x[0-9a-fA-F]{40})/)?.[1];
   return { ok: !!(platform && noah), platform, noah, out: out.slice(-2500) };
 }
@@ -258,7 +258,7 @@ async function main() {
     state.deployedAt = new Date().toISOString();
     saveState(state);
     await notify(env,
-      `🎉 ARCADE IS LIVE ON ARC MAINNET!\nPlatform: ${dep.platform}\n$NOAH: ${dep.noah}\nRPC: ${found.url} (chainId ${found.chainId})\nfrontend/config.js updated — push to GitHub Pages to go public.`);
+      `🎉 ANEWONE.XYZ IS LIVE ON ARC MAINNET!\nPlatform: ${dep.platform}\n$NOAH: ${dep.noah}\nRPC: ${found.url} (chainId ${found.chainId})\nfrontend/config.js updated — push to GitHub Pages to go public.`);
     log(`DEPLOYED platform=${dep.platform} noah=${dep.noah}`);
   } finally {
     try { unlinkSync(LOCK_FILE); } catch {}
