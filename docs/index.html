@@ -82,6 +82,14 @@
   .cab .nm { color: var(--dim); margin: 6px 0 10px; }
   .cab .px { color: var(--text); font-size: 18px; }
   .cab .grad { position: absolute; top: 10px; right: 10px; font-size: 14px; color: var(--green); }
+  .cabhead { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; }
+  .cimg { width: 64px; height: 64px; object-fit: cover; border: 2px solid var(--panel2);
+    image-rendering: pixelated; flex-shrink: 0; background: #0c0c18; }
+  .upl-prev { display: none; align-items: center; gap: 10px; margin-top: 10px; }
+  .upl-prev img { width: 72px; height: 72px; object-fit: cover; border: 2px solid var(--neon);
+    image-rendering: pixelated; }
+  .upl-prev .x { border-color: var(--red); color: var(--red); box-shadow: none; padding: 6px 10px; }
+  .criteria { font-size: 14px; color: var(--dim); margin-top: 4px; letter-spacing: 1px; }
   .bar { height: 10px; background: #0c0c18; border: 1px solid var(--panel2); margin-top: 10px; }
   .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--neon), var(--neon2)); }
   .bar-label { font-size: 14px; color: var(--dim); margin-top: 4px; }
@@ -155,7 +163,18 @@
     <h2>&gt; NEW CABINET</h2>
     <label>Name</label><input id="cName" placeholder="Noah's Arc" maxlength="48">
     <label>Symbol</label><input id="cSymbol" placeholder="NOAH" maxlength="12">
-    <label>Image / metadata URL (optional)</label><input id="cUri" placeholder="https://…">
+    <label>Image (optional)</label>
+    <div class="criteria">.jpg / .jpeg / .png &nbsp;·&nbsp; max 5 MB &nbsp;·&nbsp; min 100×100 px &nbsp;·&nbsp; square is best</div>
+    <div class="row" style="margin-top:8px">
+      <button id="cUpBtn" type="button">📷 Upload image</button>
+      <input id="cFile" type="file" accept="image/png,image/jpeg" style="display:none">
+    </div>
+    <div class="upl-prev" id="cPrev">
+      <img id="cPrevImg" alt="preview">
+      <span id="cPrevInfo" class="hint"></span>
+      <button id="cPrevX" type="button" class="x">✕</button>
+    </div>
+    <div class="hint">Stored fully on-chain — auto-cropped to square, resized to 200×200, compressed to ≤24 KB.</div>
     <label>Initial dev buy in USDC (optional, ≤2% supply early)</label><input id="cBuy" placeholder="0" type="number" min="0" step="0.01">
     <div class="hint">Launching is free — you pay only gas. 1B supply, all on the curve.</div>
     <div class="row">
@@ -168,7 +187,10 @@
 <!-- trade modal -->
 <div id="tradeModal" class="modal-bg">
   <div class="modal">
-    <h2 id="tTitle">&gt; TOKEN</h2>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:18px">
+      <img id="tImg" class="cimg" style="display:none">
+      <h2 id="tTitle" style="margin-bottom:0">&gt; TOKEN</h2>
+    </div>
     <div class="row">
       <div class="stat">PRICE <b id="tPrice">–</b></div>
       <div class="stat">RAISED <b id="tRaised">–</b></div>
@@ -306,6 +328,7 @@ async function loadTokens() {
       cards.push(cardHtml(addr));
     }
     $("grid").innerHTML = cards.join("");
+    fillImages(Object.keys(tokenInfo));
     $("ticker").textContent = tickerText(count);
   } catch (e) {
     console.error(e);
@@ -321,18 +344,90 @@ function cardHtml(addr) {
   const pct = Number(progBps(inf)) / 100;
   return `<div class="cab" onclick="openTrade('${addr}')">
     ${inf.graduated ? '<span class="grad">★ GRADUATED</span>' : ""}
-    <div class="sym">$${symbol}</div>
-    <div class="nm">${name}</div>
+    <div class="cabhead">
+      <img class="cimg" id="img-${addr}" alt="" style="display:none">
+      <div>
+        <div class="sym">$${symbol}</div>
+        <div class="nm">${name}</div>
+      </div>
+    </div>
     <div class="px">${Number(ethers.formatEther(priceOf(inf))).toExponential(3)} USDC</div>
     <div class="bar"><i style="width:${Math.min(pct, 100)}%"></i></div>
     <div class="bar-label">${pct.toFixed(1)}% · raised ${fmt(inf.raised, 2)} USDC</div>
   </div>`;
 }
 
+// resolve a token's display image from its on-chain metadataURI
+const tokenImg = {};
+async function resolveImg(addr) {
+  if (tokenImg[addr] !== undefined) return tokenImg[addr];
+  let out = null;
+  const uri = tokenInfo[addr]?.metadataURI || "";
+  if (uri.startsWith("data:image")) out = uri;
+  else if (/\.(png|jpe?g|svg|gif|webp)(\?.*)?$/i.test(uri)) out = uri;
+  else if (uri.startsWith("http")) {
+    try { const j = await (await fetch(uri)).json(); if (j.image) out = j.image; } catch {}
+  }
+  // $NOAH's testnet metadata predates anewone.xyz — serve its art locally
+  if (!out && CFG.noah && addr.toLowerCase() === CFG.noah.toLowerCase()) out = "meta/noah.svg";
+  tokenImg[addr] = out;
+  return out;
+}
+function fillImages(addrs) {
+  addrs.forEach(async (addr) => {
+    const u = await resolveImg(addr);
+    if (!u) return;
+    const el = document.getElementById("img-" + addr);
+    if (el) { el.src = u; el.style.display = "block"; }
+  });
+}
+
 function tickerText(n) {
   const names = Object.values(tokenMeta).map(t => "$" + t.symbol).join("  ·  ");
   return `${n} CABINET${n === 1 ? "" : "S"} ON THE FLOOR  ·  ${names}  ·  1% FEE — HALF GOES TO CREATORS  ·  NO LP, NO RUG — RESERVES LOCKED IN CURVE  ·  GAS IS USDC — BUILT ON ARC NETWORK`;
 }
+
+// ------- image upload (pump.fun-style criteria: .jpg/.jpeg/.png, ≤5MB, ≥100×100)
+let cImageDataUri = "";
+$("cUpBtn").onclick = () => $("cFile").click();
+$("cPrevX").onclick = () => { cImageDataUri = ""; $("cFile").value = ""; $("cPrev").style.display = "none"; };
+$("cFile").onchange = async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const typeOk = ["image/jpeg", "image/png"].includes(f.type) && /\.(jpe?g|png)$/i.test(f.name);
+  if (!typeOk) { $("cFile").value = ""; return toast("Only .jpg, .jpeg or .png files"); }
+  if (f.size > 5 * 1024 * 1024) { $("cFile").value = ""; return toast("Max file size is 5 MB"); }
+  const url = URL.createObjectURL(f);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    if (img.naturalWidth < 100 || img.naturalHeight < 100) {
+      $("cFile").value = "";
+      return toast("Image must be at least 100×100 px");
+    }
+    // center-crop to square, resize to 200×200, compress until ≤24KB
+    const side = Math.min(img.naturalWidth, img.naturalHeight);
+    const cv = document.createElement("canvas");
+    cv.width = 200; cv.height = 200;
+    cv.getContext("2d").drawImage(
+      img,
+      (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side,
+      0, 0, 200, 200
+    );
+    let q = 0.85, uri = cv.toDataURL("image/jpeg", q);
+    while (uri.length > 32_000 && q > 0.3) { q -= 0.1; uri = cv.toDataURL("image/jpeg", q); }
+    if (uri.length > 32_000) { $("cFile").value = ""; return toast("Could not compress under 24 KB — try a simpler image"); }
+    cImageDataUri = uri;
+    $("cPrevImg").src = uri;
+    $("cPrevInfo").textContent = `${f.name} → 200×200 · ${(uri.length * 3 / 4 / 1024).toFixed(1)} KB on-chain`;
+    $("cPrev").style.display = "flex";
+  } catch {
+    toast("Could not read that image");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
 
 // ------- create
 $("createBtn").onclick = () => { if (!signer) return toast("Connect first"); $("createModal").classList.add("open"); };
@@ -342,11 +437,13 @@ $("cGo").onclick = async () => {
     if (!name || !sym) return toast("Name and symbol required");
     const buyVal = parseFloat($("cBuy").value || "0");
     const c = platform.connect(signer);
-    const tx = await c.createToken(name, sym, $("cUri").value.trim(), { value: ethers.parseEther(String(buyVal || 0)) });
+    const tx = await c.createToken(name, sym, cImageDataUri, { value: ethers.parseEther(String(buyVal || 0)) });
     toast("Launching…");
     await tx.wait();
     toast(`$${sym} IS LIVE!`);
     closeModals();
+    cImageDataUri = ""; $("cFile").value = ""; $("cPrev").style.display = "none";
+    $("cName").value = ""; $("cSymbol").value = ""; $("cBuy").value = "";
     await sleep(800);
     loadTokens();
   } catch (e) { toast(e.shortMessage || e.message); }
@@ -358,6 +455,8 @@ async function openTrade(addr) {
   setTabs();
   const { name, symbol } = tokenMeta[addr] || {};
   $("tTitle").textContent = `> $${symbol} — ${name}`;
+  $("tImg").style.display = "none";
+  resolveImg(addr).then((u) => { if (u && currentToken === addr) { $("tImg").src = u; $("tImg").style.display = "block"; } });
   $("tAmt").value = ""; $("tQuote").textContent = "";
   $("tLinks").innerHTML = CFG.explorer ? `<a href="${CFG.explorer}/address/${addr}" target="_blank" rel="noopener" style="color:var(--neon)">token on explorer ↗</a> · ${addr}` : addr;
   $("tradeModal").classList.add("open");
