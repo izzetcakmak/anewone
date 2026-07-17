@@ -147,6 +147,12 @@
   .tabs button { flex: 1; box-shadow: none; }
   .tabs button.on-buy { background: var(--green); color: #002211; border-color: var(--green); }
   .tabs button.on-sell { background: var(--red); color: #200008; border-color: var(--red); }
+  .pctrow { display: flex; gap: 6px; margin-top: 8px; }
+  .pctrow button { flex: 1; font-size: 10px; padding: 9px 4px; box-shadow: 2px 2px 0 rgba(0,255,213,.3); }
+  .pctrow button.max { border-color: var(--neon3); color: var(--neon3); box-shadow: 2px 2px 0 rgba(255,230,0,.3); }
+  .pctrow button.max:hover { background: var(--neon3); color: #180012; }
+  .amthead { display: flex; justify-content: space-between; align-items: baseline; }
+  .amthead .hint { margin: 12px 0 4px; }
   .quote { color: var(--neon3); margin-top: 8px; min-height: 24px; }
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -246,7 +252,17 @@
       <button id="tabBuy" class="on-buy">BUY</button>
       <button id="tabSell">SELL</button>
     </div>
-    <label id="amtLabel">USDC in</label><input id="tAmt" type="number" min="0" step="0.0001" placeholder="1.0">
+    <div class="amthead">
+      <label id="amtLabel">USDC in</label>
+      <span class="hint" id="balHint"></span>
+    </div>
+    <input id="tAmt" type="number" min="0" step="0.0001" placeholder="1.0">
+    <div class="pctrow" id="pctRow">
+      <button type="button" data-pct="25">25%</button>
+      <button type="button" data-pct="50">50%</button>
+      <button type="button" data-pct="75">75%</button>
+      <button type="button" data-pct="100" class="max">MAX</button>
+    </div>
     <div class="quote" id="tQuote"></div>
     <div class="row">
       <button id="tGo" class="alt">BUY</button>
@@ -576,6 +592,13 @@ $("cGo").onclick = async () => {
 };
 
 // ------- trade
+// gas is native USDC on Arc; MAX-buy leaves this much behind so the tx can still pay gas
+const GAS_RESERVE = ethers.parseEther("0.05");
+let userNativeBal = 0n, userTokenBal = 0n;
+// when a % button sets the amount we keep the exact wei so trades use full precision
+// (the number input can only round-trip ~15 digits); cleared on any manual edit
+let exactWei = null;
+
 async function openTrade(addr) {
   currentToken = addr; isBuy = true;
   setTabs();
@@ -583,7 +606,7 @@ async function openTrade(addr) {
   $("tTitle").textContent = `> $${symbol} — ${name}`;
   $("tImg").style.display = "none";
   resolveImg(addr).then((u) => { if (u && currentToken === addr) { $("tImg").src = u; $("tImg").style.display = "block"; } });
-  $("tAmt").value = ""; $("tQuote").textContent = "";
+  $("tAmt").value = ""; $("tQuote").textContent = ""; exactWei = null;
   $("tLinks").innerHTML = CFG.explorer ? `<a href="${CFG.explorer}/address/${addr}" target="_blank" rel="noopener" style="color:var(--neon)">token on explorer ↗</a> · ${addr}` : addr;
   $("tradeModal").classList.add("open");
   refreshTrade();
@@ -598,33 +621,63 @@ async function refreshTrade() {
   $("tBarLabel").textContent = inf.graduated ? "★ GRADUATED — trading continues" : pct.toFixed(1) + "% to graduation";
   if (userAddr) {
     await sleep(150);
-    const bal = await new ethers.Contract(currentToken, ERC20, readProvider).balanceOf(userAddr);
-    $("tHold").textContent = fmt(bal, 2);
+    userTokenBal = await new ethers.Contract(currentToken, ERC20, readProvider).balanceOf(userAddr);
+    $("tHold").textContent = fmt(userTokenBal, 2);
+    await sleep(150);
+    userNativeBal = await readProvider.getBalance(userAddr);
+    updateBalHint();
   }
+}
+function updateBalHint() {
+  if (!userAddr) { $("balHint").textContent = ""; return; }
+  $("balHint").textContent = isBuy
+    ? "bal: " + fmt(userNativeBal, 4) + " USDC"
+    : "bal: " + fmt(userTokenBal, 2) + " $" + (tokenMeta[currentToken]?.symbol || "");
+}
+function updateQuote() {
+  const inf = tokenInfo[currentToken];
+  const wei = exactWei !== null ? exactWei : (parseFloat($("tAmt").value || "0") ? ethers.parseEther($("tAmt").value) : 0n);
+  if (!wei || !inf) return $("tQuote").textContent = "";
+  const q = isBuy ? localQuoteBuy(inf, wei) : localQuoteSell(inf, wei);
+  $("tQuote").textContent = "≈ " + fmt(q, 4) + (isBuy ? ` $${tokenMeta[currentToken]?.symbol}` : " USDC");
+}
+function applyPct(p) {
+  if (!userAddr) return toast("Connect first");
+  let wei;
+  if (isBuy) {
+    if (userNativeBal <= 0n) return toast("No USDC balance");
+    wei = p === 100
+      ? (userNativeBal > GAS_RESERVE ? userNativeBal - GAS_RESERVE : 0n)
+      : userNativeBal * BigInt(p) / 100n;
+    if (wei <= 0n) return toast("USDC balance too low after gas reserve");
+  } else {
+    if (userTokenBal <= 0n) return toast("No tokens to sell");
+    wei = userTokenBal * BigInt(p) / 100n;
+  }
+  exactWei = wei;
+  // trim trailing zeros for a tidy input while keeping full precision in exactWei
+  $("tAmt").value = ethers.formatEther(wei).replace(/\.?0+$/, "");
+  updateQuote();
 }
 function setTabs() {
   $("tabBuy").className = isBuy ? "on-buy" : "";
   $("tabSell").className = isBuy ? "" : "on-sell";
   $("tGo").textContent = isBuy ? "BUY" : "SELL";
   $("amtLabel").textContent = isBuy ? "USDC in" : "Tokens in";
-  $("tQuote").textContent = "";
+  $("tAmt").value = ""; $("tQuote").textContent = ""; exactWei = null;
+  updateBalHint();
 }
 $("tabBuy").onclick = () => { isBuy = true; setTabs(); };
 $("tabSell").onclick = () => { isBuy = false; setTabs(); };
-$("tAmt").oninput = () => {
-  const v = parseFloat($("tAmt").value || "0");
-  const inf = tokenInfo[currentToken];
-  if (!v || !inf) return $("tQuote").textContent = "";
-  const wei = ethers.parseEther(String(v));
-  const q = isBuy ? localQuoteBuy(inf, wei) : localQuoteSell(inf, wei);
-  $("tQuote").textContent = "≈ " + fmt(q, 4) + (isBuy ? ` $${tokenMeta[currentToken]?.symbol}` : " USDC");
-};
+$("tAmt").oninput = () => { exactWei = null; updateQuote(); };
+$("pctRow").querySelectorAll("button").forEach((b) => {
+  b.onclick = () => applyPct(Number(b.dataset.pct));
+});
 $("tGo").onclick = async () => {
   if (!signer) return toast("Connect first");
-  const v = parseFloat($("tAmt").value || "0");
-  if (!v) return toast("Enter an amount");
+  const wei = exactWei !== null ? exactWei : (parseFloat($("tAmt").value || "0") ? ethers.parseEther($("tAmt").value) : 0n);
+  if (!wei || wei <= 0n) return toast("Enter an amount");
   try {
-    const wei = ethers.parseEther(String(v));
     const inf = tokenInfo[currentToken];
     const c = platform.connect(signer);
     if (isBuy) {
