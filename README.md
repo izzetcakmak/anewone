@@ -28,14 +28,14 @@ A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablec
 
 | Network | Platform | $NOAH |
 |---|---|---|
-| Arc Testnet (5042002) | `0x21BC50350e89A3B71E81445245Ac1c6B6f4Dc000` | `0xfF3800de41059A1E7980eAcF14147D8aEf31115d` |
+| Arc Testnet (5042002) | `0x5d85Df16c7CA1B0239959eB6dCc66d1F9AAbdEeF` | `0x0a4E6EbE4Fd63647b0506b4816b276c212595934` |
 | Arc Mainnet | ⏳ auto-deploys the minute mainnet is detected | ⏳ |
 
-*(Testnet was deployed under the project's former working name; bytecode is identical.)*
+
 
 ## Layout
 
-- `src/ANewOne.sol` — platform + minimal ERC20 (no external deps), 10/10 forge tests
+- `src/ANewOne.sol` — platform + minimal ERC20 (no external deps), 14/14 forge tests
 - `script/Deploy.s.sol` — deploys platform and launches $NOAH
 - `docs/` — static retro UI served at anewone.xyz via GitHub Pages, rate-limit-friendly RPC usage
 - `monitor/scan.mjs` — runs every minute via Windows Task Scheduler (`AnewoneMainnetScan`):

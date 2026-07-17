@@ -146,6 +146,14 @@
     <div class="stat">GRADUATION <b id="statGrad">–</b></div>
   </div>
 
+  <div class="row" style="justify-content:center" id="feeBar">
+    <div class="stat">YOUR CREATOR FEES <b id="cfAmt">—</b> <span id="cfNote" style="color:var(--neon3)"></span></div>
+    <button id="cfClaim" disabled>Claim creator fees</button>
+    <div class="stat" id="pfStat" style="display:none">PLATFORM FEES <b id="pfAmt">—</b></div>
+    <button id="pfClaim" class="alt" style="display:none">Claim platform fees</button>
+    <button id="pfSweep" class="alt" style="display:none">Sweep expired</button>
+  </div>
+
   <div id="grid" class="grid"></div>
   <div id="empty" class="empty" style="display:none">NO CABINETS YET — INSERT THE FIRST COIN</div>
 
@@ -224,7 +232,15 @@ const ABI = [
   "function gradTarget() view returns (uint256)",
   "function createToken(string,string,string) payable returns (address)",
   "function buy(address,uint256) payable",
-  "function sell(address,uint256,uint256)"
+  "function sell(address,uint256,uint256)",
+  "function owner() view returns (address)",
+  "function platformFees() view returns (uint256)",
+  "function creatorFees(address) view returns (uint256)",
+  "function creatorFeeDeadline(address) view returns (uint256)",
+  "function creatorFeeExpired(address) view returns (bool)",
+  "function claimCreatorFees()",
+  "function withdrawPlatformFees(address)",
+  "function sweepExpired(address)"
 ];
 const ERC20 = [
   "function name() view returns (string)",
@@ -297,7 +313,77 @@ async function connect() {
   userAddr = await signer.getAddress();
   $("connectBtn").textContent = userAddr.slice(0, 6) + "…" + userAddr.slice(-4);
   toast("READY PLAYER ONE");
+  refreshFees();
 }
+
+// ------- fees (creator claim for everyone-but-active-only-for-creators, platform claim for owner)
+let ownerAddr = null, cfDeadlineTs = 0, cfPot = 0n;
+async function refreshFees() {
+  if (!userAddr) return;
+  try {
+    if (!ownerAddr) { ownerAddr = (await platform.owner()).toLowerCase(); await sleep(150); }
+    cfPot = BigInt(await platform.creatorFees(userAddr));
+    await sleep(150);
+    cfDeadlineTs = Number(await platform.creatorFeeDeadline(userAddr));
+    renderCreatorFee();
+    if (userAddr.toLowerCase() === ownerAddr) {
+      await sleep(150);
+      const pf = await platform.platformFees();
+      $("pfAmt").textContent = fmt(pf, 4) + " USDC";
+      $("pfStat").style.display = "block";
+      $("pfClaim").style.display = "inline-block";
+      $("pfSweep").style.display = "inline-block";
+      $("pfClaim").disabled = pf === 0n;
+    }
+  } catch (e) { console.error(e); }
+}
+function renderCreatorFee() {
+  $("cfAmt").textContent = fmt(cfPot, 4) + " USDC";
+  if (cfPot === 0n) { $("cfNote").textContent = ""; $("cfClaim").disabled = true; return; }
+  const left = cfDeadlineTs - Math.floor(Date.now() / 1000);
+  if (left <= 0) {
+    $("cfNote").textContent = "EXPIRED → platform";
+    $("cfClaim").disabled = true;
+  } else {
+    const d = Math.floor(left / 86400), h = Math.floor((left % 86400) / 3600), m = Math.floor((left % 3600) / 60);
+    $("cfNote").textContent = `claim in ${d}d ${h}h ${m}m`;
+    $("cfClaim").disabled = false;
+  }
+}
+setInterval(renderCreatorFee, 30_000);
+$("cfClaim").onclick = async () => {
+  if (!signer) return toast("Connect first");
+  try {
+    const tx = await platform.connect(signer).claimCreatorFees();
+    toast("Claiming…"); await tx.wait();
+    toast("CREATOR FEES CLAIMED! +" + fmt(cfPot, 4) + " USDC");
+    refreshFees();
+  } catch (e) { toast(e.shortMessage || e.message); }
+};
+$("pfClaim").onclick = async () => {
+  if (!signer) return toast("Connect first");
+  try {
+    const tx = await platform.connect(signer).withdrawPlatformFees(userAddr);
+    toast("Claiming…"); await tx.wait();
+    toast("PLATFORM FEES CLAIMED!");
+    refreshFees();
+  } catch (e) { toast(e.shortMessage || e.message); }
+};
+$("pfSweep").onclick = async () => {
+  if (!signer) return toast("Connect first");
+  const creators = [...new Set(Object.values(tokenInfo).map(i => i.creator))];
+  let swept = 0;
+  for (const c of creators) {
+    try {
+      await sleep(150);
+      if (!(await platform.creatorFeeExpired(c))) continue;
+      const tx = await platform.connect(signer).sweepExpired(c);
+      await tx.wait(); swept++;
+    } catch (e) { console.error(e); }
+  }
+  toast(swept ? `Swept ${swept} expired pot(s) into platform fees` : "No expired creator pots");
+  refreshFees();
+};
 
 async function loadTokens() {
   if (loading) return;
@@ -330,6 +416,7 @@ async function loadTokens() {
     $("grid").innerHTML = cards.join("");
     fillImages(Object.keys(tokenInfo));
     $("ticker").textContent = tickerText(count);
+    if (userAddr) { await sleep(150); refreshFees(); }
   } catch (e) {
     console.error(e);
     $("ticker").textContent = "RPC busy — retrying shortly…";

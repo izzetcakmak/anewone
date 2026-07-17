@@ -224,8 +224,16 @@ contract ANewOne {
     function _splitFee(address creator, uint256 fee) internal {
         uint256 creatorCut = (fee * CREATOR_FEE_BPS) / FEE_BPS;
         if (creatorCut > 0) {
-            if (creatorFees[creator] == 0) creatorFeeSince[creator] = block.timestamp;
-            creatorFees[creator] += creatorCut;
+            uint256 pot = creatorFees[creator];
+            if (pot > 0 && block.timestamp > creatorFeeSince[creator] + CLAIM_WINDOW) {
+                // enforce expiry before adding fresh fees, so new earnings always
+                // start their own full 7-day window instead of inheriting a dead one
+                platformFees += pot;
+                emit CreatorFeesExpired(creator, pot);
+                pot = 0;
+            }
+            if (pot == 0) creatorFeeSince[creator] = block.timestamp;
+            creatorFees[creator] = pot + creatorCut;
         }
         platformFees += fee - creatorCut;
     }

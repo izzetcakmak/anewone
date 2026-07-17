@@ -225,6 +225,31 @@ contract ANewOneTest is Test {
         assertGt(arcade.creatorFeeSince(creator), t0);
     }
 
+    function test_freshFeesNeverInheritExpiredWindow() public {
+        address token = _create();
+        vm.roll(block.number + 21);
+        vm.prank(alice);
+        arcade.buy{value: 1_000e18}(token, 0); // pot: 5 USDC
+        uint256 platBefore = arcade.platformFees();
+
+        // pot expires unclaimed; token keeps trading
+        vm.warp(block.timestamp + 7 days + 1);
+        vm.prank(alice);
+        arcade.buy{value: 1_000e18}(token, 0); // fresh 5 USDC cut
+
+        // old pot rolled to platform, fresh cut got its own full window
+        assertEq(arcade.creatorFees(creator), 5e18);
+        assertEq(arcade.platformFees(), platBefore + 5e18 + 5e18); // old pot + new platform half
+        assertFalse(arcade.creatorFeeExpired(creator));
+        assertEq(arcade.creatorFeeDeadline(creator), block.timestamp + 7 days);
+
+        // creator can claim the fresh pot in full
+        uint256 balBefore = creator.balance;
+        vm.prank(creator);
+        arcade.claimCreatorFees();
+        assertEq(creator.balance - balBefore, 5e18);
+    }
+
     function testFuzz_buySellInvariant(uint96 buyAmount) public {
         vm.assume(buyAmount > 0.01e18 && buyAmount < 50_000e18);
         address token = _create();
