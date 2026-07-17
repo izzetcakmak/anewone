@@ -72,9 +72,15 @@ contract ANewOne {
     /// @notice Real USDC raised at which a token "graduates" (badge + event; trading continues).
     uint256 public immutable gradTarget;
 
+    /// @notice Creators must claim accrued fees within this window; afterwards the pot
+    ///         is sweepable into platform fees by anyone.
+    uint256 public constant CLAIM_WINDOW = 7 days;
+
     address public owner;
     uint256 public platformFees;
     mapping(address => uint256) public creatorFees;
+    /// @notice When the creator's current unclaimed pot started accruing (set when pot goes 0 -> >0).
+    mapping(address => uint256) public creatorFeeSince;
 
     struct TokenInfo {
         address creator;
@@ -105,6 +111,7 @@ contract ANewOne {
     );
     event Graduated(address indexed token, uint256 raised);
     event FeesClaimed(address indexed who, uint256 amount);
+    event CreatorFeesExpired(address indexed creator, uint256 amount);
 
     modifier nonReentrant() {
         require(unlocked == 1, "reentrancy");
@@ -216,17 +223,46 @@ contract ANewOne {
 
     function _splitFee(address creator, uint256 fee) internal {
         uint256 creatorCut = (fee * CREATOR_FEE_BPS) / FEE_BPS;
-        creatorFees[creator] += creatorCut;
+        if (creatorCut > 0) {
+            if (creatorFees[creator] == 0) creatorFeeSince[creator] = block.timestamp;
+            creatorFees[creator] += creatorCut;
+        }
         platformFees += fee - creatorCut;
+    }
+
+    /// @notice True when the creator's pot sat unclaimed past the 7-day window.
+    function creatorFeeExpired(address creator) public view returns (bool) {
+        return creatorFees[creator] > 0 && block.timestamp > creatorFeeSince[creator] + CLAIM_WINDOW;
+    }
+
+    /// @notice Deadline for the creator's current pot (0 if pot is empty).
+    function creatorFeeDeadline(address creator) external view returns (uint256) {
+        if (creatorFees[creator] == 0) return 0;
+        return creatorFeeSince[creator] + CLAIM_WINDOW;
     }
 
     function claimCreatorFees() external nonReentrant {
         uint256 amount = creatorFees[msg.sender];
         require(amount > 0, "nothing");
         creatorFees[msg.sender] = 0;
+        if (block.timestamp > creatorFeeSince[msg.sender] + CLAIM_WINDOW) {
+            // window missed: pot rolls into platform fees instead of paying out
+            platformFees += amount;
+            emit CreatorFeesExpired(msg.sender, amount);
+            return;
+        }
         (bool ok,) = msg.sender.call{value: amount}("");
         require(ok, "send");
         emit FeesClaimed(msg.sender, amount);
+    }
+
+    /// @notice Anyone may roll an expired creator pot into platform fees.
+    function sweepExpired(address creator) external nonReentrant {
+        require(creatorFeeExpired(creator), "not expired");
+        uint256 amount = creatorFees[creator];
+        creatorFees[creator] = 0;
+        platformFees += amount;
+        emit CreatorFeesExpired(creator, amount);
     }
 
     function withdrawPlatformFees(address to) external nonReentrant {

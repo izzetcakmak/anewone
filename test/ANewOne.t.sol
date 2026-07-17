@@ -154,6 +154,77 @@ contract ANewOneTest is Test {
         arcade.buy{value: 100e18}(token, quoted + 1e18);
     }
 
+    function test_creatorFeeExpiresAfter7Days() public {
+        address token = _create();
+        vm.roll(block.number + 21);
+        vm.prank(alice);
+        arcade.buy{value: 1_000e18}(token, 0); // creator pot: 5 USDC
+        assertEq(arcade.creatorFees(creator), 5e18);
+        assertFalse(arcade.creatorFeeExpired(creator));
+        assertEq(arcade.creatorFeeDeadline(creator), block.timestamp + 7 days);
+
+        vm.warp(block.timestamp + 7 days + 1);
+        assertTrue(arcade.creatorFeeExpired(creator));
+
+        // claim after expiry pays nothing — pot rolls into platform fees
+        uint256 balBefore = creator.balance;
+        uint256 platBefore = arcade.platformFees();
+        vm.prank(creator);
+        arcade.claimCreatorFees();
+        assertEq(creator.balance, balBefore);
+        assertEq(arcade.creatorFees(creator), 0);
+        assertEq(arcade.platformFees(), platBefore + 5e18);
+    }
+
+    function test_sweepExpiredByAnyone() public {
+        address token = _create();
+        vm.roll(block.number + 21);
+        vm.prank(alice);
+        arcade.buy{value: 1_000e18}(token, 0);
+
+        vm.prank(bob);
+        vm.expectRevert("not expired");
+        arcade.sweepExpired(creator);
+
+        vm.warp(block.timestamp + 7 days + 1);
+        uint256 platBefore = arcade.platformFees();
+        vm.prank(bob); // anyone can sweep
+        arcade.sweepExpired(creator);
+        assertEq(arcade.creatorFees(creator), 0);
+        assertEq(arcade.platformFees(), platBefore + 5e18);
+
+        // swept funds are withdrawable by owner
+        uint256 ownerBefore = address(this).balance;
+        arcade.withdrawPlatformFees(address(this));
+        assertEq(address(this).balance - ownerBefore, platBefore + 5e18);
+    }
+
+    function test_claimWindowSemantics() public {
+        address token = _create();
+        vm.roll(block.number + 21);
+        vm.prank(alice);
+        arcade.buy{value: 100e18}(token, 0);
+        uint256 t0 = arcade.creatorFeeSince(creator);
+
+        // new fees into a non-empty pot do NOT reset the deadline
+        vm.warp(block.timestamp + 3 days);
+        vm.prank(alice);
+        arcade.buy{value: 100e18}(token, 0);
+        assertEq(arcade.creatorFeeSince(creator), t0);
+
+        // claiming in time pays out and empties the pot
+        vm.prank(creator);
+        arcade.claimCreatorFees();
+        assertEq(arcade.creatorFees(creator), 0);
+
+        // next fee starts a fresh window
+        vm.warp(block.timestamp + 10 days);
+        vm.prank(alice);
+        arcade.buy{value: 100e18}(token, 0);
+        assertFalse(arcade.creatorFeeExpired(creator));
+        assertGt(arcade.creatorFeeSince(creator), t0);
+    }
+
     function testFuzz_buySellInvariant(uint96 buyAmount) public {
         vm.assume(buyAmount > 0.01e18 && buyAmount < 50_000e18);
         address token = _create();

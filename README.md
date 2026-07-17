@@ -21,7 +21,8 @@ A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablec
 - 1B supply per token, 100% on a constant-product bonding curve (virtual reserve: 4,000 USDC)
 - Buy/sell any time; the contract is the AMM — no LP, no migration, nothing to pull
 - Launching a token is free (gas only), optional dev-buy at creation
-- Creator claims accrued fees with `claimCreatorFees()`
+- Creator claims accrued fees with `claimCreatorFees()` — **within 7 days** of the pot starting
+  to accrue; unclaimed pots expire and roll into platform fees (`sweepExpired` is permissionless)
 
 ## Deployments
 
