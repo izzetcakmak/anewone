@@ -54,6 +54,41 @@
   .badge.live { border-color: var(--green); color: var(--green); background: rgba(61,255,162,.08);
     animation: blink 1.2s steps(2) infinite; }
   @keyframes blink { 50% { opacity: .55; } }
+  .coming {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(12px, 2.6vw, 20px);
+    text-align: center;
+    margin: 18px 0 2px;
+    letter-spacing: 4px;
+    color: var(--neon2);
+    animation: neonflicker 3s infinite;
+  }
+  .coming .zap { color: var(--neon3); }
+  @keyframes neonflicker {
+    0%, 100% {
+      opacity: 1;
+      text-shadow: 0 0 6px var(--neon2), 0 0 20px var(--neon2), 0 0 46px rgba(255, 43, 214, .8),
+        0 0 80px rgba(255, 43, 214, .5);
+    }
+    52% {
+      opacity: 1;
+      text-shadow: 0 0 6px var(--neon2), 0 0 20px var(--neon2), 0 0 46px rgba(255, 43, 214, .8);
+    }
+    54% { opacity: .25; text-shadow: none; }
+    56% {
+      opacity: 1;
+      text-shadow: 0 0 8px var(--neon), 0 0 26px var(--neon), 0 0 52px rgba(0, 255, 213, .8);
+      color: var(--neon);
+    }
+    58% { opacity: .35; text-shadow: none; }
+    60% {
+      opacity: 1;
+      text-shadow: 0 0 6px var(--neon2), 0 0 20px var(--neon2), 0 0 46px rgba(255, 43, 214, .8);
+    }
+    83% { opacity: 1; }
+    85% { opacity: .5; text-shadow: 0 0 4px var(--neon2); }
+    87% { opacity: 1; }
+  }
   button {
     font-family: 'Press Start 2P', monospace; font-size: 11px; cursor: pointer;
     background: var(--panel2); color: var(--neon); border: 2px solid var(--neon);
@@ -129,6 +164,7 @@
   <header>
     <div class="logo">A NEW ONE</div>
     <div class="tagline">INSERT COIN &nbsp;·&nbsp; LAUNCH A NEW ONE</div>
+    <div class="coming" id="comingSoon"><span class="zap">⚡</span> MAINNET COMING SOON <span class="zap">⚡</span></div>
     <div class="netbar">
       <span class="badge" style="border-color:var(--neon3);color:var(--neon3);background:rgba(255,230,0,.06)">BUILT ON ARC NETWORK</span>
       <span id="netBadge" class="badge">TESTNET</span>
@@ -290,7 +326,10 @@ const normInfo = (r) => ({
 });
 
 $("netBadge").textContent = NET_NAME;
-if (window.ANEWONE_CONFIG.mainnet.live) $("netBadge").classList.add("live");
+if (window.ANEWONE_CONFIG.mainnet.live) {
+  $("netBadge").classList.add("live");
+  $("comingSoon").style.display = "none"; // sign comes down the moment mainnet is live
+}
 $("footPlatform").textContent = CFG.platform;
 
 async function connect() {
