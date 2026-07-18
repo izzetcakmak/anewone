@@ -129,6 +129,31 @@
     margin-top: 4px; letter-spacing: 1px; }
   .cstats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; font-size: 16px; color: var(--dim); }
   .cstats b { color: var(--text); }
+  .rpcstatus { text-align: center; color: var(--neon3); font-size: 16px; margin: -6px 0 8px;
+    animation: blink 1.4s steps(2) infinite; }
+  .toolbar { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; align-items: center;
+    justify-content: space-between; }
+  .sorts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .sorts button { font-size: 10px; padding: 9px 11px; box-shadow: none; border-color: var(--panel2);
+    color: var(--dim); }
+  .sorts button:hover { background: var(--panel2); color: var(--neon); }
+  .sorts button.on { border-color: var(--neon); color: var(--neon); background: rgba(0,255,213,.08); }
+  #search { flex: 1; min-width: 200px; max-width: 320px; padding: 9px 12px; font-size: 18px; }
+  .feed { margin-top: 34px; }
+  .feed-title { font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--dim);
+    letter-spacing: 2px; margin-bottom: 10px; }
+  .frow { display: flex; gap: 10px; align-items: baseline; padding: 7px 10px; font-size: 17px;
+    border-left: 3px solid var(--panel2); background: var(--panel); margin-bottom: 4px;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
+  .frow.buy { border-left-color: var(--green); }
+  .frow.sell { border-left-color: var(--red); }
+  .frow .who { color: var(--dim); }
+  .frow .act { font-family: 'Press Start 2P', monospace; font-size: 9px; }
+  .frow.buy .act { color: var(--green); }
+  .frow.sell .act { color: var(--red); }
+  .frow .tk { color: var(--neon3); }
+  .frow .amt { color: var(--text); }
+  .frow .when { color: var(--dim); margin-left: auto; font-size: 15px; }
   .tdesc { margin-top: 14px; color: var(--text); font-size: 18px; line-height: 1.35;
     background: #0c0c18; border-left: 3px solid var(--neon2); padding: 10px 12px;
     overflow-wrap: anywhere; }
@@ -203,6 +228,7 @@
   </header>
 
   <div class="marquee"><span id="ticker">Loading the floor…</span></div>
+  <div id="rpcStatus" class="rpcstatus" style="display:none"></div>
 
   <div class="row" style="justify-content:center">
     <div class="stat">TOKENS <b id="statCount">–</b></div>
@@ -211,8 +237,23 @@
     <div class="stat">GRADUATION <b id="statGrad">–</b></div>
   </div>
 
+  <div class="toolbar">
+    <div class="sorts" id="sortTabs">
+      <button data-sort="trending" class="on">🔥 Trending</button>
+      <button data-sort="new">🆕 Newest</button>
+      <button data-sort="mcap">💰 Top MC</button>
+      <button data-sort="grad">🎓 Graduating</button>
+    </div>
+    <input id="search" placeholder="search name, symbol or address…">
+  </div>
+
   <div id="grid" class="grid"></div>
   <div id="empty" class="empty" style="display:none">NO CABINETS YET — INSERT THE FIRST COIN</div>
+
+  <div id="feedWrap" class="feed" style="display:none">
+    <div class="feed-title">LIVE TRADES</div>
+    <div id="feed"></div>
+  </div>
 
   <div id="feeBar" class="feepanel" style="display:none">
     <div class="feepanel-title">YOUR FEES</div>
@@ -302,6 +343,7 @@
     <div class="quote" id="tQuote"></div>
     <div class="row">
       <button id="tGo" class="alt">BUY</button>
+      <button id="tShare">🔗 Share</button>
       <button onclick="closeModals()">Close</button>
     </div>
     <div class="hint" id="tLinks"></div>
@@ -372,6 +414,53 @@ const safeImgSrc = (u) => {
 const fmt = (v, dp = 4) => Number(ethers.formatEther(v)).toLocaleString("en-US", { maximumFractionDigits: dp });
 const toast = (msg) => { const t = $("toast"); t.textContent = msg; t.style.display = "block"; setTimeout(() => t.style.display = "none", 5000); };
 
+// ---- RPC scheduler.
+// The public Arc RPC rate-limits hard ("request limit reached") and a single rejected
+// call used to break the whole page load. Every read goes through one serialized queue
+// with fixed spacing, and transient failures are retried with exponential backoff.
+const RPC_SPACING = 140;
+let rpcChain = Promise.resolve();
+let rpcDegraded = false;
+// ethers wraps the provider's payload, so the useful text ("request limit reached") can be
+// buried in .message/.info while .shortMessage only says "missing response for request".
+// Search every field, and treat ethers' transport-level codes as retryable too.
+const RETRYABLE_CODES = new Set(["BAD_DATA", "SERVER_ERROR", "TIMEOUT", "NETWORK_ERROR", "CALL_EXCEPTION"]);
+function isTransient(e) {
+  if (!e) return false;
+  let hay = "";
+  try {
+    hay = [e.message, e.shortMessage, e.code, JSON.stringify(e.error || ""), JSON.stringify(e.info || "")]
+      .join(" ").toLowerCase();
+  } catch { hay = String(e).toLowerCase(); }
+  if (/request limit|rate limit|too many requests|429|limit reached/.test(hay)) return true;
+  if (/failed to fetch|networkerror|timeout|timed out|econn|socket|503|502|504/.test(hay)) return true;
+  return RETRYABLE_CODES.has(e.code) && !/revert|insufficient|user rejected/.test(hay);
+}
+function rpc(fn, tries = 4) {
+  const run = async () => {
+    for (let i = 0; ; i++) {
+      try {
+        const out = await fn();
+        if (rpcDegraded) { rpcDegraded = false; setStatus(""); }
+        return out;
+      } catch (e) {
+        if (!isTransient(e) || i >= tries - 1) throw e;
+        if (!rpcDegraded) { rpcDegraded = true; setStatus("RPC busy — retrying…"); }
+        await sleep(400 * 2 ** i + Math.random() * 250);
+      }
+    }
+  };
+  const p = rpcChain.then(run);
+  rpcChain = p.catch(() => {}).then(() => sleep(RPC_SPACING));
+  return p;
+}
+function setStatus(msg) {
+  const el = $("rpcStatus");
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = msg ? "block" : "none";
+}
+
 // ---- trader-facing display helpers
 const TOTAL_SUPPLY_TOKENS = 1_000_000_000n; // fixed 1B per launch in the contract
 function compactUsd(wei) {
@@ -397,41 +486,54 @@ function ageText(blocksOld) {
 // the new blocks. Holders come from net buy/sell flow per trader, so direct
 // wallet-to-wallet transfers (rare during the curve phase) are not reflected.
 let blockTimeSec = 0, latestBlock = 0, statsReady = false;
+let fullyIndexed = false, covers24h = false, indexPct = 0, indexFloor = 0;
 const tradeStats = {};
 const TRADE_TOPIC = ethers.id("Trade(address,address,bool,uint256,uint256,uint256)");
 const topicAddr = (t) => ethers.getAddress("0x" + t.slice(26));
 const CHUNK = 10_000;
 const MAX_CHUNKS_PER_PASS = 24; // bounded work per refresh; the rest resumes next pass
-const STATS_KEY = "anewone_stats_v1_" + CFG.platform;
+// v2 records the trader/amount/side per trade (needed for the live feed and for counting
+// distinct traders); bumping the key discards incompatible v1 caches instead of half-reading them
+const STATS_KEY = "anewone_stats_v2_" + CFG.platform;
 let statsIdx = null; // { scanned, agg{token->{volAll,trades}}, net{token->{trader->bigint}}, recent[] }
 
-function loadStatsCache(earliest) {
+// The index covers the inclusive block window [lo, hi]. Scanning runs FORWARD from hi to
+// the chain tip first (cheap, keeps the feed live) and then BACKWARD from lo toward each
+// token's creation block, so the freshest data lands first and deep history fills in.
+function loadStatsCache() {
   try {
     const j = JSON.parse(localStorage.getItem(STATS_KEY) || "null");
-    if (j && j.scanned >= earliest - 1) {
+    if (j && typeof j.lo === "number" && typeof j.hi === "number") {
       return {
-        scanned: j.scanned,
+        lo: j.lo, hi: j.hi,
         agg: Object.fromEntries(Object.entries(j.agg || {})
-          .map(([k, v]) => [k, { volAll: BigInt(v.volAll), trades: v.trades }])),
+          .map(([k, v]) => [k, { volAll: BigInt(v.volAll), trades: v.trades, lastBlock: v.lastBlock || 0 }])),
         net: Object.fromEntries(Object.entries(j.net || {})
           .map(([k, m]) => [k, Object.fromEntries(Object.entries(m).map(([a, x]) => [a, BigInt(x)]))])),
-        recent: (j.recent || []).map((r) => ({ b: r.b, tk: r.tk, u: BigInt(r.u) })),
+        recent: (j.recent || []).map((r) => ({
+          b: r.b, tk: r.tk, tr: r.tr, u: BigInt(r.u), t: BigInt(r.t || 0), buy: !!r.buy
+        })),
       };
     }
   } catch {}
-  return { scanned: earliest - 1, agg: {}, net: {}, recent: [] };
+  return { lo: null, hi: null, agg: {}, net: {}, recent: [] };
 }
 function saveStatsCache(s) {
   try {
     localStorage.setItem(STATS_KEY, JSON.stringify({
-      scanned: s.scanned,
+      lo: s.lo, hi: s.hi,
       agg: Object.fromEntries(Object.entries(s.agg)
-        .map(([k, v]) => [k, { volAll: v.volAll.toString(), trades: v.trades }])),
+        .map(([k, v]) => [k, { volAll: v.volAll.toString(), trades: v.trades, lastBlock: v.lastBlock || 0 }])),
       net: Object.fromEntries(Object.entries(s.net)
         .map(([k, m]) => [k, Object.fromEntries(Object.entries(m).map(([a, x]) => [a, x.toString()]))])),
-      recent: s.recent.map((r) => ({ b: r.b, tk: r.tk, u: r.u.toString() })),
+      recent: s.recent.map((r) => ({
+        b: r.b, tk: r.tk, tr: r.tr, u: r.u.toString(), t: r.t.toString(), buy: r.buy
+      })),
     }));
-  } catch {}
+  } catch (e) {
+    // localStorage is ~5MB; if the index outgrows it, drop the replayable part and keep totals
+    try { s.recent = s.recent.slice(-500); localStorage.setItem(STATS_KEY, JSON.stringify({ lo: s.lo, hi: s.hi, agg: {}, net: {}, recent: [] })); } catch {}
+  }
 }
 function ingestLogs(logs) {
   const coder = ethers.AbiCoder.defaultAbiCoder();
@@ -442,57 +544,132 @@ function ingestLogs(logs) {
     const token = topicAddr(lg.topics[1]);
     const trader = topicAddr(lg.topics[2]);
     const isBuy = BigInt(lg.topics[3]) === 1n;
-    const a = statsIdx.agg[token] || (statsIdx.agg[token] = { volAll: 0n, trades: 0 });
+    const a = statsIdx.agg[token] || (statsIdx.agg[token] = { volAll: 0n, trades: 0, lastBlock: 0 });
     a.volAll += usdc; a.trades++;
+    if (lg.blockNumber > (a.lastBlock || 0)) a.lastBlock = lg.blockNumber;
     const m = statsIdx.net[token] || (statsIdx.net[token] = {});
     m[trader] = (m[trader] || 0n) + (isBuy ? tokens : -tokens);
-    statsIdx.recent.push({ b: lg.blockNumber, tk: token, u: usdc });
+    statsIdx.recent.push({ b: lg.blockNumber, tk: token, tr: trader, u: usdc, t: tokens, buy: isBuy });
   }
 }
 function rebuildStats() {
   const bpd = blockTimeSec ? Math.round(86400 / blockTimeSec) : 0;
   const cutoff = bpd ? latestBlock - bpd : 0;
+  // Coverage honesty: holder counts and all-time volume are only correct once the index
+  // reaches the oldest token's creation block, and a "24h" figure is only correct once the
+  // window covers 24h. Until then the UI shows progress instead of a wrong number.
+  fullyIndexed = statsIdx.lo !== null && statsIdx.lo <= indexFloor;
+  covers24h = statsIdx.lo !== null && bpd > 0 && statsIdx.lo <= cutoff;
+  indexPct = (statsIdx.lo === null || latestBlock <= indexFloor) ? 0
+    : Math.min(100, Math.round(((statsIdx.hi - statsIdx.lo + 1) / (latestBlock - indexFloor + 1)) * 100));
   statsIdx.recent = statsIdx.recent.filter((r) => r.b >= cutoff).slice(-5000);
-  const vol24 = {};
-  for (const r of statsIdx.recent) vol24[r.tk] = (vol24[r.tk] || 0n) + r.u;
+  const vol24 = {}, traders24 = {};
+  for (const r of statsIdx.recent) {
+    vol24[r.tk] = (vol24[r.tk] || 0n) + r.u;
+    (traders24[r.tk] || (traders24[r.tk] = new Set())).add(r.tr);
+  }
   for (const k of Object.keys(tradeStats)) delete tradeStats[k];
   for (const [token, a] of Object.entries(statsIdx.agg)) {
     tradeStats[token] = {
       volAll: a.volAll,
       trades: a.trades,
       vol24: vol24[token] || 0n,
+      traders24: traders24[token] ? traders24[token].size : 0,
+      lastBlock: a.lastBlock || 0,
       holders: Object.values(statsIdx.net[token] || {}).filter((v) => v > 0n).length,
     };
   }
   statsReady = true;
 }
 
-async function loadStats(earliestBlock) {
+// Trending score. Volume alone is trivially gamed — one wallet can wash-trade a token to
+// the top — so 24h volume is damped by sqrt and multiplied by the number of DISTINCT
+// traders, then decayed by time since the last trade. A single wallet can inflate the
+// first term but not the second.
+function trendScore(addr) {
+  const s = tradeStats[addr];
+  if (!s) return 0;
+  const vol = Number(ethers.formatEther(s.vol24 || 0n));
+  const uniq = s.traders24 || 0;
+  if (vol <= 0 || uniq === 0) return 0;
+  const blocksSince = latestBlock && s.lastBlock ? Math.max(0, latestBlock - s.lastBlock) : 0;
+  const hoursSince = blockTimeSec ? (blocksSince * blockTimeSec) / 3600 : 0;
+  const recency = 1 / (1 + hoursSince / 6); // half-weight after ~6h of silence
+  return Math.sqrt(vol) * uniq * recency;
+}
+
+// Keep running index passes (each bounded by MAX_CHUNKS_PER_PASS) until history is fully
+// covered, re-rendering after each pass. Only the log scan repeats — token metadata is not
+// re-fetched. Guarded so overlapping callers can't double-scan.
+let indexing = false;
+async function indexUntilDone(earliest) {
+  if (indexing) return;
+  indexing = true;
   try {
-    latestBlock = await readProvider.getBlockNumber();
+    const tick = () => {
+      renderGrid();
+      renderFeed();
+      if (!fullyIndexed) setStatus(`indexing trade history… ${indexPct}%`);
+    };
+    for (let pass = 0; pass < 40; pass++) {
+      await loadStats(earliest, tick);
+      tick();
+      if (fullyIndexed) { if (!rpcDegraded) setStatus(""); break; }
+      await sleep(600);
+    }
+  } finally { indexing = false; }
+}
+
+async function loadStats(earliestBlock, onTick) {
+  try {
+    latestBlock = await rpc(() => readProvider.getBlockNumber());
     if (!blockTimeSec) {
-      await sleep(150);
-      const b1 = await readProvider.getBlock(latestBlock);
-      await sleep(150);
-      const b0 = await readProvider.getBlock(Math.max(1, latestBlock - 5000));
+      const b1 = await rpc(() => readProvider.getBlock(latestBlock));
+      const b0 = await rpc(() => readProvider.getBlock(Math.max(1, latestBlock - 5000)));
       if (b1 && b0 && b1.number > b0.number) {
         blockTimeSec = (b1.timestamp - b0.timestamp) / (b1.number - b0.number);
       }
     }
-    if (!statsIdx) statsIdx = loadStatsCache(earliestBlock);
-    let from = Math.max(statsIdx.scanned + 1, earliestBlock);
-    for (let i = 0; i < MAX_CHUNKS_PER_PASS && from <= latestBlock; i++) {
-      const to = Math.min(from + CHUNK - 1, latestBlock);
-      await sleep(120);
-      let logs;
-      try {
-        logs = await readProvider.getLogs({ address: CFG.platform, topics: [TRADE_TOPIC], fromBlock: from, toBlock: to });
-      } catch {
-        break; // rate limited or transient — progress is kept, resume on the next pass
-      }
+    if (!statsIdx) statsIdx = loadStatsCache();
+    indexFloor = earliestBlock;
+    // rebuild + repaint after every chunk so progress is visible immediately rather than
+    // only when the whole pass finishes
+    const scan = async (from, to) => {
+      const logs = await rpc(() => readProvider.getLogs({
+        address: CFG.platform, topics: [TRADE_TOPIC], fromBlock: from, toBlock: to
+      }));
       ingestLogs(logs);
-      statsIdx.scanned = to;
-      from = to + 1;
+    };
+    // called after the window bounds are updated, so progress reflects reality
+    const tick = () => { if (onTick) { rebuildStats(); onTick(); } };
+
+    let budget = MAX_CHUNKS_PER_PASS;
+    try {
+      if (statsIdx.hi === null) {
+        // first ever pass: grab the newest chunk so the feed has something immediately
+        const from = Math.max(earliestBlock, latestBlock - CHUNK + 1);
+        await scan(from, latestBlock);
+        statsIdx.lo = from; statsIdx.hi = latestBlock; budget--;
+        tick();
+      } else {
+        // forward: catch up to the tip (priority — this is what "live" depends on)
+        while (statsIdx.hi < latestBlock && budget > 0) {
+          const from = statsIdx.hi + 1;
+          const to = Math.min(from + CHUNK - 1, latestBlock);
+          await scan(from, to);
+          statsIdx.hi = to; budget--;
+          tick();
+        }
+      }
+      // backward: fill history toward the oldest token's creation block
+      while (statsIdx.lo > earliestBlock && budget > 0) {
+        const from = Math.max(earliestBlock, statsIdx.lo - CHUNK);
+        await scan(from, statsIdx.lo - 1);
+        statsIdx.lo = from; budget--;
+        tick();
+      }
+    } catch {
+      // still failing after retries — whatever was ingested is kept and resumes next pass
     }
     saveStatsCache(statsIdx);
     rebuildStats();
@@ -599,10 +776,9 @@ async function refreshFees() {
   if (!userAddr) return;
   try {
     $("feeBar").style.display = "block"; // fee panel is only for connected users
-    if (!ownerAddr) { ownerAddr = (await platform.owner()).toLowerCase(); await sleep(150); }
-    cfPot = BigInt(await platform.creatorFees(userAddr));
-    await sleep(150);
-    cfDeadlineTs = Number(await platform.creatorFeeDeadline(userAddr));
+    if (!ownerAddr) ownerAddr = (await rpc(() => platform.owner())).toLowerCase();
+    cfPot = BigInt(await rpc(() => platform.creatorFees(userAddr)));
+    cfDeadlineTs = Number(await rpc(() => platform.creatorFeeDeadline(userAddr)));
     renderCreatorFee();
     // owner-only UI: platform address (footer) + platform-fee controls. Re-evaluated each
     // refresh so switching to a non-owner account hides them again.
@@ -612,8 +788,7 @@ async function refreshFees() {
     $("pfClaim").style.display = isOwner ? "inline-block" : "none";
     $("pfSweep").style.display = isOwner ? "inline-block" : "none";
     if (isOwner) {
-      await sleep(150);
-      const pf = await platform.platformFees();
+      const pf = await rpc(() => platform.platformFees());
       $("pfAmt").textContent = fmt(pf, 4) + " USDC";
       $("pfClaim").disabled = pf === 0n;
     }
@@ -657,8 +832,7 @@ $("pfSweep").onclick = async () => {
   let swept = 0;
   for (const c of creators) {
     try {
-      await sleep(150);
-      if (!(await platform.creatorFeeExpired(c))) continue;
+      if (!(await rpc(() => platform.creatorFeeExpired(c)))) continue;
       const tx = await platform.connect(signer).sweepExpired(c);
       await tx.wait(); swept++;
     } catch (e) { console.error(e); }
@@ -672,41 +846,35 @@ async function loadTokens() {
   loading = true;
   try {
     if (gradTarget === null) {
-      gradTarget = BigInt(await platform.gradTarget());
+      gradTarget = BigInt(await rpc(() => platform.gradTarget()));
       $("statGrad").textContent = fmt(gradTarget, 0) + " USDC";
-      await sleep(150);
     }
-    const count = Number(await platform.tokensCount());
+    const count = Number(await rpc(() => platform.tokensCount()));
     $("statCount").textContent = String(count);
     $("empty").style.display = count === 0 ? "block" : "none";
     const addrs = [];
     for (let i = 0; i < count; i++) {
-      await sleep(150);
-      const addr = await platform.allTokens(i);
+      const addr = await rpc(() => platform.allTokens(i));
       if (!tokenMeta[addr]) {
         const t = new ethers.Contract(addr, ERC20, readProvider);
-        await sleep(150);
-        const name = await t.name();
-        await sleep(150);
-        const symbol = await t.symbol();
+        const name = await rpc(() => t.name());
+        const symbol = await rpc(() => t.symbol());
         tokenMeta[addr] = { name, symbol };
       }
-      await sleep(150);
-      tokenInfo[addr] = normInfo(await platform.info(addr));
+      tokenInfo[addr] = normInfo(await rpc(() => platform.info(addr)));
       addrs.push(addr);
     }
     // paint immediately, then let the indexer fill in holders/volume/age
-    $("grid").innerHTML = addrs.map(cardHtml).join("");
-    fillImages(addrs);
+    shownAddrs = addrs;
+    $("empty").dataset.none = count === 0 ? "1" : "0";
+    renderGrid();
     $("ticker").textContent = tickerText(count);
+    openFromHash();
     if (addrs.length) {
       const earliest = Math.min(...addrs.map((a) => Number(tokenInfo[a].createdBlock)));
-      loadStats(earliest).then(() => {
-        $("grid").innerHTML = addrs.map(cardHtml).join("");
-        fillImages(addrs);
-      });
+      indexUntilDone(earliest);
     }
-    if (userAddr) { await sleep(150); refreshFees(); }
+    if (userAddr) refreshFees();
   } catch (e) {
     console.error(e);
     $("ticker").textContent = "RPC busy — retrying shortly…";
@@ -734,8 +902,8 @@ function cardHtml(addr) {
     <div class="mcap">MC ${compactUsd(marketCapWei(inf))}</div>
     ${metaOf(addr).d ? `<div class="cdesc">${esc(metaOf(addr).d)}</div>` : ""}
     <div class="cstats">
-      <span>👤 <b>${statsReady ? (st.holders || 0) : "…"}</b> holders</span>
-      <span>📊 <b>${statsReady ? compactUsd(st.vol24 || 0n) : "…"}</b> 24h</span>
+      <span>👤 <b>${fullyIndexed ? (st.holders || 0) : "…"}</b> holders</span>
+      <span>📊 <b>${covers24h ? compactUsd(st.vol24 || 0n) : "…"}</b> 24h</span>
       <span>🕐 <b>${age}</b></span>
     </div>
     <div class="bar"><i style="width:${Math.min(Math.max(pct, 1.5), 100)}%"></i></div>
@@ -803,6 +971,81 @@ function fillImages(addrs) {
     if (el) { el.src = u; el.style.display = "block"; }
   });
 }
+
+// ---- discovery: sorting, search, live feed, deep links
+let sortMode = "trending", searchQ = "", shownAddrs = [];
+
+function visibleAddrs() {
+  const q = searchQ.trim().toLowerCase();
+  let list = shownAddrs.filter((a) => {
+    if (!q) return true;
+    const m = tokenMeta[a] || {};
+    return (m.name || "").toLowerCase().includes(q)
+      || (m.symbol || "").toLowerCase().includes(q)
+      || a.toLowerCase().includes(q)
+      || (tokenInfo[a]?.creator || "").toLowerCase().includes(q);
+  });
+  const mc = (a) => marketCapWei(tokenInfo[a]);
+  const cmpBig = (x, y) => (x < y ? 1 : x > y ? -1 : 0);
+  if (sortMode === "new") list.sort((a, b) => Number(tokenInfo[b].createdBlock) - Number(tokenInfo[a].createdBlock));
+  else if (sortMode === "mcap") list.sort((a, b) => cmpBig(mc(a), mc(b)));
+  else if (sortMode === "grad") {
+    // closest to graduating first, but tokens already graduated drop to the end
+    const p = (a) => (tokenInfo[a].graduated ? -1 : Number(progBps(tokenInfo[a])));
+    list.sort((a, b) => p(b) - p(a));
+  } else if (!covers24h) {
+    // trending needs a full 24h window; until then fall back to newest rather than
+    // ranking on a partial (and therefore wrong) volume figure
+    list.sort((a, b) => Number(tokenInfo[b].createdBlock) - Number(tokenInfo[a].createdBlock));
+  } else list.sort((a, b) => (trendScore(b) - trendScore(a)) || cmpBig(mc(a), mc(b)));
+  return list;
+}
+
+function renderGrid() {
+  const list = visibleAddrs();
+  $("grid").innerHTML = list.map(cardHtml).join("");
+  fillImages(list);
+  $("empty").style.display = shownAddrs.length && !list.length ? "block" : ($("empty").dataset.none === "1" ? "block" : "none");
+  if (shownAddrs.length && !list.length) $("empty").textContent = "NO CABINET MATCHES THAT SEARCH";
+}
+
+$("sortTabs").querySelectorAll("button").forEach((b) => {
+  b.onclick = () => {
+    sortMode = b.dataset.sort;
+    $("sortTabs").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    renderGrid();
+  };
+});
+$("search").oninput = (e) => { searchQ = e.target.value; renderGrid(); };
+
+function renderFeed() {
+  if (!statsIdx || !statsIdx.recent.length) { $("feedWrap").style.display = "none"; return; }
+  const rows = statsIdx.recent.filter((r) => r && r.tr && r.tk).slice(-25).reverse().map((r) => {
+    const sym = (tokenMeta[r.tk] || {}).symbol || r.tk.slice(0, 6);
+    const who = r.tr.slice(0, 6) + "…" + r.tr.slice(-4);
+    const when = ageText(latestBlock ? latestBlock - r.b : null);
+    return `<div class="frow ${r.buy ? "buy" : "sell"}" onclick="openTrade('${esc(r.tk)}')">
+      <span class="who">${esc(who)}</span>
+      <span class="act">${r.buy ? "BOUGHT" : "SOLD"}</span>
+      <span class="amt">${esc(fmt(r.t, 0))}</span>
+      <span class="tk">$${esc(sym)}</span>
+      <span class="amt">for ${esc(compactUsd(r.u))}</span>
+      <span class="when">${esc(when)}</span>
+    </div>`;
+  }).join("");
+  $("feed").innerHTML = rows;
+  $("feedWrap").style.display = rows ? "block" : "none";
+}
+
+// deep link: #t=0x… opens that token directly so a launch can be shared
+function openFromHash() {
+  const m = location.hash.match(/t=(0x[0-9a-fA-F]{40})/);
+  if (!m) return;
+  const want = m[1].toLowerCase();
+  const hit = shownAddrs.find((a) => a.toLowerCase() === want);
+  if (hit) openTrade(hit);
+}
+window.addEventListener("hashchange", openFromHash);
 
 function tickerText(n) {
   const names = Object.values(tokenMeta).map(t => "$" + t.symbol).join("  ·  ");
@@ -952,22 +1195,21 @@ async function openTrade(addr) {
 }
 async function refreshTrade() {
   if (!currentToken) return;
-  tokenInfo[currentToken] = normInfo(await platform.info(currentToken));
+  tokenInfo[currentToken] = normInfo(await rpc(() => platform.info(currentToken)));
   const inf = tokenInfo[currentToken];
   const st = tradeStats[currentToken] || {};
   $("tMcap").textContent = compactUsd(marketCapWei(inf));
-  $("tHolders").textContent = statsReady ? (st.holders || 0) : "…";
-  $("tVol").textContent = statsReady ? compactUsd(st.vol24 || 0n) : "…";
+  $("tHolders").textContent = fullyIndexed ? (st.holders || 0) : "…";
+  $("tVol").textContent = covers24h ? compactUsd(st.vol24 || 0n) : "…";
   const pct = Number(progBps(inf)) / 100;
   $("tBar").style.width = Math.min(Math.max(pct, 1.5), 100) + "%";
   $("tBarLabel").textContent = (inf.graduated ? "★ GRADUATED — trading continues" : pct.toFixed(1) + "% to graduation")
     + ` · raised ${fmt(inf.raised, 2)} USDC`;
   if (userAddr) {
-    await sleep(150);
-    userTokenBal = await new ethers.Contract(currentToken, ERC20, readProvider).balanceOf(userAddr);
+    const tk = new ethers.Contract(currentToken, ERC20, readProvider);
+    userTokenBal = await rpc(() => tk.balanceOf(userAddr));
     $("tHold").textContent = fmt(userTokenBal, 2);
-    await sleep(150);
-    userNativeBal = await readProvider.getBalance(userAddr);
+    userNativeBal = await rpc(() => readProvider.getBalance(userAddr));
     updateBalHint();
   }
 }
@@ -1038,6 +1280,17 @@ $("tGo").onclick = async () => {
     await sleep(800);
     refreshTrade(); loadTokens();
   } catch (e) { toast(e.shortMessage || e.message); }
+};
+
+$("tShare").onclick = async () => {
+  if (!currentToken) return;
+  const sym = (tokenMeta[currentToken] || {}).symbol || "";
+  const url = location.origin + location.pathname + "#t=" + currentToken;
+  const text = `$${sym} on A NEW ONE — ${url}`;
+  try {
+    if (navigator.share) await navigator.share({ title: `$${sym}`, text: `$${sym} on A NEW ONE`, url });
+    else { await navigator.clipboard.writeText(text); toast("Link copied!"); }
+  } catch { toast(url); }
 };
 
 function closeModals() { document.querySelectorAll(".modal-bg").forEach(m => m.classList.remove("open")); }
