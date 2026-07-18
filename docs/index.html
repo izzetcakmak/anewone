@@ -129,6 +129,16 @@
     margin-top: 4px; letter-spacing: 1px; }
   .cstats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; font-size: 16px; color: var(--dim); }
   .cstats b { color: var(--text); }
+  .tdesc { margin-top: 14px; color: var(--text); font-size: 18px; line-height: 1.35;
+    background: #0c0c18; border-left: 3px solid var(--neon2); padding: 10px 12px;
+    overflow-wrap: anywhere; }
+  .tsocials { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .tsocials a { font-family: 'Press Start 2P', monospace; font-size: 9px; text-decoration: none;
+    color: var(--neon); border: 2px solid var(--neon); padding: 7px 10px; }
+  .tsocials a:hover { background: var(--neon); color: #001510; }
+  .cab .cdesc { color: var(--dim); font-size: 16px; margin-top: 6px; line-height: 1.25;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    overflow-wrap: anywhere; }
   .feepanel { margin-top: 40px; padding-top: 18px; border-top: 2px solid var(--panel2); }
   .feepanel-title { text-align: center; font-family: 'Press Start 2P', monospace; font-size: 10px;
     color: var(--dim); letter-spacing: 2px; margin-bottom: 12px; }
@@ -241,6 +251,13 @@
       <button id="cPrevX" type="button" class="x">✕</button>
     </div>
     <div class="hint">Stored fully on-chain — auto-cropped to square, resized to 200×200, compressed to ≤24 KB.</div>
+
+    <label>Description <span class="hint" id="cDescCount">0/280</span></label>
+    <input id="cDesc" placeholder="What's the story?" maxlength="280">
+    <label>X / Twitter (optional)</label><input id="cX" placeholder="https://x.com/…">
+    <label>Telegram (optional)</label><input id="cTg" placeholder="https://t.me/…">
+    <label>Website (optional)</label><input id="cWeb" placeholder="https://…">
+    <div class="hint" id="cSize">On-chain size: —</div>
     <label>Initial dev buy in USDC (optional, ≤2% supply early)</label><input id="cBuy" placeholder="0" type="number" min="0" step="0.01">
     <div class="hint">Launching is free — you pay only gas. 1B supply, all on the curve.</div>
     <div class="row">
@@ -263,6 +280,8 @@
       <div class="stat">24H VOL <b id="tVol">–</b></div>
       <div class="stat">YOU HOLD <b id="tHold">–</b></div>
     </div>
+    <div class="tdesc" id="tDesc" style="display:none"></div>
+    <div class="tsocials" id="tSocials" style="display:none"></div>
     <div class="bar" style="margin-top:14px"><i id="tBar" style="width:0%"></i></div>
     <div class="bar-label" id="tBarLabel">0% to graduation</div>
     <div class="tabs">
@@ -713,6 +732,7 @@ function cardHtml(addr) {
       </div>
     </div>
     <div class="mcap">MC ${compactUsd(marketCapWei(inf))}</div>
+    ${metaOf(addr).d ? `<div class="cdesc">${esc(metaOf(addr).d)}</div>` : ""}
     <div class="cstats">
       <span>👤 <b>${statsReady ? (st.holders || 0) : "…"}</b> holders</span>
       <span>📊 <b>${statsReady ? compactUsd(st.vol24 || 0n) : "…"}</b> 24h</span>
@@ -723,16 +743,52 @@ function cardHtml(addr) {
   </div>`;
 }
 
-// resolve a token's display image from its on-chain metadataURI
+// ---- token metadata.
+// metadataURI is a free-form string on-chain, so richer tokens store a compact JSON
+// document ({v,i,d,x,t,w} — short keys because every byte is paid for in gas). Older
+// tokens store a bare image data URI, so both shapes must keep working.
 const tokenImg = {};
+const tokenMetaDoc = {};
+const SOCIAL_HOSTS = { x: ["x.com", "twitter.com"], t: ["t.me", "telegram.me"] };
+
+function parseMetadata(uri) {
+  const s = String(uri || "").trim();
+  if (s.startsWith("{")) {
+    try {
+      const j = JSON.parse(s);
+      if (j && typeof j === "object") return j;
+    } catch {}
+  }
+  if (s.startsWith("data:image") || /\.(png|jpe?g|svg|gif|webp)(\?.*)?$/i.test(s)) return { i: s };
+  return {};
+}
+// links come from hostile input: https only, and only the hosts we expect
+function safeLink(u, kind) {
+  const s = String(u || "").trim();
+  if (!/^https:\/\//i.test(s)) return null;
+  let host;
+  try { host = new URL(s).hostname.toLowerCase().replace(/^www\./, ""); } catch { return null; }
+  if (kind === "w") return s;
+  const allowed = SOCIAL_HOSTS[kind] || [];
+  return allowed.includes(host) ? s : null;
+}
+
+function metaOf(addr) {
+  if (tokenMetaDoc[addr] === undefined) {
+    tokenMetaDoc[addr] = parseMetadata(tokenInfo[addr]?.metadataURI);
+  }
+  return tokenMetaDoc[addr];
+}
+
 async function resolveImg(addr) {
   if (tokenImg[addr] !== undefined) return tokenImg[addr];
+  const m = metaOf(addr);
   let out = null;
-  const uri = tokenInfo[addr]?.metadataURI || "";
-  if (uri.startsWith("data:image")) out = uri;
-  else if (/\.(png|jpe?g|svg|gif|webp)(\?.*)?$/i.test(uri)) out = uri;
-  else if (uri.startsWith("http")) {
-    try { const j = await (await fetch(uri)).json(); if (j.image) out = j.image; } catch {}
+  const img = String(m.i || "");
+  if (img.startsWith("data:image") || /\.(png|jpe?g|svg|gif|webp)(\?.*)?$/i.test(img)) out = img;
+  else if (img.startsWith("https://")) {
+    // an https metadata document that points at an image
+    try { const j = await (await fetch(img)).json(); if (j.image) out = j.image; } catch {}
   }
   // $NOAH's testnet metadata predates anewone.xyz — serve its art locally
   if (!out && CFG.noah && addr.toLowerCase() === CFG.noah.toLowerCase()) out = "meta/noah.svg";
@@ -756,7 +812,7 @@ function tickerText(n) {
 // ------- image upload (pump.fun-style criteria: .jpg/.jpeg/.png, ≤5MB, ≥100×100)
 let cImageDataUri = "";
 $("cUpBtn").onclick = () => $("cFile").click();
-$("cPrevX").onclick = () => { cImageDataUri = ""; $("cFile").value = ""; $("cPrev").style.display = "none"; };
+$("cPrevX").onclick = () => { cImageDataUri = ""; $("cFile").value = ""; $("cPrev").style.display = "none"; updateMetaSize(); };
 $("cFile").onchange = async (e) => {
   const f = e.target.files[0];
   if (!f) return;
@@ -788,6 +844,7 @@ $("cFile").onchange = async (e) => {
     $("cPrevImg").src = uri;
     $("cPrevInfo").textContent = `${f.name} → 200×200 · ${(uri.length * 3 / 4 / 1024).toFixed(1)} KB on-chain`;
     $("cPrev").style.display = "flex";
+    updateMetaSize();
   } catch {
     toast("Could not read that image");
   } finally {
@@ -795,21 +852,64 @@ $("cFile").onchange = async (e) => {
   }
 };
 
+// ------- metadata document written to the token at launch
+// Kept as compact JSON with short keys: the whole string is stored on-chain, so bytes = gas.
+function buildMetadata() {
+  const doc = { v: 1 };
+  if (cImageDataUri) doc.i = cImageDataUri;
+  const d = $("cDesc").value.trim();
+  if (d) doc.d = d.slice(0, 280);
+  for (const [id, key] of [["cX", "x"], ["cTg", "t"], ["cWeb", "w"]]) {
+    const raw = $(id).value.trim();
+    if (!raw) continue;
+    const ok = safeLink(raw, key);
+    if (!ok) {
+      toast(key === "w" ? "Website must be an https:// URL" : `Use a full https:// ${key === "x" ? "x.com" : "t.me"} link`);
+      return null;
+    }
+    doc[key] = ok;
+  }
+  // nothing but the version marker: keep the field empty rather than paying for "{"v":1}"
+  return Object.keys(doc).length > 1 ? JSON.stringify(doc) : "";
+}
+function updateMetaSize() {
+  const meta = (() => { try { return buildMetadataQuiet(); } catch { return ""; } })();
+  const bytes = new TextEncoder().encode(meta).length;
+  $("cSize").textContent = "On-chain size: " + (bytes < 1024 ? bytes + " B" : (bytes / 1024).toFixed(1) + " KB");
+  $("cDescCount").textContent = $("cDesc").value.length + "/280";
+}
+// same document, but without the toasts — used for the live size readout
+function buildMetadataQuiet() {
+  const doc = { v: 1 };
+  if (cImageDataUri) doc.i = cImageDataUri;
+  const d = $("cDesc").value.trim();
+  if (d) doc.d = d.slice(0, 280);
+  for (const [id, key] of [["cX", "x"], ["cTg", "t"], ["cWeb", "w"]]) {
+    const ok = safeLink($(id).value.trim(), key);
+    if (ok) doc[key] = ok;
+  }
+  return Object.keys(doc).length > 1 ? JSON.stringify(doc) : "";
+}
+["cDesc", "cX", "cTg", "cWeb"].forEach((id) => { $(id).oninput = updateMetaSize; });
+
 // ------- create
-$("createBtn").onclick = () => { if (!signer) return toast("Connect first"); $("createModal").classList.add("open"); };
+$("createBtn").onclick = () => { if (!signer) return toast("Connect first"); $("createModal").classList.add("open"); updateMetaSize(); };
 $("cGo").onclick = async () => {
   try {
     const name = $("cName").value.trim(), sym = $("cSymbol").value.trim().toUpperCase();
     if (!name || !sym) return toast("Name and symbol required");
     const buyVal = parseFloat($("cBuy").value || "0");
+    const meta = buildMetadata();
+    if (meta === null) return; // invalid link, already toasted
     const c = platform.connect(signer);
-    const tx = await c.createToken(name, sym, cImageDataUri, { value: ethers.parseEther(String(buyVal || 0)) });
+    const tx = await c.createToken(name, sym, meta, { value: ethers.parseEther(String(buyVal || 0)) });
     toast("Launching…");
     await tx.wait();
     toast(`$${sym} IS LIVE!`);
     closeModals();
     cImageDataUri = ""; $("cFile").value = ""; $("cPrev").style.display = "none";
     $("cName").value = ""; $("cSymbol").value = ""; $("cBuy").value = "";
+    ["cDesc", "cX", "cTg", "cWeb"].forEach((id) => { $(id).value = ""; });
     await sleep(800);
     loadTokens();
   } catch (e) { toast(e.shortMessage || e.message); }
@@ -833,6 +933,16 @@ async function openTrade(addr) {
     const src = safeImgSrc(u);
     if (src && currentToken === addr) { $("tImg").src = src; $("tImg").style.display = "block"; }
   });
+  const md = metaOf(addr);
+  $("tDesc").textContent = md.d || "";
+  $("tDesc").style.display = md.d ? "block" : "none";
+  const links = [["x", "𝕏 TWITTER"], ["t", "TELEGRAM"], ["w", "WEBSITE"]]
+    .map(([k, label]) => {
+      const href = safeLink(md[k], k);
+      return href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${label}</a>` : "";
+    }).filter(Boolean).join("");
+  $("tSocials").innerHTML = links;
+  $("tSocials").style.display = links ? "flex" : "none";
   $("tAmt").value = ""; $("tQuote").textContent = ""; exactWei = null;
   $("tLinks").innerHTML = CFG.explorer
     ? `<a href="${esc(CFG.explorer)}/address/${esc(addr)}" target="_blank" rel="noopener" style="color:var(--neon)">token on explorer ↗</a> · ${esc(addr)}`
