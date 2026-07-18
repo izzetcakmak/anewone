@@ -154,6 +154,11 @@
   .frow .tk { color: var(--neon3); }
   .frow .amt { color: var(--text); }
   .frow .when { color: var(--dim); margin-left: auto; font-size: 15px; }
+  .chartbox { margin-top: 14px; background: #0c0c18; border: 2px solid var(--panel2); padding: 10px; }
+  .chart-head { display: flex; justify-content: space-between; font-family: 'Press Start 2P', monospace;
+    font-size: 9px; color: var(--dim); margin-bottom: 8px; letter-spacing: 1px; }
+  .chart-head #tChartHint { color: var(--neon3); }
+  #tChart svg { display: block; width: 100%; height: auto; touch-action: none; }
   .tdesc { margin-top: 14px; color: var(--text); font-size: 18px; line-height: 1.35;
     background: #0c0c18; border-left: 3px solid var(--neon2); padding: 10px 12px;
     overflow-wrap: anywhere; }
@@ -320,6 +325,10 @@
       <div class="stat">HOLDERS <b id="tHolders">–</b></div>
       <div class="stat">24H VOL <b id="tVol">–</b></div>
       <div class="stat">YOU HOLD <b id="tHold">–</b></div>
+    </div>
+    <div class="chartbox" id="tChartBox" style="display:none">
+      <div class="chart-head"><span id="tChartLabel">MARKET CAP</span><span id="tChartHint"></span></div>
+      <div id="tChart"></div>
     </div>
     <div class="tdesc" id="tDesc" style="display:none"></div>
     <div class="tsocials" id="tSocials" style="display:none"></div>
@@ -492,9 +501,11 @@ const TRADE_TOPIC = ethers.id("Trade(address,address,bool,uint256,uint256,uint25
 const topicAddr = (t) => ethers.getAddress("0x" + t.slice(26));
 const CHUNK = 10_000;
 const MAX_CHUNKS_PER_PASS = 24; // bounded work per refresh; the rest resumes next pass
-// v2 records the trader/amount/side per trade (needed for the live feed and for counting
-// distinct traders); bumping the key discards incompatible v1 caches instead of half-reading them
-const STATS_KEY = "anewone_stats_v2_" + CFG.platform;
+// Bump SCHEMA whenever the cached shape changes: a stale cache that already covers the
+// chain would otherwise never re-scan, so newly-added fields would stay empty forever.
+// v2 added per-trade trader/amount/side; v3 added the per-token price series.
+const STATS_SCHEMA = 3;
+const STATS_KEY = `anewone_stats_v${STATS_SCHEMA}_` + CFG.platform;
 let statsIdx = null; // { scanned, agg{token->{volAll,trades}}, net{token->{trader->bigint}}, recent[] }
 
 // The index covers the inclusive block window [lo, hi]. Scanning runs FORWARD from hi to
@@ -513,10 +524,12 @@ function loadStatsCache() {
         recent: (j.recent || []).map((r) => ({
           b: r.b, tk: r.tk, tr: r.tr, u: BigInt(r.u), t: BigInt(r.t || 0), buy: !!r.buy
         })),
+        series: Object.fromEntries(Object.entries(j.series || {})
+          .map(([k, arr]) => [k, arr.map((s) => ({ b: s.b, p: BigInt(s.p) }))])),
       };
     }
   } catch {}
-  return { lo: null, hi: null, agg: {}, net: {}, recent: [] };
+  return { lo: null, hi: null, agg: {}, net: {}, recent: [], series: {} };
 }
 function saveStatsCache(s) {
   try {
@@ -529,6 +542,8 @@ function saveStatsCache(s) {
       recent: s.recent.map((r) => ({
         b: r.b, tk: r.tk, tr: r.tr, u: r.u.toString(), t: r.t.toString(), buy: r.buy
       })),
+      series: Object.fromEntries(Object.entries(s.series)
+        .map(([k, arr]) => [k, arr.map((x) => ({ b: x.b, p: x.p.toString() }))])),
     }));
   } catch (e) {
     // localStorage is ~5MB; if the index outgrows it, drop the replayable part and keep totals
@@ -538,8 +553,8 @@ function saveStatsCache(s) {
 function ingestLogs(logs) {
   const coder = ethers.AbiCoder.defaultAbiCoder();
   for (const lg of logs) {
-    let usdc, tokens;
-    try { [usdc, tokens] = coder.decode(["uint256", "uint256", "uint256"], lg.data); }
+    let usdc, tokens, priceWad;
+    try { [usdc, tokens, priceWad] = coder.decode(["uint256", "uint256", "uint256"], lg.data); }
     catch { continue; }
     const token = topicAddr(lg.topics[1]);
     const trader = topicAddr(lg.topics[2]);
@@ -550,6 +565,9 @@ function ingestLogs(logs) {
     const m = statsIdx.net[token] || (statsIdx.net[token] = {});
     m[trader] = (m[trader] || 0n) + (isBuy ? tokens : -tokens);
     statsIdx.recent.push({ b: lg.blockNumber, tk: token, tr: trader, u: usdc, t: tokens, buy: isBuy });
+    // price series for the chart — kept for the token's whole life, not just 24h
+    const ser = statsIdx.series[token] || (statsIdx.series[token] = []);
+    ser.push({ b: lg.blockNumber, p: priceWad });
   }
 }
 function rebuildStats() {
@@ -563,6 +581,14 @@ function rebuildStats() {
   indexPct = (statsIdx.lo === null || latestBlock <= indexFloor) ? 0
     : Math.min(100, Math.round(((statsIdx.hi - statsIdx.lo + 1) / (latestBlock - indexFloor + 1)) * 100));
   statsIdx.recent = statsIdx.recent.filter((r) => r.b >= cutoff).slice(-5000);
+  // chunks arrive newest-first then backwards, so each series needs sorting; cap the
+  // point count by dropping the middle (keeps the oldest anchor and recent detail)
+  for (const [tk, arr] of Object.entries(statsIdx.series)) {
+    arr.sort((a, b) => a.b - b.b);
+    const seen = new Set();
+    const dedup = arr.filter((x) => (seen.has(x.b + ":" + x.p) ? false : seen.add(x.b + ":" + x.p)));
+    statsIdx.series[tk] = dedup.length > 600 ? [dedup[0], ...dedup.slice(-599)] : dedup;
+  }
   const vol24 = {}, traders24 = {};
   for (const r of statsIdx.recent) {
     vol24[r.tk] = (vol24[r.tk] || 0n) + r.u;
@@ -972,6 +998,83 @@ function fillImages(addrs) {
   });
 }
 
+// ---- price chart, drawn as inline SVG from the indexed Trade events (no chart library).
+// Y is market cap (price x 1B supply). Memecoin curves span orders of magnitude, so the
+// axis switches to log scale when max/min is wide.
+function renderChart(addr) {
+  const box = $("tChartBox"), host = $("tChart");
+  const raw = (statsIdx && statsIdx.series[addr]) || [];
+  const inf = tokenInfo[addr];
+  const pts = raw.map((s) => ({ b: s.b, v: Number(ethers.formatEther(s.p * TOTAL_SUPPLY_TOKENS)) }))
+    .filter((p) => isFinite(p.v) && p.v > 0);
+  // always anchor the right edge at the live value
+  if (inf) pts.push({ b: latestBlock || (pts.length ? pts[pts.length - 1].b + 1 : 1), v: Number(ethers.formatEther(marketCapWei(inf))) });
+  if (pts.length < 2) {
+    box.style.display = "block";
+    host.innerHTML = `<div style="color:var(--dim);font-size:16px;padding:14px 4px">Not enough trades yet — the chart appears after the first buys.</div>`;
+    $("tChartHint").textContent = "";
+    return;
+  }
+
+  const W = 600, H = 170, PL = 6, PR = 6, PT = 8, PB = 16;
+  const xs = pts.map((p) => p.b), vs = pts.map((p) => p.v);
+  const bMin = Math.min(...xs), bMax = Math.max(...xs);
+  let vMin = Math.min(...vs), vMax = Math.max(...vs);
+  if (vMax === vMin) { vMax = vMin * 1.05 || 1; vMin = vMin * 0.95; }
+  const logScale = vMax / vMin > 25;
+  const tf = (v) => (logScale ? Math.log10(v) : v);
+  const tMin = tf(vMin), tMax = tf(vMax);
+  const x = (b) => PL + ((b - bMin) / (bMax - bMin || 1)) * (W - PL - PR);
+  const y = (v) => PT + (1 - (tf(v) - tMin) / (tMax - tMin || 1)) * (H - PT - PB);
+
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${x(p.b).toFixed(1)},${y(p.v).toFixed(1)}`).join("");
+  const area = `${line}L${x(bMax).toFixed(1)},${H - PB}L${x(bMin).toFixed(1)},${H - PB}Z`;
+  const up = vs[vs.length - 1] >= vs[0];
+  const stroke = up ? "var(--green)" : "var(--red)";
+  const grid = [0, 0.5, 1].map((f) => {
+    const yy = PT + f * (H - PT - PB);
+    return `<line x1="${PL}" y1="${yy}" x2="${W - PR}" y2="${yy}" stroke="#1a1a30" stroke-width="1"/>`;
+  }).join("");
+
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+      aria-label="market cap history">
+    <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${up ? "#3dffa2" : "#ff4d6d"}" stop-opacity=".35"/>
+      <stop offset="1" stop-color="${up ? "#3dffa2" : "#ff4d6d"}" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${grid}
+    <path d="${area}" fill="url(#cg)"/>
+    <path d="${line}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <line id="cCur" x1="0" y1="${PT}" x2="0" y2="${H - PB}" stroke="var(--neon3)" stroke-width="1" opacity="0"/>
+    <circle id="cDot" r="3.5" fill="var(--neon3)" opacity="0"/>
+  </svg>`;
+  $("tChartHint").textContent = `${compactUsd(ethers.parseEther(String(vMin.toFixed(18).slice(0, 20))))} – ${compactUsd(ethers.parseEther(String(vMax.toFixed(18).slice(0, 20))))}${logScale ? " · log" : ""}`;
+  box.style.display = "block";
+
+  // hover / touch readout
+  const svg = host.querySelector("svg");
+  const cur = host.querySelector("#cCur"), dot = host.querySelector("#cDot");
+  const move = (ev) => {
+    const r = svg.getBoundingClientRect();
+    const cx = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) / r.width * W;
+    let best = pts[0], bd = Infinity;
+    for (const p of pts) { const d = Math.abs(x(p.b) - cx); if (d < bd) { bd = d; best = p; } }
+    cur.setAttribute("x1", x(best.b)); cur.setAttribute("x2", x(best.b)); cur.setAttribute("opacity", ".8");
+    dot.setAttribute("cx", x(best.b)); dot.setAttribute("cy", y(best.v)); dot.setAttribute("opacity", "1");
+    const when = ageText(latestBlock ? latestBlock - best.b : null);
+    $("tChartLabel").textContent = `MC ${compactUsd(ethers.parseEther(best.v.toFixed(18).slice(0, 20)))} · ${when}`;
+    if (ev.cancelable) ev.preventDefault();
+  };
+  const leave = () => {
+    cur.setAttribute("opacity", "0"); dot.setAttribute("opacity", "0");
+    $("tChartLabel").textContent = "MARKET CAP";
+  };
+  svg.addEventListener("mousemove", move);
+  svg.addEventListener("mouseleave", leave);
+  svg.addEventListener("touchmove", move, { passive: false });
+  svg.addEventListener("touchend", leave);
+}
+
 // ---- discovery: sorting, search, live feed, deep links
 let sortMode = "trending", searchQ = "", shownAddrs = [];
 
@@ -1176,6 +1279,7 @@ async function openTrade(addr) {
     const src = safeImgSrc(u);
     if (src && currentToken === addr) { $("tImg").src = src; $("tImg").style.display = "block"; }
   });
+  renderChart(addr);
   const md = metaOf(addr);
   $("tDesc").textContent = md.d || "";
   $("tDesc").style.display = md.d ? "block" : "none";
