@@ -334,6 +334,22 @@ const tokenInfo = {}; // addr -> latest curve state — refreshed each cycle
 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+// token name/symbol/metadata are attacker-controlled (anyone can launch a token), and the
+// grid is built with innerHTML — everything interpolated into markup must be escaped.
+const esc = (s) => String(s ?? "").replace(/[&<>"'`]/g, (c) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;", "`": "&#96;"
+}[c]));
+// only allow image sources we control the shape of; blocks javascript:/vbscript: and
+// non-image data URIs from a hostile metadataURI
+const safeImgSrc = (u) => {
+  const s = String(u || "").trim();
+  if (/^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml);/i.test(s)) return s;
+  if (/^https:\/\//i.test(s)) return s;
+  // same-origin relative asset (e.g. meta/noah.svg) — must not start with "/" or "//",
+  // which would escape to another host
+  if (/^[\w][\w./-]*$/.test(s) && !s.includes("//")) return s;
+  return null;
+};
 const fmt = (v, dp = 4) => Number(ethers.formatEther(v)).toLocaleString("en-US", { maximumFractionDigits: dp });
 const toast = (msg) => { const t = $("toast"); t.textContent = msg; t.style.display = "block"; setTimeout(() => t.style.display = "none", 5000); };
 
@@ -686,13 +702,14 @@ function cardHtml(addr) {
   const st = tradeStats[addr] || {};
   const pct = Number(progBps(inf)) / 100;
   const age = ageText(latestBlock && inf.createdBlock ? latestBlock - Number(inf.createdBlock) : null);
-  return `<div class="cab" onclick="openTrade('${addr}')">
+  const a = esc(addr);
+  return `<div class="cab" onclick="openTrade('${a}')">
     ${inf.graduated ? '<span class="grad">★ GRADUATED</span>' : ""}
     <div class="cabhead">
-      <img class="cimg" id="img-${addr}" alt="" style="display:none">
+      <img class="cimg" id="img-${a}" alt="" style="display:none">
       <div>
-        <div class="sym">$${symbol}</div>
-        <div class="nm">${name}</div>
+        <div class="sym">$${esc(symbol)}</div>
+        <div class="nm">${esc(name)}</div>
       </div>
     </div>
     <div class="mcap">MC ${compactUsd(marketCapWei(inf))}</div>
@@ -724,7 +741,7 @@ async function resolveImg(addr) {
 }
 function fillImages(addrs) {
   addrs.forEach(async (addr) => {
-    const u = await resolveImg(addr);
+    const u = safeImgSrc(await resolveImg(addr));
     if (!u) return;
     const el = document.getElementById("img-" + addr);
     if (el) { el.src = u; el.style.display = "block"; }
@@ -812,9 +829,14 @@ async function openTrade(addr) {
   const { name, symbol } = tokenMeta[addr] || {};
   $("tTitle").textContent = `> $${symbol} — ${name}`;
   $("tImg").style.display = "none";
-  resolveImg(addr).then((u) => { if (u && currentToken === addr) { $("tImg").src = u; $("tImg").style.display = "block"; } });
+  resolveImg(addr).then((u) => {
+    const src = safeImgSrc(u);
+    if (src && currentToken === addr) { $("tImg").src = src; $("tImg").style.display = "block"; }
+  });
   $("tAmt").value = ""; $("tQuote").textContent = ""; exactWei = null;
-  $("tLinks").innerHTML = CFG.explorer ? `<a href="${CFG.explorer}/address/${addr}" target="_blank" rel="noopener" style="color:var(--neon)">token on explorer ↗</a> · ${addr}` : addr;
+  $("tLinks").innerHTML = CFG.explorer
+    ? `<a href="${esc(CFG.explorer)}/address/${esc(addr)}" target="_blank" rel="noopener" style="color:var(--neon)">token on explorer ↗</a> · ${esc(addr)}`
+    : esc(addr);
   $("tradeModal").classList.add("open");
   refreshTrade();
 }
