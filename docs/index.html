@@ -125,6 +125,13 @@
     image-rendering: pixelated; }
   .upl-prev .x { border-color: var(--red); color: var(--red); box-shadow: none; padding: 6px 10px; }
   .criteria { font-size: 14px; color: var(--dim); margin-top: 4px; letter-spacing: 1px; }
+  .cab .mcap { font-family: 'Press Start 2P', monospace; font-size: 15px; color: var(--green);
+    margin-top: 4px; letter-spacing: 1px; }
+  .cstats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; font-size: 16px; color: var(--dim); }
+  .cstats b { color: var(--text); }
+  .feepanel { margin-top: 40px; padding-top: 18px; border-top: 2px solid var(--panel2); }
+  .feepanel-title { text-align: center; font-family: 'Press Start 2P', monospace; font-size: 10px;
+    color: var(--dim); letter-spacing: 2px; margin-bottom: 12px; }
   .bar { height: 10px; background: #0c0c18; border: 1px solid var(--panel2); margin-top: 10px; }
   .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--neon), var(--neon2)); }
   .bar-label { font-size: 14px; color: var(--dim); margin-top: 4px; }
@@ -194,16 +201,19 @@
     <div class="stat">GRADUATION <b id="statGrad">–</b></div>
   </div>
 
-  <div class="row" style="justify-content:center" id="feeBar">
-    <div class="stat">YOUR CREATOR FEES <b id="cfAmt">—</b> <span id="cfNote" style="color:var(--neon3)"></span></div>
-    <button id="cfClaim" disabled>Claim creator fees</button>
-    <div class="stat" id="pfStat" style="display:none">PLATFORM FEES <b id="pfAmt">—</b></div>
-    <button id="pfClaim" class="alt" style="display:none">Claim platform fees</button>
-    <button id="pfSweep" class="alt" style="display:none">Sweep expired</button>
-  </div>
-
   <div id="grid" class="grid"></div>
   <div id="empty" class="empty" style="display:none">NO CABINETS YET — INSERT THE FIRST COIN</div>
+
+  <div id="feeBar" class="feepanel" style="display:none">
+    <div class="feepanel-title">YOUR FEES</div>
+    <div class="row" style="justify-content:center">
+      <div class="stat">CREATOR FEES <b id="cfAmt">—</b> <span id="cfNote" style="color:var(--neon3)"></span></div>
+      <button id="cfClaim" disabled>Claim creator fees</button>
+      <div class="stat" id="pfStat" style="display:none">PLATFORM FEES <b id="pfAmt">—</b></div>
+      <button id="pfClaim" class="alt" style="display:none">Claim platform fees</button>
+      <button id="pfSweep" class="alt" style="display:none">Sweep expired</button>
+    </div>
+  </div>
 
   <div class="footer">
     Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc Network</a> — gas is USDC.
@@ -248,8 +258,9 @@
       <h2 id="tTitle" style="margin-bottom:0">&gt; TOKEN</h2>
     </div>
     <div class="row">
-      <div class="stat">PRICE <b id="tPrice">–</b></div>
-      <div class="stat">RAISED <b id="tRaised">–</b></div>
+      <div class="stat">MARKET CAP <b id="tMcap">–</b></div>
+      <div class="stat">HOLDERS <b id="tHolders">–</b></div>
+      <div class="stat">24H VOL <b id="tVol">–</b></div>
       <div class="stat">YOU HOLD <b id="tHold">–</b></div>
     </div>
     <div class="bar" style="margin-top:14px"><i id="tBar" style="width:0%"></i></div>
@@ -326,6 +337,133 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const fmt = (v, dp = 4) => Number(ethers.formatEther(v)).toLocaleString("en-US", { maximumFractionDigits: dp });
 const toast = (msg) => { const t = $("toast"); t.textContent = msg; t.style.display = "block"; setTimeout(() => t.style.display = "none", 5000); };
 
+// ---- trader-facing display helpers
+const TOTAL_SUPPLY_TOKENS = 1_000_000_000n; // fixed 1B per launch in the contract
+function compactUsd(wei) {
+  const n = Number(ethers.formatEther(wei));
+  if (!isFinite(n)) return "—";
+  if (n >= 1e9) return "$" + (n / 1e9).toFixed(2) + "B";
+  if (n >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";
+  if (n >= 1e3) return "$" + (n / 1e3).toFixed(1) + "K";
+  return "$" + n.toFixed(2);
+}
+function ageText(blocksOld) {
+  if (blocksOld == null || !blockTimeSec) return "…";
+  const s = Math.max(0, Math.round(blocksOld * blockTimeSec));
+  if (s < 60) return s + "s ago";
+  if (s < 3600) return Math.floor(s / 60) + "m ago";
+  if (s < 86400) return Math.floor(s / 3600) + "h ago";
+  return Math.floor(s / 86400) + "d ago";
+}
+
+// ---- trade stats, built by an incremental in-browser indexer.
+// The public Arc RPC caps eth_getLogs at a 10k block range, so history is walked in
+// chunks and the running totals are cached in localStorage; later refreshes only scan
+// the new blocks. Holders come from net buy/sell flow per trader, so direct
+// wallet-to-wallet transfers (rare during the curve phase) are not reflected.
+let blockTimeSec = 0, latestBlock = 0, statsReady = false;
+const tradeStats = {};
+const TRADE_TOPIC = ethers.id("Trade(address,address,bool,uint256,uint256,uint256)");
+const topicAddr = (t) => ethers.getAddress("0x" + t.slice(26));
+const CHUNK = 10_000;
+const MAX_CHUNKS_PER_PASS = 24; // bounded work per refresh; the rest resumes next pass
+const STATS_KEY = "anewone_stats_v1_" + CFG.platform;
+let statsIdx = null; // { scanned, agg{token->{volAll,trades}}, net{token->{trader->bigint}}, recent[] }
+
+function loadStatsCache(earliest) {
+  try {
+    const j = JSON.parse(localStorage.getItem(STATS_KEY) || "null");
+    if (j && j.scanned >= earliest - 1) {
+      return {
+        scanned: j.scanned,
+        agg: Object.fromEntries(Object.entries(j.agg || {})
+          .map(([k, v]) => [k, { volAll: BigInt(v.volAll), trades: v.trades }])),
+        net: Object.fromEntries(Object.entries(j.net || {})
+          .map(([k, m]) => [k, Object.fromEntries(Object.entries(m).map(([a, x]) => [a, BigInt(x)]))])),
+        recent: (j.recent || []).map((r) => ({ b: r.b, tk: r.tk, u: BigInt(r.u) })),
+      };
+    }
+  } catch {}
+  return { scanned: earliest - 1, agg: {}, net: {}, recent: [] };
+}
+function saveStatsCache(s) {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify({
+      scanned: s.scanned,
+      agg: Object.fromEntries(Object.entries(s.agg)
+        .map(([k, v]) => [k, { volAll: v.volAll.toString(), trades: v.trades }])),
+      net: Object.fromEntries(Object.entries(s.net)
+        .map(([k, m]) => [k, Object.fromEntries(Object.entries(m).map(([a, x]) => [a, x.toString()]))])),
+      recent: s.recent.map((r) => ({ b: r.b, tk: r.tk, u: r.u.toString() })),
+    }));
+  } catch {}
+}
+function ingestLogs(logs) {
+  const coder = ethers.AbiCoder.defaultAbiCoder();
+  for (const lg of logs) {
+    let usdc, tokens;
+    try { [usdc, tokens] = coder.decode(["uint256", "uint256", "uint256"], lg.data); }
+    catch { continue; }
+    const token = topicAddr(lg.topics[1]);
+    const trader = topicAddr(lg.topics[2]);
+    const isBuy = BigInt(lg.topics[3]) === 1n;
+    const a = statsIdx.agg[token] || (statsIdx.agg[token] = { volAll: 0n, trades: 0 });
+    a.volAll += usdc; a.trades++;
+    const m = statsIdx.net[token] || (statsIdx.net[token] = {});
+    m[trader] = (m[trader] || 0n) + (isBuy ? tokens : -tokens);
+    statsIdx.recent.push({ b: lg.blockNumber, tk: token, u: usdc });
+  }
+}
+function rebuildStats() {
+  const bpd = blockTimeSec ? Math.round(86400 / blockTimeSec) : 0;
+  const cutoff = bpd ? latestBlock - bpd : 0;
+  statsIdx.recent = statsIdx.recent.filter((r) => r.b >= cutoff).slice(-5000);
+  const vol24 = {};
+  for (const r of statsIdx.recent) vol24[r.tk] = (vol24[r.tk] || 0n) + r.u;
+  for (const k of Object.keys(tradeStats)) delete tradeStats[k];
+  for (const [token, a] of Object.entries(statsIdx.agg)) {
+    tradeStats[token] = {
+      volAll: a.volAll,
+      trades: a.trades,
+      vol24: vol24[token] || 0n,
+      holders: Object.values(statsIdx.net[token] || {}).filter((v) => v > 0n).length,
+    };
+  }
+  statsReady = true;
+}
+
+async function loadStats(earliestBlock) {
+  try {
+    latestBlock = await readProvider.getBlockNumber();
+    if (!blockTimeSec) {
+      await sleep(150);
+      const b1 = await readProvider.getBlock(latestBlock);
+      await sleep(150);
+      const b0 = await readProvider.getBlock(Math.max(1, latestBlock - 5000));
+      if (b1 && b0 && b1.number > b0.number) {
+        blockTimeSec = (b1.timestamp - b0.timestamp) / (b1.number - b0.number);
+      }
+    }
+    if (!statsIdx) statsIdx = loadStatsCache(earliestBlock);
+    let from = Math.max(statsIdx.scanned + 1, earliestBlock);
+    for (let i = 0; i < MAX_CHUNKS_PER_PASS && from <= latestBlock; i++) {
+      const to = Math.min(from + CHUNK - 1, latestBlock);
+      await sleep(120);
+      let logs;
+      try {
+        logs = await readProvider.getLogs({ address: CFG.platform, topics: [TRADE_TOPIC], fromBlock: from, toBlock: to });
+      } catch {
+        break; // rate limited or transient — progress is kept, resume on the next pass
+      }
+      ingestLogs(logs);
+      statsIdx.scanned = to;
+      from = to + 1;
+    }
+    saveStatsCache(statsIdx);
+    rebuildStats();
+  } catch (e) { console.error("stats", e); }
+}
+
 // ---- local curve math (mirrors ANewOne.sol exactly; saves RPC calls)
 const ceilDiv = (a, b) => (a + b - 1n) / b;
 function localQuoteBuy(inf, usdcIn) {
@@ -340,6 +478,8 @@ function localQuoteSell(inf, amount) {
   return gross - (gross * FEE_BPS) / BPS;
 }
 const priceOf = (inf) => (inf.vUsdc * WAD) / inf.tReserve;
+// priceOf is USDC-wei per whole token, so × total supply gives the cap in USDC-wei
+const marketCapWei = (inf) => priceOf(inf) * TOTAL_SUPPLY_TOKENS;
 const progBps = (inf) => inf.graduated ? 10_000n : (inf.raised * BPS) / gradTarget;
 const normInfo = (r) => ({
   creator: r.creator, createdBlock: r.createdBlock, graduated: r.graduated,
@@ -394,6 +534,7 @@ function disconnect() {
   userNativeBal = 0n; userTokenBal = 0n; exactWei = null;
   $("connectBtn").textContent = "Connect";
   $("walletMenu").style.display = "none";
+  $("feeBar").style.display = "none";
   $("footPlatformLine").style.display = "none";
   $("pfStat").style.display = "none";
   $("pfClaim").style.display = "none";
@@ -422,6 +563,7 @@ let ownerAddr = null, cfDeadlineTs = 0, cfPot = 0n;
 async function refreshFees() {
   if (!userAddr) return;
   try {
+    $("feeBar").style.display = "block"; // fee panel is only for connected users
     if (!ownerAddr) { ownerAddr = (await platform.owner()).toLowerCase(); await sleep(150); }
     cfPot = BigInt(await platform.creatorFees(userAddr));
     await sleep(150);
@@ -502,7 +644,7 @@ async function loadTokens() {
     const count = Number(await platform.tokensCount());
     $("statCount").textContent = String(count);
     $("empty").style.display = count === 0 ? "block" : "none";
-    const cards = [];
+    const addrs = [];
     for (let i = 0; i < count; i++) {
       await sleep(150);
       const addr = await platform.allTokens(i);
@@ -516,11 +658,19 @@ async function loadTokens() {
       }
       await sleep(150);
       tokenInfo[addr] = normInfo(await platform.info(addr));
-      cards.push(cardHtml(addr));
+      addrs.push(addr);
     }
-    $("grid").innerHTML = cards.join("");
-    fillImages(Object.keys(tokenInfo));
+    // paint immediately, then let the indexer fill in holders/volume/age
+    $("grid").innerHTML = addrs.map(cardHtml).join("");
+    fillImages(addrs);
     $("ticker").textContent = tickerText(count);
+    if (addrs.length) {
+      const earliest = Math.min(...addrs.map((a) => Number(tokenInfo[a].createdBlock)));
+      loadStats(earliest).then(() => {
+        $("grid").innerHTML = addrs.map(cardHtml).join("");
+        fillImages(addrs);
+      });
+    }
     if (userAddr) { await sleep(150); refreshFees(); }
   } catch (e) {
     console.error(e);
@@ -533,7 +683,9 @@ async function loadTokens() {
 function cardHtml(addr) {
   const { name, symbol } = tokenMeta[addr];
   const inf = tokenInfo[addr];
+  const st = tradeStats[addr] || {};
   const pct = Number(progBps(inf)) / 100;
+  const age = ageText(latestBlock && inf.createdBlock ? latestBlock - Number(inf.createdBlock) : null);
   return `<div class="cab" onclick="openTrade('${addr}')">
     ${inf.graduated ? '<span class="grad">★ GRADUATED</span>' : ""}
     <div class="cabhead">
@@ -543,9 +695,14 @@ function cardHtml(addr) {
         <div class="nm">${name}</div>
       </div>
     </div>
-    <div class="px">${Number(ethers.formatEther(priceOf(inf))).toExponential(3)} USDC</div>
-    <div class="bar"><i style="width:${Math.min(pct, 100)}%"></i></div>
-    <div class="bar-label">${pct.toFixed(1)}% · raised ${fmt(inf.raised, 2)} USDC</div>
+    <div class="mcap">MC ${compactUsd(marketCapWei(inf))}</div>
+    <div class="cstats">
+      <span>👤 <b>${statsReady ? (st.holders || 0) : "…"}</b> holders</span>
+      <span>📊 <b>${statsReady ? compactUsd(st.vol24 || 0n) : "…"}</b> 24h</span>
+      <span>🕐 <b>${age}</b></span>
+    </div>
+    <div class="bar"><i style="width:${Math.min(Math.max(pct, 1.5), 100)}%"></i></div>
+    <div class="bar-label">${pct.toFixed(1)}% to graduation · ${st.trades || 0} trades</div>
   </div>`;
 }
 
@@ -662,13 +819,17 @@ async function openTrade(addr) {
   refreshTrade();
 }
 async function refreshTrade() {
+  if (!currentToken) return;
   tokenInfo[currentToken] = normInfo(await platform.info(currentToken));
   const inf = tokenInfo[currentToken];
-  $("tPrice").textContent = Number(ethers.formatEther(priceOf(inf))).toExponential(3);
-  $("tRaised").textContent = fmt(inf.raised, 2) + " USDC";
+  const st = tradeStats[currentToken] || {};
+  $("tMcap").textContent = compactUsd(marketCapWei(inf));
+  $("tHolders").textContent = statsReady ? (st.holders || 0) : "…";
+  $("tVol").textContent = statsReady ? compactUsd(st.vol24 || 0n) : "…";
   const pct = Number(progBps(inf)) / 100;
-  $("tBar").style.width = Math.min(pct, 100) + "%";
-  $("tBarLabel").textContent = inf.graduated ? "★ GRADUATED — trading continues" : pct.toFixed(1) + "% to graduation";
+  $("tBar").style.width = Math.min(Math.max(pct, 1.5), 100) + "%";
+  $("tBarLabel").textContent = (inf.graduated ? "★ GRADUATED — trading continues" : pct.toFixed(1) + "% to graduation")
+    + ` · raised ${fmt(inf.raised, 2)} USDC`;
   if (userAddr) {
     await sleep(150);
     userTokenBal = await new ethers.Contract(currentToken, ERC20, readProvider).balanceOf(userAddr);
