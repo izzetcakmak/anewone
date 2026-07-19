@@ -1056,12 +1056,11 @@ let web3authInstance = null;
 
 async function loadWeb3Auth() {
   if (web3authInstance) return web3authInstance;
-  // pinned ESM from a CDN — the SDK ships no UMD bundle
-  const [{ Web3Auth }, { CHAIN_NAMESPACES, WEB3AUTH_NETWORK }, { EthereumPrivateKeyProvider }] = await Promise.all([
-    import("https://esm.sh/@web3auth/modal@9.7.0"),
-    import("https://esm.sh/@web3auth/base@9.7.0"),
-    import("https://esm.sh/@web3auth/ethereum-provider@9.7.0"),
-  ]);
+  // vendored, self-hosted bundle (docs/vendor/web3auth.esm.js) — public CDNs mis-transpile
+  // Web3Auth's CJS deps (loglevel), so it's pre-bundled with esbuild and committed. Lazy so
+  // the 449KB-gzip payload only loads when someone actually chooses Google.
+  const { Web3Auth, CHAIN_NAMESPACES, WEB3AUTH_NETWORK, EthereumPrivateKeyProvider } =
+    await import("./vendor/web3auth.esm.js");
   const chainConfig = {
     chainNamespace: CHAIN_NAMESPACES.EIP155,
     chainId: CFG.chainIdHex,
@@ -1072,9 +1071,10 @@ async function loadWeb3Auth() {
     blockExplorerUrl: CFG.explorer || "",
   };
   const privateKeyProvider = new EthereumPrivateKeyProvider({ config: { chainConfig } });
+  const netKey = (window.ANEWONE_CONFIG.web3authNetwork || "sapphire_devnet").toUpperCase();
   const wa = new Web3Auth({
     clientId: WEB3AUTH_CLIENT_ID,
-    web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
+    web3AuthNetwork: WEB3AUTH_NETWORK[netKey] || WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
     privateKeyProvider,
     uiConfig: { appName: "A NEW ONE", mode: "dark", loginMethodsOrder: ["google"] },
   });

@@ -22,5 +22,7 @@ window.ANEWONE_CONFIG = {
   // "Continue with Google" (embedded wallet via Web3Auth) activates when this is set to a
   // public Web3Auth clientId. Get one free at dashboard.web3auth.io, add anewone.xyz to the
   // project's allowed origins, paste the clientId here. Empty = the Google button stays hidden.
-  web3authClientId: "",
+  web3authClientId: "BHMuvLRDj0_XO7RJoviuCgjbSLcvMWUgAgdCCSrStDO41bmuiyXZw9haSXuNDTtwqwR7IpqqZ_KKjqc-Jlvjqqk",
+  // must match the network your Web3Auth project is registered on (dashboard → project)
+  web3authNetwork: "sapphire_devnet",
 };
