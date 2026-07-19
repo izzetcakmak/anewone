@@ -196,6 +196,14 @@
   .cpanel .grade.new { color: var(--dim); background: var(--surface); border: 1px solid var(--border-2); }
   .cpanel .cnote { font-size: 11px; color: var(--faint); margin-top: 10px; line-height: 1.5; }
   .devlink { color: var(--dim); font-family: var(--mono); font-size: 12px; cursor: pointer; text-decoration: underline; }
+  .wrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px;
+    margin-bottom: 8px; background: var(--surface); border: 1px solid var(--border-2);
+    border-radius: 12px; cursor: pointer; text-align: left; font-size: 15px; color: var(--text);
+    transition: border-color .15s, background .15s; }
+  .wrow:hover { border-color: var(--accent); background: var(--bg-2); }
+  .wrow img { width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; }
+  .wrow .wname { font-weight: 600; }
+  .wrow .wlast { margin-left: auto; font-size: 11px; color: var(--accent); }
   .sliprow { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap;
     font-size: 12px; color: var(--faint); }
   .slipbtns { display: flex; gap: 5px; }
@@ -325,6 +333,7 @@
         <button id="connectBtn">Connect</button>
         <div id="walletMenu" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-2);border:1px solid var(--border-2);border-radius:12px;z-index:50;min-width:184px;box-shadow:var(--shadow);overflow:hidden">
           <button id="switchBtn" style="display:block;width:100%;box-shadow:none;border:none;border-bottom:1px solid var(--border);border-radius:0;text-align:left;background:transparent">Switch account</button>
+          <button id="changeWalletBtn" style="display:block;width:100%;box-shadow:none;border:none;border-bottom:1px solid var(--border);border-radius:0;text-align:left;background:transparent">Change wallet</button>
           <button id="disconnectBtn" style="display:block;width:100%;box-shadow:none;border:none;border-radius:0;text-align:left;background:transparent;color:var(--red)">Disconnect</button>
         </div>
       </span>
@@ -496,6 +505,21 @@
       </div>
       <div class="hint" id="tCommentHint">Hold the token (or be its creator) to comment. Stored on-chain.</div>
     </div>
+  </div>
+</div>
+
+<!-- wallet picker (EIP-6963 multi-wallet) -->
+<div id="walletModal" class="modal-bg">
+  <div class="modal" style="max-width:400px">
+    <h2>Connect a wallet</h2>
+    <div id="walletList"></div>
+    <div class="hint" id="walletNone" style="display:none">
+      No browser wallet detected. Install
+      <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">MetaMask</a>,
+      <a href="https://www.okx.com/web3" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">OKX Wallet</a> or
+      <a href="https://rabby.io" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">Rabby</a>, then reload.
+    </div>
+    <div class="row"><button onclick="closeModals()">Cancel</button></div>
   </div>
 </div>
 
@@ -898,14 +922,95 @@ if (window.ANEWONE_CONFIG.mainnet.live) {
 }
 $("footPlatform").textContent = CFG.platform;
 
+// ---- multi-wallet support (EIP-6963).
+// Wallets announce themselves via eip6963:announceProvider, so MetaMask, OKX, Rabby etc.
+// can coexist instead of fighting over window.ethereum. We keep the chosen provider in
+// activeEip1193 and bind account/chain listeners per provider (unbinding on switch).
+const discovered = new Map(); // rdns -> { info, provider }
+let activeEip1193 = null, activeRdns = null, listenersBoundTo = null;
+const LAST_WALLET_KEY = "anewone_last_wallet";
+
+window.addEventListener("eip6963:announceProvider", (ev) => {
+  const d = ev.detail;
+  if (d?.info?.rdns && d?.provider) discovered.set(d.info.rdns, d);
+});
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+function walletChoices() {
+  const list = [...discovered.values()];
+  // legacy fallback: a window.ethereum that never announced via 6963
+  if (window.ethereum && !list.some((d) => d.provider === window.ethereum)) {
+    list.push({ info: { rdns: "injected", name: "Browser wallet", icon: null }, provider: window.ethereum });
+  }
+  return list;
+}
+
+function openWalletPicker() {
+  const list = walletChoices();
+  if (list.length === 0) {
+    $("walletList").innerHTML = "";
+    $("walletNone").style.display = "block";
+    $("walletModal").classList.add("open");
+    return;
+  }
+  if (list.length === 1) { selectWallet(list[0]); return; }
+  const last = localStorage.getItem(LAST_WALLET_KEY);
+  $("walletNone").style.display = "none";
+  $("walletList").innerHTML = list.map((d) => {
+    const icon = safeImgSrc(d.info.icon) || "";
+    return `<button class="wrow" data-rdns="${esc(d.info.rdns)}">
+      ${icon ? `<img src="${esc(icon)}" alt="">` : "🦊"}
+      <span class="wname">${esc(d.info.name)}</span>
+      ${d.info.rdns === last ? '<span class="wlast">last used</span>' : ""}
+    </button>`;
+  }).join("");
+  $("walletList").querySelectorAll(".wrow").forEach((b) => {
+    b.onclick = () => {
+      const d = list.find((x) => x.info.rdns === b.dataset.rdns);
+      if (d) selectWallet(d);
+    };
+  });
+  $("walletModal").classList.add("open");
+}
+
+function bindProviderListeners(provider) {
+  if (listenersBoundTo === provider) return;
+  // best effort unbind from the previous provider so a stale wallet can't drive the UI
+  if (listenersBoundTo && listenersBoundTo.removeListener) {
+    try {
+      listenersBoundTo.removeListener("accountsChanged", onAccountsChanged);
+      listenersBoundTo.removeListener("chainChanged", onChainChanged);
+    } catch {}
+  }
+  if (provider.on) {
+    provider.on("accountsChanged", onAccountsChanged);
+    provider.on("chainChanged", onChainChanged);
+  }
+  listenersBoundTo = provider;
+}
+function onAccountsChanged(accs) {
+  if (!accs || accs.length === 0) disconnect();
+  else if (signer || userAddr) connect();
+}
+function onChainChanged() { if (signer || userAddr) connect(); }
+
+async function selectWallet(d) {
+  $("walletModal").classList.remove("open");
+  activeEip1193 = d.provider;
+  activeRdns = d.info.rdns;
+  try { localStorage.setItem(LAST_WALLET_KEY, activeRdns); } catch {}
+  bindProviderListeners(activeEip1193);
+  await connect();
+}
+
 async function connect(forcePicker) {
-  if (!window.ethereum) return toast("No wallet found — install MetaMask");
-  const bp = new ethers.BrowserProvider(window.ethereum);
+  if (!activeEip1193) return openWalletPicker();
+  const bp = new ethers.BrowserProvider(activeEip1193);
   try {
     if (forcePicker) {
       // forces the wallet's account-selection dialog even when already connected,
-      // so the user can pick a different account/wallet
-      await window.ethereum.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] });
+      // so the user can pick a different account
+      await activeEip1193.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] });
     }
     await bp.send("eth_requestAccounts", []);
   } catch (e) {
@@ -916,6 +1021,7 @@ async function connect(forcePicker) {
     try {
       await bp.send("wallet_switchEthereumChain", [{ chainId: CFG.chainIdHex }]);
     } catch (e) {
+      // 4902: chain unknown to this wallet — add it, then the wallet switches
       await bp.send("wallet_addEthereumChain", [{
         chainId: CFG.chainIdHex, chainName: NET_NAME,
         nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
@@ -935,6 +1041,7 @@ async function connect(forcePicker) {
 // but the site forgets the account and resets owner/creator UI
 function disconnect() {
   signer = null; userAddr = null;
+  activeEip1193 = null; activeRdns = null;
   userNativeBal = 0n; userTokenBal = 0n; exactWei = null;
   $("connectBtn").textContent = "Connect";
   $("walletMenu").style.display = "none";
@@ -953,14 +1060,7 @@ async function switchAccount() {
   await connect(true);
 }
 
-// react to changes made directly in the wallet extension
-if (window.ethereum && window.ethereum.on) {
-  window.ethereum.on("accountsChanged", (accs) => {
-    if (!accs || accs.length === 0) disconnect();
-    else if (signer || userAddr) connect();
-  });
-  window.ethereum.on("chainChanged", () => { if (signer || userAddr) connect(); });
-}
+// wallet events are bound per selected provider in bindProviderListeners()
 
 // ------- fees (creator claim for everyone-but-active-only-for-creators, platform claim for owner)
 // Multiple owners are supported; membership is queried per-address and cached.
@@ -1868,10 +1968,11 @@ $("connectBtn").onclick = () => {
     const m = $("walletMenu");
     m.style.display = m.style.display === "none" ? "block" : "none";
   } else {
-    connect();
+    openWalletPicker();
   }
 };
 $("switchBtn").onclick = switchAccount;
+$("changeWalletBtn").onclick = () => { $("walletMenu").style.display = "none"; openWalletPicker(); };
 $("disconnectBtn").onclick = disconnect;
 // close the wallet menu when clicking outside it
 document.addEventListener("click", (e) => {
