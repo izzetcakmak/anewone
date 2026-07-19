@@ -170,6 +170,32 @@
   .cab .cdesc { color: var(--dim); font-size: 13px; margin-top: 10px; line-height: 1.4;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     overflow-wrap: anywhere; }
+  .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-top: 14px;
+    padding: 14px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; }
+  .filters label { display: flex; flex-direction: column; gap: 5px; font-size: 11px;
+    color: var(--faint); text-transform: uppercase; letter-spacing: .5px; }
+  .filters input[type=number], .filters select { width: 118px; padding: 8px 10px; font-size: 13px; min-height: 0; }
+  .filters .fcheck { flex-direction: row; align-items: center; gap: 7px; text-transform: none;
+    font-size: 12px; letter-spacing: 0; }
+  .filters .fcheck input { width: auto; }
+  .filters #fClear { padding: 8px 14px; font-size: 12px; min-height: 0; }
+  #watchToggle.on, #filterToggle.on { border-color: var(--accent); color: var(--accent);
+    background: rgba(62,230,160,.10); }
+  .cab .star { position: absolute; top: 12px; right: 12px; cursor: pointer; font-size: 16px;
+    color: var(--faint); line-height: 1; z-index: 2; }
+  .cab .star.on { color: var(--gold); }
+  .cpanel { margin-top: 16px; padding: 16px; background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 12px; }
+  .cpanel .chead2 { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .cpanel .caddr { font-family: var(--mono); font-size: 14px; color: var(--text); }
+  .cpanel .grade { font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px; }
+  .cpanel .grade.a { color: var(--green); background: rgba(47,209,138,.12); border: 1px solid rgba(47,209,138,.4); }
+  .cpanel .grade.b { color: var(--accent); background: rgba(62,230,160,.10); border: 1px solid rgba(62,230,160,.35); }
+  .cpanel .grade.c { color: var(--gold); background: rgba(255,194,77,.10); border: 1px solid rgba(255,194,77,.4); }
+  .cpanel .grade.d { color: var(--red); background: rgba(255,84,112,.10); border: 1px solid rgba(255,84,112,.4); }
+  .cpanel .grade.new { color: var(--dim); background: var(--surface); border: 1px solid var(--border-2); }
+  .cpanel .cnote { font-size: 11px; color: var(--faint); margin-top: 10px; line-height: 1.5; }
+  .devlink { color: var(--dim); font-family: var(--mono); font-size: 12px; cursor: pointer; text-decoration: underline; }
   .sliprow { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap;
     font-size: 12px; color: var(--faint); }
   .slipbtns { display: flex; gap: 5px; }
@@ -273,6 +299,11 @@
     .sorts button { flex: 1; min-width: 0; padding: 10px 6px; }
     #search { max-width: none; width: 100%; min-height: 44px; }
     input { min-height: 44px; }
+    /* the filter panel opts out of min-height for density; on touch it must opt back in */
+    .filters input[type=number], .filters select, .filters #fClear { min-height: 44px; }
+    .filters label { flex: 1 1 132px; }
+    .filters input[type=number], .filters select { width: 100%; }
+    .slipbtns button, #slipCustom { min-height: 40px; }
     .toolbar { gap: 10px; }
     .modal { padding: 20px 16px; max-height: 94vh; border-radius: 16px; }
     .frow { flex-wrap: wrap; white-space: normal; }
@@ -319,7 +350,26 @@
       <button data-sort="grad">🎓 Graduating</button>
     </div>
     <input id="search" placeholder="search name, symbol or address…">
+    <button id="watchToggle" title="Show only your watchlist">☆ Watchlist</button>
+    <button id="filterToggle">⚙ Filters</button>
   </div>
+
+  <div id="filterPanel" class="filters" style="display:none">
+    <label>Min holders<input id="fHolders" type="number" min="0" placeholder="any"></label>
+    <label>Min 24h vol ($)<input id="fVol" type="number" min="0" placeholder="any"></label>
+    <label>Min mcap ($)<input id="fMcapMin" type="number" min="0" placeholder="any"></label>
+    <label>Max mcap ($)<input id="fMcapMax" type="number" min="0" placeholder="any"></label>
+    <label>Max age (h)<input id="fAge" type="number" min="0" placeholder="any"></label>
+    <label>Status<select id="fGrad">
+      <option value="">any</option>
+      <option value="no">not graduated</option>
+      <option value="yes">graduated</option>
+    </select></label>
+    <label class="fcheck"><input id="fSocials" type="checkbox"> has socials</label>
+    <button id="fClear">Clear</button>
+  </div>
+
+  <div id="creatorPanel" class="cpanel" style="display:none"></div>
 
   <div id="grid" class="grid"></div>
   <div id="empty" class="empty" style="display:none">No tokens yet — be the first to launch one.</div>
@@ -1036,6 +1086,8 @@ function cardHtml(addr) {
   const age = ageText(latestBlock && inf.createdBlock ? latestBlock - Number(inf.createdBlock) : null);
   const a = esc(addr);
   return `<div class="cab" onclick="openTrade('${a}')">
+    <span class="star ${isWatched(addr) ? "on" : ""}" onclick="toggleWatch('${a}', event)"
+      title="Watchlist">${isWatched(addr) ? "★" : "☆"}</span>
     ${inf.graduated ? '<span class="grad">★ GRADUATED</span>' : ""}
     <div class="cabhead">
       <img class="cimg" id="img-${a}" alt="" style="display:none">
@@ -1194,18 +1246,126 @@ function renderChart(addr) {
   svg.addEventListener("touchend", leave);
 }
 
-// ---- discovery: sorting, search, live feed, deep links
+// ---- discovery: sorting, search, filters, watchlist, creator profiles, deep links
 let sortMode = "trending", searchQ = "", shownAddrs = [];
+let watchOnly = false, creatorFilter = null;
+const filterState = { holders: null, vol: null, mcapMin: null, mcapMax: null, ageH: null, grad: "", socials: false };
+
+const WATCH_KEY = "anewone_watchlist";
+const loadWatch = () => { try { return new Set(JSON.parse(localStorage.getItem(WATCH_KEY) || "[]")); } catch { return new Set(); } };
+let watchlist = loadWatch();
+const isWatched = (a) => watchlist.has(a.toLowerCase());
+function toggleWatch(a, ev) {
+  if (ev) ev.stopPropagation(); // don't open the token when clicking the star
+  const k = a.toLowerCase();
+  if (watchlist.has(k)) watchlist.delete(k); else watchlist.add(k);
+  try { localStorage.setItem(WATCH_KEY, JSON.stringify([...watchlist])); } catch {}
+  renderGrid();
+}
+
+// Dev reputation — a transparent heuristic over indexed history, never a confident score
+// on thin data. Returns null when the creator has too few launches to judge.
+function devStats(creator) {
+  const c = (creator || "").toLowerCase();
+  const mine = Object.keys(tokenInfo).filter((a) => (tokenInfo[a].creator || "").toLowerCase() === c);
+  if (!mine.length) return null;
+  let graduated = 0, dumps = 0, holdersSum = 0, volSum = 0n;
+  for (const a of mine) {
+    const inf = tokenInfo[a];
+    if (inf.graduated) graduated++;
+    const st = tradeStats[a] || {};
+    holdersSum += st.holders || 0;
+    volSum += st.volAll || 0n;
+    // "dump" = creator took USDC out and ended up holding nothing from their trades
+    const e = netEntryFor(a, inf.creator);
+    if (e && e.o > 0n && e.t <= 0n) dumps++;
+  }
+  const launches = mine.length;
+  const gradRate = graduated / launches;
+  const avgHolders = holdersSum / launches;
+  const dumpRate = dumps / launches;
+  let score = null, grade = "new";
+  if (launches >= 2 && fullyIndexed) {
+    score = Math.round(Math.max(0, Math.min(100,
+      50 + 30 * gradRate + Math.min(20, avgHolders * 2) - 35 * dumpRate)));
+    grade = score >= 80 ? "a" : score >= 60 ? "b" : score >= 40 ? "c" : "d";
+  }
+  return { creator, tokens: mine, launches, graduated, gradRate, avgHolders, dumps, volSum, score, grade };
+}
+
+function openCreator(addr) {
+  creatorFilter = addr.toLowerCase();
+  location.hash = "creator=" + addr;
+  closeModals();
+  renderGrid();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function clearCreator() {
+  creatorFilter = null;
+  if (location.hash.startsWith("#creator=")) location.hash = "";
+  renderGrid();
+}
+function renderCreatorPanel() {
+  const box = $("creatorPanel");
+  if (!creatorFilter) { box.style.display = "none"; return; }
+  const d = devStats(creatorFilter);
+  box.style.display = "block";
+  if (!d) { box.innerHTML = `<div class="chead2"><span class="caddr">${esc(creatorFilter)}</span></div>
+    <div class="cnote">No launches indexed for this address yet.</div>`; return; }
+  const short = d.creator.slice(0, 8) + "…" + d.creator.slice(-6);
+  const gradeLabel = d.score === null ? "NEW DEV" : `${d.score}/100`;
+  box.innerHTML = `<div class="chead2">
+      <span class="caddr">👤 ${esc(short)}</span>
+      <span class="grade ${d.grade}">${esc(gradeLabel)}</span>
+      <button id="cClear" style="margin-left:auto;padding:8px 14px;font-size:12px;min-height:0">✕ Clear</button>
+    </div>
+    <div class="pgrid">
+      <div class="pcell"><div class="pk">Launches</div><div class="pv">${d.launches}</div></div>
+      <div class="pcell"><div class="pk">Graduated</div><div class="pv">${d.graduated} (${(d.gradRate * 100).toFixed(0)}%)</div></div>
+      <div class="pcell"><div class="pk">Avg holders</div><div class="pv">${d.avgHolders.toFixed(1)}</div></div>
+      <div class="pcell"><div class="pk">Dev exits</div><div class="pv ${d.dumps ? "down" : ""}">${d.dumps}</div></div>
+      <div class="pcell"><div class="pk">Total volume</div><div class="pv">${esc(compactUsd(d.volSum))}</div></div>
+    </div>
+    <div class="cnote">${d.score === null
+      ? "Too few launches to score fairly — judge the history yourself."
+      : "Heuristic score from on-chain history: graduation rate, holder spread and whether the dev exited their own launches."}
+      &nbsp;“Dev exits” counts launches where the creator sold out of their own token.</div>`;
+  const btn = document.getElementById("cClear");
+  if (btn) btn.onclick = clearCreator;
+}
 
 function visibleAddrs() {
   const q = searchQ.trim().toLowerCase();
+  const f = filterState;
   let list = shownAddrs.filter((a) => {
-    if (!q) return true;
     const m = tokenMeta[a] || {};
-    return (m.name || "").toLowerCase().includes(q)
+    const inf = tokenInfo[a];
+    if (q && !((m.name || "").toLowerCase().includes(q)
       || (m.symbol || "").toLowerCase().includes(q)
       || a.toLowerCase().includes(q)
-      || (tokenInfo[a]?.creator || "").toLowerCase().includes(q);
+      || (inf?.creator || "").toLowerCase().includes(q))) return false;
+    if (creatorFilter && (inf?.creator || "").toLowerCase() !== creatorFilter) return false;
+    if (watchOnly && !isWatched(a)) return false;
+
+    const st = tradeStats[a] || {};
+    if (f.holders != null && (st.holders || 0) < f.holders) return false;
+    if (f.vol != null && Number(ethers.formatEther(st.vol24 || 0n)) < f.vol) return false;
+    if (f.mcapMin != null || f.mcapMax != null) {
+      const mc = Number(ethers.formatEther(marketCapWei(inf)));
+      if (f.mcapMin != null && mc < f.mcapMin) return false;
+      if (f.mcapMax != null && mc > f.mcapMax) return false;
+    }
+    if (f.ageH != null && blockTimeSec && latestBlock) {
+      const hrs = ((latestBlock - Number(inf.createdBlock)) * blockTimeSec) / 3600;
+      if (hrs > f.ageH) return false;
+    }
+    if (f.grad === "yes" && !inf.graduated) return false;
+    if (f.grad === "no" && inf.graduated) return false;
+    if (f.socials) {
+      const md = metaOf(a);
+      if (!safeLink(md.x, "x") && !safeLink(md.t, "t") && !safeLink(md.w, "w")) return false;
+    }
+    return true;
   });
   const mc = (a) => marketCapWei(tokenInfo[a]);
   const cmpBig = (x, y) => (x < y ? 1 : x > y ? -1 : 0);
@@ -1224,6 +1384,7 @@ function visibleAddrs() {
 }
 
 function renderGrid() {
+  renderCreatorPanel();
   const list = visibleAddrs();
   $("grid").innerHTML = list.map(cardHtml).join("");
   fillImages(list);
@@ -1239,6 +1400,36 @@ $("sortTabs").querySelectorAll("button").forEach((b) => {
   };
 });
 $("search").oninput = (e) => { searchQ = e.target.value; renderGrid(); };
+$("watchToggle").onclick = () => {
+  watchOnly = !watchOnly;
+  $("watchToggle").classList.toggle("on", watchOnly);
+  $("watchToggle").textContent = watchOnly ? "★ Watchlist" : "☆ Watchlist";
+  renderGrid();
+};
+$("filterToggle").onclick = () => {
+  const open = $("filterPanel").style.display === "none";
+  $("filterPanel").style.display = open ? "flex" : "none";
+  $("filterToggle").classList.toggle("on", open);
+};
+const numOrNull = (v) => (v === "" || v == null || isNaN(Number(v)) ? null : Number(v));
+function readFilters() {
+  filterState.holders = numOrNull($("fHolders").value);
+  filterState.vol = numOrNull($("fVol").value);
+  filterState.mcapMin = numOrNull($("fMcapMin").value);
+  filterState.mcapMax = numOrNull($("fMcapMax").value);
+  filterState.ageH = numOrNull($("fAge").value);
+  filterState.grad = $("fGrad").value;
+  filterState.socials = $("fSocials").checked;
+  renderGrid();
+}
+["fHolders", "fVol", "fMcapMin", "fMcapMax", "fAge"].forEach((id) => { $(id).oninput = readFilters; });
+$("fGrad").onchange = readFilters;
+$("fSocials").onchange = readFilters;
+$("fClear").onclick = () => {
+  ["fHolders", "fVol", "fMcapMin", "fMcapMax", "fAge"].forEach((id) => { $(id).value = ""; });
+  $("fGrad").value = ""; $("fSocials").checked = false;
+  readFilters();
+};
 
 function renderFeed() {
   if (!statsIdx || !statsIdx.recent.length) { $("feedWrap").style.display = "none"; return; }
@@ -1261,6 +1452,8 @@ function renderFeed() {
 
 // deep link: #t=0x… opens that token directly so a launch can be shared
 function openFromHash() {
+  const c = location.hash.match(/creator=(0x[0-9a-fA-F]{40})/);
+  if (c) { creatorFilter = c[1].toLowerCase(); renderGrid(); return; }
   const m = location.hash.match(/t=(0x[0-9a-fA-F]{40})/);
   if (!m) return;
   const want = m[1].toLowerCase();
@@ -1413,9 +1606,11 @@ async function openTrade(addr) {
   $("tSocials").innerHTML = links;
   $("tSocials").style.display = links ? "flex" : "none";
   $("tAmt").value = ""; $("tQuote").textContent = ""; exactWei = null;
-  $("tLinks").innerHTML = CFG.explorer
-    ? `<a href="${esc(CFG.explorer)}/address/${esc(addr)}" target="_blank" rel="noopener" style="color:var(--accent)">token on explorer ↗</a> · ${esc(addr)}`
-    : esc(addr);
+  const dev = tokenInfo[addr]?.creator || "";
+  const devShort = dev ? dev.slice(0, 6) + "…" + dev.slice(-4) : "";
+  $("tLinks").innerHTML = (CFG.explorer
+    ? `<a href="${esc(CFG.explorer)}/address/${esc(addr)}" target="_blank" rel="noopener" style="color:var(--accent)">token on explorer ↗</a> · `
+    : "") + (dev ? `dev <span class="devlink" onclick="openCreator('${esc(dev)}')">${esc(devShort)} ↗</span>` : esc(addr));
   $("tradeModal").classList.add("open");
   refreshTrade();
 }
