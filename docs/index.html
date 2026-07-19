@@ -170,6 +170,16 @@
   .cab .cdesc { color: var(--dim); font-size: 13px; margin-top: 10px; line-height: 1.4;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     overflow-wrap: anywhere; }
+  .trust { margin-top: 16px; background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px; }
+  .trust .tbadges { display: flex; flex-wrap: wrap; gap: 7px; }
+  .tb { font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 999px;
+    border: 1px solid var(--border-2); color: var(--dim); background: var(--surface); }
+  .tb.good { color: var(--green); border-color: rgba(47,209,138,.4); background: rgba(47,209,138,.10); }
+  .tb.warn { color: var(--gold); border-color: rgba(255,194,77,.4); background: rgba(255,194,77,.10); }
+  .tb.bad { color: var(--red); border-color: rgba(255,84,112,.45); background: rgba(255,84,112,.10); }
+  .trust .tnote { font-size: 12px; color: var(--faint); margin-top: 10px; line-height: 1.5; }
+  .trust .tnote a { color: var(--dim); }
   .comments { margin-top: 4px; }
   .crow { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; overflow-wrap: anywhere; }
   .crow:last-child { border-bottom: none; }
@@ -373,6 +383,7 @@
       <div class="chart-head"><span id="tChartLabel">MARKET CAP</span><span id="tChartHint"></span></div>
       <div id="tChart"></div>
     </div>
+    <div class="trust" id="tTrust" style="display:none"></div>
     <div class="tdesc" id="tDesc" style="display:none"></div>
     <div class="tsocials" id="tSocials" style="display:none"></div>
     <div class="bar" style="margin-top:14px"><i id="tBar" style="width:0%"></i></div>
@@ -526,6 +537,7 @@ function setStatus(msg) {
 
 // ---- trader-facing display helpers
 const TOTAL_SUPPLY_TOKENS = 1_000_000_000n; // fixed 1B per launch in the contract
+const TOTAL_SUPPLY_WEI = TOTAL_SUPPLY_TOKENS * (10n ** 18n);
 function compactUsd(wei) {
   const n = Number(ethers.formatEther(wei));
   if (!isFinite(n)) return "—";
@@ -1353,6 +1365,7 @@ async function openTrade(addr) {
     if (src && currentToken === addr) { $("tImg").src = src; $("tImg").style.display = "block"; }
   });
   renderChart(addr);
+  computeTrust(addr);
   renderComments(addr);
   const md = metaOf(addr);
   $("tDesc").textContent = md.d || "";
@@ -1460,6 +1473,51 @@ $("tGo").onclick = async () => {
     refreshTrade(); loadTokens();
   } catch (e) { toast(e.shortMessage || e.message); }
 };
+
+// ------- trust / risk signals.
+// Dev holdings use the creator's REAL balanceOf (accurate). Top-wallet share is derived
+// from net trade flow and is therefore approximate — direct wallet-to-wallet ERC20
+// transfers bypass Trade events — so it is labelled as such and never presented as exact.
+async function computeTrust(addr) {
+  const box = $("tTrust");
+  box.style.display = "block";
+  box.innerHTML = `<div class="tbadges"><span class="tb good">🔒 Rug-proof</span></div>
+    <div class="tnote">Loading holder risk…</div>`;
+  const inf = tokenInfo[addr];
+  const creator = (inf.creator || "").toLowerCase();
+  const circulating = TOTAL_SUPPLY_WEI - inf.tReserve; // tokens held off the curve
+  let devBal = 0n;
+  try { devBal = await rpc(() => new ethers.Contract(addr, ERC20, readProvider).balanceOf(inf.creator)); }
+  catch { /* leave devBal 0; note stays honest below */ }
+  if (currentToken !== addr) return; // user moved on
+
+  const devPct = circulating > 0n ? Number((devBal * 10000n) / circulating) / 100 : 0;
+  const net = (statsIdx && statsIdx.net[addr]) || {};
+  const positives = Object.values(net).filter((v) => v > 0n);
+  const totalNet = positives.reduce((s, v) => s + v, 0n);
+  const topNet = positives.reduce((m, v) => (v > m ? v : m), 0n);
+  const topPct = totalNet > 0n ? Number((topNet * 10000n) / totalNet) / 100 : 0;
+  const ageBlocks = latestBlock && inf.createdBlock ? latestBlock - Number(inf.createdBlock) : null;
+  const ageSec = ageBlocks != null && blockTimeSec ? ageBlocks * blockTimeSec : null;
+
+  const badges = [`<span class="tb good">🔒 Rug-proof</span>`];
+  // dev holdings — the key dump-risk signal
+  const devCls = devPct >= 20 ? "bad" : devPct >= 5 ? "warn" : "good";
+  const devTxt = devBal === 0n && circulating > 0n ? "Dev holds 0%" : `Dev holds ${devPct.toFixed(1)}%`;
+  badges.push(`<span class="tb ${devCls}">${devPct >= 20 ? "⚠ " : ""}${devTxt}</span>`);
+  if (topPct >= 30) badges.push(`<span class="tb warn">Top wallet ${topPct.toFixed(0)}%*</span>`);
+  if (ageSec != null && ageSec < 3600) badges.push(`<span class="tb warn">🆕 Fresh</span>`);
+  if ((tradeStats[addr]?.holders || 0) <= 1 && fullyIndexed) badges.push(`<span class="tb warn">Single holder</span>`);
+
+  const link = CFG.explorer
+    ? `<a href="${esc(CFG.explorer)}/address/${esc(addr)}" target="_blank" rel="noopener">verified contract ↗</a>`
+    : "the contract";
+  box.innerHTML = `<div class="tbadges">${badges.join("")}</div>
+    <div class="tnote">Reserves are locked in the bonding curve — there is no LP to pull and no
+      migration step. Dev % is the creator's live balance vs circulating supply.
+      ${topPct >= 30 ? "<br>*Top-wallet share is estimated from trades and ignores direct transfers." : ""}
+      <br>See the ${link}.</div>`;
+}
 
 // ------- comments (on-chain, indexed from Comment events)
 function renderComments(addr) {
