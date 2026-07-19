@@ -196,6 +196,17 @@
   .cpanel .grade.new { color: var(--dim); background: var(--surface); border: 1px solid var(--border-2); }
   .cpanel .cnote { font-size: 11px; color: var(--faint); margin-top: 10px; line-height: 1.5; }
   .devlink { color: var(--dim); font-family: var(--mono); font-size: 12px; cursor: pointer; text-decoration: underline; }
+  .gmailbtn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 13px; margin-bottom: 14px; font-size: 15px; font-weight: 600; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border-2); border-radius: 12px; cursor: pointer; }
+  .gmailbtn:hover { border-color: var(--accent); background: var(--bg-2); }
+  .gmailbtn .gicon { width: 24px; height: 24px; border-radius: 50%; display: inline-flex;
+    align-items: center; justify-content: center; font-weight: 800; color: #fff;
+    background: conic-gradient(from -45deg, #ea4335, #fbbc05, #34a853, #4285f4, #ea4335); }
+  .gmailbtn:disabled { opacity: .6; cursor: wait; }
+  .wdivider { display: flex; align-items: center; gap: 10px; margin: 6px 0 14px; color: var(--faint); font-size: 11px; }
+  .wdivider::before, .wdivider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .walletmenu-sub { font-size: 11px; color: var(--accent); padding: 4px 14px 0; }
   .fundbox { margin-top: 16px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,194,77,.45);
     background: linear-gradient(135deg, rgba(255,194,77,.08), rgba(62,230,160,.06)); }
   .fundhead { font-weight: 700; font-size: 15px; color: var(--gold); margin-bottom: 6px; }
@@ -540,6 +551,10 @@
 <div id="walletModal" class="modal-bg">
   <div class="modal" style="max-width:400px">
     <h2>Connect a wallet</h2>
+    <button id="gmailBtn" class="gmailbtn" type="button">
+      <span class="gicon">G</span> Continue with Google
+    </button>
+    <div class="wdivider"><span>or use a wallet</span></div>
     <div id="walletList"></div>
     <div class="hint" id="walletNone" style="display:none">
       No browser wallet detected. Install
@@ -1031,6 +1046,69 @@ async function selectWallet(d) {
   await connect();
 }
 
+// ---- embedded wallet: "Continue with Google" via Web3Auth (client-side, no backend).
+// Web3Auth runs Google OAuth + key reconstruction in the browser using a PUBLIC clientId
+// gated by a domain allowlist, then hands us a standard EIP-1193 provider — which we route
+// through the exact same selectWallet()/connect() path as an injected wallet, so all
+// trading code is identical. Activates only when config.web3authClientId is set.
+const WEB3AUTH_CLIENT_ID = window.ANEWONE_CONFIG.web3authClientId || "";
+let web3authInstance = null;
+
+async function loadWeb3Auth() {
+  if (web3authInstance) return web3authInstance;
+  // pinned ESM from a CDN — the SDK ships no UMD bundle
+  const [{ Web3Auth }, { CHAIN_NAMESPACES, WEB3AUTH_NETWORK }, { EthereumPrivateKeyProvider }] = await Promise.all([
+    import("https://esm.sh/@web3auth/modal@9.7.0"),
+    import("https://esm.sh/@web3auth/base@9.7.0"),
+    import("https://esm.sh/@web3auth/ethereum-provider@9.7.0"),
+  ]);
+  const chainConfig = {
+    chainNamespace: CHAIN_NAMESPACES.EIP155,
+    chainId: CFG.chainIdHex,
+    rpcTarget: CFG.rpc,
+    displayName: NET_NAME,
+    ticker: "USDC",
+    tickerName: "USD Coin",
+    blockExplorerUrl: CFG.explorer || "",
+  };
+  const privateKeyProvider = new EthereumPrivateKeyProvider({ config: { chainConfig } });
+  const wa = new Web3Auth({
+    clientId: WEB3AUTH_CLIENT_ID,
+    web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
+    privateKeyProvider,
+    uiConfig: { appName: "A NEW ONE", mode: "dark", loginMethodsOrder: ["google"] },
+  });
+  await wa.initModal();
+  web3authInstance = wa;
+  return wa;
+}
+
+async function loginWithGoogle() {
+  if (!WEB3AUTH_CLIENT_ID) return toast("Google sign-in isn't configured yet");
+  $("gmailBtn").disabled = true;
+  $("gmailBtn").querySelector(".gicon").nextSibling.textContent = " Opening Google…";
+  try {
+    const wa = await loadWeb3Auth();
+    const provider = await wa.connect(); // opens Google; resolves to an EIP-1193 provider
+    if (!provider) throw new Error("cancelled");
+    await connectEmbedded(provider, "google");
+  } catch (e) {
+    toast(e.shortMessage || e.message || "Google sign-in failed");
+  } finally {
+    $("gmailBtn").disabled = false;
+    $("gmailBtn").querySelector(".gicon").nextSibling.textContent = " Continue with Google";
+  }
+}
+
+// route ANY EIP-1193 provider (embedded or injected) through the one connect path
+async function connectEmbedded(provider, rdns) {
+  $("walletModal").classList.remove("open");
+  activeEip1193 = provider;
+  activeRdns = rdns;
+  bindProviderListeners(provider);
+  await connect();
+}
+
 async function connect(forcePicker) {
   if (!activeEip1193) return openWalletPicker();
   const bp = new ethers.BrowserProvider(activeEip1193);
@@ -1112,6 +1190,10 @@ $("fundCopy").onclick = async () => {
 // clears all local wallet state; the wallet extension keeps its own permission,
 // but the site forgets the account and resets owner/creator UI
 function disconnect() {
+  // if signed in through Google/Web3Auth, end that session too
+  if (web3authInstance && activeRdns === "google") {
+    try { web3authInstance.logout(); } catch {}
+  }
   signer = null; userAddr = null;
   activeEip1193 = null; activeRdns = null;
   userNativeBal = 0n; userTokenBal = 0n; exactWei = null;
@@ -2050,6 +2132,13 @@ $("connectBtn").onclick = () => {
 $("switchBtn").onclick = switchAccount;
 $("changeWalletBtn").onclick = () => { $("walletMenu").style.display = "none"; openWalletPicker(); };
 $("disconnectBtn").onclick = disconnect;
+$("gmailBtn").onclick = loginWithGoogle;
+// the Google option only appears once a Web3Auth clientId is configured
+if (!WEB3AUTH_CLIENT_ID) {
+  $("gmailBtn").style.display = "none";
+  const div = document.querySelector("#walletModal .wdivider");
+  if (div) div.style.display = "none";
+}
 // close the wallet menu when clicking outside it
 document.addEventListener("click", (e) => {
   if (!$("walletWrap").contains(e.target)) $("walletMenu").style.display = "none";
