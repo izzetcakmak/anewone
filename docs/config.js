@@ -31,7 +31,7 @@ window.ANEWONE_CONFIG = {
       network: "sapphire_devnet",
     },
     mainnet: {
-      clientId: "", // paste a sapphire_mainnet Web3Auth clientId here before mainnet launch
+      clientId: "BIBoyMyqi-N0SYPTKHXIrBdWulIYDbJ12IONwS-i-g8VEy-2OmH9DxqBnVTOCc99gBE7v51L5aiQntfu1O9KswQ",
       network: "sapphire_mainnet",
     },
   },
