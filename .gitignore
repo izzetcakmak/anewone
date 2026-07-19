@@ -8,3 +8,4 @@ monitor/scan.log
 monitor/scan.pid
 monitor/scan.lock
 build-web3auth/
+build-video/
