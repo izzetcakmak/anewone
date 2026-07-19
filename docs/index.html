@@ -393,7 +393,7 @@ const ABI = [
   "function createToken(string,string,string) payable returns (address)",
   "function buy(address,uint256) payable",
   "function sell(address,uint256,uint256)",
-  "function owner() view returns (address)",
+  "function isOwner(address) view returns (bool)",
   "function platformFees() view returns (uint256)",
   "function creatorFees(address) view returns (uint256)",
   "function creatorFeeDeadline(address) view returns (uint256)",
@@ -818,18 +818,21 @@ if (window.ethereum && window.ethereum.on) {
 }
 
 // ------- fees (creator claim for everyone-but-active-only-for-creators, platform claim for owner)
-let ownerAddr = null, cfDeadlineTs = 0, cfPot = 0n;
+// Multiple owners are supported; membership is queried per-address and cached.
+const ownerCache = {};
+let cfDeadlineTs = 0, cfPot = 0n;
 async function refreshFees() {
   if (!userAddr) return;
   try {
     $("feeBar").style.display = "block"; // fee panel is only for connected users
-    if (!ownerAddr) ownerAddr = (await rpc(() => platform.owner())).toLowerCase();
+    const key = userAddr.toLowerCase();
+    if (ownerCache[key] === undefined) ownerCache[key] = await rpc(() => platform.isOwner(userAddr));
     cfPot = BigInt(await rpc(() => platform.creatorFees(userAddr)));
     cfDeadlineTs = Number(await rpc(() => platform.creatorFeeDeadline(userAddr)));
     renderCreatorFee();
     // owner-only UI: platform address (footer) + platform-fee controls. Re-evaluated each
     // refresh so switching to a non-owner account hides them again.
-    const isOwner = userAddr.toLowerCase() === ownerAddr;
+    const isOwner = !!ownerCache[key];
     $("footPlatformLine").style.display = isOwner ? "inline" : "none";
     $("pfStat").style.display = isOwner ? "block" : "none";
     $("pfClaim").style.display = isOwner ? "inline-block" : "none";

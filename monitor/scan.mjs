@@ -145,6 +145,7 @@ function runDeploy(env, rpcUrl) {
         PRIVATE_KEY: env.PRIVATE_KEY,
         ...(env.VIRTUAL_USDC0 ? { VIRTUAL_USDC0: env.VIRTUAL_USDC0 } : {}),
         ...(env.GRAD_TARGET ? { GRAD_TARGET: env.GRAD_TARGET } : {}),
+        ...(env.SECOND_OWNER ? { SECOND_OWNER: env.SECOND_OWNER } : {}),
       },
     }
   );

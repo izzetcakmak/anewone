@@ -250,6 +250,89 @@ contract ANewOneTest is Test {
         assertEq(creator.balance - balBefore, 5e18);
     }
 
+    // ---------------------------------------------------------------- owners
+
+    function test_deployerIsInitialOwner() public {
+        assertTrue(arcade.isOwner(address(this)));
+        assertEq(arcade.ownersCount(), 1);
+        assertEq(arcade.owners(0), address(this));
+    }
+
+    function test_secondOwnerSharesFeePool() public {
+        address token = _create();
+        vm.roll(block.number + 21);
+        vm.prank(alice);
+        arcade.buy{value: 1_000e18}(token, 0); // platformFees += 5e18
+
+        assertFalse(arcade.isOwner(bob));
+        arcade.addOwner(bob);
+        assertTrue(arcade.isOwner(bob));
+        assertEq(arcade.ownersCount(), 2);
+
+        // the second owner can withdraw the whole shared pool (Option A semantics)
+        uint256 pf = arcade.platformFees();
+        assertGt(pf, 0);
+        uint256 before = bob.balance;
+        vm.prank(bob);
+        arcade.withdrawPlatformFees(bob);
+        assertEq(bob.balance - before, pf);
+        assertEq(arcade.platformFees(), 0);
+    }
+
+    function test_nonOwnerCannotWithdrawOrAdmin() public {
+        vm.prank(alice);
+        vm.expectRevert("owner");
+        arcade.withdrawPlatformFees(alice);
+        vm.prank(alice);
+        vm.expectRevert("owner");
+        arcade.addOwner(alice);
+        vm.prank(alice);
+        vm.expectRevert("owner");
+        arcade.removeOwner(address(this));
+    }
+
+    function test_addOwnerValidation() public {
+        vm.expectRevert("zero addr");
+        arcade.addOwner(address(0));
+        arcade.addOwner(bob);
+        vm.expectRevert("already owner");
+        arcade.addOwner(bob);
+    }
+
+    function test_removeOwnerRevokesAccess() public {
+        arcade.addOwner(bob);
+        vm.prank(bob); // a second owner has full admin rights
+        arcade.addOwner(alice);
+        assertEq(arcade.ownersCount(), 3);
+
+        arcade.removeOwner(bob);
+        assertFalse(arcade.isOwner(bob));
+        assertEq(arcade.ownersCount(), 2);
+
+        vm.prank(bob);
+        vm.expectRevert("owner");
+        arcade.addOwner(address(0xDEAD));
+    }
+
+    function test_cannotRemoveLastOwner() public {
+        vm.expectRevert("last owner");
+        arcade.removeOwner(address(this));
+        assertTrue(arcade.isOwner(address(this)));
+    }
+
+    function test_ownersArrayConsistentAfterSwapPop() public {
+        arcade.addOwner(alice);
+        arcade.addOwner(bob); // [this, alice, bob]
+        arcade.removeOwner(alice); // swap-pop: [this, bob]
+        assertEq(arcade.ownersCount(), 2);
+        assertTrue(arcade.isOwner(address(this)) && arcade.isOwner(bob) && !arcade.isOwner(alice));
+        address o0 = arcade.owners(0);
+        address o1 = arcade.owners(1);
+        assertTrue(o0 != o1);
+        assertTrue(o0 == address(this) || o0 == bob);
+        assertTrue(o1 == address(this) || o1 == bob);
+    }
+
     function testFuzz_buySellInvariant(uint96 buyAmount) public {
         vm.assume(buyAmount > 0.01e18 && buyAmount < 50_000e18);
         address token = _create();

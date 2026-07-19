@@ -76,7 +76,10 @@ contract ANewOne {
     ///         is sweepable into platform fees by anyone.
     uint256 public constant CLAIM_WINDOW = 7 days;
 
-    address public owner;
+    /// @notice Platform owners. Any owner can withdraw the shared platform-fee pool and
+    ///         add/remove other owners. There must always be at least one owner.
+    mapping(address => bool) public isOwner;
+    address[] public owners;
     uint256 public platformFees;
     mapping(address => uint256) public creatorFees;
     /// @notice When the creator's current unclaimed pot started accruing (set when pot goes 0 -> >0).
@@ -112,6 +115,8 @@ contract ANewOne {
     event Graduated(address indexed token, uint256 raised);
     event FeesClaimed(address indexed who, uint256 amount);
     event CreatorFeesExpired(address indexed creator, uint256 amount);
+    event OwnerAdded(address indexed owner);
+    event OwnerRemoved(address indexed owner);
 
     modifier nonReentrant() {
         require(unlocked == 1, "reentrancy");
@@ -120,9 +125,14 @@ contract ANewOne {
         unlocked = 1;
     }
 
+    modifier onlyOwner() {
+        require(isOwner[msg.sender], "owner");
+        _;
+    }
+
     constructor(uint256 virtualUsdc0_, uint256 gradTarget_) {
         require(virtualUsdc0_ > 0 && gradTarget_ > 0, "params");
-        owner = msg.sender;
+        _addOwner(msg.sender);
         virtualUsdc0 = virtualUsdc0_;
         gradTarget = gradTarget_;
     }
@@ -273,8 +283,7 @@ contract ANewOne {
         emit CreatorFeesExpired(creator, amount);
     }
 
-    function withdrawPlatformFees(address to) external nonReentrant {
-        require(msg.sender == owner, "owner");
+    function withdrawPlatformFees(address to) external nonReentrant onlyOwner {
         uint256 amount = platformFees;
         require(amount > 0, "nothing");
         platformFees = 0;
@@ -283,9 +292,38 @@ contract ANewOne {
         emit FeesClaimed(to, amount);
     }
 
-    function setOwner(address newOwner) external {
-        require(msg.sender == owner, "owner");
-        owner = newOwner;
+    // ---------------------------------------------------------------- owners
+
+    /// @notice Grant owner rights (shared fee pool + owner admin) to another wallet.
+    function addOwner(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "zero addr");
+        require(!isOwner[newOwner], "already owner");
+        _addOwner(newOwner);
+    }
+
+    /// @notice Revoke an owner. The last remaining owner cannot be removed.
+    function removeOwner(address who) external onlyOwner {
+        require(isOwner[who], "not owner");
+        require(owners.length > 1, "last owner");
+        isOwner[who] = false;
+        for (uint256 i = 0; i < owners.length; i++) {
+            if (owners[i] == who) {
+                owners[i] = owners[owners.length - 1];
+                owners.pop();
+                break;
+            }
+        }
+        emit OwnerRemoved(who);
+    }
+
+    function _addOwner(address newOwner) internal {
+        isOwner[newOwner] = true;
+        owners.push(newOwner);
+        emit OwnerAdded(newOwner);
+    }
+
+    function ownersCount() external view returns (uint256) {
+        return owners.length;
     }
 
     // ---------------------------------------------------------------- views

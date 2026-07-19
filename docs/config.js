@@ -16,7 +16,7 @@ window.ANEWONE_CONFIG = {
     chainIdHex: "0x4cef52",
     rpc: "https://rpc.testnet.arc.network",
     explorer: "https://explorer.testnet.arc.network",
-    platform: "0x5d85Df16c7CA1B0239959eB6dCc66d1F9AAbdEeF",
-    noah: "0x0a4E6EbE4Fd63647b0506b4816b276c212595934",
+    platform: "0xC83212Af0aE3FF762Df955E571655082AEc45B49",
+    noah: "0x7BE0b3a50D326c30Fdb75B0806184E3B1D04e595",
   },
 };
