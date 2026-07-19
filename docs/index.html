@@ -63,6 +63,11 @@
   }
   .tagline { color: var(--dim); margin-top: 14px; font-size: 14px; letter-spacing: 3px;
     text-transform: uppercase; font-weight: 500; }
+  .hlink { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 10px;
+    border: 1px solid var(--border); color: var(--dim); font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600; font-size: 13px; text-decoration: none; }
+  .hlink:hover { color: var(--accent); border-color: rgba(62,230,160,.4); background: rgba(62,230,160,.06); }
+  .hlink svg { display: block; }
   .netbar { display: flex; justify-content: center; gap: 10px; margin: 26px 0 6px;
     flex-wrap: wrap; align-items: center; }
   .badge {
@@ -361,6 +366,11 @@
     <div class="netbar">
       <span class="badge" style="color:var(--gold);border-color:rgba(255,194,77,.35);background:rgba(255,194,77,.08)">⚡ Built on Arc Network</span>
       <span id="netBadge" class="badge">Testnet</span>
+      <a class="hlink" href="https://x.com/ano_xyz" target="_blank" rel="noopener noreferrer" title="Follow @ano_xyz on X" aria-label="Follow on X">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.244 2H21.5l-7.5 8.57L23 22h-6.75l-5.28-6.9L4.9 22H1.64l8.02-9.17L1 2h6.92l4.77 6.31L18.244 2Zm-1.18 18h1.83L7.02 3.9H5.06l12 16.1Z"/></svg>
+        <span>@ano_xyz</span>
+      </a>
+      <a class="hlink" href="docs.html" title="Read the docs">📄 Docs</a>
       <span id="balChip" class="badge" style="display:none" title="Your USDC on Arc — pays gas and trades"></span>
       <span id="walletWrap" style="position:relative;display:inline-block">
         <button id="connectBtn">Connect</button>
@@ -451,6 +461,8 @@
     Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc Network</a> — gas is USDC.
     Curve reserves are locked in the contract: no LP to rug. <br>
     <span id="footPlatformLine" style="display:none">Platform: <span id="footPlatform">–</span> <br></span>
+    <a href="https://x.com/ano_xyz" target="_blank" rel="noopener noreferrer">X @ano_xyz</a> ·
+    <a href="docs.html">Docs</a> ·
     Contact: <a href="mailto:contact@anewone.xyz">contact@anewone.xyz</a>
   </div>
 </div>
