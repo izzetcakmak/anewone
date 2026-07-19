@@ -63,11 +63,6 @@
   }
   .tagline { color: var(--dim); margin-top: 14px; font-size: 14px; letter-spacing: 3px;
     text-transform: uppercase; font-weight: 500; }
-  .hlink { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 10px;
-    border: 1px solid var(--border); color: var(--dim); font-family: 'Space Grotesk', sans-serif;
-    font-weight: 600; font-size: 13px; text-decoration: none; }
-  .hlink:hover { color: var(--accent); border-color: rgba(62,230,160,.4); background: rgba(62,230,160,.06); }
-  .hlink svg { display: block; }
   .netbar { display: flex; justify-content: center; gap: 10px; margin: 26px 0 6px;
     flex-wrap: wrap; align-items: center; }
   .badge {
@@ -330,8 +325,32 @@
     display: none; z-index: 2000; max-width: 90vw; font-weight: 500; font-size: 14px;
   }
   .empty { text-align: center; color: var(--dim); padding: 70px 0; font-size: 17px; }
-  .footer { text-align: center; color: var(--faint); margin-top: 70px; font-size: 13px; line-height: 1.9; }
-  .footer a { color: var(--dim); }
+  .footer { margin-top: 80px; padding-top: 34px; border-top: 1px solid var(--border); }
+  .foot-top { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  .foot-brand { display: flex; align-items: center; gap: 12px; }
+  .foot-brand img { width: 36px; height: 36px; border-radius: 9px; }
+  .foot-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px;
+    color: var(--text); letter-spacing: .3px; }
+  .foot-tag { font-size: 12.5px; color: var(--faint); margin-top: 1px; }
+  .foot-links { display: flex; gap: 10px; flex-wrap: wrap; }
+  .foot-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 15px; border-radius: 11px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--dim);
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13.5px; text-decoration: none;
+    transition: border-color .15s, color .15s, background .15s, transform .1s; }
+  .foot-btn:hover { color: var(--accent); border-color: rgba(62,230,160,.4);
+    background: rgba(62,230,160,.06); transform: translateY(-1px); }
+  .foot-btn svg { display: block; opacity: .9; }
+  .foot-meta { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    flex-wrap: wrap; margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--border);
+    color: var(--faint); font-size: 12.5px; line-height: 1.7; }
+  .foot-meta a { color: var(--dim); text-decoration: none; }
+  .foot-meta a:hover { color: var(--accent); }
+  .foot-meta .arc-pill { display: inline-flex; align-items: center; gap: 6px; color: var(--gold); }
+  @media (max-width: 600px) {
+    .foot-top { flex-direction: column; align-items: flex-start; gap: 18px; }
+    .foot-links { width: 100%; }
+    .foot-btn { flex: 1; justify-content: center; min-height: 44px; }
+  }
   .hint { font-size: 12.5px; color: var(--faint); margin-top: 6px; }
 
   /* mobile: fingers need ~44px targets, and the dense rows need room to breathe */
@@ -366,11 +385,6 @@
     <div class="netbar">
       <span class="badge" style="color:var(--gold);border-color:rgba(255,194,77,.35);background:rgba(255,194,77,.08)">⚡ Built on Arc Network</span>
       <span id="netBadge" class="badge">Testnet</span>
-      <a class="hlink" href="https://x.com/ano_xyz" target="_blank" rel="noopener noreferrer" title="Follow @ano_xyz on X" aria-label="Follow on X">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.244 2H21.5l-7.5 8.57L23 22h-6.75l-5.28-6.9L4.9 22H1.64l8.02-9.17L1 2h6.92l4.77 6.31L18.244 2Zm-1.18 18h1.83L7.02 3.9H5.06l12 16.1Z"/></svg>
-        <span>@ano_xyz</span>
-      </a>
-      <a class="hlink" href="docs.html" title="Read the docs">📄 Docs</a>
       <span id="balChip" class="badge" style="display:none" title="Your USDC on Arc — pays gas and trades"></span>
       <span id="walletWrap" style="position:relative;display:inline-block">
         <button id="connectBtn">Connect</button>
@@ -457,14 +471,35 @@
     </div>
   </div>
 
-  <div class="footer">
-    Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc Network</a> — gas is USDC.
-    Curve reserves are locked in the contract: no LP to rug. <br>
-    <span id="footPlatformLine" style="display:none">Platform: <span id="footPlatform">–</span> <br></span>
-    <a href="https://x.com/ano_xyz" target="_blank" rel="noopener noreferrer">X @ano_xyz</a> ·
-    <a href="docs.html">Docs</a> ·
-    Contact: <a href="mailto:contact@anewone.xyz">contact@anewone.xyz</a>
-  </div>
+  <footer class="footer">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <img src="favicon.svg" alt="">
+        <div>
+          <div class="foot-name">A NEW ONE</div>
+          <div class="foot-tag">The meme launchpad built on Arc</div>
+        </div>
+      </div>
+      <div class="foot-links">
+        <a class="foot-btn" href="https://x.com/ano_xyz" target="_blank" rel="noopener noreferrer" aria-label="Follow on X">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M18.244 2H21.5l-7.5 8.57L23 22h-6.75l-5.28-6.9L4.9 22H1.64l8.02-9.17L1 2h6.92l4.77 6.31L18.244 2Zm-1.18 18h1.83L7.02 3.9H5.06l12 16.1Z"/></svg>
+          <span>Follow on X</span>
+        </a>
+        <a class="foot-btn" href="docs.html" aria-label="Docs">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4a2 2 0 0 1 2-2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+          <span>Docs</span>
+        </a>
+        <a class="foot-btn" href="mailto:contact@anewone.xyz" aria-label="Contact">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+          <span>Contact</span>
+        </a>
+      </div>
+    </div>
+    <div class="foot-meta">
+      <span><span class="arc-pill">⚡ Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc Network</a></span> — gas is USDC · rug-proof: reserves locked, no LP to pull.</span>
+      <span id="footPlatformLine" style="display:none">Platform: <span id="footPlatform">–</span></span>
+    </div>
+  </footer>
 </div>
 
 <!-- create modal -->
