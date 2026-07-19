@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#141922"/>
+      <stop offset="1" stop-color="#07080b"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#2fd18a"/>
+      <stop offset="1" stop-color="#5cf7b3"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.72" cy="0.28" r="0.75">
+      <stop offset="0" stop-color="#3ee6a0" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#3ee6a0" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- full-bleed background (safe for X's circular crop) -->
+  <rect width="100" height="100" fill="url(#bg)"/>
+  <rect width="100" height="100" fill="url(#halo)"/>
+  <!-- rising arc: Arc network + launch trajectory + the "A" of A NEW ONE -->
+  <path d="M24 74 C36 66 45 46 71 30" fill="none" stroke="url(#mint)" stroke-width="11"
+        stroke-linecap="round" filter="url(#glow)"/>
+  <!-- the coin at the top of the arc -->
+  <circle cx="73" cy="29" r="11.5" fill="url(#mint)" filter="url(#glow)"/>
+  <text x="73" y="33.5" font-family="Arial, sans-serif" font-size="14" font-weight="800"
+        fill="#07130d" text-anchor="middle">$</text>
+</svg>
