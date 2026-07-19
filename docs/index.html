@@ -170,6 +170,19 @@
   .cab .cdesc { color: var(--dim); font-size: 13px; margin-top: 10px; line-height: 1.4;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     overflow-wrap: anywhere; }
+  .comments { margin-top: 4px; }
+  .crow { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; overflow-wrap: anywhere; }
+  .crow:last-child { border-bottom: none; }
+  .crow .chead { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+  .crow .cwho { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+  .crow .ctag { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; letter-spacing: .3px; }
+  .crow .ctag.dev { color: var(--accent-2); background: rgba(139,123,255,.14); border: 1px solid rgba(139,123,255,.35); }
+  .crow .ctag.you { color: var(--accent); background: rgba(62,230,160,.12); border: 1px solid rgba(62,230,160,.35); }
+  .crow .cwhen { color: var(--faint); font-size: 11px; font-family: var(--mono); margin-left: auto; }
+  .crow .ctext { color: var(--text); line-height: 1.45; }
+  .cempty { color: var(--faint); font-size: 13px; padding: 12px 0; }
+  .cbox { display: flex; gap: 8px; margin-top: 12px; }
+  .cbox input { flex: 1; }
   .feepanel { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); }
   .feepanel-title { text-align: center; font-family: 'Space Grotesk', sans-serif; font-weight: 600;
     font-size: 12px; color: var(--faint); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 14px; }
@@ -386,6 +399,16 @@
       <button onclick="closeModals()">Close</button>
     </div>
     <div class="hint" id="tLinks"></div>
+
+    <div class="comments">
+      <div class="feed-title" style="margin-top:22px">💬 COMMENTS</div>
+      <div id="tComments"></div>
+      <div class="cbox">
+        <input id="tCommentInput" placeholder="Add a comment…" maxlength="280">
+        <button id="tCommentGo" class="alt">Post</button>
+      </div>
+      <div class="hint" id="tCommentHint">Hold the token (or be its creator) to comment. Stored on-chain.</div>
+    </div>
   </div>
 </div>
 
@@ -402,6 +425,7 @@ const ABI = [
   "function createToken(string,string,string) payable returns (address)",
   "function buy(address,uint256) payable",
   "function sell(address,uint256,uint256)",
+  "function comment(address,string)",
   "function isOwner(address) view returns (bool)",
   "function platformFees() view returns (uint256)",
   "function creatorFees(address) view returns (uint256)",
@@ -528,13 +552,15 @@ let blockTimeSec = 0, latestBlock = 0, statsReady = false;
 let fullyIndexed = false, covers24h = false, indexPct = 0, indexFloor = 0;
 const tradeStats = {};
 const TRADE_TOPIC = ethers.id("Trade(address,address,bool,uint256,uint256,uint256)");
+const COMMENT_TOPIC = ethers.id("Comment(address,address,string)");
 const topicAddr = (t) => ethers.getAddress("0x" + t.slice(26));
 const CHUNK = 10_000;
 const MAX_CHUNKS_PER_PASS = 24; // bounded work per refresh; the rest resumes next pass
 // Bump SCHEMA whenever the cached shape changes: a stale cache that already covers the
 // chain would otherwise never re-scan, so newly-added fields would stay empty forever.
 // v2 added per-trade trader/amount/side; v3 added the per-token price series.
-const STATS_SCHEMA = 3;
+// v4 added on-chain comments (indexed from Comment events in the same getLogs pass)
+const STATS_SCHEMA = 4;
 const STATS_KEY = `anewone_stats_v${STATS_SCHEMA}_` + CFG.platform;
 let statsIdx = null; // { scanned, agg{token->{volAll,trades}}, net{token->{trader->bigint}}, recent[] }
 
@@ -556,10 +582,11 @@ function loadStatsCache() {
         })),
         series: Object.fromEntries(Object.entries(j.series || {})
           .map(([k, arr]) => [k, arr.map((s) => ({ b: s.b, p: BigInt(s.p) }))])),
+        comments: j.comments || {},
       };
     }
   } catch {}
-  return { lo: null, hi: null, agg: {}, net: {}, recent: [], series: {} };
+  return { lo: null, hi: null, agg: {}, net: {}, recent: [], series: {}, comments: {} };
 }
 function saveStatsCache(s) {
   try {
@@ -574,6 +601,7 @@ function saveStatsCache(s) {
       })),
       series: Object.fromEntries(Object.entries(s.series)
         .map(([k, arr]) => [k, arr.map((x) => ({ b: x.b, p: x.p.toString() }))])),
+      comments: s.comments,
     }));
   } catch (e) {
     // localStorage is ~5MB; if the index outgrows it, drop the replayable part and keep totals
@@ -583,10 +611,22 @@ function saveStatsCache(s) {
 function ingestLogs(logs) {
   const coder = ethers.AbiCoder.defaultAbiCoder();
   for (const lg of logs) {
+    const token = topicAddr(lg.topics[1]);
+    if (lg.topics[0] === COMMENT_TOPIC) {
+      let text;
+      try { [text] = coder.decode(["string"], lg.data); }
+      catch { continue; }
+      const author = topicAddr(lg.topics[2]);
+      const arr = statsIdx.comments[token] || (statsIdx.comments[token] = []);
+      // de-dup on the log's unique coordinates so re-scans don't double-insert
+      const id = lg.blockNumber + ":" + (lg.logIndex ?? lg.index ?? 0);
+      if (!arr.some((c) => c.id === id)) arr.push({ id, b: lg.blockNumber, a: author, m: String(text).slice(0, 400) });
+      continue;
+    }
+    // Trade
     let usdc, tokens, priceWad;
     try { [usdc, tokens, priceWad] = coder.decode(["uint256", "uint256", "uint256"], lg.data); }
     catch { continue; }
-    const token = topicAddr(lg.topics[1]);
     const trader = topicAddr(lg.topics[2]);
     const isBuy = BigInt(lg.topics[3]) === 1n;
     const a = statsIdx.agg[token] || (statsIdx.agg[token] = { volAll: 0n, trades: 0, lastBlock: 0 });
@@ -692,7 +732,7 @@ async function loadStats(earliestBlock, onTick) {
     // only when the whole pass finishes
     const scan = async (from, to) => {
       const logs = await rpc(() => readProvider.getLogs({
-        address: CFG.platform, topics: [TRADE_TOPIC], fromBlock: from, toBlock: to
+        address: CFG.platform, topics: [[TRADE_TOPIC, COMMENT_TOPIC]], fromBlock: from, toBlock: to
       }));
       ingestLogs(logs);
     };
@@ -1313,6 +1353,7 @@ async function openTrade(addr) {
     if (src && currentToken === addr) { $("tImg").src = src; $("tImg").style.display = "block"; }
   });
   renderChart(addr);
+  renderComments(addr);
   const md = metaOf(addr);
   $("tDesc").textContent = md.d || "";
   $("tDesc").style.display = md.d ? "block" : "none";
@@ -1419,6 +1460,51 @@ $("tGo").onclick = async () => {
     refreshTrade(); loadTokens();
   } catch (e) { toast(e.shortMessage || e.message); }
 };
+
+// ------- comments (on-chain, indexed from Comment events)
+function renderComments(addr) {
+  const list = ((statsIdx && statsIdx.comments[addr]) || []).slice().sort((a, b) => b.b - a.b);
+  const creator = (tokenInfo[addr]?.creator || "").toLowerCase();
+  if (!list.length) {
+    $("tComments").innerHTML = `<div class="cempty">No comments yet — say something.</div>`;
+  } else {
+    $("tComments").innerHTML = list.slice(0, 100).map((c) => {
+      const who = c.a.slice(0, 6) + "…" + c.a.slice(-4);
+      const tags = [];
+      if (c.a.toLowerCase() === creator) tags.push(`<span class="ctag dev">DEV</span>`);
+      if (userAddr && c.a.toLowerCase() === userAddr.toLowerCase()) tags.push(`<span class="ctag you">YOU</span>`);
+      const when = ageText(latestBlock ? latestBlock - c.b : null);
+      return `<div class="crow">
+        <div class="chead"><span class="cwho">${esc(who)}</span>${tags.join("")}<span class="cwhen">${esc(when)}</span></div>
+        <div class="ctext">${esc(c.m)}</div>
+      </div>`;
+    }).join("");
+  }
+  // enable posting only for a connected holder / creator / owner
+  const holds = userAddr && (userTokenBal > 0n
+    || userAddr.toLowerCase() === creator
+    || ownerCache[userAddr.toLowerCase()] === true);
+  $("tCommentGo").disabled = !holds;
+  $("tCommentHint").textContent = !userAddr ? "Connect a wallet to comment."
+    : holds ? "Comment is stored on-chain (gas only)."
+    : "Hold the token (or be its creator) to comment.";
+}
+$("tCommentGo").onclick = async () => {
+  if (!signer) return toast("Connect first");
+  const text = $("tCommentInput").value.trim();
+  if (!text) return;
+  try {
+    const tx = await platform.connect(signer).comment(currentToken, text);
+    toast("Posting…"); await tx.wait();
+    $("tCommentInput").value = "";
+    toast("Comment posted!");
+    await sleep(700);
+    const tok = currentToken;
+    await loadStats(indexFloor || Math.max(1, latestBlock - 9000));
+    if (currentToken === tok) renderComments(tok);
+  } catch (e) { toast(e.shortMessage || e.message); }
+};
+$("tCommentInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("tCommentGo").click(); });
 
 $("tShare").onclick = async () => {
   if (!currentToken) return;

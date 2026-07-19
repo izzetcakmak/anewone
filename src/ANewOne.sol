@@ -117,6 +117,7 @@ contract ANewOne {
     event CreatorFeesExpired(address indexed creator, uint256 amount);
     event OwnerAdded(address indexed owner);
     event OwnerRemoved(address indexed owner);
+    event Comment(address indexed token, address indexed author, string text);
 
     modifier nonReentrant() {
         require(unlocked == 1, "reentrancy");
@@ -290,6 +291,25 @@ contract ANewOne {
         (bool ok,) = to.call{value: amount}("");
         require(ok, "send");
         emit FeesClaimed(to, amount);
+    }
+
+    // ---------------------------------------------------------------- comments
+
+    uint256 public constant MAX_COMMENT_BYTES = 280;
+
+    /// @notice Post a public comment on a token's thread. Event-only — nothing is stored,
+    ///         so a comment costs little more than base gas. Spam guard: you must hold the
+    ///         token, be its creator, or be a platform owner.
+    function comment(address token, string calldata text) external {
+        TokenInfo storage t = info[token];
+        require(t.creator != address(0), "unknown token");
+        uint256 len = bytes(text).length;
+        require(len > 0 && len <= MAX_COMMENT_BYTES, "length");
+        require(
+            ANewOneToken(token).balanceOf(msg.sender) > 0 || msg.sender == t.creator || isOwner[msg.sender],
+            "hold to comment"
+        );
+        emit Comment(token, msg.sender, text);
     }
 
     // ---------------------------------------------------------------- owners

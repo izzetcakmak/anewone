@@ -250,6 +250,53 @@ contract ANewOneTest is Test {
         assertEq(creator.balance - balBefore, 5e18);
     }
 
+    // ---------------------------------------------------------------- comments
+
+    event Comment(address indexed token, address indexed author, string text);
+
+    function test_holderCanComment() public {
+        address token = _create();
+        vm.roll(block.number + 21);
+        vm.prank(alice);
+        arcade.buy{value: 10e18}(token, 0);
+
+        vm.expectEmit(true, true, false, true);
+        emit Comment(token, alice, "to the ark!");
+        vm.prank(alice);
+        arcade.comment(token, "to the ark!");
+    }
+
+    function test_creatorAndOwnerCanCommentWithoutHolding() public {
+        address token = _create();
+        vm.prank(creator); // creator holds no tokens
+        arcade.comment(token, "dev here");
+        arcade.comment(token, "owner here"); // this test contract is a platform owner
+    }
+
+    function test_nonHolderCannotComment() public {
+        address token = _create();
+        vm.prank(alice); // alice holds nothing yet
+        vm.expectRevert("hold to comment");
+        arcade.comment(token, "gm");
+    }
+
+    function test_commentValidation() public {
+        address token = _create();
+        vm.prank(creator);
+        vm.expectRevert("length");
+        arcade.comment(token, "");
+
+        bytes memory long = new bytes(281);
+        for (uint256 i = 0; i < 281; i++) long[i] = "a";
+        vm.prank(creator);
+        vm.expectRevert("length");
+        arcade.comment(token, string(long));
+
+        vm.prank(creator);
+        vm.expectRevert("unknown token");
+        arcade.comment(address(0xDEAD), "hi");
+    }
+
     // ---------------------------------------------------------------- owners
 
     function test_deployerIsInitialOwner() public {
