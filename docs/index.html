@@ -1051,7 +1051,10 @@ async function selectWallet(d) {
 // gated by a domain allowlist, then hands us a standard EIP-1193 provider — which we route
 // through the exact same selectWallet()/connect() path as an injected wallet, so all
 // trading code is identical. Activates only when config.web3authClientId is set.
-const WEB3AUTH_CLIENT_ID = window.ANEWONE_CONFIG.web3authClientId || "";
+// Web3Auth settings track the live blockchain network: testnet now, mainnet the instant the
+// scanner flips mainnet.live. Selected the same way CFG is, so no code branches on network.
+const W3A_ENV = (window.ANEWONE_CONFIG.web3auth || {})[window.ANEWONE_CONFIG.mainnet.live ? "mainnet" : "testnet"] || {};
+const WEB3AUTH_CLIENT_ID = W3A_ENV.clientId || "";
 let web3authInstance = null;
 
 async function loadWeb3Auth() {
@@ -1071,7 +1074,7 @@ async function loadWeb3Auth() {
     blockExplorerUrl: CFG.explorer || "",
   };
   const privateKeyProvider = new EthereumPrivateKeyProvider({ config: { chainConfig } });
-  const netKey = (window.ANEWONE_CONFIG.web3authNetwork || "sapphire_devnet").toUpperCase();
+  const netKey = (W3A_ENV.network || "sapphire_devnet").toUpperCase();
   const wa = new Web3Auth({
     clientId: WEB3AUTH_CLIENT_ID,
     web3AuthNetwork: WEB3AUTH_NETWORK[netKey] || WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
