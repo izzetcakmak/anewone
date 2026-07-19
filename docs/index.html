@@ -196,6 +196,18 @@
   .cpanel .grade.new { color: var(--dim); background: var(--surface); border: 1px solid var(--border-2); }
   .cpanel .cnote { font-size: 11px; color: var(--faint); margin-top: 10px; line-height: 1.5; }
   .devlink { color: var(--dim); font-family: var(--mono); font-size: 12px; cursor: pointer; text-decoration: underline; }
+  .fundbox { margin-top: 16px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,194,77,.45);
+    background: linear-gradient(135deg, rgba(255,194,77,.08), rgba(62,230,160,.06)); }
+  .fundhead { font-weight: 700; font-size: 15px; color: var(--gold); margin-bottom: 6px; }
+  .fundbody { font-size: 13px; color: var(--dim); line-height: 1.5; }
+  .fundrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .fundaddr { font-family: var(--mono); font-size: 12px; color: var(--text); background: var(--surface);
+    border: 1px solid var(--border-2); border-radius: 8px; padding: 9px 12px; overflow-wrap: anywhere; }
+  #fundCopy { padding: 9px 14px; font-size: 12px; min-height: 0; }
+  .fundcta { display: inline-block; padding: 9px 16px; font-size: 13px; font-weight: 700;
+    color: #08130d; background: var(--gold); border-radius: 10px; text-decoration: none; }
+  .fundcta:hover { filter: brightness(1.1); }
+  .fundnote { font-size: 11px; color: var(--faint); margin-top: 10px; line-height: 1.5; }
   .wrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px;
     margin-bottom: 8px; background: var(--surface); border: 1px solid var(--border-2);
     border-radius: 12px; cursor: pointer; text-align: left; font-size: 15px; color: var(--text);
@@ -329,6 +341,7 @@
     <div class="netbar">
       <span class="badge" style="color:var(--gold);border-color:rgba(255,194,77,.35);background:rgba(255,194,77,.08)">⚡ Built on Arc Network</span>
       <span id="netBadge" class="badge">Testnet</span>
+      <span id="balChip" class="badge" style="display:none" title="Your USDC on Arc — pays gas and trades"></span>
       <span id="walletWrap" style="position:relative;display:inline-block">
         <button id="connectBtn">Connect</button>
         <div id="walletMenu" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-2);border:1px solid var(--border-2);border-radius:12px;z-index:50;min-width:184px;box-shadow:var(--shadow);overflow:hidden">
@@ -379,6 +392,21 @@
   </div>
 
   <div id="creatorPanel" class="cpanel" style="display:none"></div>
+
+  <div id="fundBanner" class="fundbox" style="display:none">
+    <div class="fundhead">⛽ Fund your wallet to start trading</div>
+    <div class="fundbody">
+      On Arc, <b>USDC is both the gas and the money</b> — one balance covers fees and trades.
+      Grab free test USDC from Circle's faucet (20 USDC every 2h):
+    </div>
+    <div class="fundrow">
+      <code id="fundAddr" class="fundaddr"></code>
+      <button id="fundCopy">Copy address</button>
+      <a id="fundLink" class="fundcta" href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer">Get test USDC ↗</a>
+    </div>
+    <div class="fundnote">Paste your address on the faucet and pick <b>Arc Testnet</b>. This
+      panel disappears automatically once the balance lands (checked every ~15s).</div>
+  </div>
 
   <div id="grid" class="grid"></div>
   <div id="empty" class="empty" style="display:none">No tokens yet — be the first to launch one.</div>
@@ -1021,12 +1049,26 @@ async function connect(forcePicker) {
     try {
       await bp.send("wallet_switchEthereumChain", [{ chainId: CFG.chainIdHex }]);
     } catch (e) {
-      // 4902: chain unknown to this wallet — add it, then the wallet switches
-      await bp.send("wallet_addEthereumChain", [{
-        chainId: CFG.chainIdHex, chainName: NET_NAME,
-        nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
-        rpcUrls: [CFG.rpc], blockExplorerUrls: CFG.explorer ? [CFG.explorer] : []
-      }]);
+      // 4902 (or null from some wallets) = chain unknown — add it. 4001 = user said no.
+      const code = e?.error?.code ?? e?.code ?? e?.data?.originalError?.code ?? null;
+      if (code === 4001) return toast("Network switch rejected");
+      if (code !== 4902 && code !== null && code !== -32603) {
+        return toast(e.shortMessage || e.message || "Network switch failed");
+      }
+      try {
+        await bp.send("wallet_addEthereumChain", [{
+          chainId: CFG.chainIdHex, chainName: NET_NAME,
+          nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+          rpcUrls: [CFG.rpc], blockExplorerUrls: CFG.explorer ? [CFG.explorer] : []
+        }]);
+      } catch (e2) {
+        return toast(e2.shortMessage || e2.message || "Could not add the Arc network");
+      }
+    }
+    // some wallets resolve the switch but silently stay on the old chain — verify for real
+    const after = await activeEip1193.request({ method: "eth_chainId" });
+    if (parseInt(after, 16) !== CFG.chainId) {
+      return toast(`Please switch your wallet to ${NET_NAME} and reconnect`);
     }
   }
   signer = await bp.getSigner();
@@ -1035,7 +1077,37 @@ async function connect(forcePicker) {
   $("walletMenu").style.display = "none";
   toast("READY PLAYER ONE");
   refreshFees();
+  refreshNativeBalance();
 }
+
+// ---- balance + funding. On Arc the native USDC balance pays gas AND trades, so a fresh
+// wallet is stuck at zero — surface the balance and walk the user to Circle's faucet
+// (testnet). Polls while the fund panel is open and closes itself once funds land.
+const LOW_BAL = ethers.parseEther("0.5");
+let fundPoll = null, wasLow = false;
+async function refreshNativeBalance() {
+  if (!userAddr) return;
+  try {
+    userNativeBal = await rpc(() => readProvider.getBalance(userAddr));
+  } catch { return; }
+  $("balChip").textContent = "◎ " + fmt(userNativeBal, 2) + " USDC";
+  $("balChip").style.display = "inline-block";
+  const low = userNativeBal < LOW_BAL;
+  if (low) {
+    $("fundAddr").textContent = userAddr;
+    $("fundBanner").style.display = "block";
+    if (!fundPoll) fundPoll = setInterval(refreshNativeBalance, 15_000);
+    wasLow = true;
+  } else {
+    $("fundBanner").style.display = "none";
+    if (fundPoll) { clearInterval(fundPoll); fundPoll = null; }
+    if (wasLow) { wasLow = false; toast("Funded! You're ready to trade 🎉"); }
+  }
+}
+$("fundCopy").onclick = async () => {
+  try { await navigator.clipboard.writeText(userAddr || ""); toast("Address copied"); }
+  catch { toast(userAddr || ""); }
+};
 
 // clears all local wallet state; the wallet extension keeps its own permission,
 // but the site forgets the account and resets owner/creator UI
@@ -1045,6 +1117,10 @@ function disconnect() {
   userNativeBal = 0n; userTokenBal = 0n; exactWei = null;
   $("connectBtn").textContent = "Connect";
   $("walletMenu").style.display = "none";
+  $("balChip").style.display = "none";
+  $("fundBanner").style.display = "none";
+  if (fundPoll) { clearInterval(fundPoll); fundPoll = null; }
+  wasLow = false;
   $("feeBar").style.display = "none";
   $("footPlatformLine").style.display = "none";
   $("pfStat").style.display = "none";
