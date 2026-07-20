@@ -40,6 +40,7 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   ::selection { background: rgba(62,230,160,.25); }
+  html { scroll-behavior: smooth; }
   body {
     background: var(--bg);
     color: var(--text);
@@ -47,14 +48,34 @@
     font-size: 15px; line-height: 1.5; min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     background-image:
+      linear-gradient(rgba(255,255,255,.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.015) 1px, transparent 1px),
       radial-gradient(60% 40% at 15% -5%, rgba(62,230,160,.10), transparent 60%),
       radial-gradient(55% 40% at 90% 0%, rgba(139,123,255,.10), transparent 60%);
+    background-size: 44px 44px, 44px 44px, auto, auto;
     background-attachment: fixed;
   }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.10); border-radius: 999px;
+    border: 3px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.18); }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .topbar { position: sticky; top: 0; z-index: 200; background: rgba(7,8,11,.78);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
+    border-bottom: 1px solid var(--border); }
+  .topbar-inner { max-width: 1180px; margin: 0 auto; padding: 10px 20px; display: flex;
+    align-items: center; gap: 10px; }
+  .tb-brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+  .tb-brand:hover { text-decoration: none; }
+  .tb-brand img { width: 30px; height: 30px; border-radius: 8px; }
+  .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px;
+    letter-spacing: .6px; color: var(--text); }
+  .topbar .badge { white-space: nowrap; }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 20px 100px; }
-  header { text-align: center; padding: 40px 0 10px; }
+  header { text-align: center; padding: 46px 0 6px; }
   .logo {
     font-family: 'Space Grotesk', sans-serif; font-weight: 700;
     font-size: clamp(38px, 8vw, 68px); letter-spacing: -2px; line-height: 1;
@@ -63,7 +84,7 @@
   }
   .tagline { color: var(--dim); margin-top: 14px; font-size: 14px; letter-spacing: 3px;
     text-transform: uppercase; font-weight: 500; }
-  .netbar { display: flex; justify-content: center; gap: 10px; margin: 26px 0 6px;
+  .netbar { display: flex; justify-content: center; gap: 10px; margin: 24px 0 0;
     flex-wrap: wrap; align-items: center; }
   .badge {
     font-size: 11px; font-weight: 600; letter-spacing: .3px; padding: 7px 13px;
@@ -117,17 +138,28 @@
     transition: transform .16s cubic-bezier(.2,.7,.3,1), border-color .16s, box-shadow .16s, background .16s;
   }
   .cab:hover { transform: translateY(-4px); border-color: var(--border-2);
-    background: var(--surface-2); box-shadow: var(--shadow); }
+    background: var(--surface-2); box-shadow: var(--shadow), 0 0 0 1px rgba(62,230,160,.10); }
+  .skel-card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 18px; }
+  .sk { position: relative; overflow: hidden; background: rgba(255,255,255,.05); border-radius: 8px; }
+  .sk::after { content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+    animation: shimmer 1.4s infinite; }
+  @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
   .cab .sym { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px;
     letter-spacing: -.3px; color: var(--text); }
   .cab .nm { color: var(--dim); font-size: 13px; margin-top: 2px; }
   .cab .px { color: var(--text); font-family: var(--mono); }
-  .cab .grad { position: absolute; top: 14px; right: 14px; font-size: 11px; font-weight: 600;
-    color: var(--gold); background: rgba(255,194,77,.12); border: 1px solid rgba(255,194,77,.3);
-    padding: 3px 9px; border-radius: 999px; }
+  /* inline next to the market cap so it can never collide with the title or the star */
+  .cab .grad { display: inline-block; font-size: 10.5px; font-weight: 600; vertical-align: 2px;
+    margin-left: 6px; color: var(--gold); background: rgba(255,194,77,.12);
+    border: 1px solid rgba(255,194,77,.3); padding: 2px 8px; border-radius: 999px; }
   .cabhead { display: flex; gap: 13px; align-items: center; margin-bottom: 12px; }
   .cimg { width: 52px; height: 52px; object-fit: cover; border-radius: 12px;
     border: 1px solid var(--border); flex-shrink: 0; background: var(--bg-2); }
+  .cimg.ph { display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; color: var(--dim);
+    background: linear-gradient(135deg, rgba(62,230,160,.10), rgba(139,123,255,.10)); }
   .upl-prev { display: none; align-items: center; gap: 12px; margin-top: 12px; }
   .upl-prev img { width: 64px; height: 64px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border-2); }
   .upl-prev .x { border-color: rgba(255,84,112,.4); color: var(--red); padding: 8px 12px; }
@@ -144,7 +176,11 @@
     color: var(--dim); border-radius: 999px; }
   .sorts button:hover { background: var(--surface-2); color: var(--text); }
   .sorts button.on { background: rgba(62,230,160,.14); color: var(--accent); }
-  #search { flex: 1; min-width: 200px; max-width: 340px; }
+  .searchwrap { position: relative; flex: 1; min-width: 200px; max-width: 340px; }
+  .searchwrap svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    color: var(--faint); pointer-events: none; }
+  .searchwrap input { width: 100%; padding-left: 38px; }
+  #watchToggle, #filterToggle { display: inline-flex; align-items: center; gap: 7px; }
   .feed { margin-top: 40px; }
   .feed-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px;
     color: var(--faint); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
@@ -289,7 +325,12 @@
   .modal { background: linear-gradient(180deg, rgba(20,23,30,.98), rgba(12,14,19,.98));
     border: 1px solid var(--border-2); border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,.6);
     max-width: 480px; width: 100%; padding: 26px; max-height: 92vh; overflow-y: auto;
-    animation: pop .2s cubic-bezier(.2,.8,.3,1); }
+    position: relative; animation: pop .2s cubic-bezier(.2,.8,.3,1); }
+  .modal-x { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; padding: 0;
+    display: flex; align-items: center; justify-content: center; border-radius: 10px;
+    color: var(--faint); font-size: 14px; line-height: 1; background: transparent;
+    border: 1px solid transparent; }
+  .modal-x:hover { color: var(--text); background: var(--surface-2); border-color: var(--border); }
   @keyframes pop { from { transform: translateY(10px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
   .modal h2 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px;
     letter-spacing: -.3px; color: var(--text); margin-bottom: 18px; }
@@ -306,6 +347,12 @@
   .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     padding: 10px 14px; font-size: 12px; color: var(--dim); font-weight: 500; }
   .stat b { color: var(--text); font-family: var(--mono); font-weight: 500; font-size: 15px; display: block; margin-top: 3px; }
+  .statbar { display: flex; flex-wrap: wrap; justify-content: center; margin: 26px auto 0;
+    width: fit-content; max-width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden; }
+  .statbar .stat { background: transparent; border: none; border-radius: 0;
+    padding: 12px 22px; text-align: center; }
+  .statbar .stat + .stat { border-left: 1px solid var(--border); }
   .tabs { display: flex; gap: 6px; margin: 16px 0 0; }
   .tabs button { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--dim); }
   .tabs button.on-buy { background: rgba(47,209,138,.14); color: var(--green); border-color: rgba(47,209,138,.5); }
@@ -321,10 +368,13 @@
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     background: rgba(20,23,30,.98); border: 1px solid var(--border-2); color: var(--text);
+    border-left: 3px solid var(--accent);
     padding: 13px 22px; border-radius: 12px; box-shadow: var(--shadow);
     display: none; z-index: 2000; max-width: 90vw; font-weight: 500; font-size: 14px;
   }
-  .empty { text-align: center; color: var(--dim); padding: 70px 0; font-size: 17px; }
+  .empty { text-align: center; color: var(--dim); padding: 60px 24px; font-size: 15px;
+    border: 1px dashed var(--border-2); border-radius: var(--r); background: var(--surface);
+    margin-top: 20px; }
   .footer { margin-top: 80px; padding-top: 34px; border-top: 1px solid var(--border); }
   .foot-top { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
   .foot-brand { display: flex; align-items: center; gap: 12px; }
@@ -353,15 +403,31 @@
   }
   .hint { font-size: 12.5px; color: var(--faint); margin-top: 6px; }
 
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001s !important;
+      animation-iteration-count: 1 !important; transition-duration: .001s !important; }
+  }
+
   /* mobile: fingers need ~44px targets, and the dense rows need room to breathe */
   @media (max-width: 600px) {
     .wrap { padding: 16px 14px 70px; }
     header { padding: 26px 0 6px; }
+    .topbar-inner { padding: 8px 12px; gap: 8px; }
+    .tb-brand span { display: none; }
+    #balChip { display: none !important; }
+    .topbar .badge { font-size: 10px; padding: 6px 9px; }
+    .statbar { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+    .statbar .stat { padding: 12px 10px; }
+    .statbar .stat + .stat { border-left: none; }
+    .statbar .stat:nth-child(even) { border-left: 1px solid var(--border); }
+    .statbar .stat:nth-child(n+3) { border-top: 1px solid var(--border); }
     button { min-height: 44px; }
+    .modal-x { min-height: 0; width: 38px; height: 38px; }
     .pctrow button, .sorts button { min-height: 44px; }
     .sorts { width: 100%; }
     .sorts button { flex: 1; min-width: 0; padding: 10px 6px; }
-    #search { max-width: none; width: 100%; min-height: 44px; }
+    .searchwrap { max-width: none; width: 100%; }
+    #search { min-height: 44px; }
     input { min-height: 44px; }
     /* the filter panel opts out of min-height for density; on touch it must opt back in */
     .filters input[type=number], .filters select, .filters #fClear { min-height: 44px; }
@@ -377,6 +443,25 @@
 </style>
 </head>
 <body>
+<nav class="topbar">
+  <div class="topbar-inner">
+    <a class="tb-brand" href="index.html" aria-label="A NEW ONE — home">
+      <img src="favicon.svg" alt="">
+      <span>A NEW ONE</span>
+    </a>
+    <span id="netBadge" class="badge">Testnet</span>
+    <span id="balChip" class="badge" style="display:none" title="Your USDC on Arc — pays gas and trades"></span>
+    <span id="walletWrap" style="position:relative;display:inline-block">
+      <button id="connectBtn">Connect</button>
+      <div id="walletMenu" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-2);border:1px solid var(--border-2);border-radius:12px;z-index:50;min-width:184px;box-shadow:var(--shadow);overflow:hidden">
+        <button id="switchBtn" style="display:block;width:100%;box-shadow:none;border:none;border-bottom:1px solid var(--border);border-radius:0;text-align:left;background:transparent">Switch account</button>
+        <button id="changeWalletBtn" style="display:block;width:100%;box-shadow:none;border:none;border-bottom:1px solid var(--border);border-radius:0;text-align:left;background:transparent">Change wallet</button>
+        <button id="disconnectBtn" style="display:block;width:100%;box-shadow:none;border:none;border-radius:0;text-align:left;background:transparent;color:var(--red)">Disconnect</button>
+      </div>
+    </span>
+    <button id="createBtn" class="alt">+ Insert Coin</button>
+  </div>
+</nav>
 <div class="wrap">
   <header>
     <div class="logo">A NEW ONE</div>
@@ -384,24 +469,13 @@
     <div class="coming" id="comingSoon"><span class="zap">⚡</span> MAINNET COMING SOON <span class="zap">⚡</span></div>
     <div class="netbar">
       <span class="badge" style="color:var(--gold);border-color:rgba(255,194,77,.35);background:rgba(255,194,77,.08)">⚡ Built on Arc Network</span>
-      <span id="netBadge" class="badge">Testnet</span>
-      <span id="balChip" class="badge" style="display:none" title="Your USDC on Arc — pays gas and trades"></span>
-      <span id="walletWrap" style="position:relative;display:inline-block">
-        <button id="connectBtn">Connect</button>
-        <div id="walletMenu" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-2);border:1px solid var(--border-2);border-radius:12px;z-index:50;min-width:184px;box-shadow:var(--shadow);overflow:hidden">
-          <button id="switchBtn" style="display:block;width:100%;box-shadow:none;border:none;border-bottom:1px solid var(--border);border-radius:0;text-align:left;background:transparent">Switch account</button>
-          <button id="changeWalletBtn" style="display:block;width:100%;box-shadow:none;border:none;border-bottom:1px solid var(--border);border-radius:0;text-align:left;background:transparent">Change wallet</button>
-          <button id="disconnectBtn" style="display:block;width:100%;box-shadow:none;border:none;border-radius:0;text-align:left;background:transparent;color:var(--red)">Disconnect</button>
-        </div>
-      </span>
-      <button id="createBtn" class="alt">+ Insert Coin</button>
     </div>
   </header>
 
   <div class="marquee"><span id="ticker">Loading the floor…</span></div>
   <div id="rpcStatus" class="rpcstatus" style="display:none"></div>
 
-  <div class="row" style="justify-content:center">
+  <div class="statbar">
     <div class="stat">TOKENS <b id="statCount">–</b></div>
     <div class="stat">FEE <b>1%</b> (½ to creator)</div>
     <div class="stat">ANTI-SNIPE <b>2% cap / 20 blocks</b></div>
@@ -410,14 +484,20 @@
 
   <div class="toolbar">
     <div class="sorts" id="sortTabs">
-      <button data-sort="trending" class="on">🔥 Trending</button>
-      <button data-sort="new">🆕 Newest</button>
-      <button data-sort="mcap">💰 Top MC</button>
-      <button data-sort="grad">🎓 Graduating</button>
+      <button data-sort="trending" class="on">Trending</button>
+      <button data-sort="new">Newest</button>
+      <button data-sort="mcap">Top MC</button>
+      <button data-sort="grad">Graduating</button>
     </div>
-    <input id="search" placeholder="search name, symbol or address…">
+    <div class="searchwrap">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="search" placeholder="Search name, symbol or address…">
+    </div>
     <button id="watchToggle" title="Show only your watchlist">☆ Watchlist</button>
-    <button id="filterToggle">⚙ Filters</button>
+    <button id="filterToggle">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+      Filters
+    </button>
   </div>
 
   <div id="filterPanel" class="filters" style="display:none">
@@ -505,6 +585,7 @@
 <!-- create modal -->
 <div id="createModal" class="modal-bg">
   <div class="modal">
+    <button class="modal-x" onclick="closeModals()" aria-label="Close">✕</button>
     <h2>Launch a token</h2>
     <label>Name</label><input id="cName" placeholder="Noah's Arc" maxlength="48">
     <label>Symbol</label><input id="cSymbol" placeholder="NOAH" maxlength="12">
@@ -539,7 +620,8 @@
 <!-- trade modal -->
 <div id="tradeModal" class="modal-bg">
   <div class="modal">
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:18px">
+    <button class="modal-x" onclick="closeModals()" aria-label="Close">✕</button>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:18px;padding-right:36px">
       <img id="tImg" class="cimg" style="display:none">
       <h2 id="tTitle" style="margin-bottom:0">Token</h2>
     </div>
@@ -606,6 +688,7 @@
 <!-- wallet picker (EIP-6963 multi-wallet) -->
 <div id="walletModal" class="modal-bg">
   <div class="modal" style="max-width:400px">
+    <button class="modal-x" onclick="closeModals()" aria-label="Close">✕</button>
     <h2>Connect a wallet</h2>
     <button id="gmailBtn" class="gmailbtn" type="button">
       <span class="gicon">G</span> Continue with Google
@@ -1405,15 +1488,15 @@ function cardHtml(addr) {
   return `<div class="cab" onclick="openTrade('${a}')">
     <span class="star ${isWatched(addr) ? "on" : ""}" onclick="toggleWatch('${a}', event)"
       title="Watchlist">${isWatched(addr) ? "★" : "☆"}</span>
-    ${inf.graduated ? '<span class="grad">★ GRADUATED</span>' : ""}
     <div class="cabhead">
+      <div class="cimg ph" id="ph-${a}" aria-hidden="true">${esc(String(symbol || "?").slice(0, 1))}</div>
       <img class="cimg" id="img-${a}" alt="" style="display:none">
       <div>
         <div class="sym">$${esc(symbol)}</div>
         <div class="nm">${esc(name)}</div>
       </div>
     </div>
-    <div class="mcap">MC ${compactUsd(marketCapWei(inf))}</div>
+    <div class="mcap">MC ${compactUsd(marketCapWei(inf))}${inf.graduated ? ' <span class="grad">★ GRADUATED</span>' : ""}</div>
     ${metaOf(addr).d ? `<div class="cdesc">${esc(metaOf(addr).d)}</div>` : ""}
     <div class="cstats">
       <span>👤 <b>${fullyIndexed ? (st.holders || 0) : "…"}</b> holders</span>
@@ -1480,9 +1563,11 @@ async function resolveImg(addr) {
 function fillImages(addrs) {
   addrs.forEach(async (addr) => {
     const u = safeImgSrc(await resolveImg(addr));
-    if (!u) return;
+    if (!u) return; // no image — the monogram placeholder stays
     const el = document.getElementById("img-" + addr);
     if (el) { el.src = u; el.style.display = "block"; }
+    const ph = document.getElementById("ph-" + addr);
+    if (ph) ph.style.display = "none";
   });
 }
 
@@ -2202,6 +2287,21 @@ if (!WEB3AUTH_CLIENT_ID) {
 document.addEventListener("click", (e) => {
   if (!$("walletWrap").contains(e.target)) $("walletMenu").style.display = "none";
 });
+
+// skeleton placeholders until the first on-chain paint replaces them in renderGrid()
+$("grid").innerHTML = Array.from({ length: 6 }, () => `
+  <div class="skel-card" aria-hidden="true">
+    <div style="display:flex;gap:13px;align-items:center;margin-bottom:14px">
+      <div class="sk" style="width:52px;height:52px;border-radius:12px"></div>
+      <div style="flex:1">
+        <div class="sk" style="height:14px;width:60%;margin-bottom:8px"></div>
+        <div class="sk" style="height:11px;width:40%"></div>
+      </div>
+    </div>
+    <div class="sk" style="height:16px;width:45%;margin-bottom:12px"></div>
+    <div class="sk" style="height:11px;width:90%;margin-bottom:12px"></div>
+    <div class="sk" style="height:8px;width:100%;border-radius:999px"></div>
+  </div>`).join("");
 
 loadTokens();
 setInterval(loadTokens, 60_000);
