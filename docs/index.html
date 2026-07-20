@@ -75,17 +75,58 @@
     letter-spacing: .6px; color: var(--text); }
   .topbar .badge { white-space: nowrap; }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 20px 100px; }
-  header { text-align: center; padding: 46px 0 6px; }
-  .logo {
-    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
-    font-size: clamp(38px, 8vw, 68px); letter-spacing: -2px; line-height: 1;
+  /* ---- hero: full-bleed, procedural constellation background (no image assets) */
+  .hero { position: relative; overflow: hidden; text-align: center;
+    background: radial-gradient(90% 130% at 50% -20%, rgba(17,22,33,.9), rgba(7,8,11,0) 70%); }
+  .hero::before { content: ""; position: absolute; inset: -20%; pointer-events: none;
+    background:
+      radial-gradient(34% 42% at 16% 30%, rgba(62,230,160,.14), transparent 70%),
+      radial-gradient(30% 40% at 84% 22%, rgba(139,123,255,.13), transparent 70%),
+      radial-gradient(26% 34% at 60% 82%, rgba(62,230,160,.07), transparent 70%); }
+  .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background: linear-gradient(180deg, rgba(7,8,11,0) 64%, var(--bg) 99%); }
+  .hero-inner { position: relative; z-index: 2; max-width: 920px; margin: 0 auto;
+    padding: 78px 20px 58px; }
+  .hero h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: clamp(40px, 7.2vw, 80px); line-height: 1.05; letter-spacing: -2.5px;
+    margin: 26px 0 20px;
     background: linear-gradient(180deg, #fff 30%, #9fb0c3 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero h1 .l2 { display: block;
+    background: linear-gradient(135deg, #7df7c1, #2fd18a 70%);
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  .tagline { color: var(--dim); margin-top: 14px; font-size: 14px; letter-spacing: 3px;
-    text-transform: uppercase; font-weight: 500; }
-  .netbar { display: flex; justify-content: center; gap: 10px; margin: 24px 0 0;
-    flex-wrap: wrap; align-items: center; }
+    filter: drop-shadow(0 0 26px rgba(62,230,160,.35)); }
+  .hero-sub { color: var(--dim); font-size: 16.5px; line-height: 1.65; max-width: 58ch;
+    margin: 0 auto 34px; }
+  .hero-sub a { color: var(--text); border-bottom: 1px solid var(--border-2); }
+  .hero-sub a:hover { color: var(--accent); text-decoration: none; border-color: rgba(62,230,160,.5); }
+  .hero-stats { display: flex; justify-content: center; gap: 16px 60px; flex-wrap: wrap;
+    margin: 6px 0 36px; }
+  .hstat b { display: block; font-family: var(--mono); font-weight: 700; font-size: 31px;
+    color: var(--accent); letter-spacing: 1px; text-shadow: 0 0 26px rgba(62,230,160,.5); }
+  .hstat span { font-size: 11px; letter-spacing: 2.2px; color: var(--dim);
+    text-transform: uppercase; font-weight: 600; }
+  .hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    margin-bottom: 52px; }
+  .hbtn { display: inline-flex; align-items: center; gap: 9px; padding: 14px 28px;
+    border-radius: 13px; font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: 15px; transition: box-shadow .15s, filter .15s, transform .1s,
+    border-color .15s, background .15s; }
+  .hbtn:hover { text-decoration: none; transform: translateY(-1px); }
+  .hbtn.primary { color: #04120b; background: linear-gradient(135deg, #56f0ab, #2fd18a);
+    box-shadow: 0 6px 30px rgba(47,209,138,.38); }
+  .hbtn.primary:hover { filter: brightness(1.06); box-shadow: 0 8px 42px rgba(47,209,138,.55); }
+  .hbtn.ghost { color: var(--text); background: rgba(255,255,255,.04);
+    border: 1px solid var(--border-2); }
+  .hbtn.ghost:hover { border-color: var(--text); background: rgba(255,255,255,.08); }
+  .works-label { font-size: 10.5px; letter-spacing: 3px; color: var(--faint);
+    text-transform: uppercase; font-weight: 600; margin-bottom: 15px; }
+  .works-row { display: flex; gap: 10px 28px; justify-content: center; flex-wrap: wrap; }
+  .works-row span { display: inline-flex; align-items: center; gap: 7px; color: var(--dim);
+    opacity: .55; font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: 13.5px; letter-spacing: .4px; transition: opacity .15s; cursor: default; }
+  .works-row span:hover { opacity: 1; }
   .badge {
     font-size: 11px; font-weight: 600; letter-spacing: .3px; padding: 7px 13px;
     border-radius: 999px; border: 1px solid var(--border-2); color: var(--dim);
@@ -96,9 +137,9 @@
     background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.6s infinite; }
   @keyframes pulse { 50% { opacity: .35; } }
   .coming {
-    display: inline-flex; align-items: center; gap: 10px; margin: 22px auto 2px;
-    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
-    font-size: clamp(13px, 2.4vw, 17px); letter-spacing: 2px; padding: 10px 20px;
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: var(--mono); font-weight: 500;
+    font-size: 12px; letter-spacing: 3px; text-transform: uppercase; padding: 9px 18px;
     border-radius: 999px; color: var(--accent-2);
     border: 1px solid rgba(139,123,255,.35); background: rgba(139,123,255,.08);
     box-shadow: 0 0 30px rgba(139,123,255,.15); animation: glowpulse 3s ease-in-out infinite;
@@ -169,7 +210,7 @@
   .cstats b { color: var(--text); font-family: var(--mono); font-weight: 500; }
   .rpcstatus { text-align: center; color: var(--gold); font-size: 13px; margin: 2px 0 8px; animation: pulse 1.6s infinite; }
   .toolbar { display: flex; gap: 14px; margin-top: 28px; flex-wrap: wrap; align-items: center;
-    justify-content: space-between; }
+    justify-content: space-between; scroll-margin-top: 76px; }
   .sorts { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px;
     background: var(--surface); border: 1px solid var(--border); }
   .sorts button { font-size: 13px; padding: 8px 14px; border: none; background: transparent;
@@ -347,12 +388,6 @@
   .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     padding: 10px 14px; font-size: 12px; color: var(--dim); font-weight: 500; }
   .stat b { color: var(--text); font-family: var(--mono); font-weight: 500; font-size: 15px; display: block; margin-top: 3px; }
-  .statbar { display: flex; flex-wrap: wrap; justify-content: center; margin: 26px auto 0;
-    width: fit-content; max-width: 100%; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; overflow: hidden; }
-  .statbar .stat { background: transparent; border: none; border-radius: 0;
-    padding: 12px 22px; text-align: center; }
-  .statbar .stat + .stat { border-left: 1px solid var(--border); }
   .tabs { display: flex; gap: 6px; margin: 16px 0 0; }
   .tabs button { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--dim); }
   .tabs button.on-buy { background: rgba(47,209,138,.14); color: var(--green); border-color: rgba(47,209,138,.5); }
@@ -411,16 +446,16 @@
   /* mobile: fingers need ~44px targets, and the dense rows need room to breathe */
   @media (max-width: 600px) {
     .wrap { padding: 16px 14px 70px; }
-    header { padding: 26px 0 6px; }
+    .hero-inner { padding: 48px 18px 42px; }
+    .hero h1 { font-size: clamp(28px, 8.6vw, 40px); letter-spacing: -1.2px; }
+    .hero-stats { gap: 14px 30px; }
+    .hstat b { font-size: 24px; }
+    .hero-cta .hbtn { flex: 1; justify-content: center; min-width: 150px; }
     .topbar-inner { padding: 8px 12px; gap: 8px; }
     .tb-brand span { display: none; }
     #balChip { display: none !important; }
     .topbar .badge { font-size: 10px; padding: 6px 9px; }
-    .statbar { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
-    .statbar .stat { padding: 12px 10px; }
-    .statbar .stat + .stat { border-left: none; }
-    .statbar .stat:nth-child(even) { border-left: 1px solid var(--border); }
-    .statbar .stat:nth-child(n+3) { border-top: 1px solid var(--border); }
+    .topbar button { white-space: nowrap; padding: 10px 13px; font-size: 13px; }
     button { min-height: 44px; }
     .modal-x { min-height: 0; width: 38px; height: 38px; }
     .pctrow button, .sorts button { min-height: 44px; }
@@ -462,27 +497,40 @@
     <button id="createBtn" class="alt">+ Insert Coin</button>
   </div>
 </nav>
-<div class="wrap">
-  <header>
-    <div class="logo">A NEW ONE</div>
-    <div class="tagline">INSERT COIN &nbsp;·&nbsp; LAUNCH A NEW ONE</div>
-    <div class="coming" id="comingSoon"><span class="zap">⚡</span> MAINNET COMING SOON <span class="zap">⚡</span></div>
-    <div class="netbar">
-      <span class="badge" style="color:var(--gold);border-color:rgba(255,194,77,.35);background:rgba(255,194,77,.08)">⚡ Built on Arc Network</span>
+<section class="hero">
+  <canvas id="heroFx" aria-hidden="true"></canvas>
+  <div class="hero-inner">
+    <div class="coming" id="comingSoon"><span class="zap">⚡</span> Mainnet coming soon <span class="zap">⚡</span></div>
+    <h1>INSERT COIN.<span class="l2">LAUNCH A NEW ONE.</span></h1>
+    <p class="hero-sub">The memecoin launchpad on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc Network</a> —
+      Circle's stablecoin L1 where gas is USDC. Rug-proof bonding curves, anti-snipe
+      launches, and half of every trade fee paid straight to creators.</p>
+    <div class="hero-stats">
+      <div class="hstat"><b id="statCount">–</b><span>Tokens live</span></div>
+      <div class="hstat"><b>1%</b><span>Fee · ½ to creators</span></div>
+      <div class="hstat"><b id="statGrad">–</b><span>Graduation</span></div>
     </div>
-  </header>
+    <div class="hero-cta">
+      <a class="hbtn primary" href="#floor">Explore the floor →</a>
+      <a class="hbtn ghost" href="docs.html">Read the docs</a>
+    </div>
+    <div class="works-label">Works with any EVM wallet — built on Arc Network, powered by USDC</div>
+    <div class="works-row">
+      <span>⚡ Arc Network</span>
+      <span>◎ USDC gas</span>
+      <span>🦊 MetaMask</span>
+      <span>OKX Wallet</span>
+      <span>Rabby</span>
+      <span>Ⓖ Google sign-in</span>
+    </div>
+  </div>
+</section>
 
+<div class="wrap">
   <div class="marquee"><span id="ticker">Loading the floor…</span></div>
   <div id="rpcStatus" class="rpcstatus" style="display:none"></div>
 
-  <div class="statbar">
-    <div class="stat">TOKENS <b id="statCount">–</b></div>
-    <div class="stat">FEE <b>1%</b> (½ to creator)</div>
-    <div class="stat">ANTI-SNIPE <b>2% cap / 20 blocks</b></div>
-    <div class="stat">GRADUATION <b id="statGrad">–</b></div>
-  </div>
-
-  <div class="toolbar">
+  <div class="toolbar" id="floor">
     <div class="sorts" id="sortTabs">
       <button data-sort="trending" class="on">Trending</button>
       <button data-sort="new">Newest</button>
@@ -707,6 +755,63 @@
 
 <div id="toast" class="toast"></div>
 
+<script>
+// hero background: procedural constellation — pure canvas, zero image assets, and
+// intentionally independent of the app bundle so it still runs if the CDN is slow
+(() => {
+  const cv = document.getElementById("heroFx");
+  if (!cv) return;
+  const ctx = cv.getContext("2d");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const LINK = 130;
+  let W, H, pts = [], raf = 0, running = false;
+  function size() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.min(110, Math.round(W * H / 15000));
+    pts = Array.from({ length: n }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - .5) * .24, vy: (Math.random() - .5) * .24,
+      r: Math.random() * 1.6 + .6,
+      c: Math.random() < .78 ? "62,230,160" : "139,123,255",
+    }));
+  }
+  function frame() {
+    ctx.clearRect(0, 0, W, H);
+    for (const p of pts) {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < -20) p.x = W + 20; else if (p.x > W + 20) p.x = -20;
+      if (p.y < -20) p.y = H + 20; else if (p.y > H + 20) p.y = -20;
+    }
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i];
+      for (let j = i + 1; j < pts.length; j++) {
+        const b = pts[j];
+        const dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy;
+        if (d2 < LINK * LINK) {
+          ctx.strokeStyle = `rgba(${a.c},${((1 - Math.sqrt(d2) / LINK) * .16).toFixed(3)})`;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+      }
+    }
+    for (const p of pts) {
+      ctx.fillStyle = `rgba(${p.c},.75)`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
+    }
+  }
+  function loop() { frame(); raf = requestAnimationFrame(loop); }
+  function start() { if (!running && !reduced) { running = true; loop(); } }
+  function stop() { running = false; cancelAnimationFrame(raf); }
+  size();
+  if (reduced) frame(); else start();
+  addEventListener("resize", () => { size(); if (reduced) frame(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stop(); else start();
+  });
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
 <script src="config.js"></script>
 <script>
