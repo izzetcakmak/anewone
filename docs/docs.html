@@ -36,7 +36,9 @@
   }
   .wrap { max-width: 820px; margin: 0 auto; padding: 28px 20px 100px; }
   .top { display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    padding-bottom: 22px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    padding: 14px 0 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 100; background: rgba(7,8,11,.82);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
   .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
   .brand img { width: 34px; height: 34px; border-radius: 9px; }
   .brand b { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 19px; color: var(--text);
