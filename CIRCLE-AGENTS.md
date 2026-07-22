@@ -101,9 +101,14 @@ account system on our side.
 
 - [ ] Try Circle CLI against Arc testnet: create an Agent Wallet, allowlist the platform
       contract, execute a policy-capped `buy` on $NOAH
-- [ ] Prototype an x402-priced endpoint over the existing `docs/` RPC-reading logic
-      (e.g. `GET /floor` returning live curve stats) using the Gateway middleware
-- [ ] List that endpoint on Agent Marketplace once it's stable
+- [x] Prototype an x402-priced endpoint returning live curve stats — done: `api/server.mjs`
+      (zero-dep, `GET /floor` at $0.001 and `GET /token/{address}` at $0.0005, with
+      `MOCK_CHAIN`/`MOCK_FACILITATOR` dev modes; `api/agent-demo.mjs` demos the full
+      402 → pay → 200 loop)
+- [ ] Point `FACILITATOR_URL` at Circle's Nanopayments facilitator and take a real
+      Gateway-settled payment on Arc testnet (needs the facilitator endpoint + asset id
+      from the [Nanopayments docs](https://developers.circle.com/gateway/nanopayments))
+- [ ] List the endpoint on Agent Marketplace once it settles real payments
 - [ ] Watch for Nanopayments Arc **mainnet** support — same trigger as our own
       `monitor/scan.mjs` mainnet watch
 

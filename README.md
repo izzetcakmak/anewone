@@ -40,6 +40,8 @@ A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablec
   (the last owner cannot be removed). Seed a second owner at deploy via `SECOND_OWNER`.
 - `script/Deploy.s.sol` — deploys platform and launches $NOAH
 - `docs/` — static retro UI served at anewone.xyz via GitHub Pages, rate-limit-friendly RPC usage
+- `api/server.mjs` — zero-dependency x402-paid HTTP API (agents pay sub-cent USDC per
+  call for live floor stats); `api/agent-demo.mjs` walks the 402 → pay → 200 loop
 - `monitor/scan.mjs` — runs every minute via Windows Task Scheduler (`AnewoneMainnetScan`):
   probes candidate Arc mainnet RPCs + the chainid.network registry; on detection checks
   deployer gas, auto-deploys, updates `docs/config.js`, and pings Telegram
@@ -53,6 +55,8 @@ A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablec
 forge test
 forge script script/Deploy.s.sol --rpc-url arc_testnet --broadcast  # needs PRIVATE_KEY in .env
 node monitor/scan.mjs                                               # one scan pass
+MOCK_CHAIN=1 MOCK_FACILITATOR=1 node api/server.mjs                 # x402 API, offline dev mode
+node api/agent-demo.mjs                                             # demo agent pays for /floor
 ```
 
 Built on [Arc Network](https://www.arc.network) — this project follows the
