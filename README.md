@@ -43,6 +43,9 @@ A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablec
 - `monitor/scan.mjs` — runs every minute via Windows Task Scheduler (`AnewoneMainnetScan`):
   probes candidate Arc mainnet RPCs + the chainid.network registry; on detection checks
   deployer gas, auto-deploys, updates `docs/config.js`, and pings Telegram
+- `CIRCLE-AGENTS.md` — notes on [Circle's Agent Stack](https://agents.circle.com/)
+  (Agent Wallets, CLI, Marketplace, Nanopayments) and how AI agents can trade and
+  launch tokens on this platform
 
 ## Dev
 
