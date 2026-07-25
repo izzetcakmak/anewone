@@ -2,12 +2,14 @@
 pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
-import {ANewOne} from "../src/ANewOne.sol";
+import {ANewOne, ANewOneToken} from "../src/ANewOne.sol";
 
 /// @notice Deploys the ANewOne platform and launches $NOAH, the first token on it.
 /// Env: PRIVATE_KEY, optional VIRTUAL_USDC0 (default 4000e18), GRAD_TARGET (default 5000e18),
 ///      SKIP_FIRST_TOKEN=1 to deploy platform only,
-///      SECOND_OWNER=0x.. to grant a second owner at deploy time (shared platform-fee pool).
+///      SECOND_OWNER=0x.. to grant a second owner at deploy time (shared platform-fee pool),
+///      DEV_BUY_VALUE=<wei of native USDC> to make the dev buy inside the createToken tx
+///      (same-tx buy: nothing can front-run it, and it stays under the anti-snipe cap).
 contract Deploy is Script {
     function run() external {
         uint256 pk = vm.envUint("PRIVATE_KEY");
@@ -15,6 +17,7 @@ contract Deploy is Script {
         uint256 grad = vm.envOr("GRAD_TARGET", uint256(5_000e18));
         bool skipFirst = vm.envOr("SKIP_FIRST_TOKEN", uint256(0)) == 1;
         address secondOwner = vm.envOr("SECOND_OWNER", address(0));
+        uint256 devBuy = vm.envOr("DEV_BUY_VALUE", uint256(0));
 
         vm.startBroadcast(pk);
         ANewOne arcade = new ANewOne(v0, grad);
@@ -26,12 +29,16 @@ contract Deploy is Script {
         }
 
         if (!skipFirst) {
-            address noah = arcade.createToken(
+            address noah = arcade.createToken{value: devBuy}(
                 "Noah's Arc",
                 "NOAH",
                 "https://anewone.xyz/meta/noah.json"
             );
             console.log("NOAH_TOKEN:", noah);
+            if (devBuy > 0) {
+                console.log("DEV_BUY_VALUE:", devBuy);
+                console.log("DEV_BUY_TOKENS:", ANewOneToken(noah).balanceOf(vm.addr(pk)));
+            }
         }
         vm.stopBroadcast();
     }
