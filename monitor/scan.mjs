@@ -4,8 +4,9 @@
  *
  * Phase machine (monitor/state.json):
  *   scanning        -> probe candidate RPCs + chainid.network registry for Arc mainnet
- *   awaiting_funds  -> mainnet found; wait until the deployer wallet has gas (USDC)
- *   deployed        -> platform + $NOAH live; config.js updated; nothing left to do
+ *   awaiting_funds  -> mainnet found; auto-bridge 10 USDC from Base via CCTP (bridge.mjs),
+ *                      then wait until the deployer wallet has gas + dev-buy funds (USDC)
+ *   deployed        -> platform + $NOAH live (incl. same-tx dev buy); config.js updated
  *
  * On every phase transition it notifies via Telegram (creds in ../.env) and scan.log.
  */
@@ -13,6 +14,7 @@ import { readFileSync, writeFileSync, existsSync, statSync, appendFileSync, unli
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { bridgeStep } from "./bridge.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const MON = path.join(ROOT, "monitor");
@@ -60,6 +62,12 @@ function loadEnv() {
     }
   } catch {}
   return env;
+}
+
+/** "9" or "9.5" -> native USDC wei on Arc (18 decimals) as BigInt */
+function parseUnits18(s) {
+  const [i, f = ""] = String(s).trim().split(".");
+  return BigInt(i || "0") * 10n ** 18n + BigInt((f + "0".repeat(18)).slice(0, 18));
 }
 
 function loadState() {
@@ -132,7 +140,7 @@ async function probe(url) {
 
 // ---------------------------------------------------------------- deploy
 
-function runDeploy(env, rpcUrl) {
+function runDeploy(env, rpcUrl, devBuy) {
   const res = spawnSync(
     FORGE,
     ["script", "script/Deploy.s.sol", "--rpc-url", rpcUrl, "--broadcast", "-vv"],
@@ -143,16 +151,19 @@ function runDeploy(env, rpcUrl) {
       env: {
         ...process.env,
         PRIVATE_KEY: env.PRIVATE_KEY,
+        DEV_BUY_VALUE: (devBuy ?? 0n).toString(),
         ...(env.VIRTUAL_USDC0 ? { VIRTUAL_USDC0: env.VIRTUAL_USDC0 } : {}),
         ...(env.GRAD_TARGET ? { GRAD_TARGET: env.GRAD_TARGET } : {}),
         ...(env.SECOND_OWNER ? { SECOND_OWNER: env.SECOND_OWNER } : {}),
+        ...(env.SKIP_FIRST_TOKEN ? { SKIP_FIRST_TOKEN: env.SKIP_FIRST_TOKEN } : {}),
       },
     }
   );
   const out = (res.stdout || "") + (res.stderr || "");
   const platform = out.match(/ANEWONE_PLATFORM:\s*(0x[0-9a-fA-F]{40})/)?.[1];
   const noah = out.match(/NOAH_TOKEN:\s*(0x[0-9a-fA-F]{40})/)?.[1];
-  return { ok: !!(platform && noah), platform, noah, out: out.slice(-2500) };
+  const devTokens = out.match(/DEV_BUY_TOKENS:\s*(\d+)/)?.[1];
+  return { ok: !!(platform && noah), platform, noah, devTokens, out: out.slice(-2500) };
 }
 
 function updateFrontendConfig(rpcUrl, chainId, platform, noah) {
@@ -192,6 +203,11 @@ async function main() {
     if (age < 50_000) return;
   }
   writeFileSync(LOCK_FILE, String(process.pid));
+  // long runs (bridge wait, 5-min forge deploy) must keep the lock fresh so the
+  // next minute's invocation doesn't overlap and double-broadcast
+  const lockTimer = setInterval(() => {
+    try { writeFileSync(LOCK_FILE, String(process.pid)); } catch {}
+  }, 20_000);
 
   try {
     const env = loadEnv();
@@ -233,7 +249,18 @@ async function main() {
         `🚨 ARC MAINNET DETECTED!\nRPC: ${found.url}\nchainId: ${found.chainId}\nblock: ${found.block}\nChecking deployer gas…`);
     }
 
-    // ---- funds check
+    // ---- auto-bridge 10 USDC from Base via CCTP (Forwarding Service mints on Arc)
+    if (!env.BRIDGE_DISABLE) {
+      try {
+        await bridgeStep({
+          env, state, saveState, log,
+          notify: (text) => notify(env, text),
+          arcRpc: found.url,
+        });
+      } catch (e) { log(`bridge step error: ${e.stack || e}`); }
+    }
+
+    // ---- funds check: deploy gas + the same-tx dev buy
     const deployer = env.DEPLOYER_ADDRESS;
     const balHex = await rpcCall(found.url, "eth_getBalance", [deployer, "latest"]);
     const bal = balHex ? BigInt(balHex) : 0n;
@@ -241,20 +268,34 @@ async function main() {
     const gasPrice = gasPriceHex ? BigInt(gasPriceHex) : 0n;
     const need = gasPrice > 0n ? gasPrice * 4_500_000n * 2n : 10n ** 17n; // ~2x deploy estimate
 
-    if (bal < need) {
+    const devTarget = parseUnits18(env.DEV_BUY_USDC ?? "9");
+    const bridgePending = !env.BRIDGE_DISABLE &&
+      ["idle", "burning", "burned", "attested"].includes(state.bridge?.phase ?? "idle");
+    const burnAgeMin = state.bridge?.burnAt
+      ? (Date.now() - Date.parse(state.bridge.burnAt)) / 60_000 : 0;
+
+    let devBuy = 0n;
+    if (bal >= need + devTarget) {
+      devBuy = devTarget; // full 9 USDC dev buy
+    } else if (bal >= need && (!bridgePending || burnAgeMin > 45)) {
+      // bridge finished short / disabled / stuck for 45 min — launch with what we have
+      devBuy = bal - need;
+      if (devBuy > devTarget) devBuy = devTarget;
+    } else {
       if (!state.fundsNotified) {
         state.fundsNotified = true;
         saveState(state);
         await notify(env,
-          `⛽ Deployer ${deployer} has ${bal} wei on Arc mainnet — needs ~${need}.\nFund it with USDC (bridge/CCTP) and I deploy automatically on the next scan.`);
+          `⛽ Deployer ${deployer} has ${bal} wei on Arc mainnet — waiting for ~${(need + devTarget)} ` +
+          `(gas + ${env.DEV_BUY_USDC ?? "9"} USDC dev buy). Bridge phase: ${state.bridge?.phase ?? "n/a"}.`);
       }
-      log(`awaiting funds: bal=${bal} need=${need}`);
+      log(`awaiting funds: bal=${bal} need=${need} devTarget=${devTarget} bridge=${state.bridge?.phase ?? "n/a"}`);
       return;
     }
 
     // ---- deploy!
-    log(`deploying to ${found.url} (chainId ${found.chainId})…`);
-    const dep = runDeploy(env, found.url);
+    log(`deploying to ${found.url} (chainId ${found.chainId}) devBuy=${devBuy}…`);
+    const dep = runDeploy(env, found.url, devBuy);
     if (!dep.ok) {
       log(`DEPLOY FAILED:\n${dep.out}`);
       if (!state.deployFailNotified) {
@@ -272,13 +313,19 @@ async function main() {
     state.noah = dep.noah;
     state.deployedAt = new Date().toISOString();
     saveState(state);
+    const devLine = devBuy > 0n
+      ? `Dev buy: ${(Number(devBuy) / 1e18).toFixed(2)} USDC` +
+        (dep.devTokens ? ` → ${(Number(BigInt(dep.devTokens)) / 1e18).toLocaleString("en-US", { maximumFractionDigits: 0 })} $NOAH` : "") + "\n"
+      : "";
     await notify(env,
-      `🎉 ANEWONE.XYZ IS LIVE ON ARC MAINNET!\nPlatform: ${dep.platform}\n$NOAH: ${dep.noah}\nRPC: ${found.url} (chainId ${found.chainId})\n` +
+      `🎉 ANEWONE.XYZ IS LIVE ON ARC MAINNET!\nPlatform: ${dep.platform}\n$NOAH: ${dep.noah}\n` + devLine +
+      `RPC: ${found.url} (chainId ${found.chainId})\n` +
       (published
         ? "docs/config.js pushed — anewone.xyz switches to mainnet as soon as Pages rebuilds (~1 min)."
         : "docs/config.js updated locally but git push FAILED — push manually to flip anewone.xyz to mainnet."));
     log(`DEPLOYED platform=${dep.platform} noah=${dep.noah}`);
   } finally {
+    clearInterval(lockTimer);
     try { unlinkSync(LOCK_FILE); } catch {}
   }
 }
