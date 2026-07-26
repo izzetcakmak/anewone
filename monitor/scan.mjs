@@ -33,12 +33,28 @@ const STATIC_CANDIDATES = [
   "https://mainnet.arc.network",
   "https://mainnet-rpc.arc.network",
   "https://rpc-mainnet.arc.network",
+  // provider pattern from testnet docs: rpc.<provider>.testnet.arc.network -> mainnet analog
+  "https://rpc.blockdaemon.arc.network",
+  "https://rpc.drpc.arc.network",
+  "https://rpc.quicknode.arc.network",
   "https://rpc.arc.io",
   "https://mainnet.rpc.arc.io",
   "https://arc.drpc.org",
   "https://arc-mainnet.drpc.org",
   "https://rpc.ankr.com/arc",
+  "https://arc-rpc.publicnode.com",
+  "https://arc.publicnode.com",
+  "https://1rpc.io/arc",
+  "https://arc.llamarpc.com",
+  "https://arc.gateway.tenderly.co",
 ];
+
+// CCTP V2 MessageTransmitterV2 — uniform mainnet address on every EVM chain.
+// On the real Arc mainnet localDomain() MUST return 26; any other chain a candidate
+// URL might secretly serve (Ethereum=0, Base=6, ...) fails this check, and it also
+// guarantees CCTP is live on Arc before we burn anything on Base.
+const MESSAGE_TRANSMITTER_V2 = "0x81D40F21F12A8F0E3252Bccb954D722d4c464B64";
+const ARC_CCTP_DOMAIN = 26n;
 
 // ---------------------------------------------------------------- helpers
 
@@ -135,7 +151,17 @@ async function probe(url) {
   if (!chainId || chainId === TESTNET_CHAIN_ID || KNOWN_FOREIGN_CHAINS.has(chainId)) return null;
   const blockHex = await rpcCall(url, "eth_blockNumber");
   if (!blockHex || parseInt(blockHex, 16) === 0) return null;
+  // decisive check: only Arc mainnet's CCTP MessageTransmitterV2 answers localDomain()==26
+  const dom = await rpcCall(url, "eth_call",
+    [{ to: MESSAGE_TRANSMITTER_V2, data: "0x8d3638f4" }, "latest"]);
+  if (!dom || dom === "0x" || BigInt(dom) !== ARC_CCTP_DOMAIN) return null;
   return { url, chainId, block: parseInt(blockHex, 16) };
+}
+
+/** Probe every candidate in parallel; return the first hit in list-priority order. */
+async function sweep(candidates) {
+  const results = await Promise.all(candidates.map((u) => probe(u).catch(() => null)));
+  return results.find(Boolean) ?? null;
 }
 
 // ---------------------------------------------------------------- deploy
@@ -225,18 +251,25 @@ async function main() {
       }
     }
     if (!found) {
+      // parallel sweeps every ~12s for the rest of this 1-min invocation window,
+      // so effective detection latency is seconds, not a full scheduler tick
       const candidates = [...new Set([...STATIC_CANDIDATES, ...(await registryCandidates())])];
-      for (const url of candidates) {
-        found = await probe(url);
+      const deadline = Date.now() + 50_000;
+      let sweeps = 0;
+      for (;;) {
+        sweeps++;
+        found = await sweep(candidates);
         if (found) break;
+        const remaining = deadline - Date.now();
+        if (remaining < 12_000) {
+          state.phase = "scanning";
+          state.lastScan = new Date().toISOString();
+          saveState(state);
+          log(`scan: no Arc mainnet RPC yet (${sweeps} sweeps, ${candidates.length} candidates)`);
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 12_000));
       }
-    }
-    if (!found) {
-      state.phase = "scanning";
-      state.lastScan = new Date().toISOString();
-      saveState(state);
-      log("scan: no Arc mainnet RPC yet");
-      return;
     }
     state.lastScan = new Date().toISOString();
 
