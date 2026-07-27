@@ -1,0 +1,134 @@
+{
+ "campaign": "ANEWONE Boarding Pass — mainnet-day raffle",
+ "network": "Arc Testnet (chainId 5042002)",
+ "platform": "0x30c941ed26088DED6c5D4F1571a49f74478DCc84",
+ "criteria": "Every launch (TokenCreated) and trade (Trade) on the platform contract counts as 1 tx. Wallets ranked by total tx; ties broken by earliest activity. Team wallets excluded from ranking. Top 33 wallets enter the raffle: 90,000 / 60,000 / 30,000 $NOAH.",
+ "final": false,
+ "generatedAt": "2026-07-27T22:40:44.506Z",
+ "fromBlock": 52625041,
+ "toBlock": 53993648,
+ "totalWallets": 10,
+ "totalTxs": 36,
+ "wallets": [
+  {
+   "address": "0xd4f1254c803662c46d9c21f80f4f3c15ff57e2c9",
+   "launches": 2,
+   "trades": 12,
+   "total": 14,
+   "firstBlock": 52625043,
+   "team": true,
+   "rank": null,
+   "boarding": false
+  },
+  {
+   "address": "0x8cd14195f71c7e78132fc19e965cd8c65378174c",
+   "launches": 0,
+   "trades": 7,
+   "total": 7,
+   "firstBlock": 53739593,
+   "team": false,
+   "rank": 1,
+   "boarding": true
+  },
+  {
+   "address": "0x0e668251d5926eebe8eee27f5c49fa043a969561",
+   "launches": 1,
+   "trades": 5,
+   "total": 6,
+   "firstBlock": 52818115,
+   "team": false,
+   "rank": 2,
+   "boarding": true
+  },
+  {
+   "address": "0xbf598cd4973349db95e49e1e41662782236f20df",
+   "launches": 0,
+   "trades": 5,
+   "total": 5,
+   "firstBlock": 52818329,
+   "team": false,
+   "rank": 3,
+   "boarding": true
+  },
+  {
+   "address": "0x61a4490d589e580ec3d8b29eb87064b1bc61b33f",
+   "launches": 0,
+   "trades": 5,
+   "total": 5,
+   "firstBlock": 53587287,
+   "team": true,
+   "rank": null,
+   "boarding": false
+  },
+  {
+   "address": "0x8566b8bf3701e135cf0e81aa5f063b4574676dfd",
+   "launches": 1,
+   "trades": 3,
+   "total": 4,
+   "firstBlock": 52884659,
+   "team": false,
+   "rank": 4,
+   "boarding": true
+  },
+  {
+   "address": "0xc955eed25a33406700828b68992a3768aa930012",
+   "launches": 0,
+   "trades": 3,
+   "total": 3,
+   "firstBlock": 52651244,
+   "team": false,
+   "rank": 5,
+   "boarding": true
+  },
+  {
+   "address": "0xe3c1775231193e54fc05dca5bb3d34dea6a9e59a",
+   "launches": 0,
+   "trades": 3,
+   "total": 3,
+   "firstBlock": 52819029,
+   "team": false,
+   "rank": 6,
+   "boarding": true
+  },
+  {
+   "address": "0xa1586ec57c77fda4b65ec6be33a15f29f348df34",
+   "launches": 0,
+   "trades": 3,
+   "total": 3,
+   "firstBlock": 52986955,
+   "team": false,
+   "rank": 7,
+   "boarding": true
+  },
+  {
+   "address": "0x9b03cc56924a690d849309c8530d6daccbcdc3f4",
+   "launches": 0,
+   "trades": 2,
+   "total": 2,
+   "firstBlock": 52637885,
+   "team": false,
+   "rank": 8,
+   "boarding": true
+  },
+  {
+   "address": "0x7360ecae6ef94341c0f3f0a66898bb7b128c3ab1",
+   "launches": 0,
+   "trades": 2,
+   "total": 2,
+   "firstBlock": 53926632,
+   "team": false,
+   "rank": 9,
+   "boarding": true
+  },
+  {
+   "address": "0xcf035faa7f9ff8dab69736b96a031654eb0a286e",
+   "launches": 0,
+   "trades": 1,
+   "total": 1,
+   "firstBlock": 52625926,
+   "team": false,
+   "rank": 10,
+   "boarding": true
+  }
+ ]
+}
