@@ -10,11 +10,15 @@
  *
  * On every phase transition it notifies via Telegram (creds in ../.env) and scan.log.
  */
-import { readFileSync, writeFileSync, existsSync, statSync, appendFileSync, unlinkSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, statSync, appendFileSync, unlinkSync, renameSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { bridgeStep } from "./bridge.mjs";
+import { runSnapshot } from "./snapshot.mjs";
+
+const TESTNET_RPC = "https://rpc.testnet.arc.network";
+const SNAPSHOT_REFRESH_MS = 24 * 60 * 60 * 1000; // leaderboard refresh cadence
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const MON = path.join(ROOT, "monitor");
@@ -90,7 +94,15 @@ function loadState() {
   try { return JSON.parse(readFileSync(STATE_FILE, "utf8")); }
   catch { return { phase: "scanning" }; }
 }
-const saveState = (s) => writeFileSync(STATE_FILE, JSON.stringify(s, null, 2));
+// atomic: a crash mid-write must never wipe the bridge nonce record / frozen cutoff
+const saveState = (s) => {
+  writeFileSync(STATE_FILE + ".tmp", JSON.stringify(s, null, 2));
+  renameSync(STATE_FILE + ".tmp", STATE_FILE);
+};
+
+function isProcessAlive(pid) {
+  try { process.kill(pid, 0); return true; } catch { return false; }
+}
 
 async function rpcCall(url, method, params = [], timeoutMs = 6000) {
   const ctl = new AbortController();
@@ -207,17 +219,45 @@ function updateFrontendConfig(rpcUrl, chainId, platform, noah) {
   writeFileSync(CONFIG_JS, src.replace(/mainnet:\s*\{[^}]*\}/, block));
 }
 
+const git = (args) => spawnSync("git", args, { cwd: ROOT, encoding: "utf8", timeout: 120_000 });
+
 /** Commit + push docs/config.js so GitHub Pages flips anewone.xyz to mainnet. Best-effort. */
 function publishConfig() {
-  const git = (args) => spawnSync("git", args, { cwd: ROOT, encoding: "utf8", timeout: 60_000 });
   git(["add", "docs/config.js"]);
   git(["commit", "-m", "feat: mainnet is live — flip anewone.xyz to Arc mainnet\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>"]);
+  git(["pull", "--rebase", "origin", "main"]); // snapshot pushes may have landed meanwhile
   const push = git(["push", "origin", "main"]);
   if (push.status !== 0) {
     log(`git push failed: ${(push.stderr || "").slice(0, 400)}`);
     return false;
   }
   return true;
+}
+
+/**
+ * Boarding-list snapshot -> docs/boarding/snapshot.json, then commit+push.
+ * Returns true only when the result actually reached origin — FINAL callers key
+ * snapshotFinalDone off this, so a failed push is retried next tick (cache is warm).
+ * lastSnapshotAt records the ATTEMPT so a persistently failing refresh backs off a
+ * full cycle instead of eating every minute's detection window.
+ */
+async function snapshotAndPublish(state, { final = false, toBlock = null } = {}) {
+  state.lastSnapshotAt = Date.now();
+  try {
+    const snap = await runSnapshot({ final, toBlock, log });
+    git(["add", "docs/boarding/snapshot.json"]);
+    git(["commit", "-m", `chore: boarding snapshot ${final ? "(FINAL) " : ""}@ block ${snap.toBlock}\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>`]);
+    git(["pull", "--rebase", "origin", "main"]);
+    const push = git(["push", "origin", "main"]);
+    if (push.status !== 0) {
+      log(`snapshot push failed: ${(push.stderr || "").slice(0, 300)}`);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    log(`snapshot failed: ${e.message}`);
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------- main
@@ -227,10 +267,16 @@ async function main() {
   if (existsSync(LOCK_FILE)) {
     const age = Date.now() - statSync(LOCK_FILE).mtimeMs;
     if (age < 50_000) return;
+    // timers can't fire while spawnSync (forge deploy: up to 300s, cast send: 150s)
+    // blocks the event loop, so an old lock may still belong to a LIVE process.
+    // Overlapping would risk a double deploy / double burn — trust the lock while
+    // its PID is alive (hard 20-min cap in case the PID got recycled).
+    const pid = parseInt(readFileSync(LOCK_FILE, "utf8"), 10);
+    if (age < 20 * 60_000 && pid && isProcessAlive(pid)) return;
   }
   writeFileSync(LOCK_FILE, String(process.pid));
-  // long runs (bridge wait, 5-min forge deploy) must keep the lock fresh so the
-  // next minute's invocation doesn't overlap and double-broadcast
+  // refresh during async waits (sweep sleeps, RPC polling); spawnSync gaps are
+  // covered by the PID-liveness check above
   const lockTimer = setInterval(() => {
     try { writeFileSync(LOCK_FILE, String(process.pid)); } catch {}
   }, 20_000);
@@ -238,7 +284,16 @@ async function main() {
   try {
     const env = loadEnv();
     const state = loadState();
-    if (state.phase === "deployed") return;
+    if (state.phase === "deployed") {
+      // launch is done; take the pending FINAL boarding snapshot if it hasn't run yet
+      if (state.snapshotFinalDone === false) {
+        if (await snapshotAndPublish(state, { final: true, toBlock: state.snapshotBlock ?? null })) {
+          state.snapshotFinalDone = true;
+        }
+        saveState(state);
+      }
+      return;
+    }
 
     // ---- find / re-verify mainnet RPC
     let found = null;
@@ -251,6 +306,10 @@ async function main() {
       }
     }
     if (!found) {
+      // once a day, spend this tick refreshing the boarding leaderboard instead
+      // of the full sweep window (one quick sweep still runs first)
+      const snapshotDue = state.snapshotFinalDone !== true && // never overwrite a published FINAL
+        Date.now() - (state.lastSnapshotAt ?? 0) > SNAPSHOT_REFRESH_MS;
       // parallel sweeps every ~12s for the rest of this 1-min invocation window,
       // so effective detection latency is seconds, not a full scheduler tick
       const candidates = [...new Set([...STATIC_CANDIDATES, ...(await registryCandidates())])];
@@ -260,6 +319,14 @@ async function main() {
         sweeps++;
         found = await sweep(candidates);
         if (found) break;
+        if (snapshotDue) {
+          await snapshotAndPublish(state, { final: false });
+          state.phase = "scanning";
+          state.lastScan = new Date().toISOString();
+          saveState(state);
+          log(`scan: no Arc mainnet RPC yet (leaderboard refreshed)`);
+          return;
+        }
         const remaining = deadline - Date.now();
         if (remaining < 12_000) {
           state.phase = "scanning";
@@ -277,9 +344,19 @@ async function main() {
       state.phase = "awaiting_funds";
       state.rpc = found.url;
       state.chainId = found.chainId;
+      // freeze the boarding-raffle cutoff ONCE: testnet activity after this block
+      // no longer counts (the heavy log scan itself runs post-deploy, off the hot
+      // path). Guarded so an RPC flap + re-detection can't move a published cutoff.
+      if (!("snapshotBlock" in state)) {
+        let tb = null;
+        for (let i = 0; i < 3 && !tb; i++) tb = await rpcCall(TESTNET_RPC, "eth_blockNumber");
+        state.snapshotBlock = tb ? parseInt(tb, 16) : null; // null -> retried below, else latest at scan time
+        state.snapshotFinalDone = false;
+      }
       saveState(state);
       await notify(env,
-        `🚨 ARC MAINNET DETECTED!\nRPC: ${found.url}\nchainId: ${found.chainId}\nblock: ${found.block}\nChecking deployer gas…`);
+        `🚨 ARC MAINNET DETECTED!\nRPC: ${found.url}\nchainId: ${found.chainId}\nblock: ${found.block}\n` +
+        `Boarding snapshot frozen @ testnet block ${state.snapshotBlock ?? "?"}. Checking deployer gas…`);
     }
 
     // ---- auto-bridge 10 USDC from Base via CCTP (Forwarding Service mints on Arc)
@@ -323,6 +400,14 @@ async function main() {
           `(gas + ${env.DEV_BUY_USDC ?? "9"} USDC dev buy). Bridge phase: ${state.bridge?.phase ?? "n/a"}.`);
       }
       log(`awaiting funds: bal=${bal} need=${need} devTarget=${devTarget} bridge=${state.bridge?.phase ?? "n/a"}`);
+      // NO heavy work here: the deploy can become possible within seconds (CCTP
+      // forwarding mints in ~1 min) and must never wait behind a leaderboard job —
+      // the FINAL snapshot runs in the deployed phase. Only retry the cheap cutoff
+      // freeze if it failed at detection.
+      if (state.snapshotFinalDone === false && state.snapshotBlock == null) {
+        const tb = await rpcCall(TESTNET_RPC, "eth_blockNumber");
+        if (tb) { state.snapshotBlock = parseInt(tb, 16); saveState(state); }
+      }
       return;
     }
 
