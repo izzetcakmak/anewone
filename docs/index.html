@@ -484,6 +484,52 @@
     .frow .when { margin-left: 0; width: 100%; }
     .footer { font-size: 12.5px; }
   }
+  /* ---- v2 "alive" layer: spotlight, sparklines, live rail ---- */
+  .spot { position: relative; overflow: hidden; margin-top: 22px; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border-2); border-radius: var(--r);
+    padding: 22px 24px; display: flex; gap: 26px; align-items: center; flex-wrap: wrap;
+    backdrop-filter: blur(8px); transition: border-color .2s, transform .15s; }
+  .spot:hover { border-color: rgba(62,230,160,.45); transform: translateY(-2px); }
+  .spot-badge { position: absolute; top: 14px; left: 16px; display: inline-flex; gap: 6px;
+    align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 2px; color: #04120b; background: linear-gradient(135deg, #56f0ab, #2fd18a);
+    padding: 4px 12px; border-radius: 999px; font-weight: 700; z-index: 2; }
+  .spot-head { display: flex; align-items: center; gap: 16px; min-width: 230px; margin-top: 18px; }
+  .spot-img, .spot-ph { width: 74px; height: 74px; border-radius: 16px; object-fit: cover;
+    border: 2px solid var(--gold); background: var(--bg-2); }
+  .spot-ph { display: flex; align-items: center; justify-content: center; font-size: 30px;
+    font-weight: 700; color: var(--faint); font-family: 'Space Grotesk', sans-serif; }
+  .spot-sym { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: .3px; }
+  .spot-name { color: var(--dim); font-size: 13.5px; margin-top: 1px; }
+  .spot-desc { color: var(--faint); font-size: 12.5px; margin-top: 6px; max-width: 300px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .spot-stats { display: flex; gap: 26px; flex-wrap: wrap; margin-top: 16px; }
+  .spot-stats .ss b { display: block; font-family: 'JetBrains Mono', monospace; font-size: 19px; }
+  .spot-stats .ss span { font-size: 10.5px; letter-spacing: 1.6px; color: var(--faint); }
+  .spot-stats .up b { color: var(--accent); } .spot-stats .down b { color: var(--red); }
+  .spot-chart { flex: 1; min-width: 220px; margin-top: 12px; }
+  .spot-chart svg { width: 100%; height: 84px; display: block; }
+  .spot-cta { margin-top: 14px; }
+  .sconf { position: absolute; width: 7px; height: 11px; border-radius: 2px; opacity: .55;
+    top: -12px; animation: confFall linear infinite; }
+  @keyframes confFall { to { transform: translateY(130px) rotate(340deg); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .sconf { display: none; } }
+  /* card sparkline + 24h chip */
+  .cspark { margin: 10px 0 2px; }
+  .cspark svg { width: 100%; height: 34px; display: block; }
+  .chip24 { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+    margin-left: 8px; }
+  .chip24.up { color: var(--accent); } .chip24.down { color: var(--red); }
+  /* two-column floor: grid + sticky live rail */
+  .floorwrap { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
+  @media (min-width: 1180px) {
+    .floorwrap { grid-template-columns: 1fr 292px; }
+    .floorwrap #feedWrap { position: sticky; top: 76px; max-height: calc(100vh - 96px);
+      overflow-y: auto; margin-top: 20px; scrollbar-width: thin; }
+  }
+  .frow { animation: frowIn .35s ease; }
+  @keyframes frowIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .frow { animation: none; } }
 </style>
 </head>
 <body>
@@ -539,6 +585,8 @@
   <div class="marquee"><span id="ticker">Loading the floor…</span></div>
   <div id="rpcStatus" class="rpcstatus" style="display:none"></div>
 
+  <div id="spotlight" class="spot" style="display:none"></div>
+
   <div class="toolbar" id="floor">
     <div class="sorts" id="sortTabs">
       <button data-sort="trending" class="on">Trending</button>
@@ -589,12 +637,15 @@
       panel disappears automatically once the balance lands (checked every ~15s).</div>
   </div>
 
-  <div id="grid" class="grid"></div>
-  <div id="empty" class="empty" style="display:none">No tokens yet — be the first to launch one.</div>
-
-  <div id="feedWrap" class="feed" style="display:none">
-    <div class="feed-title">LIVE TRADES</div>
-    <div id="feed"></div>
+  <div class="floorwrap">
+    <div class="floor-main">
+      <div id="grid" class="grid"></div>
+      <div id="empty" class="empty" style="display:none">No tokens yet — be the first to launch one.</div>
+    </div>
+    <aside id="feedWrap" class="feed" style="display:none">
+      <div class="feed-title">LIVE TRADES</div>
+      <div id="feed"></div>
+    </aside>
   </div>
 
   <div id="feeBar" class="feepanel" style="display:none">
@@ -1601,6 +1652,47 @@ async function loadTokens() {
   }
 }
 
+// 24h price change in % from the indexed series (null until the window is meaningful);
+// tokens younger than 24h measure since launch — same convention as the big launchpads
+function pct24(addr) {
+  const ser = (statsIdx && statsIdx.series[addr]) || [];
+  if (ser.length < 2) return null;
+  const bpd = blockTimeSec ? Math.round(86400 / blockTimeSec) : 0;
+  if (!bpd || !latestBlock) return null;
+  const cutoff = latestBlock - bpd;
+  const last = ser[ser.length - 1].p;
+  let base = null;
+  for (const s of ser) { if (s.b <= cutoff) base = s.p; else break; }
+  if (base === null) base = ser[0].p;
+  if (!base) return null;
+  return Number(((last - base) * 10000n) / base) / 100;
+}
+const chip24Html = (addr) => {
+  const ch = pct24(addr);
+  if (ch === null) return "";
+  return `<span class="chip24 ${ch >= 0 ? "up" : "down"}">${ch >= 0 ? "+" : ""}${ch.toFixed(1)}%</span>`;
+};
+
+// tiny inline sparkline from the price series — shape only, so Number() precision is fine
+function sparkSvg(addr, h = 34) {
+  const ser = (statsIdx && statsIdx.series[addr]) || [];
+  if (ser.length < 2) return "";
+  const pts = ser.slice(-120);
+  const xs = pts.map((p) => p.b), ys = pts.map((p) => Number(p.p));
+  const xMin = xs[0], xSpan = xs[xs.length - 1] - xMin || 1;
+  const yMin = Math.min(...ys), ySpan = (Math.max(...ys) - yMin) || 1;
+  const X = (b) => (((b - xMin) / xSpan) * 100).toFixed(2);
+  const Y = (v) => (h - 3 - ((v - yMin) / ySpan) * (h - 6)).toFixed(2);
+  const line = pts.map((p, i) => `${X(p.b)},${Y(Number(p.p))}`).join(" ");
+  const ch = pct24(addr);
+  const col = ch !== null && ch < 0 ? "var(--red)" : "var(--accent)";
+  return `<svg viewBox="0 0 100 ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <polygon points="0,${h} ${line} 100,${h}" fill="${col}" opacity="0.10"/>
+    <polyline points="${line}" fill="none" stroke="${col}" stroke-width="1.7"
+      stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+  </svg>`;
+}
+
 function cardHtml(addr) {
   const { name, symbol } = tokenMeta[addr];
   const inf = tokenInfo[addr];
@@ -1608,6 +1700,7 @@ function cardHtml(addr) {
   const pct = Number(progBps(inf)) / 100;
   const age = ageText(latestBlock && inf.createdBlock ? latestBlock - Number(inf.createdBlock) : null);
   const a = esc(addr);
+  const spark = sparkSvg(addr);
   return `<div class="cab" onclick="openTrade('${a}')">
     <span class="star ${isWatched(addr) ? "on" : ""}" onclick="toggleWatch('${a}', event)"
       title="Watchlist">${isWatched(addr) ? "★" : "☆"}</span>
@@ -1619,7 +1712,8 @@ function cardHtml(addr) {
         <div class="nm">${esc(name)}</div>
       </div>
     </div>
-    <div class="mcap">MC ${compactUsd(marketCapWei(inf))}${inf.graduated ? ' <span class="grad">★ GRADUATED</span>' : ""}</div>
+    <div class="mcap">MC ${compactUsd(marketCapWei(inf))}${chip24Html(addr)}${inf.graduated ? ' <span class="grad">★ GRADUATED</span>' : ""}</div>
+    ${spark ? `<div class="cspark">${spark}</div>` : ""}
     ${metaOf(addr).d ? `<div class="cdesc">${esc(metaOf(addr).d)}</div>` : ""}
     <div class="cstats">
       <span>👤 <b>${fullyIndexed ? (st.holders || 0) : "…"}</b> holders</span>
@@ -1915,6 +2009,53 @@ function renderGrid() {
   fillImages(list);
   $("empty").style.display = shownAddrs.length && !list.length ? "block" : ($("empty").dataset.none === "1" ? "block" : "none");
   if (shownAddrs.length && !list.length) $("empty").textContent = "No token matches that search.";
+  renderSpotlight();
+}
+
+// ---- spotlight: the hottest token (trending score, mcap fallback) as a hero card
+let spotAddr = null;
+const CONF_COLORS = ["#3ee6a0", "#ffc24d", "#7aa7ff", "#ff5470", "#c792ea"];
+function renderSpotlight() {
+  const el = $("spotlight");
+  const addrs = shownAddrs.filter((a) => tokenMeta[a] && tokenInfo[a]);
+  if (!addrs.length || !statsReady) { el.style.display = "none"; return; }
+  let best = null, bestScore = 0;
+  for (const a of addrs) { const s = trendScore(a); if (s > bestScore) { bestScore = s; best = a; } }
+  if (!best) best = addrs.slice().sort((x, y) => (marketCapWei(tokenInfo[y]) > marketCapWei(tokenInfo[x]) ? 1 : -1))[0];
+  spotAddr = best;
+  const { name, symbol } = tokenMeta[best];
+  const inf = tokenInfo[best], st = tradeStats[best] || {};
+  const ch = pct24(best);
+  const desc = metaOf(best).d || "";
+  const conf = Array.from({ length: 12 }, (_, i) =>
+    `<i class="sconf" style="left:${(i * 8.3 + 2).toFixed(1)}%;background:${CONF_COLORS[i % CONF_COLORS.length]};animation-duration:${(2.8 + (i % 5) * 0.7).toFixed(1)}s;animation-delay:${(i * 0.45).toFixed(2)}s"></i>`).join("");
+  el.innerHTML = `${conf}<span class="spot-badge">🏆 SPOTLIGHT</span>
+    <div class="spot-head">
+      <div class="spot-ph" id="spotPh">${esc(String(symbol || "?").slice(0, 1))}</div>
+      <img class="spot-img" id="spotImg" alt="" style="display:none">
+      <div>
+        <div class="spot-sym">$${esc(symbol)}</div>
+        <div class="spot-name">${esc(name)}</div>
+        ${desc ? `<div class="spot-desc">${esc(desc)}</div>` : ""}
+      </div>
+    </div>
+    <div class="spot-stats">
+      <div class="ss"><b>${compactUsd(marketCapWei(inf))}</b><span>MARKET CAP</span></div>
+      ${ch !== null ? `<div class="ss ${ch >= 0 ? "up" : "down"}"><b>${ch >= 0 ? "+" : ""}${ch.toFixed(1)}%</b><span>24H</span></div>` : ""}
+      <div class="ss"><b>${covers24h ? compactUsd(st.vol24 || 0n) : "…"}</b><span>24H VOL</span></div>
+      <div class="ss"><b>${fullyIndexed ? (st.holders || 0) : "…"}</b><span>HOLDERS</span></div>
+    </div>
+    <div class="spot-chart">${sparkSvg(best, 84)}</div>
+    <div class="spot-cta"><button class="alt" onclick="openTrade(spotAddr);event.stopPropagation()">→ Trade</button></div>`;
+  el.style.display = "flex";
+  el.onclick = () => openTrade(best);
+  resolveImg(best).then((u) => {
+    const safe = safeImgSrc(u);
+    if (!safe || spotAddr !== best) return;
+    const im = $("spotImg"), ph = $("spotPh");
+    if (im) { im.src = safe; im.style.display = "block"; }
+    if (ph) ph.style.display = "none";
+  });
 }
 
 $("sortTabs").querySelectorAll("button").forEach((b) => {
@@ -2444,6 +2585,33 @@ $("grid").innerHTML = Array.from({ length: 6 }, () => `
 
 loadTokens();
 setInterval(loadTokens, 60_000);
+
+// ---- live tail: one cheap forward-only getLogs every 15s keeps the trade rail and
+// spotlight feeling real-time between the full 60s passes. Single call, well inside
+// the public RPC budget; skipped while a full index pass runs or the tab is hidden.
+async function liveTail() {
+  if (indexing || document.hidden || !statsIdx || statsIdx.hi === null || !readProvider) return;
+  try {
+    const tip = await rpc(() => readProvider.getBlockNumber(), 1);
+    if (tip <= statsIdx.hi) return;
+    latestBlock = tip;
+    const logs = await rpc(() => readProvider.getLogs({
+      address: CFG.platform,
+      topics: [[TRADE_TOPIC, COMMENT_TOPIC]],
+      fromBlock: statsIdx.hi + 1,
+      toBlock: Math.min(tip, statsIdx.hi + CHUNK),
+    }), 1);
+    statsIdx.hi = Math.min(tip, statsIdx.hi + CHUNK);
+    if (logs.length) {
+      ingestLogs(logs);
+      rebuildStats();
+      saveStatsCache(statsIdx);
+      renderFeed();
+      renderSpotlight();
+    }
+  } catch {} // transient RPC noise — the 60s full pass self-heals
+}
+setInterval(liveTail, 15_000);
 </script>
 </body>
 </html>
