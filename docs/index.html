@@ -425,6 +425,15 @@
   .foot-btn:hover { color: var(--accent); border-color: rgba(62,230,160,.4);
     background: rgba(62,230,160,.06); transform: translateY(-1px); }
   .foot-btn svg { display: block; opacity: .9; }
+  .foot-contact { position: relative; }
+  .contact-menu { position: absolute; right: 0; bottom: calc(100% + 8px); min-width: 200px;
+    background: var(--surface); border: 1px solid var(--border-2); border-radius: 12px;
+    padding: 6px; z-index: 60; box-shadow: 0 12px 32px rgba(0,0,0,.5); }
+  .contact-menu a, .contact-menu button { display: block; width: 100%; text-align: left; padding: 9px 12px;
+    border: none; border-radius: 8px; background: transparent; color: var(--dim); cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13px; text-decoration: none;
+    box-shadow: none; }
+  .contact-menu a:hover, .contact-menu button:hover { background: rgba(62,230,160,.08); color: var(--accent); }
   .foot-meta { display: flex; align-items: center; justify-content: space-between; gap: 16px;
     flex-wrap: wrap; margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--border);
     color: var(--faint); font-size: 12.5px; line-height: 1.7; }
@@ -617,10 +626,19 @@
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4a2 2 0 0 1 2-2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
           <span>Docs</span>
         </a>
-        <a class="foot-btn" href="mailto:contact@anewone.xyz" aria-label="Contact">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
-          <span>Contact</span>
-        </a>
+        <div class="foot-contact">
+          <button class="foot-btn" id="contactBtn" aria-haspopup="true" aria-expanded="false" aria-label="Contact">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+            <span>Contact</span>
+          </button>
+          <!-- mailto: alone opens a blank tab for visitors with no OS mail app; give
+               explicit choices instead (Gmail compose works for everyone in-browser) -->
+          <div class="contact-menu" id="contactMenu" hidden>
+            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=support@anewone.xyz" target="_blank" rel="noopener noreferrer">Open in Gmail</a>
+            <a href="mailto:support@anewone.xyz">Default mail app</a>
+            <button id="copyMailBtn" type="button">Copy address</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="foot-meta">
@@ -2381,6 +2399,22 @@ $("connectBtn").onclick = () => {
 $("switchBtn").onclick = switchAccount;
 $("changeWalletBtn").onclick = () => { $("walletMenu").style.display = "none"; openWalletPicker(); };
 $("disconnectBtn").onclick = disconnect;
+
+// footer contact popover
+$("contactBtn").onclick = (e) => {
+  e.stopPropagation();
+  const m = $("contactMenu");
+  m.hidden = !m.hidden;
+  $("contactBtn").setAttribute("aria-expanded", String(!m.hidden));
+};
+$("copyMailBtn").onclick = async () => {
+  try { await navigator.clipboard.writeText("support@anewone.xyz"); toast("support@anewone.xyz copied"); }
+  catch { toast("support@anewone.xyz"); }
+  $("contactMenu").hidden = true;
+};
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".foot-contact")) $("contactMenu").hidden = true;
+});
 $("gmailBtn").onclick = loginWithGoogle;
 // the Google option only appears once a Web3Auth clientId is configured
 if (!WEB3AUTH_CLIENT_ID) {
