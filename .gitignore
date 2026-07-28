@@ -10,3 +10,5 @@ monitor/scan.lock
 build-web3auth/
 build-video/
 monitor/bridge-attestation.json
+monitor/snapshot-cache.json
+monitor/snapshot-run.log
