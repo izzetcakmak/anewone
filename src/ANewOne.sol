@@ -104,6 +104,10 @@ contract ANewOne {
     event TokenCreated(
         address indexed token, address indexed creator, string name, string symbol, string metadataURI
     );
+    /// @notice Token image, emitted once at launch. Event-only like comments: log data costs
+    ///         8 gas/byte vs ~625 gas/byte for storage, so a 24KB image costs ~0.3M gas
+    ///         instead of ~20M.
+    event TokenImage(address indexed token, string imageURI);
     event Trade(
         address indexed token,
         address indexed trader,
@@ -140,13 +144,24 @@ contract ANewOne {
 
     // ---------------------------------------------------------------- launch
 
+    /// @notice Storage cap for the metadata document (compact JSON: description + socials).
+    ///         Storage bytes are the expensive part of a launch, so they are bounded.
+    uint256 public constant MAX_METADATA_BYTES = 2048;
+    /// @notice Cap for the image data URI carried in the TokenImage event (frontend
+    ///         compresses to ≤24KB binary ≈ 32K base64 chars; headroom on top).
+    uint256 public constant MAX_IMAGE_BYTES = 36_000;
+
     /// @notice Launch a new meme token. Free (gas only). Send value to make an initial dev buy.
-    function createToken(string calldata name_, string calldata symbol_, string calldata metadataURI_)
-        external
-        payable
-        nonReentrant
-        returns (address token)
-    {
+    /// @dev The image travels in the TokenImage event, never in storage — that keeps a launch
+    ///      with a full-size image around ~2M gas instead of ~20M+.
+    function createToken(
+        string calldata name_,
+        string calldata symbol_,
+        string calldata metadataURI_,
+        string calldata imageURI_
+    ) external payable nonReentrant returns (address token) {
+        require(bytes(metadataURI_).length <= MAX_METADATA_BYTES, "metadata too large");
+        require(bytes(imageURI_).length <= MAX_IMAGE_BYTES, "image too large");
         token = address(new ANewOneToken(name_, symbol_, TOTAL_SUPPLY, address(this)));
         info[token] = TokenInfo({
             creator: msg.sender,
@@ -159,6 +174,9 @@ contract ANewOne {
         });
         allTokens.push(token);
         emit TokenCreated(token, msg.sender, name_, symbol_, metadataURI_);
+        if (bytes(imageURI_).length > 0) {
+            emit TokenImage(token, imageURI_);
+        }
 
         if (msg.value > 0) {
             _buy(token, msg.sender, msg.value, 0);
