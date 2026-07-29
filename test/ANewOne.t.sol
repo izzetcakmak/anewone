@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {ANewOne, ANewOneToken} from "../src/ANewOne.sol";
 
 contract ANewOneTest is Test {
@@ -22,7 +22,7 @@ contract ANewOneTest is Test {
 
     function _create() internal returns (address token) {
         vm.prank(creator);
-        token = arcade.createToken("Noah's Arc", "NOAH", "ipfs://noah");
+        token = arcade.createToken("Noah's Arc", "NOAH", "ipfs://noah", "");
     }
 
     function test_createToken() public {
@@ -135,14 +135,14 @@ contract ANewOneTest is Test {
     function test_initialDevBuyOnCreate() public {
         // dev buy at creation is allowed but still subject to the anti-snipe cap (fair launch)
         vm.prank(creator);
-        address token = arcade.createToken{value: 50e18}("Test", "TST", "");
+        address token = arcade.createToken{value: 50e18}("Test", "TST", "", "");
         uint256 got = ANewOneToken(token).balanceOf(creator);
         assertGt(got, 0);
         assertLe(got, arcade.ANTI_SNIPE_MAX());
 
         vm.prank(creator);
         vm.expectRevert("anti-snipe cap");
-        arcade.createToken{value: 150e18}("Test2", "TST2", "");
+        arcade.createToken{value: 150e18}("Test2", "TST2", "", "");
     }
 
     function test_slippageProtection() public {
@@ -248,6 +248,56 @@ contract ANewOneTest is Test {
         vm.prank(creator);
         arcade.claimCreatorFees();
         assertEq(creator.balance - balBefore, 5e18);
+    }
+
+    // ---------------------------------------------------------------- launch metadata & image
+
+    bytes32 constant IMAGE_TOPIC = keccak256("TokenImage(address,string)");
+
+    function test_imageIsEventOnlyNotStored() public {
+        string memory img = "data:image/jpeg;base64,QUFBQQ==";
+        vm.recordLogs();
+        vm.prank(creator);
+        address token = arcade.createToken("Pic", "PIC", "{\"v\":1}", img);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool found;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics[0] == IMAGE_TOPIC) {
+                assertEq(logs[i].topics[1], bytes32(uint256(uint160(token))));
+                assertEq(abi.decode(logs[i].data, (string)), img);
+                found = true;
+            }
+        }
+        assertTrue(found);
+        // the image never touches storage — metadataURI holds only the compact document
+        (,,,,,, string memory stored) = arcade.info(token);
+        assertEq(stored, "{\"v\":1}");
+    }
+
+    function test_noImageEventWhenImageEmpty() public {
+        vm.recordLogs();
+        vm.prank(creator);
+        arcade.createToken("NoPic", "NOPIC", "", "");
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i = 0; i < logs.length; i++) {
+            assertTrue(logs[i].topics[0] != IMAGE_TOPIC);
+        }
+    }
+
+    function test_metadataAndImageSizeCaps() public {
+        vm.prank(creator);
+        vm.expectRevert("metadata too large");
+        arcade.createToken("Big", "BIG", string(new bytes(2049)), "");
+
+        vm.prank(creator);
+        vm.expectRevert("image too large");
+        arcade.createToken("Big", "BIG", "", string(new bytes(36_001)));
+
+        // boundary sizes launch fine
+        vm.prank(creator);
+        arcade.createToken("Max", "MAX", string(new bytes(2048)), string(new bytes(36_000)));
+        assertEq(arcade.tokensCount(), 1);
     }
 
     // ---------------------------------------------------------------- comments
