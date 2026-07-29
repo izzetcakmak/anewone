@@ -1,20 +1,23 @@
 {
  "campaign": "ANEWONE Boarding Pass — mainnet-day raffle",
  "network": "Arc Testnet (chainId 5042002)",
- "platform": "0x30c941ed26088DED6c5D4F1571a49f74478DCc84",
- "criteria": "Every launch (TokenCreated) and trade (Trade) on the platform contract counts as 1 tx. Wallets ranked by total tx; ties broken by earliest activity. Team wallets excluded from ranking. Top 33 wallets enter the raffle: 90,000 / 60,000 / 30,000 $NOAH.",
+ "platforms": [
+  "0x30c941ed26088DED6c5D4F1571a49f74478DCc84",
+  "0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf"
+ ],
+ "criteria": "Every launch (TokenCreated) and trade (Trade) on any ANEWONE platform deployment counts as 1 action. Wallets ranked by total actions; ties broken by earliest activity. Team wallets excluded from ranking. Top 33 wallets enter the raffle: 90,000 / 60,000 / 30,000 $NOAH.",
  "final": false,
- "generatedAt": "2026-07-28T22:42:12.964Z",
+ "generatedAt": "2026-07-29T11:59:17.679Z",
  "fromBlock": 52625041,
- "toBlock": 54159403,
- "totalWallets": 10,
- "totalTxs": 36,
+ "toBlock": 54251270,
+ "totalWallets": 12,
+ "totalTxs": 38,
  "wallets": [
   {
    "address": "0xd4f1254c803662c46d9c21f80f4f3c15ff57e2c9",
-   "launches": 2,
+   "launches": 3,
    "trades": 12,
-   "total": 14,
+   "total": 15,
    "firstBlock": 52625043,
    "team": true,
    "rank": null,
@@ -128,6 +131,26 @@
    "firstBlock": 52625926,
    "team": false,
    "rank": 10,
+   "boarding": true
+  },
+  {
+   "address": "0x375cf952f753248f9a1d17653c06d4b3002a6afb",
+   "launches": 0,
+   "trades": 1,
+   "total": 1,
+   "firstBlock": 54239091,
+   "team": false,
+   "rank": 11,
+   "boarding": true
+  },
+  {
+   "address": "0x540a0027509b1c9aa0a2c5c65491cc97083e16de",
+   "launches": 0,
+   "trades": 1,
+   "total": 1,
+   "firstBlock": 54244239,
+   "team": false,
+   "rank": 12,
    "boarding": true
   }
  ]
