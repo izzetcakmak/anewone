@@ -753,7 +753,7 @@
       <span id="cPrevInfo" class="hint"></span>
       <button id="cPrevX" type="button" class="x">✕</button>
     </div>
-    <div class="hint">Stored fully on-chain — auto-cropped to square, resized to 200×200, compressed to ≤24 KB.</div>
+    <div class="hint">Stored fully on-chain in the launch event — auto-cropped to square, resized to 200×200, compressed to ≤24 KB. No storage writes, so launching stays cheap.</div>
 
     <label>Description <span class="hint" id="cDescCount">0/280</span></label>
     <input id="cDesc" placeholder="What's the story?" maxlength="280">
@@ -925,7 +925,7 @@ const ABI = [
   "function allTokens(uint256) view returns (address)",
   "function info(address) view returns (address creator, uint64 createdBlock, bool graduated, uint256 vUsdc, uint256 tReserve, uint256 raised, string metadataURI)",
   "function gradTarget() view returns (uint256)",
-  "function createToken(string,string,string) payable returns (address)",
+  "function createToken(string,string,string,string) payable returns (address)",
   "function buy(address,uint256) payable",
   "function sell(address,uint256,uint256)",
   "function comment(address,string)",
@@ -1798,6 +1798,32 @@ function metaOf(addr) {
   return tokenMetaDoc[addr];
 }
 
+// v6+: the image data URI rides the TokenImage event emitted in the creation tx, so a
+// single-block getLogs at the token's createdBlock retrieves it. Images are immutable,
+// so hits (and definitive misses) are cached in localStorage and never re-queried.
+const IMAGE_TOPIC = ethers.id("TokenImage(address,string)");
+const IMG_KEY = "anewone_img_" + CFG.platform;
+let imgCache = null;
+async function imageFromEvent(addr) {
+  if (!imgCache) { try { imgCache = JSON.parse(localStorage.getItem(IMG_KEY) || "{}"); } catch { imgCache = {}; } }
+  if (imgCache[addr] !== undefined) return imgCache[addr] || null;
+  const created = Number(tokenInfo[addr]?.createdBlock || 0);
+  if (!created) return null;
+  let out = "";
+  try {
+    const logs = await rpc(() => readProvider.getLogs({
+      address: CFG.platform,
+      topics: [IMAGE_TOPIC, ethers.zeroPadValue(addr, 32)],
+      fromBlock: created, toBlock: created
+    }));
+    if (logs.length) out = String(ethers.AbiCoder.defaultAbiCoder().decode(["string"], logs[0].data)[0]);
+  } catch { return null; } // RPC hiccup: leave uncached so the next call retries
+  imgCache[addr] = out; // "" = launched without an image, cached as a definitive miss
+  try { localStorage.setItem(IMG_KEY, JSON.stringify(imgCache)); }
+  catch { try { localStorage.removeItem(IMG_KEY); } catch {} } // quota hit: in-memory only
+  return out || null;
+}
+
 async function resolveImg(addr) {
   if (tokenImg[addr] !== undefined) return tokenImg[addr];
   const m = metaOf(addr);
@@ -1808,6 +1834,8 @@ async function resolveImg(addr) {
     // an https metadata document that points at an image
     try { const j = await (await fetch(img)).json(); if (j.image) out = j.image; } catch {}
   }
+  // v6+ tokens carry their image in the TokenImage launch event, not in metadata
+  if (!out) out = await imageFromEvent(addr);
   // $NOAH's testnet metadata predates anewone.xyz — serve its art locally
   if (!out && CFG.noah && addr.toLowerCase() === CFG.noah.toLowerCase()) out = "meta/noah.svg";
   tokenImg[addr] = out;
@@ -2300,9 +2328,10 @@ $("cFile").onchange = async (e) => {
 
 // ------- metadata document written to the token at launch
 // Kept as compact JSON with short keys: the whole string is stored on-chain, so bytes = gas.
+// The image is NOT part of this document — it rides the TokenImage event (log data is
+// ~78x cheaper per byte than storage), which is what keeps launches around ~2M gas.
 function buildMetadata() {
   const doc = { v: 1 };
-  if (cImageDataUri) doc.i = cImageDataUri;
   const d = $("cDesc").value.trim();
   if (d) doc.d = d.slice(0, 280);
   for (const [id, key] of [["cX", "x"], ["cTg", "t"], ["cWeb", "w"]]) {
@@ -2321,13 +2350,14 @@ function buildMetadata() {
 function updateMetaSize() {
   const meta = (() => { try { return buildMetadataQuiet(); } catch { return ""; } })();
   const bytes = new TextEncoder().encode(meta).length;
-  $("cSize").textContent = "On-chain size: " + (bytes < 1024 ? bytes + " B" : (bytes / 1024).toFixed(1) + " KB");
+  let txt = "On-chain size: " + (bytes < 1024 ? bytes + " B" : (bytes / 1024).toFixed(1) + " KB");
+  if (cImageDataUri) txt += ` + ${(cImageDataUri.length * 3 / 4 / 1024).toFixed(1)} KB image (event log — gas-friendly)`;
+  $("cSize").textContent = txt;
   $("cDescCount").textContent = $("cDesc").value.length + "/280";
 }
 // same document, but without the toasts — used for the live size readout
 function buildMetadataQuiet() {
   const doc = { v: 1 };
-  if (cImageDataUri) doc.i = cImageDataUri;
   const d = $("cDesc").value.trim();
   if (d) doc.d = d.slice(0, 280);
   for (const [id, key] of [["cX", "x"], ["cTg", "t"], ["cWeb", "w"]]) {
@@ -2348,7 +2378,7 @@ $("cGo").onclick = async () => {
     const meta = buildMetadata();
     if (meta === null) return; // invalid link, already toasted
     const c = platform.connect(signer);
-    const tx = await c.createToken(name, sym, meta, { value: ethers.parseEther(String(buyVal || 0)) });
+    const tx = await c.createToken(name, sym, meta, cImageDataUri, { value: ethers.parseEther(String(buyVal || 0)) });
     toast("Launching…");
     await tx.wait();
     toast(`$${sym} IS LIVE!`);

@@ -19,6 +19,8 @@ A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablec
 ## Mechanics
 
 - 1B supply per token, 100% on a constant-product bonding curve (virtual reserve: 4,000 USDC)
+- Token images live in the `TokenImage` launch event, never in storage (log data is ~78×
+  cheaper per byte) — a launch with a full-size image costs ~2M gas instead of ~20M+
 - Buy/sell any time; the contract is the AMM — no LP, no migration, nothing to pull
 - Launching a token is free (gas only), optional dev-buy at creation
 - Creator claims accrued fees with `claimCreatorFees()` — **within 7 days** of the pot starting
@@ -28,7 +30,7 @@ A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablec
 
 | Network | Platform | $NOAH |
 |---|---|---|
-| Arc Testnet (5042002) | `0x30c941ed26088DED6c5D4F1571a49f74478DCc84` | `0xdd1B695d94dE16A85E17E772664067020806E4A1` |
+| Arc Testnet (5042002) | `0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf` | `0x0D1ac2a7FCdd8bF74EEC839DF4ED909071296a49` |
 | Arc Mainnet | ⏳ auto-deploys the minute mainnet is detected | ⏳ |
 
 

@@ -4,9 +4,9 @@
  "platform": "0x30c941ed26088DED6c5D4F1571a49f74478DCc84",
  "criteria": "Every launch (TokenCreated) and trade (Trade) on the platform contract counts as 1 tx. Wallets ranked by total tx; ties broken by earliest activity. Team wallets excluded from ranking. Top 33 wallets enter the raffle: 90,000 / 60,000 / 30,000 $NOAH.",
  "final": false,
- "generatedAt": "2026-07-28T12:43:12.591Z",
+ "generatedAt": "2026-07-28T22:42:12.964Z",
  "fromBlock": 52625041,
- "toBlock": 54089724,
+ "toBlock": 54159403,
  "totalWallets": 10,
  "totalTxs": 36,
  "wallets": [
