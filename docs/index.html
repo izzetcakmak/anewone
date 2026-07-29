@@ -514,6 +514,13 @@
     top: -12px; animation: confFall linear infinite; }
   @keyframes confFall { to { transform: translateY(130px) rotate(340deg); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .sconf { display: none; } }
+  .trustband { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .tb { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--dim);
+    border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px;
+    background: var(--surface); text-decoration: none; }
+  .tb b { color: var(--accent); font-weight: 600; }
+  .tb i { font-style: normal; }
+  a.tb:hover { border-color: rgba(62,230,160,.4); }
   /* card sparkline + 24h chip */
   .cspark { margin: 10px 0 2px; }
   .cspark svg { width: 100%; height: 34px; display: block; }
@@ -607,6 +614,14 @@
   <div id="rpcStatus" class="rpcstatus" style="display:none"></div>
 
   <div id="spotlight" class="spot" style="display:none"></div>
+
+  <!-- trust band: the structural guarantees competitors can't claim -->
+  <div class="trustband">
+    <span class="tb"><i>🔑</i> Your keys, your coin — <b>non-custodial</b>, even with Google sign-in</span>
+    <span class="tb"><i>🔒</i> Reserves locked in the curve — <b>no LP to pull</b></span>
+    <span class="tb"><i>🧯</i> Supply fixed at launch — <b>no mint authority</b></span>
+    <a class="tb" href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener"><i>📖</i> <b>100% open source</b> — verify everything</a>
+  </div>
 
   <div class="toolbar" id="floor">
     <div class="sorts" id="sortTabs">
@@ -1812,7 +1827,93 @@ function fillImages(addrs) {
 // ---- price chart, drawn as inline SVG from the indexed Trade events (no chart library).
 // Y is market cap (price x 1B supply). Memecoin curves span orders of magnitude, so the
 // axis switches to log scale when max/min is wide.
+// ---- candlestick upgrade: TradingView's open-source Lightweight Charts, vendored
+// locally (vendor/lightweight-charts.standalone.production.js, Apache-2.0). Loaded
+// lazily on first trade-modal open; the SVG line below stays as the fallback for
+// thin history or while the library loads.
+let lwcReady = false, lwcLoading = null, lwcChart = null, lwcSeries = null, lwcAddr = null;
+function loadLwc() {
+  if (lwcReady) return Promise.resolve();
+  if (!lwcLoading) {
+    lwcLoading = new Promise((res) => {
+      const s = document.createElement("script");
+      s.src = "vendor/lightweight-charts.standalone.production.js";
+      s.onload = () => { lwcReady = true; res(); };
+      s.onerror = () => res(); // fallback SVG keeps working
+      document.head.appendChild(s);
+    });
+  }
+  return lwcLoading;
+}
+function destroyLwc() {
+  try { if (lwcChart) lwcChart.remove(); } catch {}
+  lwcChart = lwcSeries = lwcAddr = null;
+}
+/** series -> ~5-minute OHLC candles in market-cap USD; times estimated from block age */
+function buildCandles(addr) {
+  const raw = (statsIdx && statsIdx.series[addr]) || [];
+  if (raw.length < 2 || !blockTimeSec || !latestBlock) return null;
+  const bucketBlocks = Math.max(1, Math.round(300 / blockTimeSec));
+  const nowSec = Math.floor(Date.now() / 1000);
+  const buckets = new Map();
+  for (const s of raw) {
+    const v = Number(ethers.formatEther(s.p * TOTAL_SUPPLY_TOKENS));
+    if (!isFinite(v) || v <= 0) continue;
+    const key = Math.floor(s.b / bucketBlocks);
+    const c = buckets.get(key);
+    if (!c) buckets.set(key, { key, open: v, high: v, low: v, close: v });
+    else { c.high = Math.max(c.high, v); c.low = Math.min(c.low, v); c.close = v; }
+  }
+  const inf = tokenInfo[addr];
+  if (inf) { // anchor the last candle at the live value
+    const v = Number(ethers.formatEther(marketCapWei(inf)));
+    const key = Math.floor(latestBlock / bucketBlocks);
+    const c = buckets.get(key);
+    if (!c) buckets.set(key, { key, open: v, high: v, low: v, close: v });
+    else { c.high = Math.max(c.high, v); c.low = Math.min(c.low, v); c.close = v; }
+  }
+  const out = [...buckets.values()].sort((a, b) => a.key - b.key).map((c) => ({
+    time: nowSec - Math.max(0, latestBlock - (c.key * bucketBlocks + bucketBlocks - 1)) * blockTimeSec,
+    open: c.open, high: c.high, low: c.low, close: c.close,
+  }));
+  // strictly increasing times (block-age estimates can collide on sparse data)
+  for (let i = 1; i < out.length; i++) if (out[i].time <= out[i - 1].time) out[i].time = out[i - 1].time + 1;
+  return out.length >= 4 ? out : null;
+}
+function renderCandles(addr) {
+  if (!lwcReady || !window.LightweightCharts) return false;
+  const candles = buildCandles(addr);
+  if (!candles) return false;
+  const box = $("tChartBox"), host = $("tChart");
+  box.style.display = "block";
+  if (lwcChart && lwcAddr === addr) { lwcSeries.setData(candles); return true; }
+  destroyLwc();
+  host.innerHTML = "";
+  host.style.height = "216px";
+  const LWC = window.LightweightCharts;
+  lwcChart = LWC.createChart(host, {
+    autoSize: true,
+    layout: { background: { color: "transparent" }, textColor: "#8b8b93", fontSize: 11,
+      attributionLogo: false },
+    grid: { vertLines: { color: "rgba(255,255,255,.04)" }, horzLines: { color: "rgba(255,255,255,.04)" } },
+    rightPriceScale: { borderVisible: false },
+    timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
+    crosshair: { horzLine: { labelBackgroundColor: "#1a1d26" }, vertLine: { labelBackgroundColor: "#1a1d26" } },
+  });
+  const opts = { upColor: "#3ee6a0", downColor: "#ff5470", borderVisible: false,
+    wickUpColor: "#3ee6a0", wickDownColor: "#ff5470" };
+  lwcSeries = lwcChart.addSeries ? lwcChart.addSeries(LWC.CandlestickSeries, opts)
+                                 : lwcChart.addCandlestickSeries(opts); // v5 / v4 API
+  lwcSeries.setData(candles);
+  lwcChart.timeScale().fitContent();
+  lwcAddr = addr;
+  $("tChartHint").innerHTML = `5m candles · <a href="https://www.tradingview.com/" target="_blank" rel="noopener" style="color:var(--faint)">charts by TradingView</a>`;
+  return true;
+}
+
 function renderChart(addr) {
+  if (renderCandles(addr)) return;
+  if (lwcChart) { destroyLwc(); $("tChart").innerHTML = ""; $("tChart").style.height = ""; }
   const box = $("tChartBox"), host = $("tChart");
   const raw = (statsIdx && statsIdx.series[addr]) || [];
   const inf = tokenInfo[addr];
@@ -2279,6 +2380,8 @@ async function openTrade(addr) {
     if (src && currentToken === addr) { $("tImg").src = src; $("tImg").style.display = "block"; }
   });
   renderChart(addr);
+  // candles appear as soon as the (lazy-loaded) chart library lands
+  loadLwc().then(() => { if (currentToken === addr && $("tradeModal").classList.contains("open")) renderChart(addr); });
   renderPosition(addr);
   computeTrust(addr);
   renderComments(addr);
