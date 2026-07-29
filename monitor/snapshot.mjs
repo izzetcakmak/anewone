@@ -24,7 +24,12 @@ const OUT_DIR = path.join(ROOT, "docs", "boarding");
 const OUT_FILE = path.join(OUT_DIR, "snapshot.json");
 
 const RPC = "https://rpc.testnet.arc.network";
-const PLATFORM = "0x30c941ed26088DED6c5D4F1571a49f74478DCc84";
+// The campaign spans every platform deployment: activity on retired contracts keeps
+// counting, and each redeploy (v6 event-only images, 26 Jul) just adds an entry here.
+const PLATFORMS = [
+  { addr: "0x30c941ed26088DED6c5D4F1571a49f74478DCc84", deployBlock: 52_625_041 }, // v5
+  { addr: "0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf", deployBlock: 54_249_114 }, // v6 (current)
+];
 // keccak of the event signatures (see src/ANewOne.sol)
 const TOPIC_TOKEN_CREATED = "0xfe210c99153843bc67efa2e9a61ec1d63c505e379b9dcf05a9520e84e36e6063"; // TokenCreated(address,address,string,string,string)
 const TOPIC_TRADE = "0xf7dd8a134438de4c59401760e24ef5c6cc9c74583b2b022085697f3021e59768"; // Trade(address,address,bool,uint256,uint256,uint256)
@@ -79,10 +84,9 @@ async function rpc(method, params, { retries = 5 } = {}) {
   }
 }
 
-// Platform deploy block, from broadcast/Deploy.s.sol/5042002/run-latest.json —
-// no logs can exist before it (public RPC is not an archive node, so this is
+// Deploy blocks come from broadcast/Deploy.s.sol/5042002/run-latest.json history —
+// no logs can exist before them (public RPC is not an archive node, so they are
 // hardcoded rather than discovered via historical eth_getCode).
-const DEPLOY_BLOCK = 52_625_041;
 
 /**
  * getLogs over [fromBlock, toBlock]. Splits a range ONLY on explicit range/size
@@ -92,7 +96,7 @@ const DEPLOY_BLOCK = 52_625_041;
  */
 const MAX_RANGE = 9_999n; // Arc public RPC: "eth_getLogs is limited to a 10,000 range"
 
-async function fetchLogs(fromBlock, toBlock, topic, log) {
+async function fetchLogs(platformAddr, fromBlock, toBlock, topic, log) {
   const out = [];
   // pre-chunk at the known range cap — no doomed oversized calls; the bisect
   // below only kicks in for result-size errors within a window
@@ -108,7 +112,7 @@ async function fetchLogs(fromBlock, toBlock, topic, log) {
     try {
       calls++;
       const chunk = await rpc("eth_getLogs", [{
-        address: PLATFORM,
+        address: platformAddr,
         topics: [topic],
         fromBlock: "0x" + a.toString(16),
         toBlock: "0x" + b.toString(16),
@@ -143,45 +147,61 @@ const CACHE_FILE = path.join(MON, "snapshot-cache.json");
 function loadCache() {
   try {
     const c = JSON.parse(readFileSync(CACHE_FILE, "utf8"));
-    if (c.platform === PLATFORM && Number.isInteger(c.toBlock)) return c;
+    if (c.v === 2 && c.platforms) return c;
+    // migrate v1 (single-platform) — its data belongs to whatever platform it tracked
+    if (c.platform && Number.isInteger(c.toBlock)) {
+      return { v: 2, platforms: { [c.platform.toLowerCase()]: { toBlock: c.toBlock, wallets: c.wallets || {} } } };
+    }
   } catch {}
-  return { platform: PLATFORM, toBlock: DEPLOY_BLOCK - 1, wallets: {} };
+  return { v: 2, platforms: {} };
 }
 
 export async function runSnapshot({ final = false, toBlock = null, log = console.log } = {}) {
   const cache = loadCache();
-  // when the cache already covers the requested cutoff, no RPC is needed at all —
+  // when every platform cache already covers the requested cutoff, no RPC is needed —
   // the FINAL snapshot still works even if the testnet RPC is down at cutover
-  let latest;
-  if (toBlock != null && cache.toBlock >= toBlock) {
-    latest = toBlock; // note: served from cache; cache never runs past the freeze in normal flow
-  } else {
+  let latest = toBlock;
+  const allCovered = toBlock != null && PLATFORMS.every((p) =>
+    (cache.platforms[p.addr.toLowerCase()]?.toBlock ?? 0) >= toBlock);
+  if (latest == null || !allCovered) {
     latest = toBlock ?? parseInt(await rpc("eth_blockNumber", []), 16);
   }
-  const from = cache.toBlock + 1;
-  log(`snapshot: cache at block ${cache.toBlock}, scanning ${from} -> ${latest}`);
 
-  if (latest >= from) {
+  for (const p of PLATFORMS) {
+    const key = p.addr.toLowerCase();
+    const pc = cache.platforms[key] ?? (cache.platforms[key] = { toBlock: p.deployBlock - 1, wallets: {} });
+    const from = pc.toBlock + 1;
+    if (latest < from) continue;
+    log(`snapshot: ${key.slice(0, 10)} cache at ${pc.toBlock}, scanning ${from} -> ${latest}`);
     const [created, trades] = [
-      await fetchLogs(BigInt(from), BigInt(latest), TOPIC_TOKEN_CREATED, log),
-      await fetchLogs(BigInt(from), BigInt(latest), TOPIC_TRADE, log),
+      await fetchLogs(p.addr, BigInt(from), BigInt(latest), TOPIC_TOKEN_CREATED, log),
+      await fetchLogs(p.addr, BigInt(from), BigInt(latest), TOPIC_TRADE, log),
     ];
     const bump = (addr, kind, blockHex) => {
       const block = parseInt(blockHex, 16);
-      const w = cache.wallets[addr] ?? { launches: 0, trades: 0, firstBlock: block };
+      const w = pc.wallets[addr] ?? { launches: 0, trades: 0, firstBlock: block };
       w[kind]++;
       if (block < w.firstBlock) w.firstBlock = block;
-      cache.wallets[addr] = w;
+      pc.wallets[addr] = w;
     };
     for (const l of created) bump(topicToAddr(l.topics[2]), "launches", l.blockNumber);
     for (const l of trades) bump(topicToAddr(l.topics[2]), "trades", l.blockNumber);
-    cache.toBlock = latest;
+    pc.toBlock = latest;
     atomicWrite(CACHE_FILE, JSON.stringify(cache));
-    log(`snapshot: +${created.length} launches, +${trades.length} trades merged into cache`);
+    log(`snapshot: ${key.slice(0, 10)} +${created.length} launches, +${trades.length} trades`);
   }
 
+  // combine every platform's tallies per wallet — the campaign spans all deployments
   const team = teamWallets();
-  const ranked = [...Object.entries(cache.wallets)]
+  const combined = {};
+  for (const pc of Object.values(cache.platforms)) {
+    for (const [address, w] of Object.entries(pc.wallets)) {
+      const c = combined[address] ?? (combined[address] = { launches: 0, trades: 0, firstBlock: w.firstBlock });
+      c.launches += w.launches; c.trades += w.trades;
+      if (w.firstBlock < c.firstBlock) c.firstBlock = w.firstBlock;
+    }
+  }
+  const ranked = [...Object.entries(combined)]
     .map(([address, w]) => ({
       address,
       launches: w.launches,
@@ -201,15 +221,15 @@ export async function runSnapshot({ final = false, toBlock = null, log = console
   const snapshot = {
     campaign: "ANEWONE Boarding Pass — mainnet-day raffle",
     network: "Arc Testnet (chainId 5042002)",
-    platform: PLATFORM,
+    platforms: PLATFORMS.map((p) => p.addr),
     criteria:
-      `Every launch (TokenCreated) and trade (Trade) on the platform contract counts as 1 tx. ` +
-      `Wallets ranked by total tx; ties broken by earliest activity. Team wallets excluded from ranking. ` +
+      `Every launch (TokenCreated) and trade (Trade) on any ANEWONE platform deployment counts as 1 action. ` +
+      `Wallets ranked by total actions; ties broken by earliest activity. Team wallets excluded from ranking. ` +
       `Top ${TOP_N} wallets enter the raffle: 90,000 / 60,000 / 30,000 $NOAH.`,
     final,
     generatedAt: new Date().toISOString(),
-    fromBlock: DEPLOY_BLOCK,
-    toBlock: cache.toBlock,
+    fromBlock: Math.min(...PLATFORMS.map((p) => p.deployBlock)),
+    toBlock: Math.max(...Object.values(cache.platforms).map((p) => p.toBlock)),
     totalWallets: ranked.filter((w) => !w.team).length,
     totalTxs: ranked.filter((w) => !w.team).reduce((s, w) => s + w.total, 0),
     wallets: ranked,
