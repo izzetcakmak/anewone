@@ -1700,6 +1700,17 @@ function pct24(addr) {
   let base = null;
   for (const s of ser) { if (s.b <= cutoff) base = s.p; else break; }
   if (base === null) base = ser[0].p;
+  // series are capped at [launch, last 599] — on a token with 600+ trades in 24h the
+  // true 24h-old point gets dropped and the scan above degrades to the launch price.
+  // statsIdx.recent holds the raw 24h trade window, so derive the base from its
+  // earliest trade instead (implied price = usdc / tokens, same WAD scale as p).
+  if (base === ser[0].p && ser[0].b < cutoff) {
+    let earliest = null;
+    for (const r of statsIdx.recent) {
+      if (r.tk === addr && r.t > 0n && (!earliest || r.b < earliest.b)) earliest = r;
+    }
+    if (earliest) base = (earliest.u * WAD) / earliest.t;
+  }
   if (!base) return null;
   return Number(((last - base) * 10000n) / base) / 100;
 }
@@ -2744,18 +2755,23 @@ setInterval(loadTokens, 60_000);
 // spotlight feeling real-time between the full 60s passes. Single call, well inside
 // the public RPC budget; skipped while a full index pass runs or the tab is hidden.
 async function liveTail() {
+  // shares the `indexing` mutex with indexUntilDone/loadStats: ingestLogs has no
+  // trade dedup, so two overlapping forward scans would double-count volume and
+  // per-trader flows — and persist the corruption via saveStatsCache
   if (indexing || document.hidden || !statsIdx || statsIdx.hi === null || !readProvider) return;
+  indexing = true;
   try {
     const tip = await rpc(() => readProvider.getBlockNumber(), 1);
     if (tip <= statsIdx.hi) return;
     latestBlock = tip;
+    const to = Math.min(tip, statsIdx.hi + CHUNK);
     const logs = await rpc(() => readProvider.getLogs({
       address: CFG.platform,
       topics: [[TRADE_TOPIC, COMMENT_TOPIC]],
       fromBlock: statsIdx.hi + 1,
-      toBlock: Math.min(tip, statsIdx.hi + CHUNK),
+      toBlock: to,
     }), 1);
-    statsIdx.hi = Math.min(tip, statsIdx.hi + CHUNK);
+    statsIdx.hi = to;
     if (logs.length) {
       ingestLogs(logs);
       rebuildStats();
@@ -2763,7 +2779,8 @@ async function liveTail() {
       renderFeed();
       renderSpotlight();
     }
-  } catch {} // transient RPC noise — the 60s full pass self-heals
+  } catch {} // transient RPC noise — the next tick retries from the same watermark
+  finally { indexing = false; }
 }
 setInterval(liveTail, 15_000);
 </script>
