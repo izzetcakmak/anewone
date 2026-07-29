@@ -32,7 +32,8 @@ contract Deploy is Script {
             address noah = arcade.createToken{value: devBuy}(
                 "Noah's Arc",
                 "NOAH",
-                "https://anewone.xyz/meta/noah.json"
+                "https://anewone.xyz/meta/noah.json",
+                "" // $NOAH's art ships with the site; no need to carry it in the event
             );
             console.log("NOAH_TOKEN:", noah);
             if (devBuy > 0) {
