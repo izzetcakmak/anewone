@@ -16,8 +16,8 @@ window.ANEWONE_CONFIG = {
     chainIdHex: "0x4cef52",
     rpc: "https://rpc.testnet.arc.network",
     explorer: "https://explorer.testnet.arc.network",
-    platform: "0x30c941ed26088DED6c5D4F1571a49f74478DCc84",
-    noah: "0xdd1B695d94dE16A85E17E772664067020806E4A1",
+    platform: "0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf",
+    noah: "0x0D1ac2a7FCdd8bF74EEC839DF4ED909071296a49",
   },
   // "Continue with Google" (embedded wallet via Web3Auth), configured PER blockchain network.
   // While testnet is live the testnet clientId is used; the moment the scanner flips
