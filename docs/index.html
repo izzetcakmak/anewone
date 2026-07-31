@@ -515,12 +515,13 @@
   @keyframes confFall { to { transform: translateY(130px) rotate(340deg); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .sconf { display: none; } }
   .trustband { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
-  .tb { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--dim);
-    border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px;
+  /* .tbc, not .tb — the trade modal already owns a .tb trust-badge class */
+  .tbc { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 400;
+    color: var(--dim); border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px;
     background: var(--surface); text-decoration: none; }
-  .tb b { color: var(--accent); font-weight: 600; }
-  .tb i { font-style: normal; }
-  a.tb:hover { border-color: rgba(62,230,160,.4); }
+  .tbc b { color: var(--accent); font-weight: 600; }
+  .tbc i { font-style: normal; }
+  a.tbc:hover { border-color: rgba(62,230,160,.4); }
   /* card sparkline + 24h chip */
   .cspark { margin: 10px 0 2px; }
   .cspark svg { width: 100%; height: 34px; display: block; }
@@ -530,7 +531,8 @@
   /* two-column floor: grid + sticky live rail */
   .floorwrap { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
   @media (min-width: 1180px) {
-    .floorwrap { grid-template-columns: 1fr 292px; }
+    /* the rail column exists only while the feed has rows (renderFeed toggles has-rail) */
+    .floorwrap.has-rail { grid-template-columns: 1fr 292px; }
     .floorwrap #feedWrap { position: sticky; top: 76px; max-height: calc(100vh - 96px);
       overflow-y: auto; margin-top: 20px; scrollbar-width: thin; }
   }
@@ -552,7 +554,7 @@
     .cab .nm { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .cspark { grid-row: 1; grid-column: 4; margin: 0; }
     .cspark svg { height: 30px; }
-    .mcap { grid-row: 2; grid-column: 2 / 4; margin: 0; font-size: 12.5px; }
+    .cab .mcap { grid-row: 2; grid-column: 2 / 4; margin: 0; font-size: 12.5px; }
     .cab .star { position: static; grid-row: 2; grid-column: 4; justify-self: end; padding: 0; }
     .cab .cdesc, .cab .bar, .cab .bar-label, .cab .cstats { display: none; }
     .spot { padding: 16px; gap: 14px; }
@@ -617,10 +619,10 @@
 
   <!-- trust band: the structural guarantees competitors can't claim -->
   <div class="trustband">
-    <span class="tb"><i>🔑</i> Your keys, your coin — <b>non-custodial</b>, even with Google sign-in</span>
-    <span class="tb"><i>🔒</i> Reserves locked in the curve — <b>no LP to pull</b></span>
-    <span class="tb"><i>🧯</i> Supply fixed at launch — <b>no mint authority</b></span>
-    <a class="tb" href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener"><i>📖</i> <b>100% open source</b> — verify everything</a>
+    <span class="tbc"><i>🔑</i> Your keys, your coin — <b>non-custodial</b>, even with Google sign-in</span>
+    <span class="tbc"><i>🔒</i> Reserves locked in the curve — <b>no LP to pull</b></span>
+    <span class="tbc"><i>🧯</i> Supply fixed at launch — <b>no mint authority</b></span>
+    <a class="tbc" href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener"><i>📖</i> <b>100% open source</b> — verify everything</a>
   </div>
 
   <div class="toolbar" id="floor">
@@ -1695,6 +1697,12 @@ function pct24(addr) {
   if (ser.length < 2) return null;
   const bpd = blockTimeSec ? Math.round(86400 / blockTimeSec) : 0;
   if (!bpd || !latestBlock) return null;
+  // coverage honesty (same rule as vol24/holders): no chip until the index either
+  // spans 24h or fully covers this token's life (young token -> since-launch)
+  if (!covers24h) {
+    const cb = tokenInfo[addr] ? Number(tokenInfo[addr].createdBlock) : 0;
+    if (!(statsIdx.lo != null && cb && statsIdx.lo <= cb)) return null;
+  }
   const cutoff = latestBlock - bpd;
   const last = ser[ser.length - 1].p;
   let base = null;
@@ -2174,12 +2182,12 @@ function renderGrid() {
 }
 
 // ---- spotlight: the hottest token (trending score, mcap fallback) as a hero card
-let spotAddr = null;
+let spotAddr = null, spotKey = "";
 const CONF_COLORS = ["#3ee6a0", "#ffc24d", "#7aa7ff", "#ff5470", "#c792ea"];
 function renderSpotlight() {
   const el = $("spotlight");
   const addrs = shownAddrs.filter((a) => tokenMeta[a] && tokenInfo[a]);
-  if (!addrs.length || !statsReady) { el.style.display = "none"; return; }
+  if (!addrs.length || !statsReady) { el.style.display = "none"; spotKey = ""; return; }
   let best = null, bestScore = 0;
   for (const a of addrs) { const s = trendScore(a); if (s > bestScore) { bestScore = s; best = a; } }
   if (!best) best = addrs.slice().sort((x, y) => (marketCapWei(tokenInfo[y]) > marketCapWei(tokenInfo[x]) ? 1 : -1))[0];
@@ -2187,6 +2195,11 @@ function renderSpotlight() {
   const { name, symbol } = tokenMeta[best];
   const inf = tokenInfo[best], st = tradeStats[best] || {};
   const ch = pct24(best);
+  // renderGrid fires on every keystroke/sort click — skip the innerHTML rebuild
+  // (and the confetti animation restart) unless the displayed numbers changed
+  const key = [best, marketCapWei(inf), ch, st.vol24 || 0n, st.holders || 0, fullyIndexed, covers24h].join("|");
+  if (key === spotKey) return;
+  spotKey = key;
   const desc = metaOf(best).d || "";
   const conf = Array.from({ length: 12 }, (_, i) =>
     `<i class="sconf" style="left:${(i * 8.3 + 2).toFixed(1)}%;background:${CONF_COLORS[i % CONF_COLORS.length]};animation-duration:${(2.8 + (i % 5) * 0.7).toFixed(1)}s;animation-delay:${(i * 0.45).toFixed(2)}s"></i>`).join("");
@@ -2258,9 +2271,25 @@ $("fClear").onclick = () => {
   readFilters();
 };
 
+let lastFeedKey = "";
 function renderFeed() {
-  if (!statsIdx || !statsIdx.recent.length) { $("feedWrap").style.display = "none"; return; }
-  const rows = statsIdx.recent.filter((r) => r && r.tr && r.tk).slice(-25).reverse().map((r) => {
+  const wrap = $("feedWrap");
+  const setRail = (on) => {
+    wrap.style.display = on ? "block" : "none";
+    document.querySelector(".floorwrap")?.classList.toggle("has-rail", on);
+  };
+  if (!statsIdx || !statsIdx.recent.length) { setRail(false); return; }
+  // only tokens the UI already knows — liveTail can ingest trades for tokens
+  // loadTokens hasn't discovered yet, and those rows would break openTrade
+  const list = statsIdx.recent.filter((r) => r && r.tr && r.tk && tokenMeta[r.tk] && tokenInfo[r.tk]);
+  if (!list.length) { setRail(false); return; }
+  // skip the full innerHTML rebuild (and the row entrance animation replay) unless
+  // the newest trade changed or ~5min of blocks passed (keeps "ago" labels honest)
+  const top = list[list.length - 1];
+  const key = `${list.length}:${top.b}:${top.tk}:${top.tr}:${top.u}:${Math.floor((latestBlock || 0) / 150)}`;
+  if (key === lastFeedKey) { setRail(true); return; }
+  lastFeedKey = key;
+  const rows = list.slice(-25).reverse().map((r) => {
     const sym = (tokenMeta[r.tk] || {}).symbol || r.tk.slice(0, 6);
     const who = r.tr.slice(0, 6) + "…" + r.tr.slice(-4);
     const when = ageText(latestBlock ? latestBlock - r.b : null);
@@ -2274,7 +2303,7 @@ function renderFeed() {
     </div>`;
   }).join("");
   $("feed").innerHTML = rows;
-  $("feedWrap").style.display = rows ? "block" : "none";
+  setRail(!!rows);
 }
 
 // deep link: #t=0x… opens that token directly so a launch can be shared
@@ -2411,6 +2440,8 @@ let userNativeBal = 0n, userTokenBal = 0n;
 let exactWei = null;
 
 async function openTrade(addr) {
+  // liveTail can surface trades for tokens the grid hasn't loaded yet
+  if (!tokenMeta[addr] || !tokenInfo[addr]) return toast("Token is still loading — try again in a moment");
   currentToken = addr; isBuy = true;
   setTabs();
   const { name, symbol } = tokenMeta[addr] || {};
