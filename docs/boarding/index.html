@@ -6,43 +6,80 @@
 <title>Boarding Pass — A NEW ONE</title>
 <meta name="description" content="The transparent passenger list for the ANEWONE mainnet-day raffle: the 33 most active Arc testnet wallets enter; 3 winners receive 90,000 / 60,000 / 30,000 $NOAH.">
 <style>
-  :root { --bg:#07080b; --card:#101218; --line:#23252e; --mint:#3ee6a0; --txt:#e8e8ea; --dim:#8b8b93; --gold:#f8d49b; }
+  /* pastel storybook theme — same palette as the $NOAH artwork */
+  :root { --paper:#fdf6ec; --ink:#7a5636; --ink2:#a4917a; --line:#e8d9c2;
+          --rose:#f2a7b3; --butter:#f8d49b; --sage:#a9d8c5; --sea:#8fcabb; --blue:#8fb4e3;
+          --card:#fffdf8; --red:#d9737f; --green:#4e9d7c; }
   * { box-sizing:border-box; margin:0; }
-  body { background:var(--bg); color:var(--txt); font:15px/1.6 Inter,system-ui,sans-serif; }
-  .wrap { max-width:880px; margin:0 auto; padding:40px 20px 80px; }
-  a { color:var(--mint); text-decoration:none; }
-  h1 { font-size:34px; letter-spacing:-0.5px; margin:18px 0 6px; }
-  h1 .mint { color:var(--mint); }
-  .sub { color:var(--dim); max-width:640px; }
-  .back { font-size:13px; color:var(--dim); }
-  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin:28px 0; }
-  .stat { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; }
-  .stat .v { font-size:26px; font-weight:700; color:var(--mint); }
-  .stat .k { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; }
-  .prizes .v { color:var(--gold); }
-  .rules { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin:10px 0 30px; }
+  body { background:var(--paper); color:var(--ink); font:15px/1.65 Inter,system-ui,sans-serif; }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.5; z-index:0;
+    background-image: radial-gradient(#e9d8bf 1px, transparent 1.4px); background-size: 26px 26px; }
+  .wrap { position:relative; max-width:900px; margin:0 auto; padding:38px 20px 90px; z-index:1; }
+  a { color:var(--green); text-decoration:none; }
+  .hand { font-family:'Segoe Print','Bradley Hand','Comic Sans MS',cursive; }
+  .back { font-size:13px; color:var(--ink2); }
+  h1 { font-size:34px; letter-spacing:-.3px; margin:16px 0 8px; color:#5f4128; }
+  .sub { color:var(--ink2); max-width:660px; }
+  .sub b { color:#5f4128; }
+  .rainbow { height:10px; border-radius:999px; margin:24px 0 8px; background:
+    linear-gradient(90deg, var(--rose), var(--butter), var(--sage), var(--blue), var(--rose)); opacity:.8; }
+
+  /* podium */
+  .podium { display:flex; align-items:flex-end; justify-content:center; gap:14px; margin:34px 0 0; }
+  .step { text-align:center; flex:1; max-width:170px; min-width:0; }
+  .step .who { font-family:ui-monospace,Consolas,monospace; font-size:12.5px; color:#5f4128;
+    background:var(--card); border:2px solid var(--line); border-radius:999px; padding:4px 10px;
+    display:inline-block; margin-bottom:8px; max-width:100%; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; box-sizing:border-box; }
+  .step .txs { font-size:11.5px; color:var(--ink2); margin-bottom:8px; }
+  .step .block { border-radius:16px 16px 0 0; border:2px solid rgba(95,65,40,.16); border-bottom:none;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:8px;
+    font-family:'Segoe Print','Bradley Hand','Comic Sans MS',cursive; font-weight:700; font-size:26px; color:#5f4128; }
+  .step.p1 .block { height:122px; background:var(--butter); }
+  .step.p2 .block { height:88px; background:var(--rose); }
+  .step.p3 .block { height:66px; background:var(--sage); }
+  .step .crown { font-size:22px; display:block; margin-bottom:-6px; }
+  .step .prize { font-size:12px; font-family:Inter,sans-serif; font-weight:600; color:#5f4128; opacity:.75; }
+  .podium-base { height:10px; background:var(--sea); border-radius:999px; margin:0 auto 30px; max-width:560px; opacity:.55; }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:8px 0 26px; }
+  .stat { background:var(--card); border:2px solid var(--line); border-radius:16px; padding:14px 16px; }
+  .stat .v { font-size:24px; font-weight:700; color:var(--green); font-family:ui-monospace,Consolas,monospace; }
+  .stat.prizes .v { color:#c98a2e; }
+  .stat .k { font-size:11px; color:var(--ink2); text-transform:uppercase; letter-spacing:1.2px; }
+
+  .rules { background:var(--card); border:2px solid var(--line); border-radius:18px; padding:20px 22px; margin:6px 0 28px; }
+  .rules b { color:#5f4128; }
   .rules li { margin:8px 0 8px 18px; }
-  .badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; }
-  .badge.live { background:#123326; color:var(--mint); }
-  .badge.final { background:#332612; color:var(--gold); }
-  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .badge { display:inline-block; padding:3px 12px; border-radius:999px; font-size:12px; font-weight:700; }
+  .badge.live { background:var(--sage); color:#2f5c49; }
+  .badge.final { background:var(--butter); color:#7a5210; }
+  table { width:100%; border-collapse:collapse; background:var(--card); }
   th,td { padding:10px 14px; text-align:left; font-size:14px; border-bottom:1px solid var(--line); }
-  th { color:var(--dim); font-size:12px; text-transform:uppercase; letter-spacing:1px; }
-  tr.boarding td:first-child { color:var(--mint); font-weight:700; }
-  tr.team td { color:var(--dim); font-style:italic; }
+  th { color:var(--ink2); font-size:11px; text-transform:uppercase; letter-spacing:1.2px; }
+  tr.boarding td:first-child { color:var(--green); font-weight:700; }
+  tr.team td { color:var(--ink2); font-style:italic; }
   .addr { font-family:ui-monospace,Consolas,monospace; font-size:13px; }
-  .meta { color:var(--dim); font-size:12.5px; margin:14px 2px; }
-  .tablebox { overflow-x:auto; }
-  #more { margin:16px auto; display:block; background:none; border:1px solid var(--line); color:var(--dim); padding:8px 22px; border-radius:999px; cursor:pointer; }
-  #more:hover { color:var(--mint); border-color:var(--mint); }
+  .meta { color:var(--ink2); font-size:12.5px; margin:14px 2px; }
+  .tablebox { overflow-x:auto; border-radius:16px; border:2px solid var(--line); }
+  #more { margin:16px auto; display:block; background:var(--card); border:2px solid var(--line);
+    color:var(--ink2); padding:8px 24px; border-radius:999px; cursor:pointer; font-weight:600; font-family:Inter,sans-serif; }
+  #more:hover { color:var(--green); border-color:var(--sage); }
+  @media (max-width:560px) { .podium { gap:8px; } h1 { font-size:28px; }
+    .step .who { font-size:10.5px; padding:3px 8px; } .step .prize { font-size:10.5px; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <a class="back" href="../">← anewone.xyz</a>
-  <h1>🚢 Boarding Pass <span class="mint">— The Passenger List</span></h1>
+  <h1 class="hand">🚢 Boarding Pass — The Passenger List</h1>
   <p class="sub">The flood is coming. When Arc mainnet goes live, the <b>33 most active testnet wallets</b>
-     enter an open raffle — <b>3 winners share 180,000 $NOAH</b>, the first memecoin planned to launch on Arc mainnet, on this platform.</p>
+     enter an open raffle — <b>3 winners share 180,000 $NOAH</b>, the first memecoin planned to launch on Arc
+     mainnet, on this platform.</p>
+  <div class="rainbow" aria-hidden="true"></div>
+
+  <div id="podium" class="podium" style="display:none"></div>
+  <div id="podiumBase" class="podium-base" style="display:none"></div>
 
   <div class="grid">
     <div class="stat prizes"><div class="v">90,000</div><div class="k">$NOAH · 1st</div></div>
@@ -53,7 +90,7 @@
   </div>
 
   <div class="rules">
-    <b>How it works</b>
+    <b class="hand" style="font-size:17px">How it works</b>
     <ul>
       <li>Every <b>launch</b> (TokenCreated) and every <b>trade</b> (Trade) event on <b>any ANEWONE platform deployment</b> (<a href="https://explorer.testnet.arc.network/address/0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf" target="_blank" rel="noopener">current v6</a> · <a href="https://explorer.testnet.arc.network/address/0x30c941ed26088DED6c5D4F1571a49f74478DCc84" target="_blank" rel="noopener">v5</a>) counts as 1 action — a launch with a starting buy counts as both. Contract upgrades never cost you progress. Testnet is free — gas comes from the <a href="https://faucet.circle.com" target="_blank" rel="noopener">Circle faucet</a>.</li>
       <li>Snapshot window: <b>every action since the current platform deployment (July 19, 2026) counts</b> — early supporters included — <b>until the moment Arc mainnet goes live</b>, when the cutoff freezes and the final snapshot is published here in full. Campaign announced July 28, 2026.</li>
@@ -80,8 +117,9 @@
 <script>
 (async () => {
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const num = (x) => Number(x) || 0; // snapshot fields are numbers by construction; enforce anyway
+  const num = (x) => Number(x) || 0;
   const rows = document.getElementById('rows');
+  const short = (a) => String(a).slice(0, 8) + '…' + String(a).slice(-6);
   try {
     const snap = await (await fetch('snapshot.json?v=' + Date.now())).json();
     if (!snap || !Array.isArray(snap.wallets)) throw new Error('bad snapshot');
@@ -93,11 +131,26 @@
       const b = document.getElementById('status');
       b.textContent = 'FINAL SNAPSHOT'; b.className = 'badge final';
     }
+    // pastel podium for the current top 3 (2 · 1 · 3 layout)
+    const top3 = snap.wallets.filter((w) => w.rank && w.rank <= 3);
+    if (top3.length) {
+      const by = (r) => top3.find((w) => w.rank === r);
+      const step = (w, cls, label, prize) => !w ? '' :
+        `<div class="step ${cls}">
+          <span class="who">${esc(short(w.address))}</span>
+          <div class="txs">${num(w.total)} actions</div>
+          <div class="block">${cls === 'p1' ? '<span class="crown">👑</span>' : ''}${label}
+            <span class="prize">${prize} $NOAH</span></div>
+        </div>`;
+      document.getElementById('podium').innerHTML =
+        step(by(2), 'p2', '2', '60,000') + step(by(1), 'p1', '1', '90,000') + step(by(3), 'p3', '3', '30,000');
+      document.getElementById('podium').style.display = 'flex';
+      document.getElementById('podiumBase').style.display = 'block';
+    }
     const render = (list) => list.map((w) => {
       const cls = w.team ? 'team' : (w.boarding ? 'boarding' : '');
-      const short = String(w.address).slice(0, 8) + '…' + String(w.address).slice(-6);
       return `<tr class="${cls}"><td>${w.team ? 'team' : num(w.rank)}</td>` +
-        `<td class="addr"><a href="https://explorer.testnet.arc.network/address/${esc(w.address)}" target="_blank" rel="noopener">${esc(short)}</a></td>` +
+        `<td class="addr"><a href="https://explorer.testnet.arc.network/address/${esc(w.address)}" target="_blank" rel="noopener">${esc(short(w.address))}</a></td>` +
         `<td>${num(w.launches)}</td><td>${num(w.trades)}</td><td><b>${num(w.total)}</b></td></tr>`;
     }).join('');
     const top = snap.wallets.filter((w) => w.boarding || w.team || (w.rank && w.rank <= 40));
