@@ -145,6 +145,30 @@
     box-shadow: 0 0 30px rgba(139,123,255,.15); animation: glowpulse 3s ease-in-out infinite;
   }
   .coming .zap { color: var(--gold); }
+
+  /* ---- mainnet countdown (replaces the static "coming soon" sign; both are
+     hidden the moment the scanner flips mainnet.live) */
+  .countdown { display: inline-flex; flex-direction: column; align-items: center; gap: 14px;
+    padding: 20px 30px 18px; border-radius: 18px;
+    border: 1px solid rgba(139,123,255,.30); background: rgba(139,123,255,.06);
+    box-shadow: 0 0 44px rgba(139,123,255,.13); }
+  .cd-label { font-family: var(--mono); font-weight: 500; font-size: 12px; letter-spacing: 2.6px;
+    text-transform: uppercase; color: var(--accent-2); display: flex; align-items: center; gap: 10px; }
+  .cd-label .zap { color: var(--gold); }
+  .cd-clock { display: flex; align-items: flex-start; gap: 8px; }
+  .cd-cell { display: flex; flex-direction: column; align-items: center; min-width: 74px; }
+  .cd-cell b { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 44px;
+    line-height: 1.05; color: #f2f5f7; font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 26px rgba(139,123,255,.35); }
+  .cd-cell span { margin-top: 5px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--dim); }
+  .cd-sep { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 34px;
+    line-height: 1.25; color: rgba(139,123,255,.5); }
+  /* the seconds cell is the only thing that moves every tick */
+  #cdS { color: var(--accent); text-shadow: 0 0 26px rgba(62,230,160,.4); }
+  .cd-date { font-family: var(--mono); font-size: 11.5px; letter-spacing: 1.2px; color: var(--dim); }
+  .countdown.live { border-color: rgba(62,230,160,.45); background: rgba(62,230,160,.07);
+    box-shadow: 0 0 44px rgba(62,230,160,.16); }
   @keyframes glowpulse {
     0%, 100% { box-shadow: 0 0 24px rgba(139,123,255,.14); opacity: 1; }
     50% { box-shadow: 0 0 44px rgba(139,123,255,.34); opacity: .92; }
@@ -459,6 +483,14 @@
     .hero h1 { font-size: clamp(28px, 8.6vw, 40px); letter-spacing: -1.2px; }
     .hero-stats { gap: 14px 30px; }
     .hstat b { font-size: 24px; }
+    .countdown { padding: 16px 14px 14px; gap: 11px; width: 100%; }
+    .cd-label { font-size: 10px; letter-spacing: 1.6px; text-align: center; line-height: 1.5; }
+    .cd-clock { gap: 2px; }
+    .cd-cell { min-width: 0; flex: 1; }
+    .cd-cell b { font-size: clamp(26px, 9vw, 38px); }
+    .cd-cell span { font-size: 9px; letter-spacing: 1px; }
+    .cd-sep { font-size: 24px; }
+    .cd-date { font-size: 10px; text-align: center; line-height: 1.5; }
     .hero-cta .hbtn { flex: 1; justify-content: center; min-width: 150px; }
     .topbar-inner { padding: 8px 12px; gap: 8px; }
     .tb-brand span { display: none; }
@@ -585,7 +617,19 @@
 <section class="hero">
   <canvas id="heroFx" aria-hidden="true"></canvas>
   <div class="hero-inner">
-    <div class="coming" id="comingSoon"><span class="zap">⚡</span> Mainnet coming soon <span class="zap">⚡</span></div>
+    <div class="countdown" id="comingSoon">
+      <div class="cd-label"><span class="zap">⚡</span> A NEW ONE goes live on Arc mainnet in <span class="zap">⚡</span></div>
+      <div class="cd-clock" id="cdClock" aria-live="polite">
+        <div class="cd-cell"><b id="cdD">–</b><span>days</span></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-cell"><b id="cdH">–</b><span>hours</span></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-cell"><b id="cdM">–</b><span>minutes</span></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-cell"><b id="cdS">–</b><span>seconds</span></div>
+      </div>
+      <div class="cd-date">September 16, 2026 · the first memecoin on Arc mainnet launches here</div>
+    </div>
     <h1>INSERT COIN.<span class="l2">LAUNCH A NEW ONE.</span></h1>
     <p class="hero-sub">The memecoin launchpad on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a> —
       Circle's stablecoin L1 where gas is USDC. Rug-proof bonding curves, anti-snipe
@@ -1314,6 +1358,41 @@ if (window.ANEWONE_CONFIG.mainnet.live) {
   $("netBadge").classList.add("live");
   $("comingSoon").style.display = "none"; // sign comes down the moment mainnet is live
 }
+
+// ---- mainnet countdown.
+// Circle announced 16 Sep 2026 for Arc public mainnet; the hour was not given,
+// so we target 00:00 UTC that day. If mainnet arrives early (the scanner flips
+// mainnet.live), the block above already hid this; if the clock runs out before
+// that happens, it switches to a "launching" state rather than showing zeros or
+// counting into the negative.
+(function mainnetCountdown() {
+  const box = $("comingSoon");
+  if (!box || window.ANEWONE_CONFIG.mainnet.live) return;
+  const TARGET = Date.UTC(2026, 8, 16, 0, 0, 0); // month is 0-based: 8 = September
+  const pad = (n) => String(n).padStart(2, "0");
+
+  const tick = () => {
+    const left = TARGET - Date.now();
+    if (left <= 0) {
+      box.classList.add("live");
+      $("cdClock").innerHTML =
+        '<div class="cd-cell" style="min-width:auto"><b>LAUNCHING</b></div>';
+      $("cdD").id = ""; // stop further lookups from clobbering the message
+      box.querySelector(".cd-date").textContent =
+        "Arc mainnet is opening — the scanner deploys the moment it answers.";
+      return true; // done
+    }
+    const s = Math.floor(left / 1000);
+    $("cdD").textContent = Math.floor(s / 86400);
+    $("cdH").textContent = pad(Math.floor((s % 86400) / 3600));
+    $("cdM").textContent = pad(Math.floor((s % 3600) / 60));
+    $("cdS").textContent = pad(s % 60);
+    return false;
+  };
+
+  if (tick()) return;
+  const timer = setInterval(() => { if (tick()) clearInterval(timer); }, 1000);
+})();
 $("footPlatform").textContent = CFG.platform;
 
 // ---- multi-wallet support (EIP-6963).
