@@ -60,6 +60,27 @@ const STATIC_CANDIDATES = [
 const MESSAGE_TRANSMITTER_V2 = "0x81D40F21F12A8F0E3252Bccb954D722d4c464B64";
 const ARC_CCTP_DOMAIN = 26n;
 
+// Hosts we trust to (a) deploy real funds against and (b) write into docs/config.js for every
+// visitor's wallet to connect to. Registry discovery (chainid.network) can PROVE mainnet is
+// live, but an unknown host is never auto-trusted: the localDomain()==26 probe is answered by
+// the RPC itself, so a hostile RPC can fake it. If only a non-allowlisted RPC responds we alert
+// and hold — add a host here (or to STATIC_CANDIDATES) if Arc launches on a new domain.
+const TRUSTED_RPC_HOST_SUFFIXES = [
+  "arc.network",         // rpc.arc.network, mainnet.arc.network, rpc.<provider>.arc.network, …
+  "arc.io",              // rpc.arc.io, mainnet.rpc.arc.io
+  "drpc.org",            // arc.drpc.org, arc-mainnet.drpc.org
+  "publicnode.com",      // arc.publicnode.com, arc-rpc.publicnode.com
+  "ankr.com",            // rpc.ankr.com/arc
+  "1rpc.io",             // 1rpc.io/arc
+  "llamarpc.com",        // arc.llamarpc.com
+  "gateway.tenderly.co", // arc.gateway.tenderly.co
+];
+function isTrustedRpc(u) {
+  let host;
+  try { host = new URL(u).hostname.toLowerCase(); } catch { return false; }
+  return TRUSTED_RPC_HOST_SUFFIXES.some((s) => host === s || host.endsWith("." + s));
+}
+
 // ---------------------------------------------------------------- helpers
 
 function log(msg) {
@@ -338,6 +359,25 @@ async function main() {
         await new Promise((r) => setTimeout(r, 12_000));
       }
     }
+
+    // Trust gate: sweep() prefers allowlisted static candidates in list order, so a
+    // non-allowlisted `found` means every official RPC was unreachable this tick. Registry
+    // discovery can say "mainnet is live", but we never deploy funds against — or publish to
+    // visitors — a host we can't vouch for. Alert once and hold for an allowlisted RPC.
+    if (!isTrustedRpc(found.url)) {
+      if (!state.untrustedRpcNotified) {
+        state.untrustedRpcNotified = true;
+        saveState(state);
+        await notify(env,
+          `⚠️ A non-allowlisted RPC reports Arc mainnet is live:\n${found.url}\n` +
+          `Not deploying or publishing against it until an official RPC confirms. If mainnet ` +
+          `genuinely launched on a new host, add it to STATIC_CANDIDATES / TRUSTED_RPC_HOST_SUFFIXES ` +
+          `in monitor/scan.mjs.`);
+      }
+      log(`untrusted-only mainnet signal from ${found.url}; holding for an allowlisted rpc`);
+      return;
+    }
+    state.untrustedRpcNotified = false;
     state.lastScan = new Date().toISOString();
 
     if (state.phase === "scanning") {
