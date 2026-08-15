@@ -83,8 +83,19 @@ function isTrustedRpc(u) {
 
 // ---------------------------------------------------------------- helpers
 
+// Mask known secrets (deployer key, bot token) in anything written to the log or pushed to
+// Telegram. Matches by VALUE, not by shape, so public tx/block hashes — also 0x+64 hex — are
+// never touched; only the real secret is masked, and only if it ever leaks into a cast error
+// string or a stack trace. Populated once env is loaded.
+let SECRETS = [];
+function redact(s) {
+  let out = String(s);
+  for (const sec of SECRETS) out = out.split(sec).join("[REDACTED]");
+  return out;
+}
+
 function log(msg) {
-  const line = `[${new Date().toISOString()}] ${msg}`;
+  const line = `[${new Date().toISOString()}] ${redact(msg)}`;
   console.log(line);
   try {
     if (existsSync(LOG_FILE) && statSync(LOG_FILE).size > 1_000_000) {
@@ -143,6 +154,7 @@ async function rpcCall(url, method, params = [], timeoutMs = 6000) {
 }
 
 async function notify(env, text) {
+  text = redact(text);
   log(`NOTIFY: ${text.replace(/\n/g, " | ")}`);
   const { TELEGRAM_BOT_TOKEN: tok, TELEGRAM_CHAT_ID: chat } = env;
   if (!tok || !chat) return;
@@ -304,6 +316,8 @@ async function main() {
 
   try {
     const env = loadEnv();
+    SECRETS = [env.PRIVATE_KEY, (env.PRIVATE_KEY || "").replace(/^0x/i, ""), env.TELEGRAM_BOT_TOKEN]
+      .map((s) => (s || "").trim()).filter((s) => s.length >= 8);
     const state = loadState();
     if (state.phase === "deployed") {
       // launch is done; take the pending FINAL boarding snapshot if it hasn't run yet
