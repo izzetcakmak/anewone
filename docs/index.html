@@ -1009,6 +1009,10 @@ const readProvider = _readUrls.length > 1
       undefined, { quorum: 1 })
   : new ethers.JsonRpcProvider(_readUrls[0], undefined, { batchMaxCount: 1 });
 const platform = new ethers.Contract(CFG.platform, ABI, readProvider);
+// eth_getLogs goes to the public RPC only: the keyed QuickNode "Discover" plan caps getLogs
+// at a 5-block range (413), while the public RPC serves the wide ranges the trade/comment/
+// image history scan needs. The high-volume eth_call traffic stays on readProvider (QuickNode).
+const logProvider = new ethers.JsonRpcProvider(CFG.rpc, undefined, { batchMaxCount: 1 });
 
 const FEE_BPS = 100n, BPS = 10_000n, WAD = 10n ** 18n;
 let signer = null, userAddr = null, currentToken = null, isBuy = true;
@@ -1300,7 +1304,7 @@ async function loadStats(earliestBlock, onTick) {
     // rebuild + repaint after every chunk so progress is visible immediately rather than
     // only when the whole pass finishes
     const scan = async (from, to) => {
-      const logs = await rpc(() => readProvider.getLogs({
+      const logs = await rpc(() => logProvider.getLogs({
         address: CFG.platform, topics: [[TRADE_TOPIC, COMMENT_TOPIC]], fromBlock: from, toBlock: to
       }));
       ingestLogs(logs);
