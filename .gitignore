@@ -12,3 +12,4 @@ build-video/
 monitor/bridge-attestation.json
 monitor/snapshot-cache.json
 monitor/snapshot-run.log
+monitor/state-cache.json
