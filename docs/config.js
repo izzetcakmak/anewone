@@ -15,6 +15,14 @@ window.ANEWONE_CONFIG = {
     chainId: 5042002,
     chainIdHex: "0x4cef52",
     rpc: "https://rpc.testnet.arc.network",
+    // Read RPCs (prices/balances/feed), tried in order via a FallbackProvider: keyed QuickNode
+    // first (domain-locked to anewone.xyz, high limits), public RPC as fallback. `rpc` above
+    // stays PUBLIC on purpose — wallet/Web3Auth submit txs outside this origin and the
+    // domain-locked URL would 401 them.
+    rpcs: [
+      "https://chaotic-dimensional-dream.arc-testnet.quiknode.pro/6f85d01f85d8794bd8a1299852d1c16511efb267/",
+      "https://rpc.testnet.arc.network",
+    ],
     explorer: "https://explorer.testnet.arc.network",
     platform: "0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf",
     noah: "0x0D1ac2a7FCdd8bF74EEC839DF4ED909071296a49",

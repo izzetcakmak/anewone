@@ -996,7 +996,18 @@ const CFG = window.ANEWONE_CONFIG.mainnet.live ? window.ANEWONE_CONFIG.mainnet :
 const NET_NAME = window.ANEWONE_CONFIG.mainnet.live ? "ARC MAINNET" : "ARC TESTNET";
 // batchMaxCount 1: the public Arc RPC counts every entry of a JSON-RPC batch against
 // its rate limit, so batching hurts. We space single calls out instead.
-const readProvider = new ethers.JsonRpcProvider(CFG.rpc, undefined, { batchMaxCount: 1 });
+// Reads use CFG.rpcs when present — keyed QuickNode primary + public fallback via a
+// FallbackProvider (quorum 1 = first good answer wins) — otherwise the single CFG.rpc.
+// Wallet/Web3Auth keep CFG.rpc (public); the keyed URL is domain-locked and 401s off-origin.
+const _readUrls = (CFG.rpcs && CFG.rpcs.length) ? CFG.rpcs : [CFG.rpc];
+const readProvider = _readUrls.length > 1
+  ? new ethers.FallbackProvider(
+      _readUrls.map((u, i) => ({
+        provider: new ethers.JsonRpcProvider(u, undefined, { batchMaxCount: 1 }),
+        priority: i + 1, stallTimeout: 2000, weight: 1,
+      })),
+      undefined, { quorum: 1 })
+  : new ethers.JsonRpcProvider(_readUrls[0], undefined, { batchMaxCount: 1 });
 const platform = new ethers.Contract(CFG.platform, ABI, readProvider);
 
 const FEE_BPS = 100n, BPS = 10_000n, WAD = 10n ** 18n;
