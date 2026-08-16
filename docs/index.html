@@ -1924,7 +1924,7 @@ async function imageFromEvent(addr) {
   if (!created) return null;
   let out = "";
   try {
-    const logs = await rpc(() => readProvider.getLogs({
+    const logs = await rpc(() => logProvider.getLogs({
       address: CFG.platform,
       topics: [IMAGE_TOPIC, ethers.zeroPadValue(addr, 32)],
       fromBlock: created, toBlock: created
@@ -2890,7 +2890,7 @@ async function liveTail() {
     if (tip <= statsIdx.hi) return;
     latestBlock = tip;
     const to = Math.min(tip, statsIdx.hi + CHUNK);
-    const logs = await rpc(() => readProvider.getLogs({
+    const logs = await rpc(() => logProvider.getLogs({
       address: CFG.platform,
       topics: [[TRADE_TOPIC, COMMENT_TOPIC]],
       fromBlock: statsIdx.hi + 1,
