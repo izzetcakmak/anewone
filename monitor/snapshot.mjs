@@ -23,7 +23,15 @@ const ROOT = path.dirname(MON);
 const OUT_DIR = path.join(ROOT, "docs", "boarding");
 const OUT_FILE = path.join(OUT_DIR, "snapshot.json");
 
-const RPC = "https://rpc.testnet.arc.network";
+// Every provider rate-limits independently, so calls are spread across all of
+// them: one endpoint alone throttled the historical scan down to ~25 calls/min,
+// which left the leaderboard stale for weeks. Rotating also gives free failover.
+const RPCS = [
+  "https://rpc.testnet.arc.network",
+  "https://rpc.quicknode.testnet.arc.network",
+  "https://rpc.blockdaemon.testnet.arc.network",
+  "https://rpc.drpc.testnet.arc.network",
+];
 // The campaign spans every platform deployment: activity on retired contracts keeps
 // counting, and each redeploy (v6 event-only images, 26 Jul) just adds an entry here.
 const PLATFORMS = [
@@ -35,7 +43,7 @@ const TOPIC_TOKEN_CREATED = "0xfe210c99153843bc67efa2e9a61ec1d63c505e379b9dcf05a
 const TOPIC_TRADE = "0xf7dd8a134438de4c59401760e24ef5c6cc9c74583b2b022085697f3021e59768"; // Trade(address,address,bool,uint256,uint256,uint256)
 
 const TOP_N = 33;
-const RPC_GAP_MS = 150; // Arc public RPC rate limit: single calls, spaced out
+const RPC_GAP_MS = 150; // minimum spacing PER endpoint; the pool interleaves them
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const topicToAddr = (t) => "0x" + t.slice(26);
@@ -64,11 +72,22 @@ const atomicWrite = (file, data) => {
 };
 
 let rpcId = 0;
+let rrCursor = 0;
+const lastCallAt = new Map(); // endpoint -> ms of its previous call
+
+/**
+ * Round-robins across the pool. Each endpoint keeps its own RPC_GAP_MS spacing,
+ * so the pool sustains ~4x the throughput of a single one; a retry lands on the
+ * next endpoint, which doubles as failover when one provider is down.
+ */
 async function rpc(method, params, { retries = 5 } = {}) {
   for (let i = 0; ; i++) {
-    await sleep(RPC_GAP_MS);
+    const url = RPCS[rrCursor++ % RPCS.length];
+    const wait = RPC_GAP_MS - (Date.now() - (lastCallAt.get(url) ?? 0));
+    if (wait > 0) await sleep(wait);
+    lastCallAt.set(url, Date.now());
     try {
-      const res = await fetch(RPC, {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jsonrpc: "2.0", method, params, id: ++rpcId }),
@@ -79,7 +98,7 @@ async function rpc(method, params, { retries = 5 } = {}) {
       return j.result;
     } catch (e) {
       if (i >= retries) throw e;
-      await sleep(500 * (i + 1)); // backoff on rate limit / transient failure
+      await sleep(400 * (i + 1)); // backoff on rate limit / transient failure
     }
   }
 }
@@ -143,6 +162,14 @@ async function fetchLogs(platformAddr, fromBlock, toBlock, topic, log) {
 // Full history lives here so each run only scans NEW blocks — the final
 // mainnet-day snapshot completes in seconds instead of re-walking a million blocks.
 const CACHE_FILE = path.join(MON, "snapshot-cache.json");
+/** Blocks per checkpointed window — small enough that a killed run loses little. */
+const WINDOW = 250_000;
+/**
+ * A non-final run stops after this long and resumes on the next tick. Without a
+ * budget a single catch-up scan held the lock for a full day, so no fresh
+ * snapshot was ever published while it ran.
+ */
+const RUN_BUDGET_MS = 10 * 60 * 1000;
 
 function loadCache() {
   try {
@@ -167,16 +194,19 @@ export async function runSnapshot({ final = false, toBlock = null, log = console
     latest = toBlock ?? parseInt(await rpc("eth_blockNumber", []), 16);
   }
 
+  // Scanning is windowed and checkpointed: the cache advances after every window,
+  // so an interrupted run keeps everything it already counted. The previous
+  // version only wrote the cache once a platform's whole range was done — a scan
+  // that never finished therefore never saved a single block of progress.
+  let partial = false;
+  const deadline = Date.now() + RUN_BUDGET_MS;
+
   for (const p of PLATFORMS) {
     const key = p.addr.toLowerCase();
     const pc = cache.platforms[key] ?? (cache.platforms[key] = { toBlock: p.deployBlock - 1, wallets: {} });
-    const from = pc.toBlock + 1;
-    if (latest < from) continue;
-    log(`snapshot: ${key.slice(0, 10)} cache at ${pc.toBlock}, scanning ${from} -> ${latest}`);
-    const [created, trades] = [
-      await fetchLogs(p.addr, BigInt(from), BigInt(latest), TOPIC_TOKEN_CREATED, log),
-      await fetchLogs(p.addr, BigInt(from), BigInt(latest), TOPIC_TRADE, log),
-    ];
+    if (latest < pc.toBlock + 1) continue;
+    log(`snapshot: ${key.slice(0, 10)} cache at ${pc.toBlock}, scanning -> ${latest}`);
+
     const bump = (addr, kind, blockHex) => {
       const block = parseInt(blockHex, 16);
       const w = pc.wallets[addr] ?? { launches: 0, trades: 0, firstBlock: block };
@@ -184,11 +214,28 @@ export async function runSnapshot({ final = false, toBlock = null, log = console
       if (block < w.firstBlock) w.firstBlock = block;
       pc.wallets[addr] = w;
     };
-    for (const l of created) bump(topicToAddr(l.topics[2]), "launches", l.blockNumber);
-    for (const l of trades) bump(topicToAddr(l.topics[2]), "trades", l.blockNumber);
-    pc.toBlock = latest;
-    atomicWrite(CACHE_FILE, JSON.stringify(cache));
-    log(`snapshot: ${key.slice(0, 10)} +${created.length} launches, +${trades.length} trades`);
+
+    while (pc.toBlock < latest) {
+      // a FINAL snapshot must be complete, so it ignores the clock
+      if (!final && Date.now() > deadline) { partial = true; break; }
+      const from = pc.toBlock + 1;
+      const to = Math.min(from + WINDOW - 1, latest);
+      const [created, trades] = [
+        await fetchLogs(p.addr, BigInt(from), BigInt(to), TOPIC_TOKEN_CREATED, log),
+        await fetchLogs(p.addr, BigInt(from), BigInt(to), TOPIC_TRADE, log),
+      ];
+      for (const l of created) bump(topicToAddr(l.topics[2]), "launches", l.blockNumber);
+      for (const l of trades) bump(topicToAddr(l.topics[2]), "trades", l.blockNumber);
+      pc.toBlock = to; // checkpoint: everything up to `to` is now counted and saved
+      atomicWrite(CACHE_FILE, JSON.stringify(cache));
+      if (created.length || trades.length) {
+        log(`snapshot: ${key.slice(0, 10)} +${created.length} launches, +${trades.length} trades @ ${to}`);
+      }
+    }
+    if (partial) {
+      log(`snapshot: run budget spent at block ${pc.toBlock} (${latest - pc.toBlock} to go) — resuming next tick`);
+      break;
+    }
   }
 
   // combine every platform's tallies per wallet — the campaign spans all deployments
@@ -227,6 +274,9 @@ export async function runSnapshot({ final = false, toBlock = null, log = console
       `Wallets ranked by total actions; ties broken by earliest activity. Team wallets excluded from ranking. ` +
       `Top ${TOP_N} wallets enter the raffle: 90,000 / 60,000 / 30,000 $NOAH.`,
     final,
+    // true when the catch-up scan ran out of budget: the counts are correct up to
+    // toBlock, just not yet at the chain tip
+    catchingUp: partial,
     generatedAt: new Date().toISOString(),
     fromBlock: Math.min(...PLATFORMS.map((p) => p.deployBlock)),
     toBlock: Math.max(...Object.values(cache.platforms).map((p) => p.toBlock)),
@@ -237,7 +287,8 @@ export async function runSnapshot({ final = false, toBlock = null, log = console
 
   mkdirSync(OUT_DIR, { recursive: true });
   atomicWrite(OUT_FILE, JSON.stringify(snapshot, null, 1));
-  log(`snapshot: ${snapshot.totalWallets} wallets, ${snapshot.totalTxs} txs -> docs/boarding/snapshot.json${final ? " (FINAL)" : ""}`);
+  log(`snapshot: ${snapshot.totalWallets} wallets, ${snapshot.totalTxs} txs @ block ${snapshot.toBlock}` +
+      ` -> docs/boarding/snapshot.json${final ? " (FINAL)" : partial ? " (catching up)" : ""}`);
   return snapshot;
 }
 
