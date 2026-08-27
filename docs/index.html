@@ -74,6 +74,17 @@
   .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px;
     letter-spacing: .6px; color: var(--text); }
   .topbar .badge { white-space: nowrap; }
+  /* ---- topbar nav links (Boarding Pass, Docs) */
+  .tb-link { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: .6px; color: var(--text);
+    padding: 9px 14px; border-radius: 999px; border: 1px solid rgba(62,230,160,.28);
+    background: rgba(62,230,160,.07); transition: background .2s, border-color .2s, color .2s; }
+  .tb-link:hover { text-decoration: none; background: rgba(62,230,160,.14);
+    border-color: rgba(62,230,160,.5); color: var(--accent); }
+  /* Docs is secondary: same shape, no accent until hovered */
+  .tb-link-quiet { border-color: var(--border-2); background: transparent; color: var(--dim); }
+  .tb-link-quiet:hover { color: var(--text); border-color: var(--border-2);
+    background: rgba(255,255,255,.05); }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 20px 100px; }
   /* ---- hero: full-bleed, procedural constellation background (no image assets) */
   .hero { position: relative; overflow: hidden; text-align: center;
@@ -494,6 +505,9 @@
     .hero-cta .hbtn { flex: 1; justify-content: center; min-width: 150px; }
     .topbar-inner { padding: 8px 12px; gap: 8px; }
     .tb-brand span { display: none; }
+    /* keep the Boarding Pass reachable on phones, drop Docs (it lives in the footer too) */
+    .tb-link { font-size: 11px; padding: 8px 10px; }
+    .tb-link-quiet { display: none; }
     #balChip { display: none !important; }
     .topbar .badge { font-size: 10px; padding: 6px 9px; }
     .topbar button { white-space: nowrap; padding: 10px 13px; font-size: 13px; }
@@ -601,6 +615,8 @@
       <img src="favicon.svg" alt="">
       <span>A NEW ONE</span>
     </a>
+    <a class="tb-link" href="boarding/" title="Boarding Pass — the 33 most active testnet wallets enter the mainnet-day draw">🎟 Boarding Pass</a>
+    <a class="tb-link tb-link-quiet" href="docs.html">Docs</a>
     <span id="netBadge" class="badge">Testnet</span>
     <span id="balChip" class="badge" style="display:none" title="Your USDC on Arc — pays gas and trades"></span>
     <span id="walletWrap" style="position:relative;display:inline-block">
