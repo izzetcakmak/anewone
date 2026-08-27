@@ -93,7 +93,7 @@
     <b class="hand" style="font-size:17px">How it works</b>
     <ul>
       <li>Every <b>launch</b> (TokenCreated) and every <b>trade</b> (Trade) event on <b>any ANEWONE platform deployment</b> (<a href="https://explorer.testnet.arc.network/address/0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf" target="_blank" rel="noopener">current v6</a> · <a href="https://explorer.testnet.arc.network/address/0x30c941ed26088DED6c5D4F1571a49f74478DCc84" target="_blank" rel="noopener">v5</a>) counts as 1 action — a launch with a starting buy counts as both. Contract upgrades never cost you progress. Testnet is free — gas comes from the <a href="https://faucet.circle.com" target="_blank" rel="noopener">Circle faucet</a>.</li>
-      <li>Snapshot window: <b>every action since the current platform deployment (July 19, 2026) counts</b> — early supporters included — <b>until the moment Arc mainnet goes live</b>, when the cutoff freezes and the final snapshot is published here in full. Campaign announced July 28, 2026.</li>
+      <li>Snapshot window: <b>every action since the first platform deployment (July 19, 2026) counts</b> — early supporters included — <b>until Arc mainnet goes live on September 16, 2026</b>, when the cutoff freezes and the final snapshot is published here in full. Campaign announced July 28, 2026.</li>
       <li>Wallets ranked by total transactions; ties go to the earlier wallet. Team wallets are listed but excluded from ranking.</li>
       <li>The top 33 wallets are entered into a decentralized raffle tool the same day. Winners receive their $NOAH on Arc mainnet; results are published here and on X.</li>
       <li>Everything is open source: <a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">github.com/izzetcakmak/anewone</a> (snapshot engine: <code>monitor/snapshot.mjs</code>). Questions: <a href="mailto:support@anewone.xyz">support@anewone.xyz</a></li>
@@ -101,7 +101,8 @@
   </div>
 
   <p class="meta"><span id="status" class="badge live">LIVE LEADERBOARD</span>
-     <span id="gen"></span> · counts activity since the current platform deployment (block <span id="fromb">—</span>)</p>
+     <span id="gen"></span> · counts every action from block <span id="fromb">—</span> to block <span id="tob">—</span>
+     across all platform deployments</p>
 
   <div class="tablebox">
   <table>
@@ -126,10 +127,16 @@
     document.getElementById('s-wallets').textContent = num(snap.totalWallets).toLocaleString('en-US');
     document.getElementById('s-txs').textContent = num(snap.totalTxs).toLocaleString('en-US');
     document.getElementById('fromb').textContent = num(snap.fromBlock).toLocaleString('en-US');
+    document.getElementById('tob').textContent = num(snap.toBlock).toLocaleString('en-US');
     document.getElementById('gen').textContent = 'updated ' + new Date(snap.generatedAt).toUTCString();
     if (snap.final) {
       const b = document.getElementById('status');
       b.textContent = 'FINAL SNAPSHOT'; b.className = 'badge final';
+    } else if (snap.catchingUp) {
+      // the scan is still walking toward the chain tip: say so rather than let a
+      // trailing toBlock look like missing activity
+      const b = document.getElementById('status');
+      b.textContent = 'CATCHING UP'; b.title = 'Counts are complete up to the block shown and are still being extended to the chain tip.';
     }
     // pastel podium for the current top 3 (2 · 1 · 3 layout)
     const top3 = snap.wallets.filter((w) => w.rank && w.rank <= 3);
