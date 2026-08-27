@@ -18,7 +18,10 @@ import { bridgeStep } from "./bridge.mjs";
 import { runSnapshot } from "./snapshot.mjs";
 
 const TESTNET_RPC = "https://rpc.testnet.arc.network";
-const SNAPSHOT_REFRESH_MS = 24 * 60 * 60 * 1000; // leaderboard refresh cadence
+// Leaderboard refresh cadence. Daily was too slow once the campaign was being
+// promoted ("every trade moves you up the board" has to be visibly true), and a
+// run that is still catching up re-runs on the next tick regardless.
+const SNAPSHOT_REFRESH_MS = 6 * 60 * 60 * 1000;
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const MON = path.join(ROOT, "monitor");
@@ -278,6 +281,8 @@ async function snapshotAndPublish(state, { final = false, toBlock = null } = {})
   state.lastSnapshotAt = Date.now();
   try {
     const snap = await runSnapshot({ final, toBlock, log });
+    // a partial run must come back next tick until the cache reaches the tip
+    state.snapshotCatchingUp = snap.catchingUp === true;
     git(["add", "docs/boarding/snapshot.json"]);
     git(["commit", "-m", `chore: boarding snapshot ${final ? "(FINAL) " : ""}@ block ${snap.toBlock}\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>`]);
     git(["pull", "--rebase", "origin", "main"]);
@@ -303,9 +308,14 @@ async function main() {
     // timers can't fire while spawnSync (forge deploy: up to 300s, cast send: 150s)
     // blocks the event loop, so an old lock may still belong to a LIVE process.
     // Overlapping would risk a double deploy / double burn — trust the lock while
-    // its PID is alive (hard 20-min cap in case the PID got recycled).
+    // its PID is alive (hard cap in case the PID got recycled).
+    //
+    // The cap used to be 20 minutes, which a long catch-up scan outlived: its
+    // lock was stolen, and from then on every scheduler tick started another
+    // overlapping scanner. They then rate-limited each other on the same RPC and
+    // none of them ever finished. Runs are now budget-capped well under this.
     const pid = parseInt(readFileSync(LOCK_FILE, "utf8"), 10);
-    if (age < 20 * 60_000 && pid && isProcessAlive(pid)) return;
+    if (age < 45 * 60_000 && pid && isProcessAlive(pid)) return;
   }
   writeFileSync(LOCK_FILE, String(process.pid));
   // refresh during async waits (sweep sleeps, RPC polling); spawnSync gaps are
@@ -341,10 +351,13 @@ async function main() {
       }
     }
     if (!found) {
-      // once a day, spend this tick refreshing the boarding leaderboard instead
-      // of the full sweep window (one quick sweep still runs first)
+      // every few hours, spend this tick refreshing the boarding leaderboard
+      // instead of the full sweep window (one quick sweep still runs first).
+      // A run that stopped mid-catch-up is due again immediately, so the
+      // backlog is worked off tick by tick rather than in one endless run.
       const snapshotDue = state.snapshotFinalDone !== true && // never overwrite a published FINAL
-        Date.now() - (state.lastSnapshotAt ?? 0) > SNAPSHOT_REFRESH_MS;
+        (state.snapshotCatchingUp === true ||
+          Date.now() - (state.lastSnapshotAt ?? 0) > SNAPSHOT_REFRESH_MS);
       // parallel sweeps every ~12s for the rest of this 1-min invocation window,
       // so effective detection latency is seconds, not a full scheduler tick
       const candidates = [...new Set([...STATIC_CANDIDATES, ...(await registryCandidates())])];
