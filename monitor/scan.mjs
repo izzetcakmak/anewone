@@ -277,7 +277,7 @@ function publishConfig() {
  * lastSnapshotAt records the ATTEMPT so a persistently failing refresh backs off a
  * full cycle instead of eating every minute's detection window.
  */
-async function snapshotAndPublish(state, { final = false, toBlock = null } = {}) {
+async function snapshotAndPublish(state, env, { final = false, toBlock = null } = {}) {
   state.lastSnapshotAt = Date.now();
   try {
     const snap = await runSnapshot({ final, toBlock, log });
@@ -288,8 +288,21 @@ async function snapshotAndPublish(state, { final = false, toBlock = null } = {})
     git(["pull", "--rebase", "origin", "main"]);
     const push = git(["push", "origin", "main"]);
     if (push.status !== 0) {
-      log(`snapshot push failed: ${(push.stderr || "").slice(0, 300)}`);
+      const why = (push.stderr || "").slice(0, 300);
+      log(`snapshot push failed: ${why}`);
+      // A push that fails silently leaves a fresh snapshot sitting in a local
+      // commit while the site keeps serving a stale one — that went unnoticed
+      // for weeks once (wrong GitHub account in the credential store). Alert
+      // on the first failure of a streak, not on every retry.
+      state.pushFailures = (state.pushFailures ?? 0) + 1;
+      if (state.pushFailures === 1 && env) {
+        await notify(env, `⚠️ ANEWONE: boarding snapshot committed but PUSH FAILED — the live leaderboard is now stale.\n\n${why}`);
+      }
       return false;
+    }
+    if (state.pushFailures) {
+      if (env) await notify(env, `✅ ANEWONE: leaderboard publishing recovered after ${state.pushFailures} failed push(es).`);
+      state.pushFailures = 0;
     }
     return true;
   } catch (e) {
@@ -332,7 +345,7 @@ async function main() {
     if (state.phase === "deployed") {
       // launch is done; take the pending FINAL boarding snapshot if it hasn't run yet
       if (state.snapshotFinalDone === false) {
-        if (await snapshotAndPublish(state, { final: true, toBlock: state.snapshotBlock ?? null })) {
+        if (await snapshotAndPublish(state, env, { final: true, toBlock: state.snapshotBlock ?? null })) {
           state.snapshotFinalDone = true;
         }
         saveState(state);
@@ -368,7 +381,7 @@ async function main() {
         found = await sweep(candidates);
         if (found) break;
         if (snapshotDue) {
-          await snapshotAndPublish(state, { final: false });
+          await snapshotAndPublish(state, env, { final: false });
           state.phase = "scanning";
           state.lastScan = new Date().toISOString();
           saveState(state);
