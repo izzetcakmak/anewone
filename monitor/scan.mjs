@@ -260,7 +260,7 @@ const git = (args) => spawnSync("git", args, { cwd: ROOT, encoding: "utf8", time
 /** Commit + push docs/config.js so GitHub Pages flips anewone.xyz to mainnet. Best-effort. */
 function publishConfig() {
   git(["add", "docs/config.js"]);
-  git(["commit", "-m", "feat: mainnet is live — flip anewone.xyz to Arc mainnet\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>"]);
+  git(["commit", "-m", "feat: mainnet is live — flip anewone.xyz to Arc mainnet"]);
   git(["pull", "--rebase", "origin", "main"]); // snapshot pushes may have landed meanwhile
   const push = git(["push", "origin", "main"]);
   if (push.status !== 0) {
@@ -284,7 +284,7 @@ async function snapshotAndPublish(state, env, { final = false, toBlock = null } 
     // a partial run must come back next tick until the cache reaches the tip
     state.snapshotCatchingUp = snap.catchingUp === true;
     git(["add", "docs/boarding/snapshot.json"]);
-    git(["commit", "-m", `chore: boarding snapshot ${final ? "(FINAL) " : ""}@ block ${snap.toBlock}\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>`]);
+    git(["commit", "-m", `chore: boarding snapshot ${final ? "(FINAL) " : ""}@ block ${snap.toBlock}`]);
     git(["pull", "--rebase", "origin", "main"]);
     const push = git(["push", "origin", "main"]);
     if (push.status !== 0) {
