@@ -30,6 +30,9 @@ const LOCK_FILE = path.join(MON, "scan.lock");
 const LOG_FILE = path.join(MON, "scan.log");
 const CONFIG_JS = path.join(ROOT, "docs", "config.js");
 const FORGE = "C:/Users/Monster/.foundry/bin/forge.exe";
+// Absolute path: the scheduled task runs with a minimal PATH, so a bare
+// "vercel" resolves to nothing there.
+const VERCEL = "C:/Users/Monster/AppData/Roaming/npm/vercel.cmd";
 
 const TESTNET_CHAIN_ID = 5042002; // 0x4cef52 — never treat as mainnet
 const KNOWN_FOREIGN_CHAINS = new Set([1243, 1244]); // legacy "ARC" chains unrelated to Circle
@@ -277,12 +280,46 @@ function publishConfig() {
  * lastSnapshotAt records the ATTEMPT so a persistently failing refresh backs off a
  * full cycle instead of eating every minute's detection window.
  */
+/**
+ * Publishes docs/ to Vercel, which is what actually serves anewone.xyz.
+ * Deploying straight from the working tree means the live leaderboard never
+ * depends on GitHub being reachable — the account restriction of 29 Aug took
+ * Pages down for days while snapshots kept generating fine.
+ */
+function deployToVercel() {
+  const r = spawnSync(VERCEL, ["deploy", "--prod", "--yes"], {
+    cwd: path.join(ROOT, "docs"),
+    encoding: "utf8",
+    shell: true,
+    timeout: 300_000,
+  });
+  return { ok: r.status === 0, err: ((r.stderr || "") + (r.stdout || "")).slice(-300) };
+}
+
 async function snapshotAndPublish(state, env, { final = false, toBlock = null } = {}) {
   state.lastSnapshotAt = Date.now();
   try {
     const snap = await runSnapshot({ final, toBlock, log });
     // a partial run must come back next tick until the cache reaches the tip
     state.snapshotCatchingUp = snap.catchingUp === true;
+
+    // Live site first: the leaderboard people actually read is on Vercel, and
+    // it must update even when the git side is broken.
+    const dep = deployToVercel();
+    if (dep.ok) {
+      log(`snapshot: deployed to Vercel @ block ${snap.toBlock}`);
+      if (state.deployFailures) {
+        if (env) await notify(env, `✅ ANEWONE: leaderboard deploys recovered after ${state.deployFailures} failure(s).`);
+        state.deployFailures = 0;
+      }
+    } else {
+      log(`snapshot deploy failed: ${dep.err}`);
+      state.deployFailures = (state.deployFailures ?? 0) + 1;
+      if (state.deployFailures === 1 && env) {
+        await notify(env, `⚠️ ANEWONE: snapshot generated but the Vercel DEPLOY FAILED — the live leaderboard is stale.\n\n${dep.err}`);
+      }
+    }
+
     git(["add", "docs/boarding/snapshot.json"]);
     git(["commit", "-m", `chore: boarding snapshot ${final ? "(FINAL) " : ""}@ block ${snap.toBlock}`]);
     git(["pull", "--rebase", "origin", "main"]);
@@ -295,13 +332,16 @@ async function snapshotAndPublish(state, env, { final = false, toBlock = null } 
       // for weeks once (wrong GitHub account in the credential store). Alert
       // on the first failure of a streak, not on every retry.
       state.pushFailures = (state.pushFailures ?? 0) + 1;
+      // The live site is already updated by the Vercel deploy above, so a failed
+      // push only means the public git record is behind — worth one alert, not
+      // an emergency.
       if (state.pushFailures === 1 && env) {
-        await notify(env, `⚠️ ANEWONE: boarding snapshot committed but PUSH FAILED — the live leaderboard is now stale.\n\n${why}`);
+        await notify(env, `⚠️ ANEWONE: snapshot is live on the site, but the git PUSH failed — the public repo record is behind.\n\n${why}`);
       }
-      return false;
+      return dep.ok;
     }
     if (state.pushFailures) {
-      if (env) await notify(env, `✅ ANEWONE: leaderboard publishing recovered after ${state.pushFailures} failed push(es).`);
+      if (env) await notify(env, `✅ ANEWONE: git publishing recovered after ${state.pushFailures} failed push(es).`);
       state.pushFailures = 0;
     }
     return true;
