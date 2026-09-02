@@ -1694,6 +1694,13 @@ const priceOf = (inf) => (inf.vUsdc * WAD) / inf.tReserve;
 // priceOf is USDC-wei per whole token, so × total supply gives the cap in USDC-wei
 const marketCapWei = (inf) => priceOf(inf) * TOTAL_SUPPLY_TOKENS;
 const progBps = (inf) => inf.graduated ? 10_000n : (inf.raised * BPS) / gradTarget;
+// A token belongs under "Graduating" once it is at or past the graduation line: the
+// ones that already crossed it, then those within reach of the 5,000 USDC target.
+// Both the left rail and the floor share this, so the two tabs can't disagree — and
+// neither may fall back to plain sorting, which listed every token including one at
+// 0.2% of the target, reading as if all of them were about to graduate.
+const GRADUATING_MIN_PCT = 50;
+const isGraduating = (inf) => inf.graduated || Number(progBps(inf)) / 100 >= GRADUATING_MIN_PCT;
 const normInfo = (r) => ({
   creator: r.creator, createdBlock: r.createdBlock, graduated: r.graduated,
   vUsdc: BigInt(r.vUsdc), tReserve: BigInt(r.tReserve), raised: BigInt(r.raised),
@@ -2668,8 +2675,9 @@ function visibleAddrs() {
   if (sortMode === "new") list.sort((a, b) => Number(tokenInfo[b].createdBlock) - Number(tokenInfo[a].createdBlock));
   else if (sortMode === "mcap") list.sort((a, b) => cmpBig(mc(a), mc(b)));
   else if (sortMode === "grad") {
-    // closest to graduating first, but tokens already graduated drop to the end
-    const p = (a) => (tokenInfo[a].graduated ? -1 : Number(progBps(tokenInfo[a])));
+    // a filter, not just an ordering: the ones that made it first, then the closest
+    list = list.filter((a) => isGraduating(tokenInfo[a]));
+    const p = (a) => (tokenInfo[a].graduated ? 1e9 : Number(progBps(tokenInfo[a])));
     list.sort((a, b) => p(b) - p(a));
   } else if (!covers24h) {
     // trending needs a full 24h window; until then fall back to newest rather than
@@ -2686,7 +2694,11 @@ function renderGrid() {
   $("grid").innerHTML = list.map(cardHtml).join("");
   fillImages(list);
   $("empty").style.display = shownAddrs.length && !list.length ? "block" : ($("empty").dataset.none === "1" ? "block" : "none");
-  if (shownAddrs.length && !list.length) $("empty").textContent = "No token matches that search.";
+  if (shownAddrs.length && !list.length) {
+    $("empty").textContent = sortMode === "grad" && !searchQ.trim()
+      ? `No token is past ${GRADUATING_MIN_PCT}% of the 5,000 USDC graduation target yet.`
+      : "No token matches that search.";
+  }
   renderSpotlight();
 }
 
@@ -2817,9 +2829,6 @@ function renderFeed() {
 
 // ---- left rail: the same tokens as the floor, at list density
 let liveSort = "trending";
-// Halfway to the 5,000 USDC graduation target — far enough along that calling a
-// token "graduating" is honest.
-const GRADUATING_MIN_PCT = 50;
 function renderLiveRail() {
   const box = $("liveList");
   if (!box) return;
@@ -2834,13 +2843,11 @@ function renderLiveRail() {
   const by = {
     trending: (x, y) => (y.vol - x.vol) || (y.mc - x.mc),
     new: (x, y) => y.born - x.born,
-    grad: (x, y) => y.prog - x.prog,
+    // graduated tokens sit above the ones still climbing
+    grad: (x, y) => (Number(y.inf.graduated) - Number(x.inf.graduated)) || (y.prog - x.prog),
   }[liveSort];
-  // "Graduating" is a filter here, not just an ordering: a token only belongs in
-  // it once it is actually within reach of the 5,000 USDC target. Sorting alone
-  // listed every token, which read as if all of them were about to graduate.
   const rows = (liveSort === "grad"
-    ? scored.filter((t) => !t.inf.graduated && t.prog >= GRADUATING_MIN_PCT)
+    ? scored.filter((t) => isGraduating(t.inf))
     : scored).sort(by).slice(0, 12);
   box.innerHTML = rows.map(({ a, inf, st, mc, vol }) => {
     const m = tokenMeta[a], img = safeImgSrc(tokenImg[a]);
@@ -2861,7 +2868,7 @@ function renderLiveRail() {
     </div>`;
   }).join("") || `<div class="lrow" style="color:var(--faint);cursor:default;font-size:12px">${
     liveSort === "grad"
-      ? `Nothing past ${GRADUATING_MIN_PCT}% of the 5,000 USDC target yet`
+      ? `No token is past ${GRADUATING_MIN_PCT}% of the 5,000 USDC target yet`
       : "No tokens yet"}</div>`;
 }
 
