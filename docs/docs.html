@@ -164,12 +164,17 @@
       <em>and</em> buys tokens. No volatile gas coin, no priority-fee auctions.</p></div>
     <div class="card"><span class="tag good">fair launch</span><h3>Anti-snipe</h3><p>A per-wallet cap in the
       first blocks blunts bots and bundlers sniping a launch.</p></div>
+    <div class="card"><span class="tag good">verifiable</span><h3>100% open source</h3><p>Contracts, frontend and
+      the indexer are all public — read them, run them, or check any claim on this page against the source:
+      <a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">github.com/izzetcakmak/anewone</a>.</p></div>
   </div>
 
   <h2 id="curve">The bonding curve</h2>
   <p>Each token has a fixed supply of <strong>1,000,000,000</strong> (1B), all placed on the curve at
-    creation. Price follows a constant-product formula against a virtual USDC reserve, so every buy
-    pushes the price up and every sell pushes it down — smoothly and predictably.</p>
+    creation. The contract has <strong>no mint authority</strong> — there is no function that can
+    create more, so the supply you see at launch is the supply forever. Price follows a
+    constant-product formula against a virtual USDC reserve, so every buy pushes the price up and
+    every sell pushes it down — smoothly and predictably.</p>
   <ul>
     <li><strong>Market cap</strong> = current price × 1B supply. The app shows this (not a raw price) so numbers mean something.</li>
     <li><strong>Graduation</strong> is a milestone badge at a set amount of USDC raised. Trading continues on the same curve — there is no forced migration.</li>
