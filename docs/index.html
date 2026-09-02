@@ -692,6 +692,19 @@
   .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     padding: 10px 14px; font-size: 12px; color: var(--dim); font-weight: 500; }
   .stat b { color: var(--text); font-family: var(--mono); font-weight: 500; font-size: 15px; display: block; margin-top: 3px; }
+  /* Nothing below the graduation bar works without a wallet, so the ask comes
+     before the buy/sell form rather than as a dead-end toast on the BUY button. */
+  .tconnect { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin: 16px 0 0; padding: 16px 18px; border-radius: var(--r-md);
+    background: rgba(var(--accent-rgb),.07); border: 1px solid rgba(var(--accent-rgb),.28); }
+  .tconnect .tc-copy { flex: 1 1 200px; min-width: 0; }
+  .tconnect b { display: block; color: var(--text); font-size: 14.5px; font-weight: 600; }
+  .tconnect span { display: block; color: var(--dim); font-size: 12.5px; margin-top: 3px; }
+  .tconnect button { flex: 0 0 auto; padding: 12px 22px; font-size: 14px; font-weight: 600;
+    border-radius: var(--r-sm); border: 0; background: var(--accent); color: #04241a; }
+  .tconnect button:hover { filter: brightness(1.07); }
+  /* the form stays visible while disconnected, but reads as inert */
+  .tform-locked { opacity: .45; pointer-events: none; }
   .tabs { display: flex; gap: 6px; margin: 16px 0 0; }
   .tabs button { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--dim); }
   .tabs button.on-buy { background: rgba(var(--green-rgb),.14); color: var(--green); border-color: rgba(var(--green-rgb),.5); }
@@ -1145,7 +1158,15 @@
     <div class="tsocials" id="tSocials" style="display:none"></div>
     <div class="bar" style="margin-top:14px"><i id="tBar" style="width:0%"></i></div>
     <div class="bar-label" id="tBarLabel">0% to graduation</div>
-    <div class="tabs">
+    <div class="tconnect" id="tConnect" style="display:none">
+      <div class="tc-copy">
+        <b>Connect a wallet to trade</b>
+        <span id="tConnectSub">See your balance and buy or sell straight from the curve.</span>
+      </div>
+      <button type="button" id="tConnectBtn">Connect wallet</button>
+    </div>
+    <div id="tForm">
+    <div class="tabs" id="tTabs">
       <button id="tabBuy" class="on-buy">BUY</button>
       <button id="tabSell">SELL</button>
     </div>
@@ -1170,6 +1191,7 @@
       </div>
       <input id="slipCustom" type="number" min="0.1" max="50" step="0.1" placeholder="custom">
     </div>
+    </div><!-- /tForm -->
     <div class="row">
       <button id="tGo" class="alt">BUY</button>
       <button id="tShare">🔗 Share</button>
@@ -1945,6 +1967,7 @@ async function connect(forcePicker) {
   $("connectBtn").textContent = userAddr.slice(0, 6) + "…" + userAddr.slice(-4);
   $("walletMenu").style.display = "none";
   toast("READY PLAYER ONE");
+  syncTradeAuth();
   refreshFees();
   refreshNativeBalance();
 }
@@ -1987,6 +2010,7 @@ function disconnect() {
   }
   signer = null; userAddr = null;
   activeEip1193 = null; activeRdns = null;
+  syncTradeAuth();
   userNativeBal = 0n; userTokenBal = 0n; exactWei = null;
   $("connectBtn").textContent = "Connect";
   $("walletMenu").style.display = "none";
@@ -3036,6 +3060,21 @@ function applyPct(p) {
   $("tAmt").value = ethers.formatEther(wei).replace(/\.?0+$/, "");
   updateQuote();
 }
+// Shows the connect panel and greys out the form whenever there's no signer, so a
+// visitor who opened a token sees the one action that's actually available to them.
+function syncTradeAuth() {
+  const connected = !!signer;
+  $("tConnect").style.display = connected ? "none" : "flex";
+  $("tForm").classList.toggle("tform-locked", !connected);
+  if (!connected && currentToken) {
+    const sym = tokenMeta[currentToken]?.symbol;
+    $("tConnectSub").textContent = sym
+      ? `See your balance and buy or sell $${sym} straight from the curve.`
+      : "See your balance and buy or sell straight from the curve.";
+  }
+}
+$("tConnectBtn").onclick = () => connect();
+
 function setTabs() {
   $("tabBuy").className = isBuy ? "on-buy" : "";
   $("tabSell").className = isBuy ? "" : "on-sell";
@@ -3044,6 +3083,7 @@ function setTabs() {
   $("amtLabel").textContent = isBuy ? "USDC in" : "Tokens in";
   $("tAmt").value = ""; $("tQuote").textContent = ""; exactWei = null;
   updateBalHint();
+  syncTradeAuth();
 }
 // slippage guard: the contract already enforces a min-out, this exposes the tolerance
 let slipBps = 200n; // 2% default
@@ -3065,7 +3105,7 @@ $("pctRow").querySelectorAll("button").forEach((b) => {
   b.onclick = () => applyPct(Number(b.dataset.pct));
 });
 $("tGo").onclick = async () => {
-  if (!signer) return toast("Connect first");
+  if (!signer) return connect(); // the picker, not a dead-end toast
   const wei = exactWei !== null ? exactWei : (parseFloat($("tAmt").value || "0") ? ethers.parseEther($("tAmt").value) : 0n);
   if (!wei || wei <= 0n) return toast("Enter an amount");
   try {
