@@ -2771,6 +2771,9 @@ function renderFeed() {
 
 // ---- left rail: the same tokens as the floor, at list density
 let liveSort = "trending";
+// Halfway to the 5,000 USDC graduation target — far enough along that calling a
+// token "graduating" is honest.
+const GRADUATING_MIN_PCT = 50;
 function renderLiveRail() {
   const box = $("liveList");
   if (!box) return;
@@ -2787,7 +2790,13 @@ function renderLiveRail() {
     new: (x, y) => y.born - x.born,
     grad: (x, y) => y.prog - x.prog,
   }[liveSort];
-  box.innerHTML = scored.sort(by).slice(0, 12).map(({ a, inf, st, mc, vol }) => {
+  // "Graduating" is a filter here, not just an ordering: a token only belongs in
+  // it once it is actually within reach of the 5,000 USDC target. Sorting alone
+  // listed every token, which read as if all of them were about to graduate.
+  const rows = (liveSort === "grad"
+    ? scored.filter((t) => !t.inf.graduated && t.prog >= GRADUATING_MIN_PCT)
+    : scored).sort(by).slice(0, 12);
+  box.innerHTML = rows.map(({ a, inf, st, mc, vol }) => {
     const m = tokenMeta[a], img = safeImgSrc(tokenImg[a]);
     const age = ageText(latestBlock && inf.createdBlock ? latestBlock - Number(inf.createdBlock) : null);
     // there is no price history per token here, so the badge shows curve progress
@@ -2804,7 +2813,10 @@ function renderLiveRail() {
         <span class="pc ${prog >= 50 ? "up" : ""}">${prog.toFixed(1)}%</span>
       </span>
     </div>`;
-  }).join("") || `<div class="lrow" style="color:var(--faint);cursor:default">No tokens yet</div>`;
+  }).join("") || `<div class="lrow" style="color:var(--faint);cursor:default;font-size:12px">${
+    liveSort === "grad"
+      ? `Nothing past ${GRADUATING_MIN_PCT}% of the 5,000 USDC target yet`
+      : "No tokens yet"}</div>`;
 }
 
 // ---- right rail: campaign standings from the published snapshot
