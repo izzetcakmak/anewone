@@ -13,7 +13,7 @@
     } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   })();
 </script>
-<title>Docs — A NEW ONE | anewone.xyz</title>
+<title>A NEW ONE Docs | anewone.xyz</title>
 <meta name="description" content="How A NEW ONE works: the rug-proof bonding curve, fees, launching and trading tokens on Arc.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
@@ -134,10 +134,10 @@
     </div>
   </div>
 
-  <h1>A NEW ONE — Docs</h1>
+  <h1>A NEW ONE Docs</h1>
   <p class="lede">The meme launchpad built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a>,
     Circle's stablecoin L1 where gas <em>is</em> USDC. Launch a token in seconds, trade on a
-    rug-proof bonding curve — no LP to pull, ever.</p>
+    rug-proof bonding curve with no LP to pull, ever.</p>
 
   <div class="toc">
     <a href="#what">What it is</a>
@@ -156,7 +156,7 @@
   <p>A NEW ONE is a permissionless memecoin launchpad. Anyone can create a token for free (you pay
     only network gas), and every token trades immediately on its own <strong>constant-product bonding
     curve</strong> priced in <strong>USDC</strong>. There is no order book, no seeding liquidity, and
-    no listing step — the contract itself is the market maker.</p>
+    no listing step. The contract itself is the market maker.</p>
   <div class="grid">
     <div class="card"><span class="tag good">rug-proof</span><h3>No LP to pull</h3><p>Reserves are locked inside
       the contract for the token's whole life. There is no liquidity pool a dev can drain and no migration step.</p></div>
@@ -165,19 +165,19 @@
     <div class="card"><span class="tag good">fair launch</span><h3>Anti-snipe</h3><p>A per-wallet cap in the
       first blocks blunts bots and bundlers sniping a launch.</p></div>
     <div class="card"><span class="tag good">verifiable</span><h3>100% open source</h3><p>Contracts, frontend and
-      the indexer are all public — read them, run them, or check any claim on this page against the source:
+      the indexer are all public. Read them, run them, or check any claim on this page against the source:
       <a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">github.com/izzetcakmak/anewone</a>.</p></div>
   </div>
 
   <h2 id="curve">The bonding curve</h2>
   <p>Each token has a fixed supply of <strong>1,000,000,000</strong> (1B), all placed on the curve at
-    creation. The contract has <strong>no mint authority</strong> — there is no function that can
+    creation. The contract has <strong>no mint authority</strong>. There is no function that can
     create more, so the supply you see at launch is the supply forever. Price follows a
     constant-product formula against a virtual USDC reserve, so every buy pushes the price up and
-    every sell pushes it down — smoothly and predictably.</p>
+    every sell pushes it down, smoothly and predictably.</p>
   <ul>
     <li><strong>Market cap</strong> = current price × 1B supply. The app shows this (not a raw price) so numbers mean something.</li>
-    <li><strong>Graduation</strong> is a milestone badge at a set amount of USDC raised. Trading continues on the same curve — there is no forced migration.</li>
+    <li><strong>Graduation</strong> is a milestone badge at a set amount of USDC raised. Trading continues on the same curve, and there is no forced migration.</li>
     <li>Buys and sells always clear against the contract, so there is always liquidity to exit.</li>
   </ul>
 
@@ -189,22 +189,22 @@
     <tr><td>0.5%</td><td>Platform</td><td>Plus any creator fees left unclaimed past the window</td></tr>
   </table>
   <p>That's a bigger day-one creator cut than most launchpads. If a creator doesn't claim within 7
-    days, the pot rolls into platform fees (anyone can trigger the sweep) — so claim your earnings.</p>
+    days, the pot rolls into platform fees (anyone can trigger the sweep), so claim your earnings.</p>
 
   <h2 id="safety">Safety by design</h2>
   <ul>
-    <li><strong>Rug-proof:</strong> no LP exists, and curve reserves can never be withdrawn — only traded against. Fees are held in separate accounting from reserves.</li>
+    <li><strong>Rug-proof:</strong> no LP exists, and curve reserves can never be withdrawn, only traded against. Fees are held in separate accounting from reserves.</li>
     <li><strong>Anti-snipe:</strong> for the first 20 blocks after launch, each wallet can buy at most 2% of supply.</li>
     <li><strong>Verified &amp; open:</strong> the contract is public and the frontend is a static, no-backend page you can inspect. Token names, images and comments are escaped, so a hostile token can't attack you.</li>
   </ul>
 
   <h2 id="launch">Launch a token</h2>
   <ol>
-    <li>Connect a wallet (or sign in with Google — see <a href="#wallets">Wallets</a>).</li>
+    <li>Connect a wallet (or sign in with Google; see <a href="#wallets">Wallets</a>).</li>
     <li>Click <strong>+ Create Coin</strong>.</li>
-    <li>Set name, symbol, and optionally an image (JPG/PNG, ≤5&nbsp;MB, ≥100×100 — auto-cropped &amp; stored on-chain), a description and socials (X / Telegram / website).</li>
+    <li>Set name, symbol, and optionally an image (JPG/PNG, ≤5&nbsp;MB, ≥100×100, auto-cropped &amp; stored on-chain), a description and socials (X / Telegram / website).</li>
     <li>Optionally add a small dev buy at launch (still subject to the anti-snipe cap).</li>
-    <li>Confirm. You pay only gas — launching is free. Your token is live and tradable instantly.</li>
+    <li>Confirm. You pay only gas. Launching is free. Your token is live and tradable instantly.</li>
   </ol>
   <div class="note">Metadata is stored fully on-chain, so your token's image and links can't rot or be swapped out from under holders.</div>
 
@@ -212,40 +212,40 @@
   <ul>
     <li>Open any token to see its <strong>market cap, holders, 24h volume, age</strong> and a live price chart.</li>
     <li>Buy or sell with an amount or the <strong>25 / 50 / 75 / MAX</strong> presets.</li>
-    <li>Set a <strong>max slippage</strong> (1 / 2 / 5% or custom) — the contract enforces a minimum-output so a fast-moving curve can't fill you far from the quote.</li>
-    <li>Your <strong>position card</strong> shows real cost basis and P&amp;L using a live sell quote (fees + curve impact included) — not an optimistic price × balance.</li>
+    <li>Set a <strong>max slippage</strong> (1 / 2 / 5% or custom). The contract enforces a minimum-output so a fast-moving curve can't fill you far from the quote.</li>
+    <li>Your <strong>position card</strong> shows real cost basis and P&amp;L using a live sell quote (fees + curve impact included), not an optimistic price × balance.</li>
     <li>Discover coins via <strong>Trending / Newest / Top MC / Graduating</strong>, search, advanced filters, a live trade feed, and a watchlist.</li>
   </ul>
 
   <h2 id="wallets">Wallets &amp; funding</h2>
   <h3>Connect</h3>
-  <p>Use any injected wallet — <strong>MetaMask, OKX, Rabby</strong> — or <strong>Continue with Google</strong>
+  <p>Use any injected wallet (<strong>MetaMask, OKX, Rabby</strong>) or <strong>Continue with Google</strong>
     to instantly create a non-custodial embedded wallet with no seed phrase. Both paths behave identically once connected.</p>
   <h3>Fund it</h3>
   <p>A fresh wallet needs USDC on Arc (it's the gas <em>and</em> the money). On testnet, the app shows a
     <strong>Get test USDC</strong> button that opens <a href="https://faucet.circle.com" target="_blank" rel="noopener">Circle's faucet</a>
     (20 USDC every 2h, pick <em>Arc Testnet</em>). The funding panel disappears automatically once the balance lands.</p>
-  <div class="note warn">Arc mainnet is not live yet (targeted by Circle for 2026). On testnet, tokens have no real value — it's for trying the platform.</div>
+  <div class="note warn">Arc mainnet is not live yet (targeted by Circle for 2026). On testnet, tokens have no real value; it's for trying the platform.</div>
 
   <h2 id="trust">Trust signals</h2>
   <p>Every token page carries an honest risk read-out so you can judge before you buy:</p>
   <ul>
-    <li><span class="tag good" style="margin:0">🔒 Rug-proof</span> — structural, always true, links the verified contract.</li>
-    <li><strong>Dev holds %</strong> — the creator's real balance vs circulating supply (green &lt;5%, amber 5–20%, red ≥20%).</li>
-    <li><strong>Top wallet %</strong> and <strong>Snipers %</strong> — concentration estimated from trades (labelled, since direct transfers aren't counted).</li>
-    <li><strong>Creator profile &amp; reputation score</strong> — a wallet's past launches, graduation rate and whether they exited their own tokens.</li>
-    <li><strong>On-chain comments</strong> — a per-token thread; you must hold the token (or be its creator) to post, so it resists comment-bot spam.</li>
+    <li><span class="tag good" style="margin:0">🔒 Rug-proof</span> is structural, always true, and links the verified contract.</li>
+    <li><strong>Dev holds %</strong> is the creator's real balance vs circulating supply (green &lt;5%, amber 5-20%, red ≥20%).</li>
+    <li><strong>Top wallet %</strong> and <strong>Snipers %</strong> show concentration estimated from trades (labelled, since direct transfers aren't counted).</li>
+    <li><strong>Creator profile &amp; reputation score</strong> covers a wallet's past launches, graduation rate and whether they exited their own tokens.</li>
+    <li><strong>On-chain comments</strong> are a per-token thread; you must hold the token (or be its creator) to post, so it resists comment-bot spam.</li>
   </ul>
 
   <h2 id="faq">FAQ</h2>
   <h3>Is it really rug-proof?</h3>
-  <p>There is no liquidity pool and reserves can't be withdrawn from the contract — only traded against. So the classic "pull the LP" rug is impossible by construction. A dev can still sell their own tokens on the curve, which the trust panel surfaces (Dev holds % / Dev exits).</p>
+  <p>There is no liquidity pool and reserves can't be withdrawn from the contract, only traded against. So the classic "pull the LP" rug is impossible by construction. A dev can still sell their own tokens on the curve, which the trust panel surfaces (Dev holds % / Dev exits).</p>
   <h3>What does it cost to launch?</h3>
   <p>Nothing but gas. There's no listing fee.</p>
   <h3>Why USDC for gas?</h3>
-  <p>Arc is Circle's stablecoin L1 where the native gas token is USDC. One stable asset covers fees and trades — no second coin to acquire.</p>
+  <p>Arc is Circle's stablecoin L1 where the native gas token is USDC. One stable asset covers fees and trades, with no second coin to acquire.</p>
   <h3>Do I keep control of my Google wallet?</h3>
-  <p>Yes — it's a non-custodial embedded wallet; neither the platform nor the provider can move your funds. For a large or long-term stash, an injected wallet you fully control is still recommended.</p>
+  <p>Yes. It's a non-custodial embedded wallet; neither the platform nor the provider can move your funds. For a large or long-term stash, an injected wallet you fully control is still recommended.</p>
 
   <h2 id="addresses">Contracts</h2>
   <p>The platform auto-deploys to Arc mainnet the moment it goes live. Current testnet deployment:</p>
@@ -263,7 +263,7 @@
     Follow <a href="https://x.com/ano_xyz" target="_blank" rel="noopener noreferrer">@ano_xyz</a> ·
     <a href="mailto:contact@anewone.xyz">contact@anewone.xyz</a> ·
     <a href="index.html">Launch app</a>
-    <br><br>Nothing here is financial advice. Memecoins are highly risky — only trade what you can afford to lose.
+    <br><br>Nothing here is financial advice. Memecoins are highly risky, so only trade what you can afford to lose.
   </div>
 </div>
 <script src="config.js"></script>
