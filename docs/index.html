@@ -8,10 +8,9 @@
   // No stored choice means "follow the OS", which most people never change.
   (function () {
     try {
-      var t = localStorage.getItem("anewone_theme");
-      if (!t) t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+      var t = localStorage.getItem("anewone_theme") || "light";
       document.documentElement.setAttribute("data-theme", t);
-    } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+    } catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
   })();
 </script>
 <title>A NEW ONE — Insert Coin. Launch a New One. | anewone.xyz</title>
@@ -30,101 +29,286 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   /* ============================ THEME SYSTEM ============================
-     Three themes — dark (arcade neon), dim (softer night) and light (daylight
-     arcade). Colours are declared as RGB TRIPLETS so every translucent layer
-     (`rgba(var(--accent-rgb), .12)`) re-tints with the theme instead of being
-     frozen to one palette. `--ink-rgb` is the colour that overlays are built
-     from: white on the dark themes, near-black on light.
+     Light is the default; dim and dark are opt-in. The palette is deliberately
+     narrow: ONE accent (mint) plus red for losses. Everything else is neutral,
+     so the colour on screen comes from the token artwork rather than from the
+     interface — which is what keeps a launchpad looking like a product instead
+     of a template.
+
+     Colours are RGB triplets so translucent layers re-tint per theme.
+     `--ink-rgb` is what overlays are built from: near-black on light, white on
+     the dark themes.
      ==================================================================== */
   :root {
-    /* the arcade palette — six accents, shared by every theme */
-    --accent-rgb: 62,230,160;      /* mint — primary */
-    --accent2-rgb: 139,123,255;    /* violet */
-    --cyan-rgb: 56,214,255;        /* electric cyan */
-    --pink-rgb: 255,106,193;       /* hot pink */
-    --gold-rgb: 255,194,77;        /* coin gold */
-    --green-rgb: 47,209,138;
-    --red-rgb: 255,84,112;
+    --accent-rgb: 0,184,119;       /* mint — the only accent */
+    --green-rgb: 0,165,104;        /* gains */
+    --red-rgb: 224,51,79;          /* losses */
+    --gold-rgb: 200,138,0;         /* rare: warnings, 1st place */
 
     --accent: rgb(var(--accent-rgb));
-    --accent-2: rgb(var(--accent2-rgb));
-    --cyan: rgb(var(--cyan-rgb));
-    --pink: rgb(var(--pink-rgb));
-    --gold: rgb(var(--gold-rgb));
     --green: rgb(var(--green-rgb));
     --red: rgb(var(--red-rgb));
+    --gold: rgb(var(--gold-rgb));
+    /* legacy aliases: older rules still reference these, and they must not
+       reintroduce a second hue */
+    --accent-2: var(--accent);
+    --cyan: var(--accent);
+    --pink: var(--accent);
+    --accent2-rgb: var(--accent-rgb);
+    --cyan-rgb: var(--accent-rgb);
+    --pink-rgb: var(--accent-rgb);
+    --grad: rgb(var(--accent-rgb));
 
-    /* the signature gradient: used on headings, bars and hover glows */
-    --grad: linear-gradient(100deg, rgb(var(--accent-rgb)), rgb(var(--cyan-rgb)) 38%,
-      rgb(var(--accent2-rgb)) 68%, rgb(var(--pink-rgb)));
-
-    --r: 16px;
+    --r: 20px;                     /* containers */
+    --r-md: 14px;                  /* cards */
     --r-sm: 10px;
     --mono: 'JetBrains Mono', ui-monospace, monospace;
   }
 
-  /* ---- DARK (default): near-black, neon on top */
-  :root, :root[data-theme="dark"] {
-    --bg: #07080b;
-    --bg-2: #0b0d12;
-    --bg-rgb: 7,8,11;
-    --ink-rgb: 255,255,255;        /* overlays are white here */
-    --surface: rgba(var(--ink-rgb),0.026);
-    --surface-2: rgba(var(--ink-rgb),0.05);
-    --border: rgba(var(--ink-rgb),0.08);
-    --border-2: rgba(var(--ink-rgb),0.15);
-    --text: #eaecf1;
-    --dim: #98a1b2;
-    --faint: #5c6472;
-    --shadow: 0 10px 40px rgba(0,0,0,.45);
-    --glow: .55;                   /* neon intensity multiplier */
-    --grid: 0.015;                 /* background grid opacity */
-  }
-
-  /* ---- DIM: slate-blue night, softer contrast for long sessions */
-  :root[data-theme="dim"] {
-    --bg: #151a24;
-    --bg-2: #1b2130;
-    --bg-rgb: 21,26,36;
-    --ink-rgb: 255,255,255;
-    --surface: rgba(var(--ink-rgb),0.04);
-    --surface-2: rgba(var(--ink-rgb),0.07);
-    --border: rgba(var(--ink-rgb),0.10);
-    --border-2: rgba(var(--ink-rgb),0.18);
-    --text: #e4e8f0;
-    --dim: #9aa5ba;
-    --faint: #67718a;
-    --shadow: 0 10px 40px rgba(0,0,0,.35);
-    --glow: .38;
-    --grid: 0.02;
-  }
-
-  /* ---- LIGHT: daylight arcade — paper white, ink text, same neon accents
-     darkened just enough to stay readable on white */
-  :root[data-theme="light"] {
-    --bg: #fbfaff;
+  /* ---- LIGHT (default): neutral paper, ink text ---- */
+  :root, :root[data-theme="light"] {
+    --bg: #f4f4f5;
     --bg-2: #ffffff;
-    --bg-rgb: 251,250,255;
-    --ink-rgb: 22,20,38;           /* overlays go dark on light */
-    --surface: rgba(var(--ink-rgb),0.028);
-    --surface-2: rgba(var(--ink-rgb),0.055);
-    --border: rgba(var(--ink-rgb),0.10);
-    --border-2: rgba(var(--ink-rgb),0.18);
-    --text: #191833;
-    --dim: #5b5a78;
-    --faint: #8b8aa3;
-    --shadow: 0 10px 34px rgba(60,50,120,.13);
-    --glow: .22;
-    --grid: 0.045;
-    /* accents pulled down in luminance so they read on white */
-    --accent-rgb: 0,178,116;
-    --accent2-rgb: 108,86,255;
-    --cyan-rgb: 0,160,214;
-    --pink-rgb: 226,60,163;
-    --gold-rgb: 214,146,0;
-    --green-rgb: 0,166,110;
-    --red-rgb: 226,46,88;
+    --card: #ececee;
+    --bg-rgb: 244,244,245;
+    --ink-rgb: 16,16,24;
+    --surface: #ffffff;
+    --surface-2: #ececee;
+    --border: rgba(var(--ink-rgb),0.09);
+    --border-2: rgba(var(--ink-rgb),0.16);
+    --text: #111116;
+    --dim: #5f5f6d;
+    --faint: #8b8b98;
+    --accent-soft: #e8f9f1;
+    --strip: #17171c;              /* the dark announcement strip */
+    --shadow: 0 1px 2px rgba(16,16,24,.06);
+    --shadow-lg: 0 8px 30px rgba(16,16,24,.09);
+    --glow: 0;                     /* no neon in daylight */
+    --grid: 0;
   }
+
+  /* ---- DIM: soft slate night ---- */
+  :root[data-theme="dim"] {
+    --bg: #17171c;
+    --bg-2: #1d1d23;
+    --card: #232329;
+    --bg-rgb: 23,23,28;
+    --ink-rgb: 255,255,255;
+    --surface: #1d1d23;
+    --surface-2: #232329;
+    --border: rgba(var(--ink-rgb),0.09);
+    --border-2: rgba(var(--ink-rgb),0.16);
+    --text: #eeeef2;
+    --dim: #9a9aa8;
+    --faint: #6d6d7b;
+    --accent-rgb: 62,230,160;
+    --green-rgb: 62,230,160;
+    --red-rgb: 255,84,112;
+    --gold-rgb: 255,194,77;
+    --accent-soft: rgba(62,230,160,.10);
+    --strip: #101014;
+    --shadow: 0 1px 2px rgba(0,0,0,.3);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,.35);
+    --glow: 0;
+    --grid: 0;
+  }
+
+  /* ---- DARK: near-black ---- */
+  :root[data-theme="dark"] {
+    --bg: #0d0d10;
+    --bg-2: #151519;
+    --card: #1b1b20;
+    --bg-rgb: 13,13,16;
+    --ink-rgb: 255,255,255;
+    --surface: #151519;
+    --surface-2: #1b1b20;
+    --border: rgba(var(--ink-rgb),0.09);
+    --border-2: rgba(var(--ink-rgb),0.16);
+    --text: #f2f2f5;
+    --dim: #a0a0ae;
+    --faint: #6e6e7c;
+    --accent-rgb: 62,230,160;
+    --green-rgb: 62,230,160;
+    --red-rgb: 255,84,112;
+    --gold-rgb: 255,194,77;
+    --accent-soft: rgba(62,230,160,.10);
+    --strip: #08080a;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,.45);
+    --glow: 0;
+    --grid: 0;
+  }
+
+  /* ===================== REDESIGN: strip, shell, rails, ticker =====================
+     Layout follows the reference apps: a dense left list, a calm centre column of
+     product cards, and a social/standings rail on the right, with the live trade
+     flow pinned to the bottom instead of eating a column. */
+
+  /* ---- announcement strip ---- */
+  .strip { background: var(--strip); color: #e9e9ef; height: 38px; display: flex;
+    align-items: center; justify-content: center; gap: 10px; font-size: 12.5px;
+    padding: 0 16px; white-space: nowrap; overflow: hidden; }
+  .strip .s-clock b { color: var(--accent); font-weight: 600;
+    font-variant-numeric: tabular-nums; font-family: var(--mono); }
+  .strip .s-hi { color: var(--accent); font-weight: 500; }
+  .strip .s-short { display: none; }
+  .strip .s-sep { color: #4a4a55; }
+  .strip a { color: #e9e9ef; opacity: .8; text-decoration: underline; text-underline-offset: 3px; }
+  .strip a:hover { opacity: 1; }
+  .strip.live { background: var(--accent); color: #04241a; }
+  .strip.live .s-hi, .strip.live .s-clock b, .strip.live a { color: #04241a; }
+
+  /* ---- three-column shell ---- */
+  .shell { display: grid; grid-template-columns: 250px minmax(0,1fr) 286px;
+    gap: 16px; align-items: start; }
+  .col-main { min-width: 0; }
+  .rail { background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); overflow: hidden; position: sticky; top: 74px; }
+  .rail-h { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; }
+  .rail-h h3 { font-size: 14.5px; font-weight: 600; letter-spacing: -.2px; }
+  .rail-count { font-size: 11px; color: var(--dim); background: var(--surface-2);
+    border-radius: 999px; padding: 2px 8px; }
+  .rail-tabs { display: flex; gap: 2px; padding: 0 10px 10px; }
+  .rail-tabs button { all: unset; cursor: pointer; font-size: 12.5px; color: var(--dim);
+    padding: 5px 10px; border-radius: 999px; transition: background .15s, color .15s; }
+  .rail-tabs button:hover { color: var(--text); }
+  .rail-tabs button.on { background: var(--text); color: var(--bg); font-weight: 500; }
+  .rail-list { max-height: calc(100vh - 210px); overflow-y: auto; }
+
+  /* left rail rows */
+  .lrow { display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+    border-top: 1px solid var(--border); cursor: pointer; transition: background .12s; }
+  .lrow:hover { background: var(--surface-2); }
+  .lrow .av { width: 30px; height: 30px; border-radius: 9px; flex: none; object-fit: cover;
+    background: var(--surface-2); display: grid; place-items: center; font-size: 12px;
+    font-weight: 700; color: var(--dim); }
+  .lrow .l { min-width: 0; flex: 1; }
+  .lrow .nm { font-size: 13px; font-weight: 600; display: flex; align-items: baseline; gap: 6px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lrow .nm small { font-weight: 400; color: var(--faint); font-size: 11px; }
+  .lrow .sub { font-size: 11.5px; color: var(--faint); }
+  .lrow .r { text-align: right; }
+  .lrow .mc { font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .lrow .pc { font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .lrow .pc.up { color: var(--green); } .lrow .pc.dn { color: var(--red); }
+
+  /* right rail: standings */
+  .bprow { display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+    border-top: 1px solid var(--border); }
+  .bprow .rk { width: 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--faint); }
+  .bprow .rk.g1 { color: var(--gold); } .bprow .rk.g2 { color: #9aa0ad; } .bprow .rk.g3 { color: #b4703a; }
+  .bprow .w { flex: 1; font-family: var(--mono); font-size: 12px; color: var(--text); }
+  .bprow .acts { font-size: 12px; font-weight: 600; }
+  .bprow .acts small { color: var(--faint); font-weight: 400; margin-left: 3px; }
+  .bprow.me { background: var(--accent-soft); }
+  .bp-note { display: block; margin: 12px 14px 14px; background: var(--accent-soft);
+    border-radius: 12px; padding: 11px 12px; font-size: 11.5px; color: var(--dim);
+    line-height: 1.5; }
+  .bp-note:hover { text-decoration: none; }
+  .bp-note b { color: var(--text); } .bp-note u { color: var(--accent); text-decoration: none; }
+
+  /* ---- bottom ticker ---- */
+  .tickerbar { position: fixed; left: 16px; right: 16px; bottom: 14px; z-index: 150;
+    height: 42px; display: flex; align-items: center; gap: 16px; padding: 0 8px 0 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+    box-shadow: var(--shadow-lg); overflow: hidden; }
+  .tk-lead { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700;
+    letter-spacing: 1px; color: var(--accent); flex: none; }
+  .tk-lead i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+  .tk-track { display: flex; align-items: center; gap: 22px; overflow: hidden;
+    font-size: 12.5px; color: var(--dim); white-space: nowrap; mask-image:
+      linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 40px), transparent); }
+  .tk-item b { color: var(--text); font-weight: 600; }
+  .tk-item .up { color: var(--green); } .tk-item .dn { color: var(--red); }
+  body { padding-bottom: 62px; }   /* room for the pinned ticker */
+
+  /* ---- hero, rebuilt: left-aligned, product-first ---- */
+  .hero { background: linear-gradient(160deg, var(--accent-soft), transparent 62%);
+    border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 16px; }
+  .hero-inner { padding: 30px 30px 26px; max-width: none; text-align: left; }
+  .hero h1 { font-size: clamp(28px, 3.4vw, 40px); line-height: 1.06; letter-spacing: -1.5px;
+    margin: 0; text-transform: none; }
+  .hero h1 .l2 { display: block; }
+  .hero-sub { margin: 12px 0 0; max-width: 62ch; font-size: 14.5px; color: var(--dim);
+    text-align: left; }
+  .hero-sub b { color: var(--text); font-weight: 600; }
+  .hero-row { display: flex; align-items: center; gap: 28px; margin-top: 22px; flex-wrap: wrap; }
+  .hero-stats { display: flex; gap: 28px; margin: 0; }
+  .hstat b { font-size: 19px; }
+  .hstat span { font-size: 10.5px; letter-spacing: 1.4px; }
+
+  @media (max-width: 1180px) {
+    .shell { grid-template-columns: minmax(0,1fr) 286px; }
+    .rail-left { display: none; }
+  }
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: minmax(0,1fr); }
+    .rail-right { display: none; }
+    /* phones: the strip carries the deadline only — the full sentence forces a
+       wider layout than the viewport and pushes the whole page sideways */
+    .strip { font-size: 11.5px; gap: 6px; }
+    .strip .s-hi, .strip .s-sep, .strip .s-txt { display: none; }
+    .strip .s-short { display: inline; }
+    /* the guarantee chips are one long sentence each; let them wrap on phones
+       instead of setting the page's minimum width */
+    .trustband .tbc { white-space: normal; max-width: 100%; }
+    .tickerbar { left: 8px; right: 8px; }
+  }
+
+
+  /* the hero now lives inside the centre column: no full-bleed canvas, no
+     viewport-height first screen — the floor has to be visible immediately */
+  .hero { position: relative; overflow: hidden; }
+  .hero::before, .hero::after { display: none; }
+  .hero canvas { opacity: .5; }
+
+  /* trust band as a single quiet row of guarantees */
+  .trustband.compact { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .trustband.compact .tbc { flex: none; font-size: 11.5px; padding: 7px 12px;
+    border-radius: 999px; background: var(--surface); border: 1px solid var(--border);
+    color: var(--dim); }
+  .trustband.compact .tbc b { color: var(--text); font-weight: 600; }
+  .trustband.compact .tbc i { font-style: normal; margin-right: 5px; }
+
+  /* left-rail rows must not overflow at 250px */
+  .lrow .nm { min-width: 0; }
+  .lrow .nm small { flex: none; }
+  .lrow .r { flex: none; display: flex; flex-direction: column; align-items: flex-end; }
+
+
+  /* ---- token cards: artwork-led, pons-style ---- */
+  .grid { grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 12px; }
+  .cab { background: var(--surface-2); border: 1px solid transparent; border-radius: var(--r-md);
+    padding: 10px; backdrop-filter: none; }
+  .cab .cart { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden;
+    background: var(--card); }
+  .cab .cimg { width: 100%; height: 100%; object-fit: cover; border: 0; border-radius: 0;
+    display: block; background: var(--card); }
+  .cab .cimg.ph { display: grid; place-items: center; font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 40px; color: var(--faint); }
+  .cbadge { position: absolute; top: 8px; left: 8px; background: rgba(10,10,14,.78); color: #fff;
+    font-size: 10px; font-weight: 600; letter-spacing: .3px; border-radius: 999px; padding: 3px 8px; }
+  .cbadge.grad { background: var(--accent); color: #04241a; }
+  .cab .star { position: absolute; top: 6px; right: 6px; left: auto; z-index: 2;
+    background: rgba(10,10,14,.5); border-radius: 999px; width: 24px; height: 24px;
+    display: grid; place-items: center; color: #fff; font-size: 13px; }
+  .cname { font-size: 13.5px; font-weight: 600; margin-top: 9px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+  .ctick { font-size: 12px; color: var(--faint); }
+  .cmc { font-size: 13.5px; font-weight: 700; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .cmc small { font-size: 10.5px; color: var(--faint); font-weight: 500; margin-left: 3px; }
+  .cab .bar { height: 3px; margin-top: 8px; background: var(--border); border-radius: 2px; }
+  .cab .bar i { background: var(--accent); }
+  .cfoot { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--faint);
+    margin-top: 7px; font-family: var(--mono); }
+
+  /* toolbar: one compact row, no duplicated chrome */
+  .toolbar { gap: 8px; margin: 0 0 14px; }
+  .toolbar .sorts button { font-size: 12.5px; padding: 7px 12px; }
+  .searchwrap { height: 38px; }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
   ::selection { background: rgba(var(--accent-rgb),.25); }
   html { scroll-behavior: smooth; }
@@ -153,7 +337,7 @@
   .topbar { position: sticky; top: 0; z-index: 200; background: rgba(var(--bg-rgb),.78);
     -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
     border-bottom: 1px solid var(--border); }
-  .topbar-inner { max-width: 1180px; margin: 0 auto; padding: 10px 20px; display: flex;
+  .topbar-inner { max-width: 1560px; margin: 0 auto; padding: 10px 20px; display: flex;
     align-items: center; gap: 10px; }
   .tb-brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
   .tb-brand:hover { text-decoration: none; }
@@ -183,7 +367,7 @@
   .tb-link-quiet { border-color: var(--border-2); background: transparent; color: var(--dim); }
   .tb-link-quiet:hover { color: var(--text); border-color: var(--border-2);
     background: rgba(var(--ink-rgb),.05); }
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 20px 100px; }
+  .wrap { max-width: 1560px; margin: 0 auto; padding: 16px 20px 40px; }
   /* ---- hero: full-bleed, procedural constellation background (no image assets) */
   .hero { position: relative; overflow: hidden; text-align: center;
     background: radial-gradient(90% 130% at 50% -20%, rgba(var(--bg-rgb),.9), rgba(var(--bg-rgb),0) 70%); }
@@ -195,52 +379,30 @@
   .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
   .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
     background: linear-gradient(180deg, rgba(var(--bg-rgb),0) 64%, var(--bg) 99%); }
-  .hero-inner { position: relative; z-index: 2; max-width: 920px; margin: 0 auto;
-    padding: 78px 20px 58px; }
+  .hero-inner { position: relative; z-index: 2; max-width: none; margin: 0;
+    padding: 30px 30px 26px; text-align: left; }
   .hero h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700;
-    font-size: clamp(40px, 7.2vw, 80px); line-height: 1.05; letter-spacing: -2.5px;
-    margin: 26px 0 20px;
-    color: var(--text); }
-  /* second line rides the full arcade gradient and drifts across it — the one
-     piece of motion on the page that never stops, like an attract screen */
-  .hero h1 .l2 { display: block;
-    background: var(--grad); background-size: 260% 100%;
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 30px rgba(var(--accent-rgb), calc(var(--glow) * .7)));
-    animation: gradientDrift 9s ease-in-out infinite; }
-  @keyframes gradientDrift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-  }
-  .hero-sub { color: var(--dim); font-size: 16.5px; line-height: 1.65; max-width: 58ch;
-    margin: 0 auto 34px; }
+    font-size: clamp(26px, 2.8vw, 38px); line-height: 1.08; letter-spacing: -1.4px;
+    margin: 0; color: var(--text); }
+  .hero h1 .l2 { display: block; color: var(--text); }
+  .hero-sub { color: var(--dim); font-size: 14.5px; line-height: 1.6; max-width: 62ch;
+    margin: 12px 0 0; }
   .hero-sub a { color: var(--text); border-bottom: 1px solid var(--border-2); }
   .hero-sub a:hover { color: var(--accent); text-decoration: none; border-color: rgba(var(--accent-rgb),.5); }
-  .hero-stats { display: flex; justify-content: center; gap: 16px 60px; flex-wrap: wrap;
-    margin: 6px 0 36px; }
-  /* each stat gets its own colour so the row reads as a little arcade scoreboard */
-  .hstat { transition: transform .18s; }
-  .hstat:hover { transform: translateY(-3px); }
+  .hero-stats { display: flex; gap: 28px; flex-wrap: wrap; margin: 0; }
   .hstat b { display: block; font-family: var(--mono); font-weight: 700; font-size: 31px;
-    color: var(--accent); letter-spacing: 1px;
-    text-shadow: 0 0 26px rgba(var(--accent-rgb), var(--glow)); }
-  .hstat:nth-child(2) b { color: var(--cyan); text-shadow: 0 0 26px rgba(var(--cyan-rgb), var(--glow)); }
-  .hstat:nth-child(3) b { color: var(--pink); text-shadow: 0 0 26px rgba(var(--pink-rgb), var(--glow)); }
+    color: var(--text); letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
   .hstat span { font-size: 11px; letter-spacing: 2.2px; color: var(--dim);
     text-transform: uppercase; font-weight: 600; }
-  .hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
-    margin-bottom: 52px; }
+  .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; margin: 0; }
   .hbtn { display: inline-flex; align-items: center; gap: 9px; padding: 14px 28px;
     border-radius: 13px; font-family: 'Space Grotesk', sans-serif; font-weight: 700;
     font-size: 15px; transition: box-shadow .15s, filter .15s, transform .1s,
     border-color .15s, background .15s; }
   .hbtn:hover { text-decoration: none; transform: translateY(-1px); }
-  /* the primary button carries the arcade gradient and slides it on hover */
-  .hbtn.primary { color: #06121d; background: var(--grad); background-size: 200% 100%;
-    box-shadow: 0 6px 30px rgba(var(--accent-rgb), calc(var(--glow) * .8)); }
-  .hbtn.primary:hover { background-position: 100% 50%;
-    box-shadow: 0 10px 44px rgba(var(--accent2-rgb), var(--glow)); }
-  .hbtn.primary { transition: box-shadow .2s, background-position .45s ease, transform .1s; }
+  .hbtn.primary { color: #04241a; background: var(--accent); box-shadow: none;
+    transition: filter .15s, transform .1s; }
+  .hbtn.primary:hover { filter: brightness(1.06); }
   .hbtn.ghost { color: var(--text); background: rgba(var(--ink-rgb),.04);
     border: 1px solid var(--border-2); }
   .hbtn.ghost:hover { border-color: var(--text); background: rgba(var(--ink-rgb),.08); }
@@ -251,14 +413,7 @@
     opacity: .55; font-family: 'Space Grotesk', sans-serif; font-weight: 600;
     font-size: 13.5px; letter-spacing: .4px; cursor: default;
     transition: opacity .15s, color .15s, transform .15s; }
-  /* the wallet row lights up in a different colour per item on hover */
-  .works-row span:hover { opacity: 1; transform: translateY(-2px); }
-  .works-row span:nth-child(1):hover { color: var(--accent); }
-  .works-row span:nth-child(2):hover { color: var(--cyan); }
-  .works-row span:nth-child(3):hover { color: var(--gold); }
-  .works-row span:nth-child(4):hover { color: var(--accent-2); }
-  .works-row span:nth-child(5):hover { color: var(--pink); }
-  .works-row span:nth-child(6):hover { color: var(--green); }
+  .works-row span:hover { opacity: 1; color: var(--text); }
   .badge {
     font-size: 11px; font-weight: 600; letter-spacing: .3px; padding: 7px 13px;
     border-radius: 999px; border: 1px solid var(--border-2); color: var(--dim);
@@ -291,13 +446,13 @@
   .cd-cell { display: flex; flex-direction: column; align-items: center; min-width: 74px; }
   .cd-cell b { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 44px;
     line-height: 1.05; color: var(--text); font-variant-numeric: tabular-nums;
-    text-shadow: 0 0 26px rgba(var(--accent2-rgb),.35); }
+    color: var(--text); }
   .cd-cell span { margin-top: 5px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 2px;
     text-transform: uppercase; color: var(--dim); }
   .cd-sep { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 34px;
     line-height: 1.25; color: rgba(var(--accent2-rgb),.5); }
   /* the seconds cell is the only thing that moves every tick */
-  #cdS { color: var(--accent); text-shadow: 0 0 26px rgba(var(--accent-rgb),.4); }
+  #cdS { color: var(--accent); }
   .cd-date { font-family: var(--mono); font-size: 11.5px; letter-spacing: 1.2px; color: var(--dim); }
   .countdown.live { border-color: rgba(var(--accent-rgb),.45); background: rgba(var(--accent-rgb),.07);
     box-shadow: 0 0 44px rgba(var(--accent-rgb),.16); }
@@ -328,28 +483,18 @@
   }
   .marquee span { display: inline-block; padding: 4px 0; animation: scroll 45s linear infinite; }
   @keyframes scroll { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: 16px; margin-top: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(186px, 1fr)); gap: 12px; margin-top: 14px; }
   .cab {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
     padding: 18px; cursor: pointer; position: relative; backdrop-filter: blur(8px);
     transition: transform .16s cubic-bezier(.2,.7,.3,1), border-color .16s, box-shadow .16s, background .16s;
   }
-  /* Every cabinet on the floor gets its own colour, cycled through the palette,
-     so a wall of tokens reads like a row of arcade machines instead of a
-     spreadsheet. --cab is also what the hover glow and top edge pick up. */
-  .cab { --cab: var(--accent-rgb); }
-  .cab:nth-child(5n+2) { --cab: var(--cyan-rgb); }
-  .cab:nth-child(5n+3) { --cab: var(--accent2-rgb); }
-  .cab:nth-child(5n+4) { --cab: var(--pink-rgb); }
-  .cab:nth-child(5n+5) { --cab: var(--gold-rgb); }
-  .cab::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px;
-    border-radius: var(--r) var(--r) 0 0;
-    background: linear-gradient(90deg, rgb(var(--cab)), transparent 85%);
-    opacity: .75; transition: opacity .16s; }
+  .cab::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 2px;
+    border-radius: var(--r) var(--r) 0 0; background: var(--accent);
+    opacity: 0; transition: opacity .16s; }
   .cab:hover::before { opacity: 1; }
-  .cab:hover { transform: translateY(-5px); border-color: rgba(var(--cab),.45);
-    background: var(--surface-2);
-    box-shadow: var(--shadow), 0 12px 40px rgba(var(--cab), calc(var(--glow) * .45)); }
+  .cab:hover { transform: translateY(-2px); border-color: var(--border-2);
+    background: var(--surface-2); box-shadow: var(--shadow-lg); }
   .skel-card { background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--r); padding: 18px; }
   .sk { position: relative; overflow: hidden; background: rgba(var(--ink-rgb),.05); border-radius: 8px; }
@@ -379,7 +524,7 @@
   .cstats { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: 12.5px; color: var(--dim); }
   .cstats b { color: var(--text); font-family: var(--mono); font-weight: 500; }
   .rpcstatus { text-align: center; color: var(--gold); font-size: 13px; margin: 2px 0 8px; animation: pulse 1.6s infinite; }
-  .toolbar { display: flex; gap: 14px; margin-top: 28px; flex-wrap: wrap; align-items: center;
+  .toolbar { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; align-items: center;
     justify-content: space-between; scroll-margin-top: 76px; }
   .sorts { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px;
     background: var(--surface); border: 1px solid var(--border); }
@@ -626,7 +771,7 @@
   @media (max-width: 600px) {
     .wrap { padding: 16px 14px 70px; }
     .hero-inner { padding: 48px 18px 42px; }
-    .hero h1 { font-size: clamp(28px, 8.6vw, 40px); letter-spacing: -1.2px; }
+    .hero h1 { font-size: clamp(24px, 7vw, 32px); letter-spacing: -1px; }
     .hero-stats { gap: 14px 30px; }
     .hstat b { font-size: 24px; }
     .countdown { padding: 16px 14px 14px; gap: 11px; width: 100%; }
@@ -640,9 +785,20 @@
     .hero-cta .hbtn { flex: 1; justify-content: center; min-width: 150px; }
     .topbar-inner { padding: 8px 12px; gap: 8px; }
     .tb-brand span { display: none; }
-    /* keep the Boarding Pass reachable on phones, drop Docs (it lives in the footer too) */
-    .tb-link { font-size: 11px; padding: 8px 10px; }
-    .tb-link-quiet { display: none; }
+    /* phones: keep the Boarding Pass reachable, drop Docs (it lives in the footer
+       too), and shrink the theme switch so Connect/Create never get pushed off */
+    /* the strip already links to the Boarding Pass on phones, so the nav pills
+       come out of the bar entirely and Connect/Create get the room */
+    .tb-link { display: none; }
+    .theme-sw { padding: 2px; margin-right: auto; }
+    .theme-sw button { width: 22px; height: 22px; }
+    .theme-sw svg { width: 13px; height: 13px; }
+    .topbar-inner { gap: 6px; padding: 8px 10px; }
+    .topbar button { padding: 9px 10px; font-size: 12px; }
+    #createBtn { padding: 9px 11px; font-size: 11.5px; }
+    #connectBtn { padding: 9px 11px; font-size: 11.5px; }
+    .tb-brand img { width: 26px; height: 26px; }
+    #netBadge { display: none; }
     #balChip { display: none !important; }
     .topbar .badge { font-size: 10px; padding: 6px 9px; }
     .topbar button { white-space: nowrap; padding: 10px 13px; font-size: 13px; }
@@ -695,10 +851,10 @@
     top: -12px; animation: confFall linear infinite; }
   @keyframes confFall { to { transform: translateY(130px) rotate(340deg); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .sconf { display: none; } }
-  .trustband { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .trustband { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
   /* .tbc, not .tb — the trade modal already owns a .tb trust-badge class */
-  .tbc { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 400;
-    color: var(--dim); border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px;
+  .tbc { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 400;
+    color: var(--dim); border: 1px solid var(--border); border-radius: 999px; padding: 6px 11px;
     background: var(--surface); text-decoration: none; }
   .tbc b { color: var(--accent); font-weight: 600; }
   .tbc i { font-style: normal; }
@@ -744,6 +900,19 @@
 </style>
 </head>
 <body>
+<!-- Announcement strip: the countdown lives here now, so the first thing a
+     visitor reads is the deadline, and the hero can get on with the product. -->
+<div class="strip" id="comingSoon">
+  <span class="s-txt">A NEW ONE goes live on Arc mainnet in</span>
+  <span class="s-short">Mainnet in</span>
+  <span class="s-clock" id="cdClock" aria-live="polite">
+    <b id="cdD">–</b>d <b id="cdH">–</b>h <b id="cdM">–</b>m <b id="cdS">–</b>s
+  </span>
+  <span class="s-sep">·</span>
+  <span class="s-hi">the first memecoin on Arc launches here</span>
+  <span class="s-sep">·</span>
+  <a href="boarding/">Boarding Pass</a>
+</div>
 <nav class="topbar">
   <div class="topbar-inner">
     <a class="tb-brand" href="index.html" aria-label="A NEW ONE — home">
@@ -776,55 +945,44 @@
     <button id="createBtn" class="alt">+ Create Coin</button>
   </div>
 </nav>
+
+<div class="wrap">
+  <div id="rpcStatus" class="rpcstatus" style="display:none"></div>
+
+  <div class="shell">
+  <!-- LEFT RAIL: the live list, densest view of the same data as the floor -->
+  <aside class="rail rail-left">
+    <div class="rail-h"><h3>Live</h3><span class="rail-count" id="liveCount">–</span></div>
+    <div class="rail-tabs" id="liveTabs">
+      <button data-live="trending" class="on">Trending</button>
+      <button data-live="new">New</button>
+      <button data-live="grad">Graduating</button>
+    </div>
+    <div id="liveList" class="rail-list"></div>
+  </aside>
+
+  <div class="col-main">
 <section class="hero">
   <canvas id="heroFx" aria-hidden="true"></canvas>
   <div class="hero-inner">
-    <div class="countdown" id="comingSoon">
-      <div class="cd-label"><span class="zap">⚡</span> A NEW ONE goes live on Arc mainnet in <span class="zap">⚡</span></div>
-      <div class="cd-clock" id="cdClock" aria-live="polite">
-        <div class="cd-cell"><b id="cdD">–</b><span>days</span></div>
-        <div class="cd-sep">:</div>
-        <div class="cd-cell"><b id="cdH">–</b><span>hours</span></div>
-        <div class="cd-sep">:</div>
-        <div class="cd-cell"><b id="cdM">–</b><span>minutes</span></div>
-        <div class="cd-sep">:</div>
-        <div class="cd-cell"><b id="cdS">–</b><span>seconds</span></div>
-      </div>
-      <div class="cd-date">September 16, 2026 · the first memecoin on Arc mainnet launches here</div>
-    </div>
-    <h1>INSERT COIN.<span class="l2">LAUNCH A NEW ONE.</span></h1>
-    <p class="hero-sub">The memecoin launchpad on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a> —
-      Circle's stablecoin L1 where gas is USDC. Rug-proof bonding curves, anti-snipe
-      launches, and half of every trade fee paid straight to creators.</p>
-    <div class="hero-stats">
-      <div class="hstat"><b id="statCount">–</b><span>Tokens live</span></div>
-      <div class="hstat"><b>1%</b><span>Fee · ½ to creators</span></div>
-      <div class="hstat"><b id="statGrad">–</b><span>Graduation</span></div>
-    </div>
-    <div class="hero-cta">
+    <h1>Insert coin.<span class="l2">Launch a new one.</span></h1>
+    <p class="hero-sub">Bonding curves priced in <b>USDC</b>, not in a volatile gas token.
+      <b>No LP, no migration, nothing to pull</b> — and half of every trade fee goes
+      straight to the creator.</p>
+    <div class="hero-row">
       <a class="hbtn primary" href="#floor">Explore the floor →</a>
-      <a class="hbtn ghost" href="docs.html">Read the docs</a>
-    </div>
-    <div class="works-label">Works with any EVM wallet — built on Arc, powered by USDC</div>
-    <div class="works-row">
-      <span>⚡ Arc</span>
-      <span>◎ USDC gas</span>
-      <span>🦊 MetaMask</span>
-      <span>OKX Wallet</span>
-      <span>Rabby</span>
-      <span>Ⓖ Google sign-in</span>
+      <div class="hero-stats">
+        <div class="hstat"><b id="statCount">–</b><span>Tokens live</span></div>
+        <div class="hstat"><b>1%</b><span>Fee · ½ to creators</span></div>
+        <div class="hstat"><b id="statGrad">–</b><span>Graduation</span></div>
+      </div>
     </div>
   </div>
 </section>
-
-<div class="wrap">
-  <div class="marquee"><span id="ticker">Loading the floor…</span></div>
-  <div id="rpcStatus" class="rpcstatus" style="display:none"></div>
-
   <div id="spotlight" class="spot" style="display:none"></div>
 
   <!-- trust band: the structural guarantees competitors can't claim -->
-  <div class="trustband">
+  <div class="trustband compact">
     <span class="tbc"><i>🔑</i> Your keys, your coin — <b>non-custodial</b>, even with Google sign-in</span>
     <span class="tbc"><i>🔒</i> Reserves locked in the curve — <b>no LP to pull</b></span>
     <span class="tbc"><i>🧯</i> Supply fixed at launch — <b>no mint authority</b></span>
@@ -886,11 +1044,21 @@
       <div id="grid" class="grid"></div>
       <div id="empty" class="empty" style="display:none">No tokens yet — be the first to launch one.</div>
     </div>
-    <aside id="feedWrap" class="feed" style="display:none">
-      <div class="feed-title">LIVE TRADES</div>
-      <div id="feed"></div>
-    </aside>
+
   </div>
+
+  </div><!-- /col-main -->
+
+  <!-- RIGHT RAIL: the campaign standings, read straight from the published snapshot -->
+  <aside class="rail rail-right">
+    <div class="rail-h"><h3>Boarding Pass</h3><span class="rail-count">top 33</span></div>
+    <div id="bpList" class="rail-list"></div>
+    <a class="bp-note" href="boarding/">
+      Mainnet day draw: <b>90,000 / 60,000 / 30,000 $NOAH</b> to three of the 33 most
+      active testnet wallets. Every launch and trade moves you up. <u>Full list →</u>
+    </a>
+  </aside>
+  </div><!-- /shell -->
 
   <div id="feeBar" class="feepanel" style="display:none">
     <div class="feepanel-title">YOUR FEES</div>
@@ -1066,6 +1234,11 @@
   </div>
 </div>
 
+<!-- Bottom ticker: the live trade flow, always visible without taking column space -->
+<div class="tickerbar" id="tickerBar" style="display:none">
+  <span class="tk-lead"><i></i>LIVE</span>
+  <div class="tk-track" id="feed"></div>
+</div>
 <div id="toast" class="toast"></div>
 
 <script>
@@ -1556,7 +1729,7 @@ const cssVar = (name) =>
       b.setAttribute("aria-pressed", String(b.dataset.themeSet === t));
     }
   };
-  paint(root.getAttribute("data-theme") || "dark");
+  paint(root.getAttribute("data-theme") || "light");
 
   sw.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-theme-set]");
@@ -1566,12 +1739,7 @@ const cssVar = (name) =>
     paint(t);
   });
 
-  const mq = matchMedia("(prefers-color-scheme: light)");
-  mq.addEventListener?.("change", (ev) => {
-    let stored = null;
-    try { stored = localStorage.getItem(KEY); } catch {}
-    if (!stored) paint(ev.matches ? "light" : "dark");
-  });
+
 })();
 
 // ---- mainnet countdown.
@@ -1969,7 +2137,7 @@ async function loadTokens() {
     shownAddrs = addrs;
     $("empty").dataset.none = count === 0 ? "1" : "0";
     renderGrid();
-    $("ticker").textContent = tickerText(count);
+    const tk = $("ticker"); if (tk) tk.textContent = tickerText(count);
     openFromHash();
     if (addrs.length) {
       const earliest = Math.min(...addrs.map((a) => Number(tokenInfo[a].createdBlock)));
@@ -1978,7 +2146,7 @@ async function loadTokens() {
     if (userAddr) refreshFees();
   } catch (e) {
     console.error(e);
-    $("ticker").textContent = "RPC busy — retrying shortly…";
+    const tk = $("ticker"); if (tk) tk.textContent = "RPC busy — retrying shortly…";
   } finally {
     loading = false;
   }
@@ -2049,28 +2217,28 @@ function cardHtml(addr) {
   const pct = Number(progBps(inf)) / 100;
   const age = ageText(latestBlock && inf.createdBlock ? latestBlock - Number(inf.createdBlock) : null);
   const a = esc(addr);
-  const spark = sparkSvg(addr);
+  const short = addr.slice(0, 6) + "…" + addr.slice(-4);
+  // The artwork is the card. Everything else is one line of numbers underneath,
+  // so a wall of tokens reads by picture first — which is how people actually
+  // scan a launchpad.
+  const badge = inf.graduated
+    ? '<span class="cbadge grad">GRADUATED</span>'
+    : pct >= 50 ? '<span class="cbadge">GRADUATING</span>'
+    : (latestBlock && inf.createdBlock && latestBlock - Number(inf.createdBlock) < 20000)
+      ? '<span class="cbadge">NEW</span>' : "";
   return `<div class="cab" onclick="openTrade('${a}')">
-    <span class="star ${isWatched(addr) ? "on" : ""}" onclick="toggleWatch('${a}', event)"
-      title="Watchlist">${isWatched(addr) ? "★" : "☆"}</span>
-    <div class="cabhead">
+    <div class="cart">
       <div class="cimg ph" id="ph-${a}" aria-hidden="true">${esc(String(symbol || "?").slice(0, 1))}</div>
       <img class="cimg" id="img-${a}" alt="" style="display:none">
-      <div>
-        <div class="sym">$${esc(symbol)}</div>
-        <div class="nm">${esc(name)}</div>
-      </div>
+      ${badge}
+      <span class="star ${isWatched(addr) ? "on" : ""}" onclick="toggleWatch('${a}', event)"
+        title="Watchlist">${isWatched(addr) ? "★" : "☆"}</span>
     </div>
-    <div class="mcap">MC ${compactUsd(marketCapWei(inf))}${chip24Html(addr)}${inf.graduated ? ' <span class="grad">★ GRADUATED</span>' : ""}</div>
-    ${spark ? `<div class="cspark">${spark}</div>` : ""}
-    ${metaOf(addr).d ? `<div class="cdesc">${esc(metaOf(addr).d)}</div>` : ""}
-    <div class="cstats">
-      <span>👤 <b>${fullyIndexed ? (st.holders || 0) : "…"}</b> holders</span>
-      <span>📊 <b>${covers24h ? compactUsd(st.vol24 || 0n) : "…"}</b> 24h</span>
-      <span>🕐 <b>${age}</b></span>
-    </div>
+    <div class="cname">${esc(name)}</div>
+    <div class="ctick">$${esc(symbol)}</div>
+    <div class="cmc">${compactUsd(marketCapWei(inf))} <small>MC</small>${chip24Html(addr)}</div>
     <div class="bar"><i style="width:${Math.min(Math.max(pct, 1.5), 100)}%"></i></div>
-    <div class="bar-label">${pct.toFixed(1)}% to graduation · ${st.trades || 0} trades</div>
+    <div class="cfoot"><span>${esc(short)}</span><span>${esc(age)}</span></div>
   </div>`;
 }
 
@@ -2467,6 +2635,7 @@ function visibleAddrs() {
 
 function renderGrid() {
   renderCreatorPanel();
+  renderLiveRail();
   const list = visibleAddrs();
   $("grid").innerHTML = list.map(cardHtml).join("");
   fillImages(list);
@@ -2526,6 +2695,14 @@ function renderSpotlight() {
   });
 }
 
+$("liveTabs")?.querySelectorAll("button").forEach((b) => {
+  b.onclick = () => {
+    liveSort = b.dataset.live;
+    $("liveTabs").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    renderLiveRail();
+  };
+});
+
 $("sortTabs").querySelectorAll("button").forEach((b) => {
   b.onclick = () => {
     sortMode = b.dataset.sort;
@@ -2567,37 +2744,87 @@ $("fClear").onclick = () => {
 
 let lastFeedKey = "";
 function renderFeed() {
-  const wrap = $("feedWrap");
-  const setRail = (on) => {
-    wrap.style.display = on ? "block" : "none";
-    document.querySelector(".floorwrap")?.classList.toggle("has-rail", on);
-  };
-  if (!statsIdx || !statsIdx.recent.length) { setRail(false); return; }
+  const bar = $("tickerBar");
+  if (!bar) return;
+  const show = (on) => { bar.style.display = on ? "flex" : "none"; };
+  if (!statsIdx || !statsIdx.recent.length) { show(false); return; }
   // only tokens the UI already knows — liveTail can ingest trades for tokens
   // loadTokens hasn't discovered yet, and those rows would break openTrade
   const list = statsIdx.recent.filter((r) => r && r.tr && r.tk && tokenMeta[r.tk] && tokenInfo[r.tk]);
-  if (!list.length) { setRail(false); return; }
-  // skip the full innerHTML rebuild (and the row entrance animation replay) unless
-  // the newest trade changed or ~5min of blocks passed (keeps "ago" labels honest)
+  if (!list.length) { show(false); return; }
   const top = list[list.length - 1];
   const key = `${list.length}:${top.b}:${top.tk}:${top.tr}:${top.u}:${Math.floor((latestBlock || 0) / 150)}`;
-  if (key === lastFeedKey) { setRail(true); return; }
+  if (key === lastFeedKey) { show(true); return; }
   lastFeedKey = key;
-  const rows = list.slice(-25).reverse().map((r) => {
+  // newest first; the bar shows as many as fit and masks the overflow
+  $("feed").innerHTML = list.slice(-18).reverse().map((r) => {
     const sym = (tokenMeta[r.tk] || {}).symbol || r.tk.slice(0, 6);
-    const who = r.tr.slice(0, 6) + "…" + r.tr.slice(-4);
     const when = ageText(latestBlock ? latestBlock - r.b : null);
-    return `<div class="frow ${r.buy ? "buy" : "sell"}" onclick="openTrade('${esc(r.tk)}')">
-      <span class="who">${esc(who)}</span>
-      <span class="act">${r.buy ? "BOUGHT" : "SOLD"}</span>
-      <span class="amt">${esc(fmt(r.t, 0))}</span>
-      <span class="tk">$${esc(sym)}</span>
-      <span class="amt">for ${esc(compactUsd(r.u))}</span>
-      <span class="when">${esc(when)}</span>
+    return `<span class="tk-item" onclick="openTrade('${esc(r.tk)}')" style="cursor:pointer">
+      ${r.buy ? '<span class="up">buy</span>' : '<span class="dn">sell</span>'}
+      <b>$${esc(sym)}</b> ${esc(compactUsd(r.u))}
+      <span style="opacity:.6">${esc(when)}</span>
+    </span>`;
+  }).join("");
+  show(true);
+}
+
+// ---- left rail: the same tokens as the floor, at list density
+let liveSort = "trending";
+function renderLiveRail() {
+  const box = $("liveList");
+  if (!box) return;
+  const list = shownAddrs.filter((a) => tokenInfo[a] && tokenMeta[a]);
+  $("liveCount").textContent = list.length || "–";
+  const scored = list.map((a) => {
+    const inf = tokenInfo[a], st = tradeStats[a] || {};
+    return { a, inf, st, mc: Number(ethers.formatEther(marketCapWei(inf))),
+             prog: Number(progBps(inf)) / 100, born: Number(inf.createdBlock || 0),
+             vol: Number(ethers.formatEther(st.vol24 || 0n)) };
+  });
+  const by = {
+    trending: (x, y) => (y.vol - x.vol) || (y.mc - x.mc),
+    new: (x, y) => y.born - x.born,
+    grad: (x, y) => y.prog - x.prog,
+  }[liveSort];
+  box.innerHTML = scored.sort(by).slice(0, 12).map(({ a, inf, st, mc, vol }) => {
+    const m = tokenMeta[a], img = safeImgSrc(tokenImg[a]);
+    const age = ageText(latestBlock && inf.createdBlock ? latestBlock - Number(inf.createdBlock) : null);
+    // there is no price history per token here, so the badge shows curve progress
+    const prog = Number(progBps(inf)) / 100;
+    return `<div class="lrow" onclick="openTrade('${esc(a)}')">
+      ${img ? `<img class="av" src="${esc(img)}" alt="">`
+            : `<span class="av">${esc((m.symbol || "?")[0])}</span>`}
+      <span class="l">
+        <span class="nm">$${esc(m.symbol || "")}</span>
+        <span class="sub">${esc(age)} · ${esc(compactUsd(st.vol24 || 0n))} vol</span>
+      </span>
+      <span class="r">
+        <span class="mc">${esc(compactUsd(marketCapWei(inf)))}</span>
+        <span class="pc ${prog >= 50 ? "up" : ""}">${prog.toFixed(1)}%</span>
+      </span>
+    </div>`;
+  }).join("") || `<div class="lrow" style="color:var(--faint);cursor:default">No tokens yet</div>`;
+}
+
+// ---- right rail: campaign standings from the published snapshot
+async function renderBoardingRail() {
+  const box = $("bpList");
+  if (!box) return;
+  let snap;
+  try { snap = await (await fetch("boarding/snapshot.json", { cache: "no-store" })).json(); }
+  catch { box.innerHTML = `<div class="bprow" style="color:var(--faint)">Standings unavailable</div>`; return; }
+  const ranked = (snap.wallets || []).filter((w) => w.rank).slice(0, 8);
+  const me = (userAddr || "").toLowerCase();
+  box.innerHTML = ranked.map((w) => {
+    const short = w.address.slice(0, 6) + "…" + w.address.slice(-4);
+    const medal = w.rank <= 3 ? ` g${w.rank}` : "";
+    return `<div class="bprow${w.address.toLowerCase() === me ? " me" : ""}">
+      <span class="rk${medal}">${w.rank}</span>
+      <span class="w">${esc(short)}</span>
+      <span class="acts">${w.total}<small>acts</small></span>
     </div>`;
   }).join("");
-  $("feed").innerHTML = rows;
-  setRail(!!rows);
 }
 
 // deep link: #t=0x… opens that token directly so a launch can be shared
@@ -3075,6 +3302,10 @@ $("grid").innerHTML = Array.from({ length: 6 }, () => `
 
 loadTokens();
 setInterval(loadTokens, 60_000);
+
+// standings change once every few hours, so this is deliberately infrequent
+renderBoardingRail();
+setInterval(renderBoardingRail, 10 * 60_000);
 
 // ---- live tail: one cheap forward-only getLogs every 15s keeps the trade rail and
 // spotlight feeling real-time between the full 60s passes. Single call, well inside
