@@ -251,9 +251,6 @@
     .strip { font-size: 11.5px; gap: 6px; }
     .strip .s-hi, .strip .s-sep, .strip .s-txt { display: none; }
     .strip .s-short { display: inline; }
-    /* the guarantee chips are one long sentence each; let them wrap on phones
-       instead of setting the page's minimum width */
-    .trustband .tbc { white-space: normal; max-width: 100%; }
     .tickerbar { left: 8px; right: 8px; }
   }
 
@@ -263,14 +260,6 @@
   .hero { position: relative; overflow: hidden; }
   .hero::before, .hero::after { display: none; }
   .hero canvas { opacity: .5; }
-
-  /* trust band as a single quiet row of guarantees */
-  .trustband.compact { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-  .trustband.compact .tbc { flex: none; font-size: 11.5px; padding: 7px 12px;
-    border-radius: 999px; background: var(--surface); border: 1px solid var(--border);
-    color: var(--dim); }
-  .trustband.compact .tbc b { color: var(--text); font-weight: 600; }
-  .trustband.compact .tbc i { font-style: normal; margin-right: 5px; }
 
   /* left-rail rows must not overflow at 250px */
   .lrow .nm { min-width: 0; }
@@ -851,14 +840,6 @@
     top: -12px; animation: confFall linear infinite; }
   @keyframes confFall { to { transform: translateY(130px) rotate(340deg); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .sconf { display: none; } }
-  .trustband { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
-  /* .tbc, not .tb — the trade modal already owns a .tb trust-badge class */
-  .tbc { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 400;
-    color: var(--dim); border: 1px solid var(--border); border-radius: 999px; padding: 6px 11px;
-    background: var(--surface); text-decoration: none; }
-  .tbc b { color: var(--accent); font-weight: 600; }
-  .tbc i { font-style: normal; }
-  a.tbc:hover { border-color: rgba(var(--accent-rgb),.4); }
   /* card sparkline + 24h chip */
   .cspark { margin: 10px 0 2px; }
   .cspark svg { width: 100%; height: 34px; display: block; }
@@ -981,13 +962,7 @@
 </section>
   <div id="spotlight" class="spot" style="display:none"></div>
 
-  <!-- trust band: the structural guarantees competitors can't claim -->
-  <div class="trustband compact">
-    <span class="tbc"><i>🔑</i> Your keys, your coin — <b>non-custodial</b>, even with Google sign-in</span>
-    <span class="tbc"><i>🔒</i> Reserves locked in the curve — <b>no LP to pull</b></span>
-    <span class="tbc"><i>🧯</i> Supply fixed at launch — <b>no mint authority</b></span>
-    <a class="tbc" href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener"><i>📖</i> <b>100% open source</b> — verify everything</a>
-  </div>
+  <!-- the guarantees used to be repeated here as chips; they live in the docs now -->
 
   <div class="toolbar" id="floor">
     <div class="sorts" id="sortTabs">
