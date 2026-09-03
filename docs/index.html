@@ -1406,10 +1406,16 @@ const esc = (s) => String(s ?? "").replace(/[&<>"'`]/g, (c) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;", "`": "&#96;"
 }[c]));
 // only allow image sources we control the shape of; blocks javascript:/vbscript: and
-// non-image data URIs from a hostile metadataURI
+// non-image data URIs from a hostile metadataURI.
+// svg+xml is deliberately NOT allowed. An SVG can carry <script>, and metadataURI /
+// imageURI are attacker-controlled — anyone can call createToken() directly with
+// whatever bytes they like. Inside <img> that script cannot run, which is the only
+// place these values reach today; the day one of those sinks becomes <object>,
+// <iframe> or an inline SVG, allowing it would become stored XSS on a page that
+// signs transactions. The launcher itself only ever emits image/jpeg.
 const safeImgSrc = (u) => {
   const s = String(u || "").trim();
-  if (/^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml);/i.test(s)) return s;
+  if (/^data:image\/(png|jpeg|jpg|gif|webp);/i.test(s)) return s;
   if (/^https:\/\//i.test(s)) return s;
   // same-origin relative asset (e.g. meta/noah.svg) — must not start with "/" or "//",
   // which would escape to another host
