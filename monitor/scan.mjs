@@ -334,6 +334,7 @@ function deployToVercel() {
   const cwd = path.join(ROOT, "docs");
   const attempts = [];
   if (existsSync(VC_JS)) attempts.push([process.execPath, [VC_JS, "deploy", "--prod", "--yes"], false]);
+  else log(`vercel deploy: ${VC_JS} not visible from this process — falling back to the cmd wrapper`);
   attempts.push([VERCEL, ["deploy", "--prod", "--yes"], true]);
   let err = "no attempt ran";
   for (const [cmd, args, shell] of attempts) {
@@ -431,6 +432,25 @@ async function main() {
       .map((s) => (s || "").trim()).filter((s) => s.length >= 8);
     const state = loadState();
     if (state.phase === "deployed") {
+      // The deploy path has failed for reasons that were never reproduced off the scheduler,
+      // and one missed attempt would leave anewone.xyz on testnet with mainnet contracts live.
+      // So the flip is retried every tick until the site actually serves the mainnet config.
+      if (state.configShipped === false) {
+        const retry = deployToVercel();
+        if (retry.ok) {
+          state.configShipped = true;
+          saveState(state);
+          await notify(env, "✅ anewone.xyz is now serving the mainnet config (deploy retry succeeded).");
+        } else if (!state.shipRetryNotified) {
+          state.shipRetryNotified = true;
+          saveState(state);
+          await notify(env,
+            `🚨 anewone.xyz is STILL ON TESTNET — the deploy keeps failing.
+` +
+            `Run by hand: cd "${path.join(ROOT, "docs")}" && vercel deploy --prod
+${retry.err}`);
+        }
+      }
       // launch is done; take the pending FINAL boarding snapshot if it hasn't run yet
       if (state.snapshotFinalDone === false) {
         if (await snapshotAndPublish(state, env, { final: true, toBlock: state.snapshotBlock ?? null })) {
@@ -607,6 +627,7 @@ async function main() {
     // not a side effect of the final snapshot that may or may not run afterwards.
     const shipped = wrote ? deployToVercel() : { ok: false, err: "config.js was not rewritten" };
     if (wrote && !shipped.ok) log(`MAINNET VERCEL DEPLOY FAILED: ${shipped.err}`);
+    state.configShipped = shipped.ok;
     const published = wrote && publishConfig();
     const devLine = devBuy > 0n
       ? `Dev buy: ${(Number(devBuy) / 1e18).toFixed(2)} USDC` +
