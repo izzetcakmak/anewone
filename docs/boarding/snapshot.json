@@ -8,9 +8,9 @@
  "criteria": "Every launch (TokenCreated) and trade (Trade) on any ANEWONE platform deployment counts as 1 action. Wallets ranked by total actions; ties broken by earliest activity. Team wallets excluded from ranking. Top 33 wallets enter the raffle: 90,000 / 60,000 / 30,000 $NOAH.",
  "final": false,
  "catchingUp": false,
- "generatedAt": "2026-09-03T10:25:45.478Z",
+ "generatedAt": "2026-09-03T16:26:33.636Z",
  "fromBlock": 52625041,
- "toBlock": 60236992,
+ "toBlock": 60270940,
  "totalWallets": 43,
  "totalTxs": 635,
  "wallets": [
