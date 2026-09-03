@@ -2199,9 +2199,13 @@ async function loadTokens() {
       indexUntilDone(earliest);
     }
     if (userAddr) refreshFees();
+    setStatus("");
   } catch (e) {
     console.error(e);
-    const tk = $("ticker"); if (tk) tk.textContent = "RPC busy — retrying shortly…";
+    // The old marquee this used to write to is gone, so a failed first load left the
+    // visitor staring at skeleton cards with no message and no retry for a full minute.
+    setStatus("Network is busy — retrying…");
+    if (!shownAddrs.length) setTimeout(loadTokens, 4000);
   } finally {
     loading = false;
   }
