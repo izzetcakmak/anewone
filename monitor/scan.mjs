@@ -445,10 +445,8 @@ async function main() {
           state.shipRetryNotified = true;
           saveState(state);
           await notify(env,
-            `🚨 anewone.xyz is STILL ON TESTNET — the deploy keeps failing.
-` +
-            `Run by hand: cd "${path.join(ROOT, "docs")}" && vercel deploy --prod
-${retry.err}`);
+            `🚨 anewone.xyz is STILL ON TESTNET — the deploy keeps failing.\n` +
+            `Run by hand: cd "${path.join(ROOT, "docs")}" && vercel deploy --prod\n${retry.err}`);
         }
       }
       // launch is done; take the pending FINAL boarding snapshot if it hasn't run yet
