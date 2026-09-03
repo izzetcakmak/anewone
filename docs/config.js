@@ -19,8 +19,14 @@ window.ANEWONE_CONFIG = {
     // first (domain-locked to anewone.xyz, high limits), public RPC as fallback. `rpc` above
     // stays PUBLIC on purpose — wallet/Web3Auth submit txs outside this origin and the
     // domain-locked URL would 401 them.
+    // A keyed entry may declare the hosts its domain lock accepts. Anywhere else
+    // (www., a *.vercel.app preview, localhost) it 401s every single call, so it is
+    // dropped from the pool instead of burning the retry budget on a certain failure.
     rpcs: [
-      "https://chaotic-dimensional-dream.arc-testnet.quiknode.pro/6f85d01f85d8794bd8a1299852d1c16511efb267/",
+      {
+        url: "https://chaotic-dimensional-dream.arc-testnet.quiknode.pro/6f85d01f85d8794bd8a1299852d1c16511efb267/",
+        hosts: ["anewone.xyz"],
+      },
       "https://rpc.testnet.arc.network",
     ],
     explorer: "https://explorer.testnet.arc.network",

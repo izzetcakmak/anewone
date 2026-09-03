@@ -1331,7 +1331,9 @@ const NET_NAME = window.ANEWONE_CONFIG.mainnet.live ? "ARC MAINNET" : "ARC TESTN
 // Reads use CFG.rpcs when present — keyed QuickNode primary + public fallback via a
 // FallbackProvider (quorum 1 = first good answer wins) — otherwise the single CFG.rpc.
 // Wallet/Web3Auth keep CFG.rpc (public); the keyed URL is domain-locked and 401s off-origin.
-const _readUrls = (CFG.rpcs && CFG.rpcs.length) ? CFG.rpcs : [CFG.rpc];
+const _readUrls = ((CFG.rpcs && CFG.rpcs.length) ? CFG.rpcs : [CFG.rpc])
+  .filter((r) => typeof r === "string" || !r.hosts || r.hosts.includes(location.hostname))
+  .map((r) => (typeof r === "string" ? r : r.url));
 const readProvider = _readUrls.length > 1
   ? new ethers.FallbackProvider(
       _readUrls.map((u, i) => ({
