@@ -1372,19 +1372,25 @@ const NET_NAME = window.ANEWONE_CONFIG.mainnet.live ? "ARC MAINNET" : "ARC TESTN
 const _readUrls = ((CFG.rpcs && CFG.rpcs.length) ? CFG.rpcs : [CFG.rpc])
   .filter((r) => typeof r === "string" || !r.hosts || r.hosts.includes(location.hostname))
   .map((r) => (typeof r === "string" ? r : r.url));
+// The chain is fixed and known from config, but without staticNetwork ethers
+// re-detects it around requests: a profile of a cold load counted 91 eth_chainId
+// calls against 42 real ones, and that traffic is what pushed the public RPC into
+// rate-limiting us (and every 429 costs an exponential backoff).
+const ARC_NET = new ethers.Network(NET_NAME, CFG.chainId);
+const mkProvider = (u) =>
+  new ethers.JsonRpcProvider(u, ARC_NET, { batchMaxCount: 1, staticNetwork: ARC_NET });
 const readProvider = _readUrls.length > 1
   ? new ethers.FallbackProvider(
       _readUrls.map((u, i) => ({
-        provider: new ethers.JsonRpcProvider(u, undefined, { batchMaxCount: 1 }),
-        priority: i + 1, stallTimeout: 2000, weight: 1,
+        provider: mkProvider(u), priority: i + 1, stallTimeout: 2000, weight: 1,
       })),
-      undefined, { quorum: 1 })
-  : new ethers.JsonRpcProvider(_readUrls[0], undefined, { batchMaxCount: 1 });
+      ARC_NET, { quorum: 1 })
+  : mkProvider(_readUrls[0]);
 const platform = new ethers.Contract(CFG.platform, ABI, readProvider);
 // eth_getLogs goes to the public RPC only: the keyed QuickNode "Discover" plan caps getLogs
 // at a 5-block range (413), while the public RPC serves the wide ranges the trade/comment/
 // image history scan needs. The high-volume eth_call traffic stays on readProvider (QuickNode).
-const logProvider = new ethers.JsonRpcProvider(CFG.rpc, undefined, { batchMaxCount: 1 });
+const logProvider = mkProvider(CFG.rpc);
 
 const FEE_BPS = 100n, BPS = 10_000n, WAD = 10n ** 18n;
 let signer = null, userAddr = null, currentToken = null, isBuy = true;
@@ -2216,15 +2222,18 @@ async function loadTokens() {
     $("empty").style.display = count === 0 ? "block" : "none";
     const addrs = [];
     for (let i = 0; i < count; i++) {
-      const addr = await rpc(() => platform.allTokens(i));
+      addrs.push(await rpc(() => platform.allTokens(i)));
+    }
+    for (const addr of addrs) {
       if (!tokenMeta[addr]) {
         const t = new ethers.Contract(addr, ERC20, readProvider);
         const name = await rpc(() => t.name());
         const symbol = await rpc(() => t.symbol());
         tokenMeta[addr] = { name, symbol };
       }
+    }
+    for (const addr of addrs) {
       tokenInfo[addr] = normInfo(await rpc(() => platform.info(addr)));
-      addrs.push(addr);
     }
     // paint immediately, then let the indexer fill in holders/volume/age
     shownAddrs = addrs;
