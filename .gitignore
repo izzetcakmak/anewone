@@ -7,7 +7,14 @@ monitor/state.json
 monitor/scan.log
 monitor/scan.pid
 monitor/scan.lock
-build-web3auth/
+# The vendored web3auth bundle is committed, so its build recipe has to be too —
+# otherwise nobody can reproduce or audit 1.4MB of code that touches wallets.
+# Everything here except the recipe (and never node_modules) stays ignored.
+build-web3auth/*
+!build-web3auth/package.json
+!build-web3auth/package-lock.json
+!build-web3auth/entry.mjs
+!build-web3auth/shim.mjs
 build-video/
 monitor/bridge-attestation.json
 monitor/snapshot-cache.json

@@ -45,7 +45,13 @@ const FAST_THRESHOLD = 1000; // fast transfer; anything <1000 is treated as 1000
 const MAX_FEE_CAP = 200_000n; // 0.20 USDC — abort if protocol+forward fees ever exceed this
 
 const ZERO32 = "0x" + "0".repeat(64);
-const b32 = (addr) => "0x" + "0".repeat(24) + addr.slice(2).toLowerCase();
+/** EVM address -> CCTP bytes32 mintRecipient. Strict on purpose: a malformed recipient here
+ *  is not a failed transaction, it is USDC minted to an address nobody controls. */
+const ADDR_RE = /^0x[0-9a-fA-F]{40}$/;
+const b32 = (addr) => {
+  if (!ADDR_RE.test(String(addr))) throw new Error(`refusing to bridge to a malformed recipient: ${addr}`);
+  return "0x" + "0".repeat(24) + String(addr).slice(2).toLowerCase();
+};
 const padUint = (n) => n.toString(16).padStart(64, "0");
 
 // ---------------------------------------------------------------- low-level
@@ -168,6 +174,11 @@ export async function bridgeStep(ctx) {
     };
 
     if (!env.PRIVATE_KEY || !recipient) return fail("PRIVATE_KEY / DEPLOYER_ADDRESS missing in .env", true);
+    // Checked before any broadcast: the funds are minted on Arc to whatever this says, and a
+    // typo that is still 40 hex characters would be an unrecoverable send to a dead address.
+    if (!ADDR_RE.test(recipient)) {
+      return fail(`MINT_RECIPIENT/DEPLOYER_ADDRESS is not a 20-byte hex address: ${recipient}`, true);
+    }
     const rpc = await pickBaseRpc();
     if (!rpc) return fail("no healthy Base RPC");
     if (!(await remoteMessengerRegistered(rpc))) return fail("Arc domain 26 not registered on Base TokenMessengerV2 yet");
