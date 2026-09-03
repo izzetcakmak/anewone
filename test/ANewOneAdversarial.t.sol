@@ -177,6 +177,30 @@ contract ANewOneAdversarialTest is Test {
         emit log_named_decimal_uint("victim token shortfall", victimClean - victimSandwiched, 18);
     }
 
+    /// @dev Trade.usdcAmount is trader-centric and the two sides are not the same quantity: a buy
+    ///      carries what the trader paid (fee included), a sell what they received (fee removed).
+    ///      The frontend converts both to the curve-side amount before summing them as volume —
+    ///      buy x (1 - fee), sell / (1 - fee). This pins that formula to what the curve actually
+    ///      did, so the two cannot drift apart.
+    function test_tradeEventMapsToTheCurveSideAmount() public {
+        address t = _launch(alice);
+        uint256 feeBps = arcade.FEE_BPS();
+
+        (,,,,, uint256 r0,) = arcade.info(t);
+        vm.prank(bob);
+        arcade.buy{value: 1_000e18}(t, 0);
+        (,,,,, uint256 r1,) = arcade.info(t);
+        assertEq(r1 - r0, 1_000e18 - (1_000e18 * feeBps) / 10_000, "buy: curve side != paid x (1 - fee)");
+
+        uint256 bobBefore = bob.balance;
+        _sell(bob, t, ANewOneToken(t).balanceOf(bob));
+        (,,,,, uint256 r2,) = arcade.info(t);
+        uint256 received = bob.balance - bobBefore;
+        assertApproxEqAbs(
+            r1 - r2, (received * 10_000) / (10_000 - feeBps), 2, "sell: curve side != received / (1 - fee)"
+        );
+    }
+
     // ------------------------------------------------------------ cross-token isolation
 
     /// @dev Each curve's reserves belong to that curve. Draining one token by trading another

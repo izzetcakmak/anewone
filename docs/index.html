@@ -1393,6 +1393,12 @@ const platform = new ethers.Contract(CFG.platform, ABI, readProvider);
 const logProvider = mkProvider(CFG.rpc);
 
 const FEE_BPS = 100n, BPS = 10_000n, WAD = 10n ** 18n;
+// Trade.usdcAmount is trader-centric: on a buy it is what the wallet PAID (fee included),
+// on a sell what the wallet RECEIVED (fee already taken out). That is the right number for
+// the live feed and for PnL, but the two sides are not the same quantity, so summing them
+// as volume overstates buys by the 1% fee and a price implied from u/t is off by the same.
+// This converts either side to the amount that actually moved through the curve.
+const curveSide = (u, isBuy) => (isBuy ? (u * (BPS - FEE_BPS)) / BPS : (u * BPS) / (BPS - FEE_BPS));
 let signer = null, userAddr = null, currentToken = null, isBuy = true;
 let gradTarget = null, loading = false;
 const tokenMeta = {}; // addr -> {name, symbol} — immutable, fetched once
@@ -1593,7 +1599,7 @@ function ingestLogs(logs) {
     const trader = topicAddr(lg.topics[2]);
     const isBuy = BigInt(lg.topics[3]) === 1n;
     const a = statsIdx.agg[token] || (statsIdx.agg[token] = { volAll: 0n, trades: 0, lastBlock: 0 });
-    a.volAll += usdc; a.trades++;
+    a.volAll += curveSide(usdc, isBuy); a.trades++;
     if (lg.blockNumber > (a.lastBlock || 0)) a.lastBlock = lg.blockNumber;
     // per (token, trader): net tokens, USDC spent/received, and first-seen block.
     // This is what powers holder counts, PnL, sniper share and dev-dump detection.
@@ -1629,7 +1635,7 @@ function rebuildStats() {
   }
   const vol24 = {}, traders24 = {};
   for (const r of statsIdx.recent) {
-    vol24[r.tk] = (vol24[r.tk] || 0n) + r.u;
+    vol24[r.tk] = (vol24[r.tk] || 0n) + curveSide(r.u, r.buy);
     (traders24[r.tk] || (traders24[r.tk] = new Set())).add(r.tr);
   }
   for (const k of Object.keys(tradeStats)) delete tradeStats[k];
@@ -2340,7 +2346,7 @@ function pct24(addr) {
     for (const r of statsIdx.recent) {
       if (r.tk === addr && r.t > 0n && (!earliest || r.b < earliest.b)) earliest = r;
     }
-    if (earliest) base = (earliest.u * WAD) / earliest.t;
+    if (earliest) base = (curveSide(earliest.u, earliest.buy) * WAD) / earliest.t;
   }
   if (!base) return null;
   return Number(((last - base) * 10000n) / base) / 100;

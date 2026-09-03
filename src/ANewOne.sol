@@ -108,6 +108,14 @@ contract ANewOne {
     ///         8 gas/byte vs ~625 gas/byte for storage, so a 24KB image costs ~0.3M gas
     ///         instead of ~20M.
     event TokenImage(address indexed token, string imageURI);
+    /// @notice A completed trade.
+    /// @dev `usdcAmount` is trader-centric and the two sides are deliberately NOT the same
+    ///      quantity: on a buy it is what the trader PAID (fee included), on a sell what the
+    ///      trader RECEIVED (fee already deducted). That is what a wallet actually moved, so
+    ///      it is the correct basis for a trade feed and for per-trader PnL.
+    ///      Indexers summing this as VOLUME must convert both sides to the curve-side amount
+    ///      first (buy x (1 - fee), sell / (1 - fee)); adding the raw values overstates buys
+    ///      by the fee. The same applies to any price implied as usdcAmount / tokenAmount.
     event Trade(
         address indexed token,
         address indexed trader,
