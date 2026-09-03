@@ -243,19 +243,54 @@ function runDeploy(env, rpcUrl, devBuy) {
   return { ok: !!(platform && noah), platform, noah, devTokens, out: out.slice(-2500) };
 }
 
+/** Rewrite the marked mainnet block in docs/config.js. Returns true only when the
+ *  new values are verifiably in the file afterwards.
+ *
+ *  Never throws. This runs immediately after an irreversible deploy, and an
+ *  exception escaping here would skip saveState() and let the next tick deploy a
+ *  second platform with a second dev buy. A failed rewrite must degrade to "the
+ *  site still says testnet", never to "deploy it again".
+ *
+ *  Marker-delimited rather than regex-matched: the old /mainnet:\s*\{[^}]*\}/ was
+ *  non-global and matched the FIRST "mainnet: {" in the file, so any reordering
+ *  that floated web3auth.mainnet to the top would have silently overwritten the
+ *  Google-login client id on launch day.
+ */
 function updateFrontendConfig(rpcUrl, chainId, platform, noah) {
-  const src = readFileSync(CONFIG_JS, "utf8");
-  const block =
-`mainnet: {
-    live: true,
-    chainId: ${chainId},
-    chainIdHex: "0x${chainId.toString(16)}",
-    rpc: "${rpcUrl}",
-    explorer: null,
-    platform: "${platform}",
-    noah: "${noah}",
-  }`;
-  writeFileSync(CONFIG_JS, src.replace(/mainnet:\s*\{[^}]*\}/, block));
+  const START = "/* MAINNET_BLOCK_START";
+  const END = "/* MAINNET_BLOCK_END */";
+  try {
+    const src = readFileSync(CONFIG_JS, "utf8");
+    const i = src.indexOf(START);
+    const j = src.indexOf(END);
+    if (i < 0 || j < 0 || j < i) {
+      log("config.js: MAINNET_BLOCK markers missing — refusing to guess; set the block by hand");
+      return false;
+    }
+    const head = src.slice(0, src.indexOf("\n", i) + 1);
+    const block = [
+      "  mainnet: {",
+      "    live: true,",
+      "    chainId: " + chainId + ",",
+      '    chainIdHex: "0x' + chainId.toString(16) + '",',
+      '    rpc: "' + rpcUrl + '",',
+      "    explorer: null,",
+      '    platform: "' + platform + '",',
+      '    noah: "' + noah + '",',
+      "  },",
+      "",
+    ].join("\n");
+    const next = head + block + "  " + src.slice(j);
+    if (!next.includes('platform: "' + platform + '"') || !next.includes("live: true")) {
+      log("config.js: rewrite did not take — leaving the file untouched");
+      return false;
+    }
+    writeFileSync(CONFIG_JS, next);
+    return true;
+  } catch (e) {
+    log("config.js: rewrite failed — " + (e && e.message));
+    return false;
+  }
 }
 
 const git = (args) => spawnSync("git", args, { cwd: ROOT, encoding: "utf8", timeout: 120_000 });
@@ -544,13 +579,17 @@ async function main() {
       return;
     }
 
-    updateFrontendConfig(found.url, found.chainId, dep.platform, dep.noah);
-    const published = publishConfig();
+    // The deploy is irreversible and real funds have already moved. Persist that
+    // fact BEFORE touching config.js or git: if either fails, the next tick must
+    // see phase "deployed" and stop, never deploy a second platform.
     state.phase = "deployed";
     state.platform = dep.platform;
     state.noah = dep.noah;
     state.deployedAt = new Date().toISOString();
     saveState(state);
+
+    const wrote = updateFrontendConfig(found.url, found.chainId, dep.platform, dep.noah);
+    const published = wrote && publishConfig();
     const devLine = devBuy > 0n
       ? `Dev buy: ${(Number(devBuy) / 1e18).toFixed(2)} USDC` +
         (dep.devTokens ? ` → ${(Number(BigInt(dep.devTokens)) / 1e18).toLocaleString("en-US", { maximumFractionDigits: 0 })} $NOAH` : "") + "\n"
@@ -558,7 +597,9 @@ async function main() {
     await notify(env,
       `🎉 ANEWONE.XYZ IS LIVE ON ARC MAINNET!\nPlatform: ${dep.platform}\n$NOAH: ${dep.noah}\n` + devLine +
       `RPC: ${found.url} (chainId ${found.chainId})\n` +
-      (published
+      (!wrote
+        ? "⚠️ docs/config.js could NOT be rewritten — anewone.xyz is STILL ON TESTNET. Set the mainnet block by hand, then push."
+        : published
         ? "docs/config.js pushed — anewone.xyz switches to mainnet as soon as Pages rebuilds (~1 min)."
         : "docs/config.js updated locally but git push FAILED — push manually to flip anewone.xyz to mainnet."));
     log(`DEPLOYED platform=${dep.platform} noah=${dep.noah}`);

@@ -1,6 +1,7 @@
 // ANEWONE (anewone.xyz) network config. The mainnet block is filled automatically by monitor/scan.mjs
 // the moment Arc mainnet is detected and the platform is deployed.
 window.ANEWONE_CONFIG = {
+  /* MAINNET_BLOCK_START — rewritten verbatim by monitor/scan.mjs; keep both markers */
   mainnet: {
     live: false,
     chainId: null,
@@ -10,6 +11,7 @@ window.ANEWONE_CONFIG = {
     platform: null,
     noah: null,
   },
+  /* MAINNET_BLOCK_END */
   testnet: {
     live: true,
     chainId: 5042002,
