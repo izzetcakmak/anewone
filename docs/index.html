@@ -1424,7 +1424,14 @@ const toast = (msg) => { const t = $("toast"); t.textContent = msg; t.style.disp
 // call used to break the whole page load. Every read goes through one serialized queue
 // with fixed spacing, and transient failures are retried with exponential backoff.
 const RPC_SPACING = 140;
-let rpcChain = Promise.resolve();
+// Two independent lanes, because they hit two different endpoints with two different
+// budgets. eth_call goes to the keyed provider; the history scan's eth_getLogs goes to
+// the public RPC, which rate-limits it. Sharing one queue meant a 429 on a log chunk
+// backed off the token reads behind it, and the floor sat half-drawn for 20+ seconds
+// waiting on history nobody was looking at yet.
+// "img" is its own lane for the same reason: a card's artwork is one single-block
+// lookup, and it should not wait behind the whole history scan to appear.
+const lanes = { call: Promise.resolve(), img: Promise.resolve(), logs: Promise.resolve() };
 let rpcDegraded = false;
 // ethers wraps the provider's payload, so the useful text ("request limit reached") can be
 // buried in .message/.info while .shortMessage only says "missing response for request".
@@ -1441,7 +1448,7 @@ function isTransient(e) {
   if (/failed to fetch|networkerror|timeout|timed out|econn|socket|503|502|504/.test(hay)) return true;
   return RETRYABLE_CODES.has(e.code) && !/revert|insufficient|user rejected/.test(hay);
 }
-function rpc(fn, tries = 4) {
+function rpc(fn, tries = 4, lane = "call") {
   const run = async () => {
     for (let i = 0; ; i++) {
       try {
@@ -1455,8 +1462,8 @@ function rpc(fn, tries = 4) {
       }
     }
   };
-  const p = rpcChain.then(run);
-  rpcChain = p.catch(() => {}).then(() => sleep(RPC_SPACING));
+  const p = lanes[lane].then(run);
+  lanes[lane] = p.catch(() => {}).then(() => sleep(RPC_SPACING));
   return p;
 }
 function setStatus(msg) {
@@ -1684,7 +1691,7 @@ async function loadStats(earliestBlock, onTick) {
     const scan = async (from, to) => {
       const logs = await rpc(() => logProvider.getLogs({
         address: CFG.platform, topics: [[TRADE_TOPIC, COMMENT_TOPIC]], fromBlock: from, toBlock: to
-      }));
+      }), 4, "logs");
       ingestLogs(logs);
     };
     // called after the window bounds are updated, so progress reflects reality
@@ -2484,7 +2491,7 @@ async function imageFromEvent(addr) {
       address: CFG.platform,
       topics: [IMAGE_TOPIC, ethers.zeroPadValue(addr, 32)],
       fromBlock: created, toBlock: created
-    }));
+    }), 4, "img");
     if (logs.length) out = String(ethers.AbiCoder.defaultAbiCoder().decode(["string"], logs[0].data)[0]);
   } catch { return null; } // RPC hiccup: leave uncached so the next call retries
   imgCache[addr] = out; // "" = launched without an image, cached as a definitive miss
@@ -3563,7 +3570,7 @@ async function liveTail() {
       topics: [[TRADE_TOPIC, COMMENT_TOPIC]],
       fromBlock: statsIdx.hi + 1,
       toBlock: to,
-    }), 1);
+    }), 1, "logs");
     statsIdx.hi = to;
     if (logs.length) {
       ingestLogs(logs);
