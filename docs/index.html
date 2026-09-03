@@ -217,9 +217,26 @@
   .tk-lead i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
     animation: pulse 2s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
-  .tk-track { display: flex; align-items: center; gap: 22px; overflow: hidden;
+  .tk-track { display: flex; align-items: center; overflow: hidden; flex: 1; min-width: 0;
     font-size: 12.5px; color: var(--dim); white-space: nowrap; mask-image:
       linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 40px), transparent); }
+  /* Two identical runs side by side, each sliding one full width: the second is
+     already in place when the first leaves, so the loop has no seam. Duration is
+     set from the measured width in JS, which keeps the speed constant no matter
+     how many trades are in the bar. */
+  .tk-run { display: flex; align-items: center; gap: 22px; padding-right: 22px; flex: none;
+    animation: tkroll var(--tk-dur, 40s) linear infinite; }
+  @keyframes tkroll { to { transform: translateX(-100%); } }
+  .tickerbar:hover .tk-run, .tickerbar:active .tk-run { animation-play-state: paused; }
+  /* No animation means the overflow would be unreachable, so hand the row back
+     to the user as a scrollable strip and drop the duplicate that only existed
+     to make the loop seamless. */
+  @media (prefers-reduced-motion: reduce) {
+    .tk-run { animation: none; }
+    .tk-run[aria-hidden] { display: none; }
+    .tk-track { overflow-x: auto; scrollbar-width: none; }
+    .tk-track::-webkit-scrollbar { display: none; }
+  }
   .tk-item b { color: var(--text); font-weight: 600; }
   .tk-item .up { color: var(--green); } .tk-item .dn { color: var(--red); }
   body { padding-bottom: 62px; }   /* room for the pinned ticker */
@@ -2885,8 +2902,12 @@ function renderFeed() {
   const key = `${list.length}:${top.b}:${top.tk}:${top.tr}:${top.u}:${Math.floor((latestBlock || 0) / 150)}`;
   if (key === lastFeedKey) { show(true); return; }
   lastFeedKey = key;
-  // newest first; the bar shows as many as fit and masks the overflow
-  $("feed").innerHTML = list.slice(-18).reverse().map((r) => {
+  // a re-render restarts the animation, which reads as a jump mid-scroll — carry
+  // the current position over as a negative delay so the bar keeps gliding
+  const prev = $("feed").querySelector(".tk-run");
+  const at = prev && prev.getAnimations ? (prev.getAnimations()[0]?.currentTime || 0) : 0;
+  // newest first
+  const items = list.slice(-24).reverse().map((r) => {
     const sym = (tokenMeta[r.tk] || {}).symbol || r.tk.slice(0, 6);
     const when = ageText(latestBlock ? latestBlock - r.b : null);
     return `<span class="tk-item" onclick="openTrade('${esc(r.tk)}')" style="cursor:pointer">
@@ -2895,7 +2916,17 @@ function renderFeed() {
       <span style="opacity:.6">${esc(when)}</span>
     </span>`;
   }).join("");
+  // the copy is aria-hidden: it exists only to make the wrap seamless
+  $("feed").innerHTML = `<div class="tk-run">${items}</div>` +
+                        `<div class="tk-run" aria-hidden="true">${items}</div>`;
   show(true);
+  const runs = $("feed").querySelectorAll(".tk-run");
+  const w = runs[0].scrollWidth;
+  if (w) {
+    // ~62px per second reads without being hard to follow
+    $("feed").style.setProperty("--tk-dur", (w / 62).toFixed(1) + "s");
+    runs.forEach((el) => { el.style.animationDelay = `-${(at || 0) / 1000}s`; });
+  }
 }
 
 // ---- left rail: the same tokens as the floor, at list density
