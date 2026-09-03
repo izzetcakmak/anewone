@@ -2249,6 +2249,11 @@ async function loadTokens() {
       addrs.push(await rpc(() => platform.allTokens(i)));
     }
     addrs.length = count;                 // a redeploy can only ever shorten it
+    // Paint as the data lands. Every read is serialised behind one queue, so
+    // waiting for all of them before the first card left a cold load looking dead
+    // for ten seconds even though the first token was ready after three calls.
+    const ready = [];
+    let painted = 0;
     for (const addr of addrs) {
       if (!tokenMeta[addr]) {
         const t = new ethers.Contract(addr, ERC20, readProvider);
@@ -2256,11 +2261,18 @@ async function loadTokens() {
         const symbol = await rpc(() => t.symbol());
         tokenMeta[addr] = { name, symbol };
       }
+      tokenInfo[addr] = normInfo(await rpc(() => platform.info(addr)));
+      ready.push(addr);
+      // first one immediately, then at most every 400ms — a full re-render walks
+      // the rail and the spotlight too, and thrashing that is its own slowness
+      const now = performance.now();
+      if (ready.length === 1 || now - painted > 400) {
+        painted = now;
+        shownAddrs = ready.slice();
+        paintGrid();    // the floor only; the rest is drawn once, below
+      }
     }
     saveImmutable(addrs);
-    for (const addr of addrs) {
-      tokenInfo[addr] = normInfo(await rpc(() => platform.info(addr)));
-    }
     // paint immediately, then let the indexer fill in holders/volume/age
     shownAddrs = addrs;
     $("empty").dataset.none = count === 0 ? "1" : "0";
@@ -2810,12 +2822,19 @@ function visibleAddrs() {
   return list;
 }
 
-function renderGrid() {
-  renderCreatorPanel();
-  renderLiveRail();
+// Just the floor. During a cold load this runs once per token as data arrives, and
+// dragging the rail, the spotlight and the creator panel through each of those
+// passes cost more than the reads it was interleaved with.
+function paintGrid() {
   const list = visibleAddrs();
   $("grid").innerHTML = list.map(cardHtml).join("");
   fillImages(list);
+  return list;
+}
+function renderGrid() {
+  renderCreatorPanel();
+  renderLiveRail();
+  const list = paintGrid();
   $("empty").style.display = shownAddrs.length && !list.length ? "block" : ($("empty").dataset.none === "1" ? "block" : "none");
   if (shownAddrs.length && !list.length) {
     $("empty").textContent = sortMode === "grad" && !searchQ.trim()
