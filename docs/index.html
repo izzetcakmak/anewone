@@ -2209,6 +2209,27 @@ $("pfSweep").onclick = async () => {
   refreshFees();
 };
 
+// Keyed by platform + chain, so a redeploy or a network switch starts clean rather
+// than showing tokens from a contract that is no longer the one being read.
+const IMMUTABLE_KEY = `anewone_static_${CFG.chainId}_${String(CFG.platform).toLowerCase()}`;
+function loadImmutable() {
+  try {
+    const c = JSON.parse(localStorage.getItem(IMMUTABLE_KEY) || "null");
+    if (!c || !Array.isArray(c.addrs)) return [];
+    for (const [a, m] of Object.entries(c.meta || {})) {
+      if (m && typeof m.name === "string" && typeof m.symbol === "string") tokenMeta[a] = m;
+    }
+    return c.addrs.filter((a) => typeof a === "string" && /^0x[0-9a-fA-F]{40}$/.test(a));
+  } catch { return []; }
+}
+function saveImmutable(addrs) {
+  try {
+    const meta = {};
+    for (const a of addrs) if (tokenMeta[a]) meta[a] = tokenMeta[a];
+    localStorage.setItem(IMMUTABLE_KEY, JSON.stringify({ addrs, meta }));
+  } catch {} // quota or private mode — the cache is an optimisation, not a dependency
+}
+
 async function loadTokens() {
   if (loading) return;
   loading = true;
@@ -2220,10 +2241,14 @@ async function loadTokens() {
     const count = Number(await rpc(() => platform.tokensCount()));
     $("statCount").textContent = String(count);
     $("empty").style.display = count === 0 ? "block" : "none";
-    const addrs = [];
-    for (let i = 0; i < count; i++) {
+    // allTokens is append-only and an ERC20's name/symbol never change, yet every
+    // load re-read all of it: four serialised calls per token, 140ms apart. Only
+    // the curve state actually needs refetching, so the rest is read once and kept.
+    const addrs = loadImmutable();
+    for (let i = addrs.length; i < count; i++) {
       addrs.push(await rpc(() => platform.allTokens(i)));
     }
+    addrs.length = count;                 // a redeploy can only ever shorten it
     for (const addr of addrs) {
       if (!tokenMeta[addr]) {
         const t = new ethers.Contract(addr, ERC20, readProvider);
@@ -2232,6 +2257,7 @@ async function loadTokens() {
         tokenMeta[addr] = { name, symbol };
       }
     }
+    saveImmutable(addrs);
     for (const addr of addrs) {
       tokenInfo[addr] = normInfo(await rpc(() => platform.info(addr)));
     }
