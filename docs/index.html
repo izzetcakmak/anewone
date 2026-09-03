@@ -1432,6 +1432,10 @@ const RPC_SPACING = 140;
 // "img" is its own lane for the same reason: a card's artwork is one single-block
 // lookup, and it should not wait behind the whole history scan to appear.
 const lanes = { call: Promise.resolve(), img: Promise.resolve(), logs: Promise.resolve() };
+// The history scan is background work nobody is waiting on, and it is the one thing
+// the public RPC rate-limits hard. Pacing it wider costs it nothing and keeps the
+// 429s (and their exponential backoffs) away from the lanes that draw the page.
+const LANE_SPACING = { call: 70, img: RPC_SPACING, logs: 320 };
 let rpcDegraded = false;
 // ethers wraps the provider's payload, so the useful text ("request limit reached") can be
 // buried in .message/.info while .shortMessage only says "missing response for request".
@@ -1463,7 +1467,7 @@ function rpc(fn, tries = 4, lane = "call") {
     }
   };
   const p = lanes[lane].then(run);
-  lanes[lane] = p.catch(() => {}).then(() => sleep(RPC_SPACING));
+  lanes[lane] = p.catch(() => {}).then(() => sleep(LANE_SPACING[lane] || RPC_SPACING));
   return p;
 }
 function setStatus(msg) {
