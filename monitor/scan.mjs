@@ -321,16 +321,29 @@ function publishConfig() {
  * depends on GitHub being reachable — the account restriction of 29 Aug took
  * Pages down for days while snapshots kept generating fine.
  */
-function deployToVercel() {
-  const r = spawnSync(VERCEL, ["deploy", "--prod", "--yes"], {
-    cwd: path.join(ROOT, "docs"),
-    encoding: "utf8",
-    shell: true,
-    timeout: 300_000,
-  });
-  return { ok: r.status === 0, err: ((r.stderr || "") + (r.stdout || "")).slice(-300) };
-}
+// vercel.cmd is a cmd.exe wrapper that re-launches node off PATH. Under the
+// scheduled task that indirection has failed every time since 1 Sep with "the
+// system cannot find the path specified", while the CLI itself runs fine in that
+// same environment (verified: whoami and --version both succeed through wscript,
+// console-less, same cwd, same shell:true). The wrapper is the only layer that
+// misbehaves, so try the CLI entry point directly with the node binary already
+// running this file, and keep the wrapper as a fallback.
+const VC_JS = path.join(path.dirname(VERCEL), "node_modules", "vercel", "dist", "vc.js");
 
+function deployToVercel() {
+  const cwd = path.join(ROOT, "docs");
+  const attempts = [];
+  if (existsSync(VC_JS)) attempts.push([process.execPath, [VC_JS, "deploy", "--prod", "--yes"], false]);
+  attempts.push([VERCEL, ["deploy", "--prod", "--yes"], true]);
+  let err = "no attempt ran";
+  for (const [cmd, args, shell] of attempts) {
+    const r = spawnSync(cmd, args, { cwd, encoding: "utf8", shell, timeout: 300_000 });
+    if (r.status === 0) return { ok: true, err: "" };
+    err = (((r.stderr || "") + (r.stdout || "")).trim() || (r.error ? r.error.code : "status " + r.status)).slice(-300);
+    log(`vercel deploy attempt via ${shell ? "vercel.cmd" : "node vc.js"} failed: ${err}`);
+  }
+  return { ok: false, err };
+}
 async function snapshotAndPublish(state, env, { final = false, toBlock = null } = {}) {
   state.lastSnapshotAt = Date.now();
   try {
@@ -589,6 +602,11 @@ async function main() {
     saveState(state);
 
     const wrote = updateFrontendConfig(found.url, found.chainId, dep.platform, dep.noah);
+    // A git push does NOT deploy: this Vercel project has no git integration and
+    // every deployment is CLI-driven. Shipping the new config.js is its own step,
+    // not a side effect of the final snapshot that may or may not run afterwards.
+    const shipped = wrote ? deployToVercel() : { ok: false, err: "config.js was not rewritten" };
+    if (wrote && !shipped.ok) log(`MAINNET VERCEL DEPLOY FAILED: ${shipped.err}`);
     const published = wrote && publishConfig();
     const devLine = devBuy > 0n
       ? `Dev buy: ${(Number(devBuy) / 1e18).toFixed(2)} USDC` +
@@ -598,10 +616,13 @@ async function main() {
       `🎉 ANEWONE.XYZ IS LIVE ON ARC MAINNET!\nPlatform: ${dep.platform}\n$NOAH: ${dep.noah}\n` + devLine +
       `RPC: ${found.url} (chainId ${found.chainId})\n` +
       (!wrote
-        ? "⚠️ docs/config.js could NOT be rewritten — anewone.xyz is STILL ON TESTNET. Set the mainnet block by hand, then push."
+        ? "⚠️ docs/config.js could NOT be rewritten — anewone.xyz is STILL ON TESTNET. Set the mainnet block by hand, then deploy."
+        : !shipped.ok
+        ? `🚨 config.js is correct but the VERCEL DEPLOY FAILED — anewone.xyz is STILL ON TESTNET.\n` +
+          `Fix by hand: cd "${path.join(ROOT, "docs")}" && vercel deploy --prod\n${shipped.err}`
         : published
-        ? "docs/config.js pushed — anewone.xyz switches to mainnet as soon as Pages rebuilds (~1 min)."
-        : "docs/config.js updated locally but git push FAILED — push manually to flip anewone.xyz to mainnet."));
+        ? "anewone.xyz is now serving the mainnet config."
+        : "anewone.xyz is now serving the mainnet config, but the git push FAILED — only the public repo record is behind."));
     log(`DEPLOYED platform=${dep.platform} noah=${dep.noah}`);
   } finally {
     clearInterval(lockTimer);
