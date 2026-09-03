@@ -290,8 +290,19 @@
   .cmc small { font-size: 10.5px; color: var(--faint); font-weight: 500; margin-left: 3px; }
   .cab .bar { height: 3px; margin-top: 8px; background: var(--border); border-radius: 2px; }
   .cab .bar i { background: var(--accent); }
-  .cfoot { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--faint);
-    margin-top: 7px; font-family: var(--mono); }
+  .cfoot { display: flex; justify-content: space-between; align-items: center; gap: 6px;
+    font-size: 10.5px; color: var(--faint); margin-top: 7px; font-family: var(--mono); }
+  /* the contract address is what people paste into a wallet, so it gets a real
+     copy affordance instead of being a label you have to select by hand */
+  .cfoot .ca { display: inline-flex; align-items: center; gap: 5px; min-width: 0;
+    background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+  .cfoot .ca em { font-style: normal; opacity: .65; letter-spacing: .04em; }
+  .cfoot .ca svg { width: 11px; height: 11px; flex: none; opacity: .7; }
+  .cfoot .ca:hover { color: var(--text); }
+  .cfoot .ca:hover svg { opacity: 1; }
+  .cfoot .ca.done { color: var(--green); }
+  .cfoot .ca.done svg { opacity: 1; }
+  .cfoot .age { flex: none; }
 
   /* toolbar: one compact row, no duplicated chrome */
   .toolbar { gap: 8px; margin: 0 0 14px; }
@@ -2297,8 +2308,52 @@ function cardHtml(addr) {
     <div class="ctick">$${esc(symbol)}</div>
     <div class="cmc">${compactUsd(marketCapWei(inf))} <small>MC</small>${chip24Html(addr)}</div>
     <div class="bar"><i style="width:${Math.min(Math.max(pct, 1.5), 100)}%"></i></div>
-    <div class="cfoot"><span>${esc(short)}</span><span>${esc(age)}</span></div>
+    <div class="cfoot">
+      <button type="button" class="ca" onclick="copyCa('${a}', event)"
+        title="Copy contract address&#10;${a}">
+        <em>CA</em> ${esc(short)}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="9" y="9" width="12" height="12" rx="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+      </button>
+      <span class="age">${esc(age)}</span>
+    </div>
   </div>`;
+}
+
+// The full address, not the shortened label on screen — this is what gets pasted
+// into a wallet. stopPropagation keeps the click off the card's openTrade handler.
+async function copyCa(addr, ev) {
+  if (ev) ev.stopPropagation();
+  const btn = ev && ev.currentTarget;
+  if (!(await copyText(addr))) return toast(addr); // last resort: show it to select
+  toast("Contract address copied");
+  if (btn) {
+    btn.classList.add("done");
+    setTimeout(() => btn.classList.remove("done"), 1200);
+  }
+}
+
+// The async Clipboard API needs a focused document and a secure context; execCommand
+// still works where it doesn't, so try both before admitting failure.
+async function copyText(s) {
+  try {
+    await navigator.clipboard.writeText(s);
+    return true;
+  } catch {}
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;pointer-events:none";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch { return false; }
 }
 
 // ---- token metadata.
