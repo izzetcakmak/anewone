@@ -29,7 +29,7 @@ window.ANEWONE_CONFIG = {
       },
       "https://rpc.testnet.arc.network",
     ],
-    explorer: "https://explorer.testnet.arc.network",
+    explorer: "https://testnet.arcscan.app",
     platform: "0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf",
     noah: "0x0D1ac2a7FCdd8bF74EEC839DF4ED909071296a49",
   },
