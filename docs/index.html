@@ -1556,6 +1556,74 @@ function loadStatsCache() {
   } catch {}
   return { lo: null, hi: null, agg: {}, net: {}, recent: [], series: {}, comments: {} };
 }
+// ---- prebuilt floor: the same index this page used to build for itself, computed
+// once by monitor/floor.mjs and served as one static file. A cold visit was ~80
+// chain calls (and every visitor repeated the identical scan, so the ceiling was
+// our RPC quota rather than the chain); this makes it one CDN fetch. Everything
+// after it is unchanged: loadTokens() still re-reads the live curve, liveTail()
+// still tails new logs from wherever the file stops.
+//
+// The generator writes plain lowercase addresses; this page keys everything on
+// EIP-55 checksummed ones, so every address crossing the boundary is normalised.
+async function hydrateFromFloor() {
+  let d;
+  try {
+    const r = await fetch("data/floor.json", { cache: "no-cache" });
+    if (!r.ok) return false;
+    d = await r.json();
+  } catch { return false; }
+  if (!d || d.schema !== STATS_SCHEMA) return false;
+  if (String(d.platform || "").toLowerCase() !== String(CFG.platform).toLowerCase()) return false;
+
+  const cs = (a) => { try { return ethers.getAddress(a); } catch { return null; } };
+  const rekey = (obj, fn) => Object.fromEntries(Object.entries(obj || {})
+    .map(([k, v]) => { const k2 = cs(k); return k2 ? [k2, fn(v)] : null; }).filter(Boolean));
+
+  const addrs = [];
+  for (const t of d.tokens || []) {
+    const a = cs(t.addr);
+    if (!a) continue;
+    tokenMeta[a] = { name: t.name, symbol: t.symbol };
+    tokenInfo[a] = normInfo({ ...t, creator: cs(t.creator) || t.creator });
+    addrs.push(a);
+  }
+  if (!addrs.length) return false;
+
+  if (gradTarget === null && d.gradTarget) {
+    gradTarget = BigInt(d.gradTarget);
+    $("statGrad").textContent = fmt(gradTarget, 0) + " USDC";
+  }
+  $("statCount").textContent = String(addrs.length);
+
+  // only adopt the shared index if it reaches further than what this browser
+  // already has cached — a returning visitor may be ahead of the published file
+  const idx = d.index;
+  const local = loadStatsCache();
+  if (idx && typeof idx.hi === "number" && (local.hi === null || idx.hi > local.hi)) {
+    statsIdx = {
+      lo: idx.lo, hi: idx.hi,
+      agg: rekey(idx.agg, (v) => ({ volAll: BigInt(v.volAll), trades: v.trades, lastBlock: v.lastBlock || 0 })),
+      net: rekey(idx.net, (m) => rekey(m, (x) => ({ t: BigInt(x.t), i: BigInt(x.i), o: BigInt(x.o), f: x.f }))),
+      recent: (idx.recent || []).map((r) => ({
+        b: r.b, tk: cs(r.tk), tr: cs(r.tr), u: BigInt(r.u), t: BigInt(r.t || 0), buy: !!r.buy,
+      })).filter((r) => r.tk && r.tr),
+      series: rekey(idx.series, (arr) => arr.map((s) => ({ b: s.b, p: BigInt(s.p) }))),
+      comments: rekey(idx.comments, (arr) => arr.map((c) => ({ ...c, a: cs(c.a) || c.a }))),
+    };
+    indexFloor = idx.lo;
+    latestBlock = Math.max(latestBlock || 0, d.tip || 0);
+    rebuildStats();
+  }
+
+  shownAddrs = addrs;
+  $("empty").dataset.none = "0";
+  renderGrid();
+  // the list and the ERC20 names came with the file, so the live pass that
+  // follows only has to re-read each curve — not rediscover the whole floor
+  saveImmutable(addrs);
+  return true;
+}
+
 function saveStatsCache(s) {
   try {
     localStorage.setItem(STATS_KEY, JSON.stringify({
@@ -3594,7 +3662,13 @@ $("grid").innerHTML = Array.from({ length: 6 }, () => `
     <div class="sk" style="height:8px;width:100%;border-radius:999px"></div>
   </div>`).join("");
 
-loadTokens();
+// Draw from the prebuilt floor first — it is one static fetch and paints in well
+// under a second — then let the live pass correct prices behind it. If the file
+// is missing or stale-schema, hydrate returns false and this is exactly the old
+// boot path, so the page never depends on it.
+hydrateFromFloor()
+  .catch(() => false)
+  .then(() => loadTokens());
 setInterval(loadTokens, 60_000);
 
 // standings change once every few hours, so this is deliberately infrequent
