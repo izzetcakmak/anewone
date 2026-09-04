@@ -2516,8 +2516,21 @@ async function imageFromEvent(addr) {
   return out || null;
 }
 
-async function resolveImg(addr) {
-  if (tokenImg[addr] !== undefined) return tokenImg[addr];
+// The result is cached in tokenImg, but only once the lookup RESOLVES — and the
+// grid repaints several times while the floor fills in, so the same token was
+// being looked up again on every repaint before the first answer came back:
+// 51 chain calls for 11 tokens. Concurrent callers now share one request.
+const imgInflight = new Map();
+function resolveImg(addr) {
+  if (tokenImg[addr] !== undefined) return Promise.resolve(tokenImg[addr]);
+  let p = imgInflight.get(addr);
+  if (!p) {
+    p = resolveImgOnce(addr).finally(() => imgInflight.delete(addr));
+    imgInflight.set(addr, p);
+  }
+  return p;
+}
+async function resolveImgOnce(addr) {
   const m = metaOf(addr);
   let out = null;
   const img = String(m.i || "");
