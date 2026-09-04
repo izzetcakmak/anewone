@@ -15,13 +15,18 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { bridgeStep } from "./bridge.mjs";
-import { runSnapshot } from "./snapshot.mjs";
+import { runSnapshot, CURRENT_PLATFORM } from "./snapshot.mjs";
+import { runFloor } from "./floor.mjs";
 
 const TESTNET_RPC = "https://rpc.testnet.arc.network";
 // Leaderboard refresh cadence. Daily was too slow once the campaign was being
 // promoted ("every trade moves you up the board" has to be visibly true), and a
 // run that is still catching up re-runs on the next tick regardless.
 const SNAPSHOT_REFRESH_MS = 6 * 60 * 60 * 1000;
+/** The floor index is cheap to rebuild but each publish is a deployment. */
+const FLOOR_REFRESH_MS = 30 * 60 * 1000;
+/** Off until the owner has signed off on the prebuilt floor going live. */
+const FLOOR_AUTOPUBLISH = false;
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const MON = path.join(ROOT, "monitor");
@@ -368,6 +373,26 @@ function deployToVercel() {
   }
   return { ok: false, err };
 }
+/**
+ * Rebuilds docs/data/floor.json — the prebuilt index the front page hydrates from,
+ * so a visitor makes one static fetch instead of ~80 chain calls.
+ *
+ * Half an hour of staleness costs the browser one extra getLogs to catch up, so
+ * the cadence is set by what a deployment costs rather than by freshness. Nothing
+ * is published when no trade landed: quiet hours should not burn deployments.
+ */
+async function refreshFloor(state) {
+  state.lastFloorAt = Date.now();
+  try {
+    const r = await runFloor({ platform: CURRENT_PLATFORM, log });
+    if (!r.changed) { log("floor: nothing new, skipping deploy"); return; }
+    const dep = deployToVercel();
+    log(dep.ok ? `floor: deployed @ block ${r.tip}` : `floor deploy failed: ${dep.err}`);
+  } catch (e) {
+    log(`floor refresh failed: ${(e && e.message) || e}`);
+  }
+}
+
 async function snapshotAndPublish(state, env, { final = false, toBlock = null } = {}) {
   state.lastSnapshotAt = Date.now();
   try {
@@ -500,6 +525,8 @@ async function main() {
       const snapshotDue = state.snapshotFinalDone !== true && // never overwrite a published FINAL
         (state.snapshotCatchingUp === true ||
           Date.now() - (state.lastSnapshotAt ?? 0) > SNAPSHOT_REFRESH_MS);
+      const floorDue = FLOOR_AUTOPUBLISH && !snapshotDue &&
+        Date.now() - (state.lastFloorAt ?? 0) > FLOOR_REFRESH_MS;
       // parallel sweeps every ~12s for the rest of this 1-min invocation window,
       // so effective detection latency is seconds, not a full scheduler tick
       const candidates = [...new Set([...STATIC_CANDIDATES, ...(await registryCandidates())])];
@@ -515,6 +542,13 @@ async function main() {
           state.lastScan = new Date().toISOString();
           saveState(state);
           log(`scan: no Arc mainnet RPC yet (leaderboard refreshed)`);
+          return;
+        }
+        if (floorDue) {
+          await refreshFloor(state);
+          state.phase = "scanning";
+          state.lastScan = new Date().toISOString();
+          saveState(state);
           return;
         }
         const remaining = deadline - Date.now();
