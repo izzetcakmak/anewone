@@ -330,18 +330,41 @@ function publishConfig() {
 // running this file, and keep the wrapper as a fallback.
 const VC_JS = path.join(path.dirname(VERCEL), "node_modules", "vercel", "dist", "vc.js");
 
+// Candidate entry points, most direct first. The .cmd wrapper is last because it
+// re-launches node off PATH, and the scheduled task's PATH does not necessarily
+// contain node — which is exactly what "the system cannot find the path specified"
+// meant on the runs that failed silently for 15 hours.
+const VC_CANDIDATES = [
+  VC_JS,
+  path.join(process.env.APPDATA || "", "npm", "node_modules", "vercel", "dist", "vc.js"),
+  path.join(path.dirname(process.execPath), "node_modules", "vercel", "dist", "vc.js"),
+];
+
 function deployToVercel() {
   const cwd = path.join(ROOT, "docs");
+  // never depend on the caller's PATH: give the child the node we are already running
+  const env = { ...process.env, PATH: `${path.dirname(process.execPath)};${process.env.PATH || ""}` };
   const attempts = [];
-  if (existsSync(VC_JS)) attempts.push([process.execPath, [VC_JS, "deploy", "--prod", "--yes"], false]);
-  else log(`vercel deploy: ${VC_JS} not visible from this process — falling back to the cmd wrapper`);
-  attempts.push([VERCEL, ["deploy", "--prod", "--yes"], true]);
+  const seen = new Set();
+  for (const p of VC_CANDIDATES) {
+    if (!p || seen.has(p)) continue;
+    seen.add(p);
+    if (existsSync(p)) attempts.push([`node ${path.basename(path.dirname(path.dirname(p)))}/vc.js`,
+                                      process.execPath, [p, "deploy", "--prod", "--yes"], false]);
+  }
+  attempts.push(["vercel.cmd", VERCEL, ["deploy", "--prod", "--yes"], true]);
+  if (attempts.length === 1) {
+    // leave a trail that says which paths were checked, so the next failure
+    // does not need another afternoon of guessing
+    log(`vercel deploy: no vc.js found; checked ${VC_CANDIDATES.filter(Boolean).join(" | ")}`);
+  }
   let err = "no attempt ran";
-  for (const [cmd, args, shell] of attempts) {
-    const r = spawnSync(cmd, args, { cwd, encoding: "utf8", shell, timeout: 300_000 });
+  if (!existsSync(cwd)) return { ok: false, err: `deploy cwd missing: ${cwd}` };
+  for (const [label, cmd, args, shell] of attempts) {
+    const r = spawnSync(cmd, args, { cwd, env, encoding: "utf8", shell, timeout: 300_000 });
     if (r.status === 0) return { ok: true, err: "" };
     err = (((r.stderr || "") + (r.stdout || "")).trim() || (r.error ? r.error.code : "status " + r.status)).slice(-300);
-    log(`vercel deploy attempt via ${shell ? "vercel.cmd" : "node vc.js"} failed: ${err}`);
+    log(`vercel deploy attempt via ${label} failed: ${err}`);
   }
   return { ok: false, err };
 }
