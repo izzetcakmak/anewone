@@ -38,6 +38,8 @@ const PLATFORMS = [
   { addr: "0x30c941ed26088DED6c5D4F1571a49f74478DCc84", deployBlock: 52_625_041 }, // v5
   { addr: "0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf", deployBlock: 54_249_114 }, // v6 (current)
 ];
+/** The deployment the front page reads; retired ones only matter to the campaign. */
+export const CURRENT_PLATFORM = PLATFORMS[PLATFORMS.length - 1].addr;
 // keccak of the event signatures (see src/ANewOne.sol)
 const TOPIC_TOKEN_CREATED = "0xfe210c99153843bc67efa2e9a61ec1d63c505e379b9dcf05a9520e84e36e6063"; // TokenCreated(address,address,string,string,string)
 const TOPIC_TRADE = "0xf7dd8a134438de4c59401760e24ef5c6cc9c74583b2b022085697f3021e59768"; // Trade(address,address,bool,uint256,uint256,uint256)
@@ -66,7 +68,7 @@ function teamWallets() {
   return set;
 }
 
-const atomicWrite = (file, data) => {
+export const atomicWrite = (file, data) => {
   writeFileSync(file + ".tmp", data);
   renameSync(file + ".tmp", file);
 };
@@ -80,7 +82,7 @@ const lastCallAt = new Map(); // endpoint -> ms of its previous call
  * so the pool sustains ~4x the throughput of a single one; a retry lands on the
  * next endpoint, which doubles as failover when one provider is down.
  */
-async function rpc(method, params, { retries = 5 } = {}) {
+export async function rpc(method, params, { retries = 5 } = {}) {
   for (let i = 0; ; i++) {
     const url = RPCS[rrCursor++ % RPCS.length];
     const wait = RPC_GAP_MS - (Date.now() - (lastCallAt.get(url) ?? 0));
@@ -115,7 +117,7 @@ async function rpc(method, params, { retries = 5 } = {}) {
  */
 const MAX_RANGE = 9_999n; // Arc public RPC: "eth_getLogs is limited to a 10,000 range"
 
-async function fetchLogs(platformAddr, fromBlock, toBlock, topic, log) {
+export async function fetchLogs(platformAddr, fromBlock, toBlock, topic, log) {
   const out = [];
   // pre-chunk at the known range cap — no doomed oversized calls; the bisect
   // below only kicks in for result-size errors within a window
