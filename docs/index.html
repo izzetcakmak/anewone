@@ -2966,6 +2966,24 @@ $("fClear").onclick = () => {
 };
 
 let lastFeedKey = "";
+// Windows with "animation effects" switched off — a common way to make a PC feel
+// snappier — makes Chrome report prefers-reduced-motion, which silenced the ticker
+// entirely and left most of the trades hidden past the right edge. Respect the
+// preference (no sliding), but keep the content cycling: the row is rebuilt in
+// place every few seconds, which is a swap rather than motion.
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+let tkParts = [], tkRotate = null, tkAt = 0;
+function paintFeedStatic() {
+  const feed = $("feed");
+  if (!feed) return;
+  const shift = tkParts.length ? tkAt % tkParts.length : 0;
+  feed.innerHTML = `<div class="tk-run">${tkParts.slice(shift).concat(tkParts.slice(0, shift)).join("")}</div>`;
+  if (!tkRotate) tkRotate = setInterval(() => { tkAt++; paintFeedStatic(); }, 4000);
+}
+function stopFeedRotation() { if (tkRotate) { clearInterval(tkRotate); tkRotate = null; } }
+// the setting can be toggled while the page is open
+reduceMotion.addEventListener?.("change", () => { stopFeedRotation(); lastFeedKey = ""; renderFeed(); });
+
 function renderFeed() {
   const bar = $("tickerBar");
   if (!bar) return;
@@ -2984,7 +3002,7 @@ function renderFeed() {
   const prev = $("feed").querySelector(".tk-run");
   const at = prev && prev.getAnimations ? (prev.getAnimations()[0]?.currentTime || 0) : 0;
   // newest first
-  const items = list.slice(-24).reverse().map((r) => {
+  tkParts = list.slice(-24).reverse().map((r) => {
     const sym = (tokenMeta[r.tk] || {}).symbol || r.tk.slice(0, 6);
     const when = ageText(latestBlock ? latestBlock - r.b : null);
     return `<span class="tk-item" onclick="openTrade('${esc(r.tk)}')" style="cursor:pointer">
@@ -2992,7 +3010,10 @@ function renderFeed() {
       <b>$${esc(sym)}</b> ${esc(compactUsd(r.u))}
       <span style="opacity:.6">${esc(when)}</span>
     </span>`;
-  }).join("");
+  });
+  if (reduceMotion.matches) { show(true); return paintFeedStatic(); }
+  stopFeedRotation();
+  const items = tkParts.join("");
   // the copy is aria-hidden: it exists only to make the wrap seamless
   $("feed").innerHTML = `<div class="tk-run">${items}</div>` +
                         `<div class="tk-run" aria-hidden="true">${items}</div>`;
