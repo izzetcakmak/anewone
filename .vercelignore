@@ -1,0 +1,16 @@
+# Only docs/ is served (see outputDirectory in vercel.json). Everything else is
+# contracts, tooling and build output that the site never reads, so keep it out
+# of the upload rather than shipping a Foundry workspace to the edge.
+lib
+out
+cache
+broadcast
+build-video
+build-web3auth
+promo
+script
+src
+test
+monitor
+foundry.toml
+README.md

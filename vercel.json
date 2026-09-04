@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": "docs",
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.anewone.xyz" }],
+      "destination": "https://anewone.xyz/$1",
+      "permanent": false
+    }
+  ]
+}
