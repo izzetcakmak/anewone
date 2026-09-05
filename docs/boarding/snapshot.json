@@ -8,11 +8,11 @@
  "criteria": "Every launch (TokenCreated) and trade (Trade) on any ANEWONE platform deployment counts as 1 action. Wallets ranked by total actions; ties broken by earliest activity. Team wallets excluded from ranking. Top 33 wallets enter the raffle: 90,000 / 60,000 / 30,000 $NOAH.",
  "final": false,
  "catchingUp": false,
- "generatedAt": "2026-09-04T20:28:34.159Z",
+ "generatedAt": "2026-09-05T01:43:02.672Z",
  "fromBlock": 52625041,
- "toBlock": 60466655,
+ "toBlock": 60503305,
  "totalWallets": 44,
- "totalTxs": 647,
+ "totalTxs": 649,
  "wallets": [
   {
    "address": "0xfe2282be943ddb6500bad74f9d6e2d21af7e1249",
@@ -235,13 +235,23 @@
    "boarding": true
   },
   {
+   "address": "0xc955eed25a33406700828b68992a3768aa930012",
+   "launches": 0,
+   "trades": 5,
+   "total": 5,
+   "firstBlock": 52651244,
+   "team": false,
+   "rank": 21,
+   "boarding": true
+  },
+  {
    "address": "0x8566b8bf3701e135cf0e81aa5f063b4574676dfd",
    "launches": 1,
    "trades": 3,
    "total": 4,
    "firstBlock": 52884659,
    "team": false,
-   "rank": 21,
+   "rank": 22,
    "boarding": true
   },
   {
@@ -251,7 +261,7 @@
    "total": 4,
    "firstBlock": 55952400,
    "team": false,
-   "rank": 22,
+   "rank": 23,
    "boarding": true
   },
   {
@@ -261,7 +271,7 @@
    "total": 4,
    "firstBlock": 55963740,
    "team": false,
-   "rank": 23,
+   "rank": 24,
    "boarding": true
   },
   {
@@ -270,16 +280,6 @@
    "trades": 4,
    "total": 4,
    "firstBlock": 56362942,
-   "team": false,
-   "rank": 24,
-   "boarding": true
-  },
-  {
-   "address": "0xc955eed25a33406700828b68992a3768aa930012",
-   "launches": 0,
-   "trades": 3,
-   "total": 3,
-   "firstBlock": 52651244,
    "team": false,
    "rank": 25,
    "boarding": true
