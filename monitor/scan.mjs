@@ -381,16 +381,56 @@ function deployToVercel() {
  * the cadence is set by what a deployment costs rather than by freshness. Nothing
  * is published when no trade landed: quiet hours should not burn deployments.
  */
-async function refreshFloor(state) {
+async function refreshFloor(state, env) {
   state.lastFloorAt = Date.now();
   try {
     const r = await runFloor({ platform: CURRENT_PLATFORM, log });
-    if (!r.changed) { log("floor: nothing new, skipping deploy"); return; }
-    const dep = deployToVercel();
-    log(dep.ok ? `floor: deployed @ block ${r.tip}` : `floor deploy failed: ${dep.err}`);
+    if (!r.changed) { log("floor: nothing new, nothing to publish"); return; }
+    const ok = await publishViaGit(state, env, `chore: floor index @ block ${r.tip}`,
+                                   ["docs/data/floor.json"]);
+    if (ok) log(`floor: published @ block ${r.tip}`);
   } catch (e) {
     log(`floor refresh failed: ${(e && e.message) || e}`);
   }
+}
+
+/**
+ * Commits the given paths and pushes; Vercel deploys from the push.
+ *
+ * A push that fails silently leaves fresh data sitting in a local commit while
+ * the site keeps serving a stale one — that went unnoticed for days once, when
+ * the credential store handed back a different GitHub account. So a failure is
+ * alerted on, and re-alerted every ALERT_REPEAT_MS while it persists rather than
+ * only on the first one of a streak.
+ */
+const ALERT_REPEAT_MS = 6 * 60 * 60 * 1000;
+async function publishViaGit(state, env, message, paths) {
+  git(["add", ...paths]);
+  const commit = git(["commit", "-m", message]);
+  // "nothing to commit" is not a failure: the data simply did not move
+  if (commit.status !== 0 && !/nothing to commit/i.test((commit.stdout || "") + (commit.stderr || ""))) {
+    log(`publish: commit failed: ${((commit.stderr || "") + (commit.stdout || "")).slice(0, 200)}`);
+  }
+  git(["pull", "--rebase", "origin", "main"]);
+  const push = git(["push", "origin", "main"]);
+  if (push.status !== 0) {
+    const why = ((push.stderr || "") + (push.stdout || "")).slice(0, 300);
+    log(`publish: push failed: ${why}`);
+    state.pushFailures = (state.pushFailures ?? 0) + 1;
+    const due = Date.now() - (state.lastPushAlertAt ?? 0) > ALERT_REPEAT_MS;
+    if ((state.pushFailures === 1 || due) && env) {
+      state.lastPushAlertAt = Date.now();
+      await notify(env, `⚠️ ANEWONE: data is fresh locally but the PUSH FAILED, so the site is stale ` +
+        `(${state.pushFailures} in a row).\n\n${why}`);
+    }
+    return false;
+  }
+  if (state.pushFailures) {
+    if (env) await notify(env, `✅ ANEWONE: publishing recovered after ${state.pushFailures} failed push(es).`);
+    state.pushFailures = 0;
+    state.lastPushAlertAt = 0;
+  }
+  return true;
 }
 
 async function snapshotAndPublish(state, env, { final = false, toBlock = null } = {}) {
@@ -400,48 +440,13 @@ async function snapshotAndPublish(state, env, { final = false, toBlock = null } 
     // a partial run must come back next tick until the cache reaches the tip
     state.snapshotCatchingUp = snap.catchingUp === true;
 
-    // Live site first: the leaderboard people actually read is on Vercel, and
-    // it must update even when the git side is broken.
-    const dep = deployToVercel();
-    if (dep.ok) {
-      log(`snapshot: deployed to Vercel @ block ${snap.toBlock}`);
-      if (state.deployFailures) {
-        if (env) await notify(env, `✅ ANEWONE: leaderboard deploys recovered after ${state.deployFailures} failure(s).`);
-        state.deployFailures = 0;
-      }
-    } else {
-      log(`snapshot deploy failed: ${dep.err}`);
-      state.deployFailures = (state.deployFailures ?? 0) + 1;
-      if (state.deployFailures === 1 && env) {
-        await notify(env, `⚠️ ANEWONE: snapshot generated but the Vercel DEPLOY FAILED — the live leaderboard is stale.\n\n${dep.err}`);
-      }
-    }
-
-    git(["add", "docs/boarding/snapshot.json"]);
-    git(["commit", "-m", `chore: boarding snapshot ${final ? "(FINAL) " : ""}@ block ${snap.toBlock}`]);
-    git(["pull", "--rebase", "origin", "main"]);
-    const push = git(["push", "origin", "main"]);
-    if (push.status !== 0) {
-      const why = (push.stderr || "").slice(0, 300);
-      log(`snapshot push failed: ${why}`);
-      // A push that fails silently leaves a fresh snapshot sitting in a local
-      // commit while the site keeps serving a stale one — that went unnoticed
-      // for weeks once (wrong GitHub account in the credential store). Alert
-      // on the first failure of a streak, not on every retry.
-      state.pushFailures = (state.pushFailures ?? 0) + 1;
-      // The live site is already updated by the Vercel deploy above, so a failed
-      // push only means the public git record is behind — worth one alert, not
-      // an emergency.
-      if (state.pushFailures === 1 && env) {
-        await notify(env, `⚠️ ANEWONE: snapshot is live on the site, but the git PUSH failed — the public repo record is behind.\n\n${why}`);
-      }
-      return dep.ok;
-    }
-    if (state.pushFailures) {
-      if (env) await notify(env, `✅ ANEWONE: git publishing recovered after ${state.pushFailures} failed push(es).`);
-      state.pushFailures = 0;
-    }
-    return true;
+    // The push IS the deploy: the Vercel project builds from this repo, so one
+    // mechanism publishes both the site and the public record. The CLI is no
+    // longer involved — it lives inside a virtualised AppData that the scheduled
+    // task cannot see at all, which is why deploys failed silently for days.
+    return publishViaGit(state, env,
+      `chore: boarding snapshot ${final ? "(FINAL) " : ""}@ block ${snap.toBlock}`,
+      ["docs/boarding/snapshot.json", "docs/data/floor.json"]);
   } catch (e) {
     log(`snapshot failed: ${e.message}`);
     return false;
@@ -545,7 +550,7 @@ async function main() {
           return;
         }
         if (floorDue) {
-          await refreshFloor(state);
+          await refreshFloor(state, env);
           state.phase = "scanning";
           state.lastScan = new Date().toISOString();
           saveState(state);
