@@ -206,6 +206,17 @@ export async function runFloor({ platform, log = console.log } = {}) {
   const tipHex = await rpc("eth_blockNumber", []);
   const tip = BigInt(tipHex);
 
+  // The page needs seconds-per-block to say "3h ago" and to know whether its
+  // window really covers 24h. It used to derive that from two getBlock calls of
+  // its own; measuring it here once means every visitor gets it for free.
+  const [bNow, bOld] = await Promise.all([
+    rpc("eth_getBlockByNumber", [tipHex, false]),
+    rpc("eth_getBlockByNumber", ["0x" + (tip - 5000n).toString(16), false]),
+  ]);
+  const blockTimeSec = bNow && bOld
+    ? (Number(BigInt(bNow.timestamp)) - Number(BigInt(bOld.timestamp))) / 5000
+    : 0;
+
   const count = Number(toBig(word(await ethCall(platform, SEL.tokensCount), 0)));
   const gradTarget = toBig(word(await ethCall(platform, SEL.gradTarget), 0)).toString();
   log(`floor: ${count} tokens @ block ${tip}`);
@@ -241,6 +252,7 @@ export async function runFloor({ platform, log = console.log } = {}) {
     generatedAt: new Date().toISOString(),
     platform,
     tip: Number(tip),
+    blockTimeSec,
     gradTarget,
     tokens,
     index,

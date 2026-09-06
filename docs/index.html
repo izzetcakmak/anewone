@@ -1598,6 +1598,9 @@ async function hydrateFromFloor() {
   }
   if (!addrs.length) return false;
 
+  // without this the page cannot date a trade or tell whether its window spans
+  // 24h, so ages and 24h volume both fall back to "…"
+  if (!blockTimeSec && d.blockTimeSec > 0) blockTimeSec = d.blockTimeSec;
   if (gradTarget === null && d.gradTarget) {
     gradTarget = BigInt(d.gradTarget);
     $("statGrad").textContent = fmt(gradTarget, 0) + " USDC";
@@ -1630,6 +1633,13 @@ async function hydrateFromFloor() {
   // the list and the ERC20 names came with the file, so the live pass that
   // follows only has to re-read each curve — not rediscover the whole floor
   saveImmutable(addrs);
+  hydrated = true;
+  dirtyTokens.clear();
+  // Nothing needs re-reading yet: a curve that has not traded still holds the
+  // value in this file, and one that HAS traded is about to be flagged by
+  // liveTail replaying the gap — off the public endpoint, for free. So start
+  // the count poll's clock here instead of spending a full pass on arrival.
+  lastCountPoll = Date.now();
   return true;
 }
 
@@ -1675,6 +1685,11 @@ function ingestLogs(logs) {
     catch { continue; }
     const trader = topicAddr(lg.topics[2]);
     const isBuy = BigInt(lg.topics[3]) === 1n;
+    // A curve only moves when someone trades against it, so the Trade log is an
+    // exact signal for "this token's info() is stale". Everything else can be
+    // left alone, which is what keeps a room full of viewers off the RPC.
+    dirtyTokens.add(token);
+    if (tokenInfo[token]) tokenInfo[token].pxWad = priceWad;
     const a = statsIdx.agg[token] || (statsIdx.agg[token] = { volAll: 0n, trades: 0, lastBlock: 0 });
     a.volAll += curveSide(usdc, isBuy); a.trades++;
     if (lg.blockNumber > (a.lastBlock || 0)) a.lastBlock = lg.blockNumber;
@@ -1836,7 +1851,11 @@ function localQuoteSell(inf, amount) {
   if (gross > inf.raised) gross = inf.raised;
   return gross - (gross * FEE_BPS) / BPS;
 }
-const priceOf = (inf) => (inf.vUsdc * WAD) / inf.tReserve;
+// A Trade log carries the resulting price, and liveTail already fetches those
+// logs off the free endpoint. Preferring that value means a trade updates every
+// open tab for nothing, instead of each tab re-reading info() — which, with a
+// crowd watching, is the one cost that grows with the size of the crowd.
+const priceOf = (inf) => (inf.pxWad !== undefined ? inf.pxWad : (inf.vUsdc * WAD) / inf.tReserve);
 // priceOf is USDC-wei per whole token, so × total supply gives the cap in USDC-wei
 const marketCapWei = (inf) => priceOf(inf) * TOTAL_SUPPLY_TOKENS;
 const progBps = (inf) => inf.graduated ? 10_000n : (inf.raised * BPS) / gradTarget;
@@ -2330,6 +2349,15 @@ function saveImmutable(addrs) {
   } catch {} // quota or private mode — the cache is an optimisation, not a dependency
 }
 
+// Tokens whose curve moved since the last refresh (filled by ingestLogs).
+const dirtyTokens = new Set();
+// Discovering a brand-new launch needs tokensCount(), which nothing else can
+// tell us — but a launch is rare, so asking every minute is waste. Trades are
+// already noticed within 15s by liveTail, so this only sets how long a new
+// token takes to appear on the floor.
+const COUNT_POLL_MS = 5 * 60 * 1000;
+let lastCountPoll = 0, hydrated = false;
+
 async function loadTokens() {
   if (loading) return;
   loading = true;
@@ -2338,6 +2366,15 @@ async function loadTokens() {
       gradTarget = BigInt(await rpc(() => platform.gradTarget()));
       $("statGrad").textContent = fmt(gradTarget, 0) + " USDC";
     }
+    // Prices already moved with the Trade logs, so an ordinary cycle has nothing
+    // to ask the chain. Only the count poll does real work, and even then only
+    // for tokens that are new or that actually traded.
+    const countDue = !hydrated || Date.now() - lastCountPoll > COUNT_POLL_MS;
+    if (!countDue) {
+      if ([...dirtyTokens].some((a) => !tokenInfo[a])) lastCountPoll = 0;  // a launch: discover now
+      return;
+    }
+    lastCountPoll = Date.now();
     const count = Number(await rpc(() => platform.tokensCount()));
     $("statCount").textContent = String(count);
     $("empty").style.display = count === 0 ? "block" : "none";
@@ -2361,7 +2398,12 @@ async function loadTokens() {
         const symbol = await rpc(() => t.symbol());
         tokenMeta[addr] = { name, symbol };
       }
-      tokenInfo[addr] = normInfo(await rpc(() => platform.info(addr)));
+      // an already-known curve is re-read only when it traded; the rest are
+      // exactly as the last read left them
+      if (!tokenInfo[addr] || dirtyTokens.has(addr)) {
+        tokenInfo[addr] = normInfo(await rpc(() => platform.info(addr)));
+        dirtyTokens.delete(addr);
+      }
       ready.push(addr);
       // first one immediately, then at most every 400ms — a full re-render walks
       // the rail and the spotlight too, and thrashing that is its own slowness
@@ -2373,6 +2415,7 @@ async function loadTokens() {
       }
     }
     saveImmutable(addrs);
+    dirtyTokens.clear();
     // paint immediately, then let the indexer fill in holders/volume/age
     shownAddrs = addrs;
     $("empty").dataset.none = count === 0 ? "1" : "0";
@@ -3712,6 +3755,12 @@ async function liveTail() {
       saveStatsCache(statsIdx);
       renderFeed();
       renderSpotlight();
+      paintGrid();   // prices moved; the cards say so without asking the chain
+      // A trade against a token we have never seen is a launch that happened after
+      // the prebuilt floor was published. Until it is discovered its trades are
+      // filtered out of the ticker, so go and find it now rather than at the next
+      // poll — this is the one case where waiting is visible to everyone.
+      if ([...dirtyTokens].some((a) => !tokenInfo[a])) { lastCountPoll = 0; loadTokens(); }
     }
   } catch {} // transient RPC noise — the next tick retries from the same watermark
   finally { indexing = false; }
