@@ -1,8 +1,3 @@
-    // An image is what makes a card readable on the floor, and launching without
-    // one is how the same name got minted four times in a row. The contract
-    // cannot enforce this — anyone may call createToken() directly — so this is
-    // a rule of the front end, not a guarantee.
-    if (!cImageDataUri) return toast("Add an image — every coin needs one");
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -541,6 +536,8 @@
   .upl-prev img { width: 64px; height: 64px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border-2); }
   .upl-prev .x { border-color: rgba(var(--red-rgb),.4); color: var(--red); padding: 8px 12px; }
   .criteria { font-size: 12px; color: var(--faint); margin-top: 6px; }
+  /* a name or ticker that already exists on the floor, flagged while typing */
+  .dupe { font-size: 12.5px; color: var(--red); margin-top: 6px; font-weight: 500; }
   .cab .mcap { font-family: var(--mono); font-weight: 700; font-size: 17px; color: var(--green); margin-top: 2px; }
   .cstats { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: 12.5px; color: var(--dim); }
   .cstats b { color: var(--text); font-family: var(--mono); font-weight: 500; }
@@ -1148,6 +1145,7 @@
     <h2>Launch a token</h2>
     <label>Name</label><input id="cName" placeholder="Noah's Arc" maxlength="48">
     <label>Symbol</label><input id="cSymbol" placeholder="NOAH" maxlength="12">
+    <div class="dupe" id="cDupe" style="display:none"></div>
     <label>Image <span style="color:var(--red)">*</span></label>
     <div class="criteria">.jpg / .jpeg / .png &nbsp;·&nbsp; max 5 MB &nbsp;·&nbsp; min 100×100 px &nbsp;·&nbsp; square is best</div>
     <div class="row" style="margin-top:8px">
@@ -3332,11 +3330,41 @@ function buildMetadataQuiet() {
 ["cDesc", "cX", "cTg", "cWeb"].forEach((id) => { $(id).oninput = updateMetaSize; });
 
 // ------- create
+// One wallet minted the same coin four times in a row, three of them never
+// traded, and nothing on the floor could tell them apart. The chain will not
+// stop that — createToken() is permissionless and a launched token can never be
+// removed — so the launch form refuses the obvious repeat instead.
+const norm = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+function findDuplicate(name, symbol) {
+  const n = norm(name), s = norm(symbol);
+  for (const [addr, m] of Object.entries(tokenMeta)) {
+    if (!m) continue;
+    if (norm(m.symbol) === s || norm(m.name) === n) return { addr, name: m.name, symbol: m.symbol };
+  }
+  return null;
+}
+// tell them before they pay gas, not after
+function checkDuplicateHint() {
+  const el = $("cDupe");
+  if (!el) return;
+  const clash = findDuplicate($("cName").value, $("cSymbol").value);
+  el.textContent = clash ? `$${clash.symbol} "${clash.name}" already exists on the floor` : "";
+  el.style.display = clash ? "block" : "none";
+}
+["cName", "cSymbol"].forEach((id) => $(id).addEventListener("input", checkDuplicateHint));
+
 $("createBtn").onclick = () => { if (!signer) return toast("Connect first"); $("createModal").classList.add("open"); updateMetaSize(); };
 $("cGo").onclick = async () => {
   try {
     const name = $("cName").value.trim(), sym = $("cSymbol").value.trim().toUpperCase();
     if (!name || !sym) return toast("Name and symbol required");
+    // An image is what makes a card readable on the floor, and launching without
+    // one is how the same name got minted four times in a row. The contract
+    // cannot enforce this — anyone may call createToken() directly — so this is
+    // a rule of the front end, not a guarantee.
+    if (!cImageDataUri) return toast("Add an image — every coin needs one");
+    const clash = findDuplicate(name, sym);
+    if (clash) return toast(`$${clash.symbol} "${clash.name}" already exists — pick another name or ticker`);
     const buyVal = parseFloat($("cBuy").value || "0");
     const meta = buildMetadata();
     if (meta === null) return; // invalid link, already toasted
