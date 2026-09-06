@@ -44,14 +44,18 @@ window.ANEWONE_CONFIG = {
         hosts: ["anewone.xyz"],
       },
     ],
-    // eth_getLogs is a different capability from eth_call and the endpoints differ:
-    // the keyed QuickNode plan caps a range at 5 blocks (413s the history scan),
-    // drpc and the public RPC cap at 10k, blockdaemon served 50k. The front end
-    // asks for 10k chunks, so all three below work — best first.
+    // eth_getLogs is a different capability from eth_call, and for logs the
+    // deciding property is not throughput but HISTORY. Token artwork lives in a
+    // TokenImage event at the block the coin was created — sometimes millions of
+    // blocks back — and blockdaemon answers those with "pruned history
+    // unavailable". Ordering it first (it takes the widest ranges and the most
+    // concurrency) silently emptied every card on the floor for anyone without a
+    // warm cache. Full-history endpoints lead; blockdaemon still earns its place
+    // on the recent ranges the live tail asks for.
     logRpcs: [
-      "https://rpc.blockdaemon.testnet.arc.network",
       "https://rpc.drpc.testnet.arc.network",
       "https://rpc.testnet.arc.network",
+      "https://rpc.blockdaemon.testnet.arc.network",
     ],
     explorer: "https://testnet.arcscan.app",
     platform: "0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf",
