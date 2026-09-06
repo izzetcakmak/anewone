@@ -8,11 +8,11 @@
  "criteria": "Every launch (TokenCreated) and trade (Trade) on any ANEWONE platform deployment counts as 1 action. Wallets ranked by total actions; ties broken by earliest activity. Team wallets excluded from ranking. Top 33 wallets enter the raffle: 90,000 / 60,000 / 30,000 $NOAH.",
  "final": false,
  "catchingUp": false,
- "generatedAt": "2026-09-06T07:47:45.860Z",
+ "generatedAt": "2026-09-06T13:48:45.761Z",
  "fromBlock": 52625041,
- "toBlock": 60713164,
+ "toBlock": 60755049,
  "totalWallets": 45,
- "totalTxs": 662,
+ "totalTxs": 665,
  "wallets": [
   {
    "address": "0xfe2282be943ddb6500bad74f9d6e2d21af7e1249",
@@ -255,13 +255,23 @@
    "boarding": true
   },
   {
+   "address": "0xfad0ef593e123ecdb83bfcfe17b9f5f90da69f91",
+   "launches": 0,
+   "trades": 5,
+   "total": 5,
+   "firstBlock": 57334110,
+   "team": false,
+   "rank": 23,
+   "boarding": true
+  },
+  {
    "address": "0x8566b8bf3701e135cf0e81aa5f063b4574676dfd",
    "launches": 1,
    "trades": 3,
    "total": 4,
    "firstBlock": 52884659,
    "team": false,
-   "rank": 23,
+   "rank": 24,
    "boarding": true
   },
   {
@@ -271,7 +281,7 @@
    "total": 4,
    "firstBlock": 55952400,
    "team": false,
-   "rank": 24,
+   "rank": 25,
    "boarding": true
   },
   {
@@ -281,7 +291,7 @@
    "total": 4,
    "firstBlock": 55963740,
    "team": false,
-   "rank": 25,
+   "rank": 26,
    "boarding": true
   },
   {
@@ -291,7 +301,7 @@
    "total": 4,
    "firstBlock": 56362942,
    "team": false,
-   "rank": 26,
+   "rank": 27,
    "boarding": true
   },
   {
@@ -301,7 +311,7 @@
    "total": 3,
    "firstBlock": 54393972,
    "team": false,
-   "rank": 27,
+   "rank": 28,
    "boarding": true
   },
   {
@@ -311,7 +321,7 @@
    "total": 3,
    "firstBlock": 57324748,
    "team": false,
-   "rank": 28,
+   "rank": 29,
    "boarding": true
   },
   {
@@ -321,7 +331,7 @@
    "total": 3,
    "firstBlock": 57333092,
    "team": false,
-   "rank": 29,
+   "rank": 30,
    "boarding": true
   },
   {
@@ -331,7 +341,7 @@
    "total": 3,
    "firstBlock": 57333850,
    "team": false,
-   "rank": 30,
+   "rank": 31,
    "boarding": true
   },
   {
@@ -341,7 +351,7 @@
    "total": 2,
    "firstBlock": 53926632,
    "team": false,
-   "rank": 31,
+   "rank": 32,
    "boarding": true
   },
   {
@@ -351,7 +361,7 @@
    "total": 2,
    "firstBlock": 54498126,
    "team": false,
-   "rank": 32,
+   "rank": 33,
    "boarding": true
   },
   {
@@ -360,16 +370,6 @@
    "trades": 2,
    "total": 2,
    "firstBlock": 57334001,
-   "team": false,
-   "rank": 33,
-   "boarding": true
-  },
-  {
-   "address": "0xfad0ef593e123ecdb83bfcfe17b9f5f90da69f91",
-   "launches": 0,
-   "trades": 2,
-   "total": 2,
-   "firstBlock": 57334110,
    "team": false,
    "rank": 34,
    "boarding": false
