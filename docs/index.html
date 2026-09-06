@@ -2672,10 +2672,13 @@ function fillImages(addrs) {
   addrs.forEach(async (addr) => {
     const u = safeImgSrc(await resolveImg(addr));
     if (!u) return; // no image — the monogram placeholder stays
-    const el = document.getElementById("img-" + addr);
-    if (el) { el.src = u; el.style.display = "block"; }
-    const ph = document.getElementById("ph-" + addr);
-    if (ph) ph.style.display = "none";
+    // the floor card and the left rail both hold a slot for this token
+    for (const [imgId, phId] of [["img-", "ph-"], ["rimg-", "rph-"]]) {
+      const el = document.getElementById(imgId + addr);
+      if (el) { el.src = u; el.style.display = "block"; }
+      const ph = document.getElementById(phId + addr);
+      if (ph) ph.style.display = "none";
+    }
   });
 }
 
@@ -3190,8 +3193,14 @@ function renderLiveRail() {
     // there is no price history per token here, so the badge shows curve progress
     const prog = Number(progBps(inf)) / 100;
     return `<div class="lrow" onclick="openTrade('${esc(a)}')">
-      ${img ? `<img class="av" src="${esc(img)}" alt="">`
-            : `<span class="av">${esc((m.symbol || "?")[0])}</span>`}
+      ${img
+        ? `<img class="av" src="${esc(img)}" alt="">`
+        // The image may not be resolved yet. Render the monogram AND a hidden
+        // slot, exactly as the cards do, so fillImages can swap them in when the
+        // lookup lands — otherwise the rail keeps its letters until something
+        // else happens to redraw it, which is why switching tabs "fixed" it.
+        : `<span class="av" id="rph-${a}">${esc((m.symbol || "?")[0])}</span>` +
+          `<img class="av" id="rimg-${a}" alt="" style="display:none">`}
       <span class="l">
         <span class="nm">$${esc(m.symbol || "")}</span>
         <span class="sub">${esc(age)} · ${esc(compactUsd(st.vol24 || 0n))} vol</span>
@@ -3205,6 +3214,9 @@ function renderLiveRail() {
     liveSort === "grad"
       ? `No token is past ${GRADUATING_MIN_PCT}% of the 5,000 USDC target yet`
       : "No tokens yet"}</div>`;
+  // the rail has its own sort and cap, so it can show tokens the floor filtered
+  // out; ask for those images itself rather than relying on the grid's pass
+  fillImages(rows.map((r) => r.a));
 }
 
 // ---- right rail: campaign standings from the published snapshot
