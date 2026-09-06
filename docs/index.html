@@ -1,3 +1,8 @@
+    // An image is what makes a card readable on the floor, and launching without
+    // one is how the same name got minted four times in a row. The contract
+    // cannot enforce this — anyone may call createToken() directly — so this is
+    // a rule of the front end, not a guarantee.
+    if (!cImageDataUri) return toast("Add an image — every coin needs one");
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1143,7 +1148,7 @@
     <h2>Launch a token</h2>
     <label>Name</label><input id="cName" placeholder="Noah's Arc" maxlength="48">
     <label>Symbol</label><input id="cSymbol" placeholder="NOAH" maxlength="12">
-    <label>Image (optional)</label>
+    <label>Image <span style="color:var(--red)">*</span></label>
     <div class="criteria">.jpg / .jpeg / .png &nbsp;·&nbsp; max 5 MB &nbsp;·&nbsp; min 100×100 px &nbsp;·&nbsp; square is best</div>
     <div class="row" style="margin-top:8px">
       <button id="cUpBtn" type="button">📷 Upload image</button>
