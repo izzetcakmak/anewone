@@ -25,8 +25,13 @@ const TESTNET_RPC = "https://rpc.testnet.arc.network";
 const SNAPSHOT_REFRESH_MS = 6 * 60 * 60 * 1000;
 /** The floor index is cheap to rebuild but each publish is a deployment. */
 const FLOOR_REFRESH_MS = 30 * 60 * 1000;
-/** Off until the owner has signed off on the prebuilt floor going live. */
-const FLOOR_AUTOPUBLISH = false;
+/**
+ * Each publish is a commit, a push and a Vercel build, so this only fires when a
+ * trade actually landed — quiet hours cost nothing. At half-hourly that is at
+ * most ~48 builds a day on top of the four snapshot ones; widen the interval if
+ * the project ever bumps into a deployment cap.
+ */
+const FLOOR_AUTOPUBLISH = true;
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const MON = path.join(ROOT, "monitor");
