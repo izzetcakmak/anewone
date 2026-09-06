@@ -21,14 +21,36 @@ window.ANEWONE_CONFIG = {
     // first (domain-locked to anewone.xyz, high limits), public RPC as fallback. `rpc` above
     // stays PUBLIC on purpose — wallet/Web3Auth submit txs outside this origin and the
     // domain-locked URL would 401 them.
-    // A keyed entry may declare the hosts its domain lock accepts. Anywhere else
-    // (www., a *.vercel.app preview, localhost) it 401s every single call, so it is
+    // Read pool, best first. Measured against the real workload (eth_call, 200
+    // concurrent) rather than assumed:
+    //
+    //   drpc         200 concurrent, 0 errors   ~230 calls/s
+    //   blockdaemon  200 concurrent, 0 errors   ~150 calls/s
+    //   arc public    throttles at 50            ~39 calls/s
+    //   our keyed     throttles at 25            (last resort)
+    //
+    // The keyed endpoint sits LAST on purpose. Its quota is shared by every
+    // visitor at once, so it is the one thing that gets worse as the site gets
+    // busier; the public ones rate-limit per IP, so they scale with the crowd.
+    // A keyed entry may declare the hosts its domain lock accepts — anywhere else
+    // (www., a *.vercel.app preview, localhost) it 401s every call, so it is
     // dropped from the pool instead of burning the retry budget on a certain failure.
     rpcs: [
+      "https://rpc.drpc.testnet.arc.network",
+      "https://rpc.blockdaemon.testnet.arc.network",
+      "https://rpc.testnet.arc.network",
       {
         url: "https://chaotic-dimensional-dream.arc-testnet.quiknode.pro/6f85d01f85d8794bd8a1299852d1c16511efb267/",
         hosts: ["anewone.xyz"],
       },
+    ],
+    // eth_getLogs is a different capability from eth_call and the endpoints differ:
+    // the keyed QuickNode plan caps a range at 5 blocks (413s the history scan),
+    // drpc and the public RPC cap at 10k, blockdaemon served 50k. The front end
+    // asks for 10k chunks, so all three below work — best first.
+    logRpcs: [
+      "https://rpc.blockdaemon.testnet.arc.network",
+      "https://rpc.drpc.testnet.arc.network",
       "https://rpc.testnet.arc.network",
     ],
     explorer: "https://testnet.arcscan.app",

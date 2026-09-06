@@ -1382,7 +1382,8 @@ const mkProvider = (u) =>
 const readProvider = _readUrls.length > 1
   ? new ethers.FallbackProvider(
       _readUrls.map((u, i) => ({
-        provider: mkProvider(u), priority: i + 1, stallTimeout: 2000, weight: 1,
+        // a dead endpoint should cost the visitor a beat, not two seconds
+        provider: mkProvider(u), priority: i + 1, stallTimeout: 1500, weight: 1,
       })),
       ARC_NET, { quorum: 1 })
   : mkProvider(_readUrls[0]);
@@ -1390,7 +1391,15 @@ const platform = new ethers.Contract(CFG.platform, ABI, readProvider);
 // eth_getLogs goes to the public RPC only: the keyed QuickNode "Discover" plan caps getLogs
 // at a 5-block range (413), while the public RPC serves the wide ranges the trade/comment/
 // image history scan needs. The high-volume eth_call traffic stays on readProvider (QuickNode).
-const logProvider = mkProvider(CFG.rpc);
+// getLogs gets its own pool: the endpoints that serve it well are not the same
+// ones that serve eth_call well, and this traffic is the steady drip every open
+// tab makes — so it must never land on the shared keyed endpoint.
+const _logUrls = (CFG.logRpcs && CFG.logRpcs.length) ? CFG.logRpcs : [CFG.rpc];
+const logProvider = _logUrls.length > 1
+  ? new ethers.FallbackProvider(
+      _logUrls.map((u, i) => ({ provider: mkProvider(u), priority: i + 1, stallTimeout: 1500, weight: 1 })),
+      ARC_NET, { quorum: 1 })
+  : mkProvider(_logUrls[0]);
 
 const FEE_BPS = 100n, BPS = 10_000n, WAD = 10n ** 18n;
 // Trade.usdcAmount is trader-centric: on a buy it is what the wallet PAID (fee included),
@@ -3685,7 +3694,8 @@ async function liveTail() {
   if (indexing || document.hidden || !statsIdx || statsIdx.hi === null || !readProvider) return;
   indexing = true;
   try {
-    const tip = await rpc(() => readProvider.getBlockNumber(), 1);
+    // the public endpoint answers this too, and it is the one the getLogs below hits
+    const tip = await rpc(() => logProvider.getBlockNumber(), 1, "logs");
     if (tip <= statsIdx.hi) return;
     latestBlock = tip;
     const to = Math.min(tip, statsIdx.hi + CHUNK);
