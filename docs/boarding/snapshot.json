@@ -8,11 +8,11 @@
  "criteria": "Every launch (TokenCreated) and trade (Trade) on any ANEWONE platform deployment counts as 1 action. Wallets ranked by total actions; ties broken by earliest activity. Team wallets excluded from ranking. Top 33 wallets enter the raffle: 90,000 / 60,000 / 30,000 $NOAH.",
  "final": false,
  "catchingUp": false,
- "generatedAt": "2026-09-07T07:17:55.208Z",
+ "generatedAt": "2026-09-07T13:18:45.346Z",
  "fromBlock": 52625041,
- "toBlock": 60874583,
- "totalWallets": 46,
- "totalTxs": 673,
+ "toBlock": 60913569,
+ "totalWallets": 58,
+ "totalTxs": 722,
  "wallets": [
   {
    "address": "0xfe2282be943ddb6500bad74f9d6e2d21af7e1249",
@@ -87,11 +87,31 @@
   {
    "address": "0x74aa6bee181d6c2ff011d1622ef1addc07a5b885",
    "launches": 1,
-   "trades": 16,
-   "total": 17,
+   "trades": 19,
+   "total": 20,
    "firstBlock": 57811238,
    "team": false,
    "rank": 7,
+   "boarding": true
+  },
+  {
+   "address": "0x0e668251d5926eebe8eee27f5c49fa043a969561",
+   "launches": 1,
+   "trades": 12,
+   "total": 13,
+   "firstBlock": 52818115,
+   "team": false,
+   "rank": 8,
+   "boarding": true
+  },
+  {
+   "address": "0xbf598cd4973349db95e49e1e41662782236f20df",
+   "launches": 0,
+   "trades": 13,
+   "total": 13,
+   "firstBlock": 52818329,
+   "team": false,
+   "rank": 9,
    "boarding": true
   },
   {
@@ -103,26 +123,6 @@
    "team": true,
    "rank": null,
    "boarding": false
-  },
-  {
-   "address": "0x0e668251d5926eebe8eee27f5c49fa043a969561",
-   "launches": 1,
-   "trades": 11,
-   "total": 12,
-   "firstBlock": 52818115,
-   "team": false,
-   "rank": 8,
-   "boarding": true
-  },
-  {
-   "address": "0xbf598cd4973349db95e49e1e41662782236f20df",
-   "launches": 0,
-   "trades": 12,
-   "total": 12,
-   "firstBlock": 52818329,
-   "team": false,
-   "rank": 9,
-   "boarding": true
   },
   {
    "address": "0xa90f67cf6eb1519dbce2ec7ba71f857367fab648",
@@ -137,8 +137,8 @@
   {
    "address": "0xe3c1775231193e54fc05dca5bb3d34dea6a9e59a",
    "launches": 0,
-   "trades": 10,
-   "total": 10,
+   "trades": 11,
+   "total": 11,
    "firstBlock": 52819029,
    "team": false,
    "rank": 11,
@@ -147,8 +147,8 @@
   {
    "address": "0xa1586ec57c77fda4b65ec6be33a15f29f348df34",
    "launches": 0,
-   "trades": 10,
-   "total": 10,
+   "trades": 11,
+   "total": 11,
    "firstBlock": 52986955,
    "team": false,
    "rank": 12,
@@ -185,13 +185,23 @@
    "boarding": true
   },
   {
+   "address": "0xb1dbe03da1466be88c254c272648070928340ccd",
+   "launches": 0,
+   "trades": 8,
+   "total": 8,
+   "firstBlock": 60902085,
+   "team": false,
+   "rank": 16,
+   "boarding": true
+  },
+  {
    "address": "0x9b03cc56924a690d849309c8530d6daccbcdc3f4",
    "launches": 0,
    "trades": 7,
    "total": 7,
    "firstBlock": 52637885,
    "team": false,
-   "rank": 16,
+   "rank": 17,
    "boarding": true
   },
   {
@@ -201,7 +211,7 @@
    "total": 7,
    "firstBlock": 53739593,
    "team": false,
-   "rank": 17,
+   "rank": 18,
    "boarding": true
   },
   {
@@ -211,7 +221,7 @@
    "total": 7,
    "firstBlock": 57333527,
    "team": false,
-   "rank": 18,
+   "rank": 19,
    "boarding": true
   },
   {
@@ -221,7 +231,7 @@
    "total": 6,
    "firstBlock": 57320781,
    "team": false,
-   "rank": 19,
+   "rank": 20,
    "boarding": true
   },
   {
@@ -231,7 +241,7 @@
    "total": 6,
    "firstBlock": 57333291,
    "team": false,
-   "rank": 20,
+   "rank": 21,
    "boarding": true
   },
   {
@@ -241,7 +251,17 @@
    "total": 6,
    "firstBlock": 60637560,
    "team": false,
-   "rank": 21,
+   "rank": 22,
+   "boarding": true
+  },
+  {
+   "address": "0xcd58191d15a36fb67ecc7a6d0744c50c977d6e73",
+   "launches": 0,
+   "trades": 6,
+   "total": 6,
+   "firstBlock": 60901226,
+   "team": false,
+   "rank": 23,
    "boarding": true
   },
   {
@@ -251,7 +271,17 @@
    "total": 5,
    "firstBlock": 52651244,
    "team": false,
-   "rank": 22,
+   "rank": 24,
+   "boarding": true
+  },
+  {
+   "address": "0x70b7779b9f6698dc85ecc1f346781709a8356fbf",
+   "launches": 1,
+   "trades": 4,
+   "total": 5,
+   "firstBlock": 55963740,
+   "team": false,
+   "rank": 25,
    "boarding": true
   },
   {
@@ -261,7 +291,47 @@
    "total": 5,
    "firstBlock": 57334110,
    "team": false,
-   "rank": 23,
+   "rank": 26,
+   "boarding": true
+  },
+  {
+   "address": "0xab7279bad0b1b7df73bd3140ead1f4b2bd24a0b4",
+   "launches": 0,
+   "trades": 5,
+   "total": 5,
+   "firstBlock": 60760970,
+   "team": false,
+   "rank": 27,
+   "boarding": true
+  },
+  {
+   "address": "0x70fe2628e98af4500377139d4a31429df112fbaa",
+   "launches": 0,
+   "trades": 5,
+   "total": 5,
+   "firstBlock": 60892255,
+   "team": false,
+   "rank": 28,
+   "boarding": true
+  },
+  {
+   "address": "0x2bf69e33af0804604fc665603d68daedf547bbfd",
+   "launches": 0,
+   "trades": 5,
+   "total": 5,
+   "firstBlock": 60892321,
+   "team": false,
+   "rank": 29,
+   "boarding": true
+  },
+  {
+   "address": "0x3a51a380330d7dbb1739153223b5a5a2f5f160a4",
+   "launches": 0,
+   "trades": 5,
+   "total": 5,
+   "firstBlock": 60892498,
+   "team": false,
+   "rank": 30,
    "boarding": true
   },
   {
@@ -271,7 +341,7 @@
    "total": 4,
    "firstBlock": 52884659,
    "team": false,
-   "rank": 24,
+   "rank": 31,
    "boarding": true
   },
   {
@@ -281,17 +351,7 @@
    "total": 4,
    "firstBlock": 55952400,
    "team": false,
-   "rank": 25,
-   "boarding": true
-  },
-  {
-   "address": "0x70b7779b9f6698dc85ecc1f346781709a8356fbf",
-   "launches": 1,
-   "trades": 3,
-   "total": 4,
-   "firstBlock": 55963740,
-   "team": false,
-   "rank": 26,
+   "rank": 32,
    "boarding": true
   },
   {
@@ -301,8 +361,18 @@
    "total": 4,
    "firstBlock": 56362942,
    "team": false,
-   "rank": 27,
+   "rank": 33,
    "boarding": true
+  },
+  {
+   "address": "0x625173ac03037396891b64e41eb82b6c52a69274",
+   "launches": 0,
+   "trades": 4,
+   "total": 4,
+   "firstBlock": 60907699,
+   "team": false,
+   "rank": 34,
+   "boarding": false
   },
   {
    "address": "0x601ad7e0f15b4e2c5e5f3295468aecf4953296e1",
@@ -311,8 +381,8 @@
    "total": 3,
    "firstBlock": 54393972,
    "team": false,
-   "rank": 28,
-   "boarding": true
+   "rank": 35,
+   "boarding": false
   },
   {
    "address": "0x7e6244fd69986566edb79dd1d219246dc9b9aea0",
@@ -321,8 +391,8 @@
    "total": 3,
    "firstBlock": 57324748,
    "team": false,
-   "rank": 29,
-   "boarding": true
+   "rank": 36,
+   "boarding": false
   },
   {
    "address": "0x51d00b385b30ca14c7d90500c96b8258adbb212f",
@@ -331,8 +401,8 @@
    "total": 3,
    "firstBlock": 57333092,
    "team": false,
-   "rank": 30,
-   "boarding": true
+   "rank": 37,
+   "boarding": false
   },
   {
    "address": "0x656efb053236370aa93f91281097833fad02409e",
@@ -341,18 +411,8 @@
    "total": 3,
    "firstBlock": 57333850,
    "team": false,
-   "rank": 31,
-   "boarding": true
-  },
-  {
-   "address": "0xab7279bad0b1b7df73bd3140ead1f4b2bd24a0b4",
-   "launches": 0,
-   "trades": 3,
-   "total": 3,
-   "firstBlock": 60760970,
-   "team": false,
-   "rank": 32,
-   "boarding": true
+   "rank": 38,
+   "boarding": false
   },
   {
    "address": "0x7360ecae6ef94341c0f3f0a66898bb7b128c3ab1",
@@ -361,8 +421,8 @@
    "total": 2,
    "firstBlock": 53926632,
    "team": false,
-   "rank": 33,
-   "boarding": true
+   "rank": 39,
+   "boarding": false
   },
   {
    "address": "0x7652645d82c99393e172ea2ca4896af16c4de801",
@@ -371,7 +431,7 @@
    "total": 2,
    "firstBlock": 54498126,
    "team": false,
-   "rank": 34,
+   "rank": 40,
    "boarding": false
   },
   {
@@ -381,7 +441,7 @@
    "total": 2,
    "firstBlock": 57334001,
    "team": false,
-   "rank": 35,
+   "rank": 41,
    "boarding": false
   },
   {
@@ -391,7 +451,7 @@
    "total": 2,
    "firstBlock": 60132922,
    "team": false,
-   "rank": 36,
+   "rank": 42,
    "boarding": false
   },
   {
@@ -401,7 +461,7 @@
    "total": 2,
    "firstBlock": 60134103,
    "team": false,
-   "rank": 37,
+   "rank": 43,
    "boarding": false
   },
   {
@@ -411,7 +471,7 @@
    "total": 2,
    "firstBlock": 60138232,
    "team": false,
-   "rank": 38,
+   "rank": 44,
    "boarding": false
   },
   {
@@ -421,7 +481,7 @@
    "total": 2,
    "firstBlock": 60139586,
    "team": false,
-   "rank": 39,
+   "rank": 45,
    "boarding": false
   },
   {
@@ -431,7 +491,7 @@
    "total": 2,
    "firstBlock": 60139880,
    "team": false,
-   "rank": 40,
+   "rank": 46,
    "boarding": false
   },
   {
@@ -441,7 +501,7 @@
    "total": 2,
    "firstBlock": 60140571,
    "team": false,
-   "rank": 41,
+   "rank": 47,
    "boarding": false
   },
   {
@@ -451,7 +511,7 @@
    "total": 1,
    "firstBlock": 52625926,
    "team": false,
-   "rank": 42,
+   "rank": 48,
    "boarding": false
   },
   {
@@ -461,7 +521,7 @@
    "total": 1,
    "firstBlock": 54239091,
    "team": false,
-   "rank": 43,
+   "rank": 49,
    "boarding": false
   },
   {
@@ -471,7 +531,7 @@
    "total": 1,
    "firstBlock": 55963607,
    "team": false,
-   "rank": 44,
+   "rank": 50,
    "boarding": false
   },
   {
@@ -481,7 +541,7 @@
    "total": 1,
    "firstBlock": 57305858,
    "team": false,
-   "rank": 45,
+   "rank": 51,
    "boarding": false
   },
   {
@@ -491,7 +551,67 @@
    "total": 1,
    "firstBlock": 60141103,
    "team": false,
-   "rank": 46,
+   "rank": 52,
+   "boarding": false
+  },
+  {
+   "address": "0xff46c04485b616cb7dd4797076c3c2ea74abbb53",
+   "launches": 0,
+   "trades": 1,
+   "total": 1,
+   "firstBlock": 60891335,
+   "team": false,
+   "rank": 53,
+   "boarding": false
+  },
+  {
+   "address": "0xf22b2e391a9d08809ab4bd48f3278a1fd51d4638",
+   "launches": 0,
+   "trades": 1,
+   "total": 1,
+   "firstBlock": 60891462,
+   "team": false,
+   "rank": 54,
+   "boarding": false
+  },
+  {
+   "address": "0x8fea48570e7974f0773acf9419816b01f756fa80",
+   "launches": 0,
+   "trades": 1,
+   "total": 1,
+   "firstBlock": 60891554,
+   "team": false,
+   "rank": 55,
+   "boarding": false
+  },
+  {
+   "address": "0x63cedbbff6c2b5dd1b74a8d4c21aa3b7a0f8d5a7",
+   "launches": 0,
+   "trades": 1,
+   "total": 1,
+   "firstBlock": 60891733,
+   "team": false,
+   "rank": 56,
+   "boarding": false
+  },
+  {
+   "address": "0xf872f2afe40d508298b453c7c5cf42ef72651f11",
+   "launches": 0,
+   "trades": 1,
+   "total": 1,
+   "firstBlock": 60891804,
+   "team": false,
+   "rank": 57,
+   "boarding": false
+  },
+  {
+   "address": "0xa1c5a4404acc988109fb7ebfbc9962d63ac4e9a9",
+   "launches": 0,
+   "trades": 1,
+   "total": 1,
+   "firstBlock": 60891958,
+   "team": false,
+   "rank": 58,
    "boarding": false
   }
  ]
