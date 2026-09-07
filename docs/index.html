@@ -1755,7 +1755,11 @@ function trendScore(addr) {
   if (!s) return 0;
   const vol = Number(ethers.formatEther(s.vol24 || 0n));
   const uniq = s.traders24 || 0;
-  if (vol <= 0 || uniq === 0) return 0;
+  // Two distinct traders, not one. With a single wallet the second term is just
+  // 1, so anyone buying their own coin once outranked every honest token that
+  // simply had a quiet day — which is how four blank duplicates ended up above
+  // the real ones. "Trending" has to mean more than one person is interested.
+  if (vol <= 0 || uniq < 2) return 0;
   const blocksSince = latestBlock && s.lastBlock ? Math.max(0, latestBlock - s.lastBlock) : 0;
   const hoursSince = blockTimeSec ? (blocksSince * blockTimeSec) / 3600 : 0;
   const recency = 1 / (1 + hoursSince / 6); // half-weight after ~6h of silence
