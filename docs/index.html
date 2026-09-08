@@ -13,12 +13,12 @@
     } catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
   })();
 </script>
-<title>A NEW ONE — Insert Coin. Launch a New One. | anewone.xyz</title>
-<meta name="description" content="anewone.xyz — launch a new one. Meme token launchpad built on Arc: rug-proof bonding curve, priced in USDC.">
+<title>A NEW ONE · Insert Coin. Launch a New One. | anewone.xyz</title>
+<meta name="description" content="Launch a new one on anewone.xyz. Meme token launchpad built on Arc: rug-proof bonding curve, priced in USDC.">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <meta name="theme-color" content="#07080b">
-<meta property="og:title" content="A NEW ONE — Insert Coin. Launch a New One.">
+<meta property="og:title" content="A NEW ONE · Insert Coin. Launch a New One.">
 <meta property="og:description" content="The meme launchpad built on Arc. Rug-proof bonding curve, priced in USDC.">
 <meta property="og:image" content="https://anewone.xyz/apple-touch-icon.png">
 <meta property="og:url" content="https://anewone.xyz">
@@ -948,11 +948,11 @@
 </div>
 <nav class="topbar">
   <div class="topbar-inner">
-    <a class="tb-brand" href="index.html" aria-label="A NEW ONE — home">
+    <a class="tb-brand" href="index.html" aria-label="A NEW ONE, home">
       <img src="brand/mark.png" alt="">
       <span>A NEW ONE</span>
     </a>
-    <a class="tb-link" href="boarding/" title="Boarding Pass — the 33 most active testnet wallets enter the mainnet-day draw">🎟 Boarding Pass</a>
+    <a class="tb-link" href="boarding/" title="Boarding Pass: the 33 most active testnet wallets enter the mainnet-day draw">🎟 Boarding Pass</a>
     <!-- Docs lives in the footer; one link is enough -->
     <div class="theme-sw" id="themeSw" role="group" aria-label="Colour theme">
       <button type="button" data-theme-set="light" title="Light" aria-pressed="false" aria-label="Light theme">
@@ -966,7 +966,7 @@
       </button>
     </div>
     <span id="netBadge" class="badge">Testnet</span>
-    <span id="balChip" class="badge" style="display:none" title="Your USDC on Arc — pays gas and trades"></span>
+    <span id="balChip" class="badge" style="display:none" title="Your USDC on Arc. Pays gas and trades"></span>
     <span id="walletWrap" style="position:relative;display:inline-block">
       <button id="connectBtn">Connect</button>
       <div id="walletMenu" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-2);border:1px solid var(--border-2);border-radius:12px;z-index:50;min-width:184px;box-shadow:var(--shadow);overflow:hidden">
@@ -1054,7 +1054,7 @@
   <div id="fundBanner" class="fundbox" style="display:none">
     <div class="fundhead">⛽ Fund your wallet to start trading</div>
     <div class="fundbody">
-      On Arc, <b>USDC is both the gas and the money</b> — one balance covers fees and trades.
+      On Arc, <b>USDC is both the gas and the money</b>. One balance covers fees and trades.
       Grab free test USDC from Circle's faucet (20 USDC every 2h):
     </div>
     <div class="fundrow">
@@ -1069,7 +1069,7 @@
   <div class="floorwrap">
     <div class="floor-main">
       <div id="grid" class="grid"></div>
-      <div id="empty" class="empty" style="display:none">No tokens yet — be the first to launch one.</div>
+      <div id="empty" class="empty" style="display:none">No tokens yet. Be the first to launch one.</div>
     </div>
 
   </div>
@@ -1132,7 +1132,7 @@
       </div>
     </div>
     <div class="foot-meta">
-      <span><span class="arc-pill">⚡ Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a></span> — gas is USDC · rug-proof: reserves locked, no LP to pull.</span>
+      <span><span class="arc-pill">⚡ Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a></span> · gas is USDC · rug-proof: reserves locked, no LP to pull.</span>
       <span id="footPlatformLine" style="display:none">Platform: <span id="footPlatform">–</span></span>
     </div>
   </footer>
@@ -1157,7 +1157,7 @@
       <span id="cPrevInfo" class="hint"></span>
       <button id="cPrevX" type="button" class="x">✕</button>
     </div>
-    <div class="hint">Stored fully on-chain in the launch event — auto-cropped to square, resized to 200×200, compressed to ≤24 KB. No storage writes, so launching stays cheap.</div>
+    <div class="hint">Stored fully on-chain in the launch event. Auto-cropped to square, resized to 200×200, compressed to ≤24 KB. No storage writes, so launching stays cheap.</div>
 
     <label>Description <span class="hint" id="cDescCount">0/280</span></label>
     <input id="cDesc" placeholder="What's the story?" maxlength="280">
@@ -1166,7 +1166,7 @@
     <label>Website (optional)</label><input id="cWeb" placeholder="https://…">
     <div class="hint" id="cSize">On-chain size: —</div>
     <label>Initial dev buy in USDC (optional, ≤2% supply early)</label><input id="cBuy" placeholder="0" type="number" min="0" step="0.01">
-    <div class="hint">Launching is free — you pay only gas. 1B supply, all on the curve.</div>
+    <div class="hint">Launching is free. You pay only gas. 1B supply, all on the curve.</div>
     <div class="row">
       <button id="cGo" class="alt">Launch</button>
       <button onclick="closeModals()">Cancel</button>
@@ -1484,7 +1484,7 @@ function rpc(fn, tries = 4, lane = "call") {
         return out;
       } catch (e) {
         if (!isTransient(e) || i >= tries - 1) throw e;
-        if (!rpcDegraded) { rpcDegraded = true; setStatus("RPC busy — retrying…"); }
+        if (!rpcDegraded) { rpcDegraded = true; setStatus("RPC busy, retrying…"); }
         await sleep(400 * 2 ** i + Math.random() * 250);
       }
     }
@@ -1945,7 +1945,7 @@ const cssVar = (name) =>
         '<div class="cd-cell" style="min-width:auto"><b>LAUNCHING</b></div>';
       $("cdD").id = ""; // stop further lookups from clobbering the message
       box.querySelector(".cd-date").textContent =
-        "Arc mainnet is opening — the scanner deploys the moment it answers.";
+        "Arc mainnet is opening. The scanner deploys the moment it answers.";
       return true; // done
     }
     const s = Math.floor(left / 1000);
@@ -2446,7 +2446,7 @@ async function loadTokens() {
     console.error(e);
     // The old marquee this used to write to is gone, so a failed first load left the
     // visitor staring at skeleton cards with no message and no retry for a full minute.
-    setStatus("Network is busy — retrying…");
+    setStatus("Network is busy, retrying…");
     if (!shownAddrs.length) setTimeout(loadTokens, 4000);
   } finally {
     loading = false;
@@ -2793,7 +2793,7 @@ function renderChart(addr) {
   if (inf) pts.push({ b: latestBlock || (pts.length ? pts[pts.length - 1].b + 1 : 1), v: Number(ethers.formatEther(marketCapWei(inf))) });
   if (pts.length < 2) {
     box.style.display = "block";
-    host.innerHTML = `<div style="color:var(--dim);font-size:16px;padding:14px 4px">Not enough trades yet — the chart appears after the first buys.</div>`;
+    host.innerHTML = `<div style="color:var(--dim);font-size:16px;padding:14px 4px">Not enough trades yet. The chart appears after the first buys.</div>`;
     $("tChartHint").textContent = "";
     return;
   }
@@ -2830,7 +2830,7 @@ function renderChart(addr) {
     <line id="cCur" x1="0" y1="${PT}" x2="0" y2="${H - PB}" stroke="var(--gold)" stroke-width="1" opacity="0"/>
     <circle id="cDot" r="3.5" fill="var(--gold)" opacity="0"/>
   </svg>`;
-  $("tChartHint").textContent = `${compactUsd(ethers.parseEther(String(vMin.toFixed(18).slice(0, 20))))} – ${compactUsd(ethers.parseEther(String(vMax.toFixed(18).slice(0, 20))))}${logScale ? " · log" : ""}`;
+  $("tChartHint").textContent = `${compactUsd(ethers.parseEther(String(vMin.toFixed(18).slice(0, 20))))} to ${compactUsd(ethers.parseEther(String(vMax.toFixed(18).slice(0, 20))))}${logScale ? " · log" : ""}`;
   box.style.display = "block";
 
   // hover / touch readout
@@ -2938,7 +2938,7 @@ function renderCreatorPanel() {
       <div class="pcell"><div class="pk">Total volume</div><div class="pv">${esc(compactUsd(d.volSum))}</div></div>
     </div>
     <div class="cnote">${d.score === null
-      ? "Too few launches to score fairly — judge the history yourself."
+      ? "Too few launches to score fairly. Judge the history yourself."
       : "Heuristic score from on-chain history: graduation rate, holder spread and whether the dev exited their own launches."}
       &nbsp;“Dev exits” counts launches where the creator sold out of their own token.</div>`;
   const btn = document.getElementById("cClear");
@@ -3265,7 +3265,7 @@ window.addEventListener("hashchange", openFromHash);
 
 function tickerText(n) {
   const names = Object.values(tokenMeta).map(t => "$" + t.symbol).join("  ·  ");
-  return `${n} TOKEN${n === 1 ? "" : "S"} LIVE  ·  ${names}  ·  1% FEE — HALF TO CREATORS  ·  NO LP, NO RUG — RESERVES LOCKED IN THE CURVE  ·  GAS IS USDC — BUILT ON ARC`;
+  return `${n} TOKEN${n === 1 ? "" : "S"} LIVE  ·  ${names}  ·  1% FEE: HALF TO CREATORS  ·  NO LP, NO RUG: RESERVES LOCKED IN THE CURVE  ·  GAS IS USDC — BUILT ON ARC`;
 }
 
 // ------- image upload (pump.fun-style criteria: .jpg/.jpeg/.png, ≤5MB, ≥100×100)
@@ -3298,7 +3298,7 @@ $("cFile").onchange = async (e) => {
     );
     let q = 0.85, uri = cv.toDataURL("image/jpeg", q);
     while (uri.length > 32_000 && q > 0.3) { q -= 0.1; uri = cv.toDataURL("image/jpeg", q); }
-    if (uri.length > 32_000) { $("cFile").value = ""; return toast("Could not compress under 24 KB — try a simpler image"); }
+    if (uri.length > 32_000) { $("cFile").value = ""; return toast("Could not compress under 24 KB. Try a simpler image"); }
     cImageDataUri = uri;
     $("cPrevImg").src = uri;
     $("cPrevInfo").textContent = `${f.name} → 200×200 · ${(uri.length * 3 / 4 / 1024).toFixed(1)} KB on-chain`;
@@ -3336,7 +3336,7 @@ function updateMetaSize() {
   const meta = (() => { try { return buildMetadataQuiet(); } catch { return ""; } })();
   const bytes = new TextEncoder().encode(meta).length;
   let txt = "On-chain size: " + (bytes < 1024 ? bytes + " B" : (bytes / 1024).toFixed(1) + " KB");
-  if (cImageDataUri) txt += ` + ${(cImageDataUri.length * 3 / 4 / 1024).toFixed(1)} KB image (event log — gas-friendly)`;
+  if (cImageDataUri) txt += ` + ${(cImageDataUri.length * 3 / 4 / 1024).toFixed(1)} KB image (event log, gas-friendly)`;
   $("cSize").textContent = txt;
   $("cDescCount").textContent = $("cDesc").value.length + "/280";
 }
@@ -3386,9 +3386,9 @@ $("cGo").onclick = async () => {
     // one is how the same name got minted four times in a row. The contract
     // cannot enforce this — anyone may call createToken() directly — so this is
     // a rule of the front end, not a guarantee.
-    if (!cImageDataUri) return toast("Add an image — every coin needs one");
+    if (!cImageDataUri) return toast("Add an image. Every coin needs one");
     const clash = findDuplicate(name, sym);
-    if (clash) return toast(`$${clash.symbol} "${clash.name}" already exists — pick another name or ticker`);
+    if (clash) return toast(`$${clash.symbol} "${clash.name}" already exists. Pick another name or ticker`);
     const buyVal = parseFloat($("cBuy").value || "0");
     const meta = buildMetadata();
     if (meta === null) return; // invalid link, already toasted
@@ -3417,7 +3417,7 @@ let exactWei = null;
 
 async function openTrade(addr) {
   // liveTail can surface trades for tokens the grid hasn't loaded yet
-  if (!tokenMeta[addr] || !tokenInfo[addr]) return toast("Token is still loading — try again in a moment");
+  if (!tokenMeta[addr] || !tokenInfo[addr]) return toast("Token is still loading. Try again in a moment");
   currentToken = addr; isBuy = true;
   setTabs();
   const { name, symbol } = tokenMeta[addr] || {};
@@ -3462,7 +3462,7 @@ async function refreshTrade() {
   $("tVol").textContent = covers24h ? compactUsd(st.vol24 || 0n) : "…";
   const pct = Number(progBps(inf)) / 100;
   $("tBar").style.width = Math.min(Math.max(pct, 1.5), 100) + "%";
-  $("tBarLabel").textContent = (inf.graduated ? "★ GRADUATED — trading continues" : pct.toFixed(1) + "% to graduation")
+  $("tBarLabel").textContent = (inf.graduated ? "★ GRADUATED · trading continues" : pct.toFixed(1) + "% to graduation")
     + ` · raised ${fmt(inf.raised, 2)} USDC`;
   if (userAddr) {
     const tk = new ethers.Contract(currentToken, ERC20, readProvider);
@@ -3611,7 +3611,7 @@ function renderPosition(addr) {
       <div class="pcell"><div class="pk">P&amp;L</div><div class="pv ${up ? "up" : "down"}">${up ? "+" : "−"}${esc(compactUsd(pnl < 0n ? -pnl : pnl))}${e.i > 0n ? ` (${up ? "+" : ""}${pnlPct.toFixed(1)}%)` : ""}</div></div>
     </div>
     <div class="pnote">Value now is a live sell quote (fee and curve impact included). Based on
-      your trades here — tokens moved by direct transfer aren't counted.</div>`;
+      your trades here. Tokens moved by direct transfer aren't counted.</div>`;
 }
 
 // ------- trust / risk signals.
@@ -3660,7 +3660,7 @@ async function computeTrust(addr) {
     ? `<a href="${esc(CFG.explorer)}/address/${esc(addr)}" target="_blank" rel="noopener">verified contract ↗</a>`
     : "the contract";
   box.innerHTML = `<div class="tbadges">${badges.join("")}</div>
-    <div class="tnote">Reserves are locked in the bonding curve — there is no LP to pull and no
+    <div class="tnote">Reserves are locked in the bonding curve. There is no LP to pull and no
       migration step. Dev % is the creator's live balance vs circulating supply.
       ${topPct >= 30 || sniperPct > 0 ? "<br>*Estimated from trades (ignores direct wallet-to-wallet transfers). Snipers = wallets that bought inside the 20-block anti-snipe window." : ""}
       <br>See the ${link}.</div>`;
@@ -3671,7 +3671,7 @@ function renderComments(addr) {
   const list = ((statsIdx && statsIdx.comments[addr]) || []).slice().sort((a, b) => b.b - a.b);
   const creator = (tokenInfo[addr]?.creator || "").toLowerCase();
   if (!list.length) {
-    $("tComments").innerHTML = `<div class="cempty">No comments yet — say something.</div>`;
+    $("tComments").innerHTML = `<div class="cempty">No comments yet. Say something.</div>`;
   } else {
     $("tComments").innerHTML = list.slice(0, 100).map((c) => {
       const who = c.a.slice(0, 6) + "…" + c.a.slice(-4);
@@ -3751,7 +3751,7 @@ $("tShare").onclick = async () => {
   const w = window.open(intent, "_blank", "noopener");
   if (w) return;
   // popup blocked: leave them the post rather than nothing
-  if (await copyText(text)) toast("Post copied — paste it into X");
+  if (await copyText(text)) toast("Post copied. Paste it into X");
   else toast(text);
 };
 
