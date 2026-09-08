@@ -2311,7 +2311,7 @@ $("cfClaim").onclick = async () => {
     const tx = await platform.connect(signer).claimCreatorFees();
     toast("Claiming…"); await tx.wait();
     toast("CREATOR FEES CLAIMED! +" + fmt(cfPot, 4) + " USDC");
-    refreshFees();
+    refreshFees(); refreshNativeBalance();   // the pot just landed in the wallet
   } catch (e) { toast(e.shortMessage || e.message); }
 };
 $("pfClaim").onclick = async () => {
@@ -2320,7 +2320,7 @@ $("pfClaim").onclick = async () => {
     const tx = await platform.connect(signer).withdrawPlatformFees(userAddr);
     toast("Claiming…"); await tx.wait();
     toast("PLATFORM FEES CLAIMED!");
-    refreshFees();
+    refreshFees(); refreshNativeBalance();
   } catch (e) { toast(e.shortMessage || e.message); }
 };
 $("pfSweep").onclick = async () => {
@@ -3393,6 +3393,7 @@ $("cGo").onclick = async () => {
     toast("Launching…");
     await tx.wait();
     toast(`$${sym} IS LIVE!`);
+    refreshNativeBalance();   // gas, plus the dev buy if one was made
     closeModals();
     cImageDataUri = ""; $("cFile").value = ""; $("cPrev").style.display = "none";
     $("cName").value = ""; $("cSymbol").value = ""; $("cBuy").value = "";
@@ -3563,6 +3564,13 @@ $("tGo").onclick = async () => {
       toast("Selling…"); await tx.wait(); toast("SOLD! +" + fmt(q, 4) + " USDC");
     }
     await sleep(800);
+    // The wallet just spent or received USDC, and nothing else refreshes the
+    // number in the header: it sat at the pre-trade figure until the visitor
+    // reloaded the page. The curve this trade moved is marked stale too, so the
+    // floor catches up on the next cycle without re-reading every other token.
+    dirtyTokens.add(currentToken);
+    refreshNativeBalance();
+    refreshFees();
     refreshTrade(); loadTokens();
   } catch (e) { toast(e.shortMessage || e.message); }
 };
