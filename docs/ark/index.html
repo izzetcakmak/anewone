@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Ark | A NEW ONE</title>
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+<meta name="description" content="Almost every memecoin is an animal. So we built the ark. Hover a passenger and it answers. The whole floor of A NEW ONE, two by two.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="A NEW ONE">
+<meta property="og:title" content="The Ark | A NEW ONE">
+<meta property="og:description" content="Almost every memecoin is an animal. So we built the ark. Hover a passenger and it answers.">
+<meta property="og:url" content="https://anewone.xyz/ark/">
+<meta property="og:image" content="https://anewone.xyz/ark/card.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Ark | A NEW ONE">
+<meta name="twitter:description" content="Almost every memecoin is an animal. So we built the ark. Hover a passenger and it answers.">
+<meta name="twitter:image" content="https://anewone.xyz/ark/card.jpg">
+<style>
+  /* Pastel storybook, the same palette as the $NOAH artwork and the Boarding Pass.
+     The trading floor is deliberately dark and serious; this page is deliberately not.
+     That contrast is the whole point of the door being hidden in the header. */
+  :root { --paper:#fdf6ec; --ink:#7a5636; --ink2:#a4917a; --line:#e8d9c2;
+          --rose:#f2a7b3; --butter:#f8d49b; --sage:#a9d8c5; --sea:#8fcabb; --blue:#8fb4e3;
+          --card:#fffdf8; --deep:#5f4128; --green:#4e9d7c; }
+  * { box-sizing:border-box; margin:0; }
+  html, body { height:100%; }
+  body { background:var(--paper); color:var(--ink); overflow-x:hidden;
+         font:15px/1.6 Inter,system-ui,-apple-system,sans-serif; }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.45; z-index:0;
+    background-image: radial-gradient(#e9d8bf 1px, transparent 1.4px); background-size:26px 26px; }
+  a { color:var(--green); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  .hand { font-family:'Segoe Print','Bradley Hand','Comic Sans MS',cursive; }
+
+  /* ---------- the gate ----------
+     A browser refuses to play audio until the visitor has interacted with THIS
+     document, and the click that brought them here happened on the floor, in
+     another tab. So the ark needs one deliberate press before it can make a
+     sound. Rather than apologise for that, it becomes the door. */
+  #gate { position:fixed; inset:0; z-index:20; display:flex; flex-direction:column;
+          align-items:center; justify-content:center; text-align:center; padding:24px;
+          background:linear-gradient(180deg,#fdf6ec 0%,#f7efe0 58%,#e8f2ee 100%); }
+  #gate.away { opacity:0; pointer-events:none; transition:opacity .5s ease; }
+  #gate .far { width:min(340px,62vw); margin-bottom:6px; animation:sail 6s ease-in-out infinite; }
+  #gate h1 { font-size:clamp(30px,6vw,48px); color:var(--deep); letter-spacing:-.5px; line-height:1.1; }
+  #gate p { color:var(--ink2); max-width:440px; margin:14px auto 26px; }
+  #gate p b { color:var(--deep); }
+  #board { font:600 15px/1 Inter,sans-serif; color:#2f5c49; background:var(--sage);
+           border:2px solid #8cc3ad; border-radius:999px; padding:15px 30px; cursor:pointer;
+           box-shadow:0 6px 0 #8cc3ad; transition:transform .12s, box-shadow .12s; }
+  #board:hover { transform:translateY(2px); box-shadow:0 4px 0 #8cc3ad; }
+  #board:active { transform:translateY(6px); box-shadow:0 0 0 #8cc3ad; }
+  #gate .tiny { font-size:12px; color:var(--ink2); margin-top:20px; }
+  @keyframes sail { 0%,100%{transform:translateY(0) rotate(-1.2deg)} 50%{transform:translateY(-12px) rotate(1.2deg)} }
+
+  /* ---------- chrome ---------- */
+  .bar { position:relative; z-index:3; display:flex; align-items:center; gap:10px;
+         max-width:1240px; margin:0 auto; padding:18px 20px 0; }
+  .bar .sp { margin-left:auto; }
+  .pill { display:inline-flex; align-items:center; gap:7px; font-size:13px; color:var(--ink);
+          background:var(--card); border:2px solid var(--line); border-radius:999px;
+          padding:7px 14px; cursor:pointer; font-family:inherit; }
+  .pill:hover { background:#fff; border-color:#dcc8a9; text-decoration:none; }
+  .pill svg { width:15px; height:15px; }
+
+  /* ---------- the scene ---------- */
+  .stage { position:relative; z-index:2; max-width:1240px; margin:10px auto 0; padding:0 20px; }
+  .scene { position:relative; width:100%; aspect-ratio:1200/640; }
+  /* Three layers, so the passengers are inside the boat rather than pasted on it:
+     the hull's far side and the house behind them, the bulwark and the water in
+     front. Depth for the price of one extra drawing. */
+  /* a container so the plaque can be sized as a share of the boat, not the window */
+  .scene { container-type:inline-size; }
+  .scene > svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .scene > svg.fore { z-index:2; pointer-events:none; }
+  .crew { position:absolute; inset:0; z-index:1; }
+
+  /* ---------- the captain's thought ----------
+     Sits in the top-right corner of the scene with its tail reaching back to
+     the captain. Sized as a share of the boat, like the plaque, so it holds its
+     place at every width. */
+  .thought { position:absolute; top:.5%; width:46%; aspect-ratio:552/300;
+    z-index:4; pointer-events:none; opacity:0; transform-origin:50% 0;
+    transform:scale(.92) translateY(-5px);
+    transition:opacity .2s ease, transform .3s cubic-bezier(.34,1.55,.64,1); }
+  .thought.show { opacity:1; transform:scale(1) translateY(0); }
+  .thought > svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .thought-text { position:absolute; top:18.3%; width:54.3%; height:45%;
+    display:flex; align-items:center; justify-content:center; }
+  /* the copy lives in one child, because a flex box lays every text node and
+     every <b> out as a separate item — which turns a sentence into columns */
+  .thought-text > span { display:block; width:100%; text-align:center;
+    color:var(--deep); font-size:15px; font-size:1.42cqi;
+    line-height:1.42; font-weight:500; }
+  .thought-text b { color:var(--green); }
+
+  /* Reach for the captain from the left and the bubble opens on his right, and
+     the other way round — so it never lands under the hand that reached. The
+     left copy is the same drawing flipped; only its text stays the right way
+     round, because it is a separate element rather than part of the artwork. */
+  #thought      { left:52%; }
+  #thought      .thought-text { left:36.2%; }
+  #thoughtL     { left:2%; }
+  #thoughtL > svg { transform:scaleX(-1); transform-origin:50% 50%; }
+  #thoughtL     .thought-text { left:9.5%; }
+
+  @media (prefers-reduced-motion:reduce) {
+    .thought { transform:none; transition:opacity .2s ease; }
+    .thought.show { transform:none; }
+  }
+  @media (max-width:760px) { .thought-text { line-height:1.34; } }
+
+  /* ---------- the name on the hull ----------
+     Same trick as the wordmark on izzetc.com: every letter its own colour and
+     its own inline-block, so each one can be picked up on its own. The spring
+     in the easing is what makes it feel poked rather than animated. */
+  .plaque { position:absolute; left:50%; top:83%; transform:translate(-50%,-50%);
+    z-index:3; display:flex; align-items:center; justify-content:center;
+    padding:.42em 1.5em; border-radius:.41em;
+    background:var(--card); border:.148em solid #a3744a;
+    font-family:ui-monospace,Consolas,monospace; font-weight:700; line-height:1;
+    font-size:26px; font-size:2.25cqi; }
+  .plaque b { display:inline-block; cursor:grab; will-change:transform;
+    transition:transform .18s cubic-bezier(.34,1.8,.64,1); }
+  .plaque b:nth-child(1) { color:#e0657a; }
+  .plaque b:nth-child(2) { color:#d9922a; }
+  .plaque b:nth-child(3) { color:#4e9d7c; }
+  .plaque b:nth-child(4) { color:#4a83c4; }
+  .plaque b:nth-child(5) { color:#a568bb; }
+  .plaque b:hover, .plaque b.pop  { transform:translateY(-.42em) rotate(-9deg) scale(1.16); }
+  /* letters lean alternate ways, so a sweep across reads as a wave */
+  .plaque b:nth-child(even):hover,
+  .plaque b:nth-child(even).pop   { transform:translateY(-.42em) rotate(9deg) scale(1.16); }
+  /* The leap and the spin are the part that needs consent; a small scale still
+     answers the pointer, so the letters stay alive without throwing anyone off.
+     These selectors have to match the :nth-child rule above or the even letters
+     go on leaping by themselves, which is worse than either choice. */
+  @media (prefers-reduced-motion:reduce) {
+    .plaque b { transition:none; }
+    .plaque b:hover, .plaque b.pop,
+    .plaque b:nth-child(even):hover, .plaque b:nth-child(even).pop { transform:scale(1.12); }
+  }
+
+  /* Every passenger is a real button: hover works for a mouse, tap works for a
+     phone, and Tab works for a keyboard, all through the same handler. */
+  .crew button { position:absolute; transform:translate(-50%,-50%); width:8%;
+    aspect-ratio:1; padding:0; border:0; background:none; cursor:pointer;
+    -webkit-tap-highlight-color:transparent; }
+  .crew button svg { width:100%; height:100%; display:block; overflow:visible;
+    transform-origin:50% 88%; }
+  .crew button:focus { outline:none; }
+  .crew button:focus-visible svg { filter:drop-shadow(0 0 0 #4e9d7c) drop-shadow(0 0 6px #4e9d7c); }
+  .crew button.cap { width:10.5%; }
+
+  /* ---------- the life in them ----------
+     What sells the walrus on izzetc.com is not its hover, it is that it never
+     holds still. Same here: every body breathes and every pair of eyes blinks
+     on its own clock, and none of it waits to be touched. The staggered
+     durations matter — twelve animals breathing in lockstep reads as a machine. */
+  .crew .body { animation:breathe 3.4s ease-in-out infinite;
+    transform-box:fill-box; transform-origin:50% 92%; }
+  .crew .eyes { animation:blink 5.4s ease-in-out infinite;
+    transform-box:fill-box; transform-origin:50% 50%; }
+  .crew button:nth-child(3n)   .body { animation-duration:4.1s; animation-delay:-1.3s; }
+  .crew button:nth-child(3n+1) .body { animation-duration:3.7s; animation-delay:-2.4s; }
+  .crew button:nth-child(4n)   .eyes { animation-duration:6.7s; animation-delay:-3.1s; }
+  .crew button:nth-child(4n+1) .eyes { animation-duration:4.6s; animation-delay:-1.7s; }
+  .crew button:nth-child(4n+2) .eyes { animation-duration:7.9s; animation-delay:-5.2s; }
+  @keyframes breathe { 0%,100% { transform:scale(1,1); } 50% { transform:scale(1.035,.975); } }
+  @keyframes blink   { 0%,92%,100% { transform:scaleY(1); } 95.5% { transform:scaleY(.06); } }
+
+  /* The gaze. Two custom properties per passenger, inherited down to its pupils;
+     the units are SVG user units, because a CSS transform on an SVG element is
+     applied in the element's own coordinate system, not in screen pixels. */
+  .crew .pup { transform:translate(calc(var(--px,0) * 1px), calc(var(--py,0) * 1px));
+    transition:transform .16s ease-out; }
+
+  /* The label only appears once you have already found the animal, and it sits
+     above the head: below the feet it would be swallowed by the bulwark. */
+  .tag { position:absolute; left:50%; top:-19%; transform:translateX(-50%);
+    font:600 10.5px/1 ui-monospace,Consolas,monospace; letter-spacing:.4px; color:var(--deep);
+    background:var(--card); border:2px solid var(--line); border-radius:999px;
+    padding:3px 8px; opacity:0; transition:opacity .18s; white-space:nowrap; pointer-events:none; }
+  .crew button:hover .tag, .crew button:focus-visible .tag, .crew button.awake .tag { opacity:1; }
+
+  /* ---------- the moves ----------
+     One class, one variable: each passenger names its own animation inline, so
+     adding the next eighteen is a line of data rather than a line of CSS. */
+  .crew button.awake svg { animation:var(--move,hop) var(--dur,.85s) ease both; }
+  @keyframes hop     { 0%,100%{transform:translateY(0)} 26%{transform:translateY(-16%) scaleY(1.06)}
+                       52%{transform:translateY(0) scaleY(.94)} 74%{transform:translateY(-7%)} }
+  @keyframes wag     { 0%,100%{transform:rotate(0)} 18%{transform:rotate(-9deg)} 40%{transform:rotate(8deg)}
+                       62%{transform:rotate(-6deg)} 82%{transform:rotate(4deg)} }
+  @keyframes waddle  { 0%,100%{transform:rotate(0) translateY(0)} 25%{transform:rotate(-11deg) translateY(-4%)}
+                       50%{transform:rotate(0) translateY(0)} 75%{transform:rotate(11deg) translateY(-4%)} }
+  @keyframes shiver  { 0%,100%{transform:translateX(0)} 12%{transform:translateX(-3%)} 24%{transform:translateX(3%)}
+                       36%{transform:translateX(-3%)} 48%{transform:translateX(2.4%)} 60%{transform:translateX(-2%)}
+                       72%{transform:translateX(1.4%)} 86%{transform:translateX(-1%)} }
+  @keyframes stretch { 0%,100%{transform:scale(1,1)} 30%{transform:scale(1.1,.9) translateY(3%)}
+                       60%{transform:scale(.93,1.12) translateY(-6%)} }
+  @keyframes heavy   { 0%,100%{transform:translateY(0) scale(1,1)} 22%{transform:translateY(-9%) scale(.97,1.05)}
+                       46%{transform:translateY(0) scale(1.07,.9)} 70%{transform:translateY(-3%) scale(1,1)} }
+  @keyframes butt    { 0%,100%{transform:rotate(0) translateX(0)} 30%{transform:rotate(-14deg) translateX(-4%)}
+                       55%{transform:rotate(16deg) translateX(5%)} 78%{transform:rotate(-5deg)} }
+  @keyframes slow    { 0%,100%{transform:rotate(0) scale(1)} 45%{transform:rotate(-5deg) scale(1.05)}
+                       70%{transform:rotate(3deg) scale(1.02)} }
+  @keyframes dance   { 0%,100%{transform:rotate(0) translateY(0)} 15%{transform:rotate(-8deg) translateY(-5%)}
+                       33%{transform:rotate(7deg) translateY(0)} 50%{transform:rotate(-7deg) translateY(-6%)}
+                       68%{transform:rotate(6deg) translateY(0)} 85%{transform:rotate(-3deg) translateY(-2%)} }
+
+
+  /* ---------- the note under the boat ---------- */
+  .note { position:relative; z-index:2; max-width:720px; margin:8px auto 0; padding:0 20px 30px;
+          text-align:center; color:var(--ink2); }
+  .note .big { font-size:clamp(18px,3vw,25px); color:var(--deep); line-height:1.35; }
+  .note .big b { color:var(--green); }
+  .note .sm { font-size:13px; margin-top:12px; }
+  .cta { display:inline-flex; align-items:center; gap:8px; margin-top:20px; font:600 14px/1 Inter,sans-serif;
+    color:#2f5c49; background:var(--sage); border:2px solid #8cc3ad; border-radius:999px;
+    padding:13px 24px; box-shadow:0 5px 0 #8cc3ad; transition:transform .12s, box-shadow .12s; }
+  .cta:hover { text-decoration:none; transform:translateY(2px); box-shadow:0 3px 0 #8cc3ad; }
+  .foot { position:relative; z-index:2; text-align:center; font-size:11.5px; color:var(--ink2);
+          padding:0 20px 40px; }
+  #closeBtn { position:fixed; right:18px; bottom:18px; z-index:5; }
+
+  /* On a phone the boat would shrink to about 360px wide, which puts every
+     animal at 40px: too small to recognise, too small to tap, and the whole
+     point of the page is recognising them. So it keeps a usable size and pans
+     sideways instead. The top padding is room for the captain's bubble, which
+     a scroll container would otherwise clip. */
+  @media (max-width:760px) {
+    .stage { padding:32px 0 10px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+             scrollbar-width:none; }
+    .stage::-webkit-scrollbar { display:none; }
+    .scene { min-width:560px; }
+    .crew button { width:10%; }
+    .crew button.cap { width:13%; }
+    /* the lower row is proportionally taller here, so it hangs down to within a
+       pixel of the plaque — and a lifted letter would climb into its feet */
+    .plaque { top:85.5%; }
+    .tag { font-size:9px; padding:2px 6px; border-width:1.5px; }
+  }
+  /* Someone who asked their system for less movement gets a still ark. The
+     sounds still work — that setting is about motion, not about sound. */
+  /* A page whose entire content is animated animals cannot answer this
+     preference by holding still — that leaves nothing to look at. So reduce
+     rather than remove. What stays is what carries no vestibular risk: the
+     blink (an eyelid, going nowhere) and the gaze (a two-unit pupil shift, and
+     a response to the visitor's own pointer rather than motion of its own).
+     What goes is travel: the breathing is softened to a seventh of its throw,
+     and the hops, wags and headbutts become a scale with no displacement. */
+  @media (prefers-reduced-motion:reduce) {
+    .crew .body { animation-name:breathe-soft; }
+    .crew button.awake svg { animation:nudge .5s ease both; }
+    #gate .far { animation:none; }
+    .cloud, .wave { animation:none !important; }
+  }
+  @keyframes breathe-soft { 0%,100% { transform:scale(1,1); } 50% { transform:scale(1.014,.992); } }
+  @keyframes nudge { 0%,100% { transform:scale(1); } 45% { transform:scale(1.09); } }
+</style>
+</head>
+<body>
+
+<!-- ============================ THE GATE ============================ -->
+<div id="gate">
+  <svg class="far" viewBox="0 0 300 170" fill="none" stroke="#7a5636" stroke-width="4"
+       stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+    <path d="M96 40 L150 12 L204 40 Z" fill="#e08a86"/>
+    <rect x="104" y="40" width="92" height="40" rx="5" fill="#f8d49b"/>
+    <circle cx="128" cy="60" r="8" fill="#fdf6ec"/><circle cx="172" cy="60" r="8" fill="#fdf6ec"/>
+    <path d="M56 88 L244 88 Q232 142 150 146 Q68 142 56 88 Z" fill="#c9925e"/>
+    <path d="M70 108 H230" stroke="#a3744a" stroke-width="4"/>
+    <path d="M10 150 q28 -12 56 0 t56 0 t56 0 t56 0 t56 0" stroke="#8fcabb" stroke-width="5"/>
+    <path d="M0 164 q28 -12 56 0 t56 0 t56 0 t56 0 t56 0" stroke="#a9d8c5" stroke-width="5"/>
+  </svg>
+  <h1 class="hand">Noah's&nbsp;Arc</h1>
+  <p>Look at the top of any memecoin chart and you will mostly find <b>animals</b>.
+     Dogs, cats, frogs, one very famous hippo. So we did the obvious thing and
+     <b>built the boat</b>.</p>
+  <button id="board" type="button">Board the ark &nbsp;→</button>
+  <p class="tiny">Hover a passenger and it will answer you. Sound on.</p>
+</div>
+
+<!-- ============================ THE DECK ============================ -->
+<main id="deck" aria-hidden="true">
+  <div class="bar">
+    <a class="pill" href="../index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+           stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      A NEW ONE
+    </a>
+    <button class="pill sp" id="muteBtn" type="button" aria-pressed="false">
+      <span id="muteIcon">🔊</span><span id="muteTxt">Sound on</span>
+    </button>
+  </div>
+
+  <div class="stage">
+    <div class="scene">
+      <!-- The ship is one flat drawing; the passengers are separate buttons on
+           top of it, so the roster is data and the boat never has to be redrawn. -->
+      <!-- BEHIND: sky, the house, the balcony they stand on, the far side of the hull -->
+      <svg class="ship" viewBox="0 0 1200 640" fill="none" stroke="#7a5636" stroke-width="4"
+           stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+        <circle cx="168" cy="112" r="44" fill="#f8d49b" stroke="#eec27f"/>
+        <g stroke="none">
+          <path d="M540 500 a340 340 0 0 1 680 0 h-35 a305 305 0 0 0 -610 0 Z" fill="#f2a7b3" opacity=".45"/>
+          <path d="M575 500 a305 305 0 0 1 610 0 h-35 a270 270 0 0 0 -540 0 Z" fill="#f8d49b" opacity=".45"/>
+          <path d="M610 500 a270 270 0 0 1 540 0 h-35 a235 235 0 0 0 -470 0 Z" fill="#a9d8c5" opacity=".45"/>
+          <path d="M645 500 a235 235 0 0 1 470 0 h-35 a200 200 0 0 0 -400 0 Z" fill="#8fb4e3" opacity=".4"/>
+        </g>
+        <g class="cloud" fill="#fffdf8" stroke="#ecdcc4" stroke-width="3">
+          <g><ellipse cx="322" cy="104" rx="50" ry="26"/><ellipse cx="280" cy="112" rx="32" ry="19"/>
+             <ellipse cx="362" cy="114" rx="30" ry="17"/></g>
+          <g opacity=".8"><ellipse cx="982" cy="186" rx="40" ry="21"/><ellipse cx="948" cy="192" rx="26" ry="15"/></g>
+        </g>
+
+        <!-- roof, flat at the very top so the captain has a bridge to stand on -->
+        <path d="M228 272 L548 184 L652 184 L972 272 Z" fill="#e08a86"/>
+        <path d="M292 254 L566 178" stroke="#c9736f"/>
+        <path d="M378 230 L596 170" stroke="#c9736f" opacity=".7"/>
+        <path d="M228 272 H972" stroke-width="5"/>
+        <rect x="528" y="170" width="144" height="16" rx="7" fill="#c9925e"/>
+
+        <!-- the house the animals are backed against -->
+        <rect x="304" y="272" width="592" height="92" rx="6" fill="#f8d49b"/>
+        <!-- portholes sit in the gaps between the upper row, never behind a face -->
+        <circle cx="402" cy="312" r="17" fill="#fffdf8"/><circle cx="534" cy="312" r="17" fill="#fffdf8"/>
+        <circle cx="666" cy="312" r="17" fill="#fffdf8"/><circle cx="798" cy="312" r="17" fill="#fffdf8"/>
+
+        <!-- balcony floor -->
+        <rect x="262" y="362" width="676" height="16" rx="7" fill="#c9925e"/>
+
+        <!-- the far side of the hull: the wall the lower row stands against -->
+        <path d="M128 440 H1072 V470 Q1046 612 600 622 Q154 612 128 470 Z" fill="#a3744a"/>
+        <rect x="124" y="432" width="952" height="16" rx="8" fill="#c9925e"/>
+      </svg>
+
+      <div class="crew" id="crew"><!-- built by script, from ROSTER --></div>
+
+      <!-- IN FRONT: the railing and the bulwark that the passengers lean over,
+           then the water the whole thing floats in -->
+      <svg class="fore" viewBox="0 0 1200 640" fill="none" stroke="#7a5636" stroke-width="4"
+           stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+        <path d="M286 362 V344 M346 362 V344 M406 362 V344 M466 362 V344 M526 362 V344
+                 M586 362 V344 M646 362 V344 M706 362 V344 M766 362 V344 M826 362 V344 M886 362 V344"
+              stroke="#a3744a"/>
+        <path d="M272 344 H928" stroke="#a3744a" stroke-width="5"/>
+
+        <path d="M134 486 H1066 Q1042 606 600 616 Q158 606 134 486 Z" fill="#c9925e"/>
+        <rect x="126" y="476" width="948" height="16" rx="8" fill="#a3744a"/>
+        <path d="M172 540 H1028" stroke="#a3744a" opacity=".55"/>
+        <path d="M228 582 H972" stroke="#a3744a" opacity=".35"/>
+
+        <g class="wave" stroke-width="6">
+          <path d="M-40 590 q40 -16 80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0"
+                stroke="#8fcabb"/>
+          <path d="M-80 614 q40 -16 80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0"
+                stroke="#a9d8c5"/>
+          <path d="M-20 636 q40 -16 80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0"
+                stroke="#bfe3d6"/>
+        </g>
+      </svg>
+
+      <!-- The plaque left the drawing and became real text: inside the SVG the
+           letters could not be coloured, hovered or moved one at a time. -->
+      <div class="plaque" id="plaque" aria-label="$NOAH">
+        <b>$</b><b>N</b><b>O</b><b>A</b><b>H</b>
+      </div>
+
+      <!-- The captain's thought. The cloud is drawn twice — once in the outline
+           colour with every bump grown, once in the fill colour at true size —
+           because overlapping ellipses drawn that way share one continuous
+           outline, which is far simpler than computing a union path. The tail
+           grows from small to large as it leaves him, the way it does in a
+           storybook. -->
+      <div class="thought" id="thought">
+        <svg viewBox="0 0 552 300" aria-hidden="true">
+          <g fill="#12080E">
+            <ellipse cx="250" cy="85"  rx="87"  ry="69"/><ellipse cx="360" cy="70"  rx="95"  ry="65"/>
+            <ellipse cx="455" cy="105" rx="85"  ry="67"/><ellipse cx="200" cy="140" rx="79"  ry="67"/>
+            <ellipse cx="320" cy="165" rx="99"  ry="69"/><ellipse cx="440" cy="160" rx="89"  ry="65"/>
+            <ellipse cx="350" cy="120" rx="137" ry="85"/>
+            <circle cx="120" cy="122" r="21"/><circle cx="85" cy="116" r="16"/><circle cx="55" cy="110" r="12"/>
+          </g>
+          <g fill="#FFFDF8">
+            <ellipse cx="250" cy="85"  rx="80"  ry="62"/><ellipse cx="360" cy="70"  rx="88"  ry="58"/>
+            <ellipse cx="455" cy="105" rx="78"  ry="60"/><ellipse cx="200" cy="140" rx="72"  ry="60"/>
+            <ellipse cx="320" cy="165" rx="92"  ry="62"/><ellipse cx="440" cy="160" rx="82"  ry="58"/>
+            <ellipse cx="350" cy="120" rx="130" ry="78"/>
+            <circle cx="120" cy="122" r="14"/><circle cx="85" cy="116" r="9"/><circle cx="55" cy="110" r="5.5"/>
+          </g>
+        </svg>
+        <div class="thought-text"><span id="thoughtText">Almost every memecoin is an
+          animal. Dogs, cats, frogs, one very famous hippo. So we did the obvious
+          thing and built the boat. And this boat still needs
+          <b>A NEW ONE</b>.</span></div>
+      </div>
+
+      <!-- The same cloud mirrored, for the approach from his other side. Its
+           drawing is cloned from the one above at load rather than repeated
+           here, so the two can never drift apart. -->
+      <div class="thought" id="thoughtL">
+        <div class="thought-text"><span id="thoughtTextL">Every week, on a surprise day,
+          half of the platform's fee income buys <b>$NOAH</b> back. All of it
+          is <b>burned</b>.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <p class="big">Every animal here is somebody's coin.<br>
+       The boat carrying them is <b>$NOAH</b>, the first one launched on A NEW ONE.</p>
+    <p class="sm">Twelve aboard so far. The rest of the flood is still being let in.</p>
+    <a class="cta" href="../index.html">Go to the floor &nbsp;→</a>
+  </div>
+  <p class="foot">$NOAH is a memecoin with no promised value. Every passenger above is a cartoon
+     drawn for this page, not an official mark of any project. Animal calls are
+     public-domain (CC0) recordings from <a href="https://freesound.org" target="_blank" rel="noopener">Freesound</a>.
+     Built on Arc.</p>
+
+  <button class="pill" id="closeBtn" type="button">Close ✕</button>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  /* =====================================================================
+     SOUND
+     Real recordings, one per passenger, all CC0 from Freesound — see
+     snd/CREDITS.json. They are trimmed to a single call and levelled to a
+     common loudness (not a common peak: a sustained horn at the same peak
+     as a squirrel chirp buries it), so no animal shouts over the others.
+     Thirteen clips come to 86 KB, and they live on this page only — the
+     trading floor never loads any of it.
+     ===================================================================== */
+  let AC = null, master = null;
+  let muted = false;
+  try { muted = localStorage.getItem("ark.muted") === "1"; } catch (e) {}
+
+  function audio() {
+    if (AC) return AC;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    AC = new Ctx();
+    master = AC.createGain();
+    master.gain.value = muted ? 0 : 0.9;
+    master.connect(AC.destination);
+    return AC;
+  }
+
+  /* Decoded once, then replayable instantly and overlappably — which an
+     <audio> element cannot do without cloning itself on every trigger. */
+  const clips = {}, loading = {};
+  function load(slug) {
+    if (clips[slug]) return Promise.resolve(clips[slug]);
+    if (!loading[slug]) {
+      const C = audio();
+      loading[slug] = !C ? Promise.resolve(null) :
+        fetch("snd/" + slug + ".mp3")
+          .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(r.status)))
+          .then((b) => C.decodeAudioData(b))
+          .then((buf) => (clips[slug] = buf))
+          .catch(() => null);
+    }
+    return loading[slug];
+  }
+
+  /** A pitched voice: start frequency, ramps through pts, optional wobble. */
+  function voice(o) {
+    const C = audio(); if (!C) return;
+    const t = C.currentTime + (o.t0 || 0), dur = o.dur || 0.3;
+    const osc = C.createOscillator(), g = C.createGain();
+    osc.type = o.type || "sawtooth";
+    const pts = o.pts || [[0, 400]];
+    osc.frequency.setValueAtTime(Math.max(1, pts[0][1]), t);
+    for (let i = 1; i < pts.length; i++)
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1, pts[i][1]), t + pts[i][0] * dur);
+    let tail = osc;
+    if (o.lp) { const f = C.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = o.lp;
+                osc.connect(f); tail = f; }
+    if (o.vib) { const l = C.createOscillator(), a = C.createGain();
+                 l.frequency.value = o.vibHz || 12; a.gain.value = o.vib;
+                 l.connect(a); a.connect(osc.frequency); l.start(t); l.stop(t + dur + 0.05); }
+    const peak = o.peak || 0.2;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + Math.min(0.02, dur * 0.2));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    tail.connect(g); g.connect(master);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+
+  /* One clip at a time. Sweeping a mouse across twelve animals should not
+     sound like twelve animals falling down the stairs. */
+  let lastPlay = 0;
+  function play(slug) {
+    if (muted || !slug) return;
+    const now = performance.now();
+    if (now - lastPlay < 110) return;
+    lastPlay = now;
+    const C = audio(); if (!C) return;
+    if (C.state === "suspended") C.resume();
+    load(slug).then((buf) => {
+      // muting between the hover and the decode should still mean silence
+      if (!buf || muted) return;
+      const src = C.createBufferSource();
+      src.buffer = buf;
+      src.connect(master);
+      src.start();
+    });
+  }
+
+  /* =====================================================================
+     THE PASSENGERS
+     Each one is a redrawing of that coin's own logo, in the house style the
+     walrus on izzetc.com established: near-black outlines heavy enough to
+     survive at 90px, a radial gradient for volume, and eyes built from a
+     white, a pupil and a highlight rather than a dot — the highlight is what
+     stops them looking dead.
+
+     What makes them feel alive is not the hover. It is that they never stop:
+     every body breathes and every pair of eyes blinks on its own clock, and
+     the pupils follow the visitor's cursor around the room. Approaching the
+     boat makes twelve animals look up at you.
+
+     Drawing conventions: viewBox 0 0 100 100, feet at y≈94, stroke inherited
+     from the root so each shape only names its fill.
+     ===================================================================== */
+  const INK = "#12080E";
+
+  const open = (defs) =>
+    '<svg viewBox="0 0 100 100" fill="none" stroke="' + INK + '" stroke-width="4.2" ' +
+    'stroke-linejoin="round" stroke-linecap="round">' + (defs ? "<defs>" + defs + "</defs>" : "");
+
+  /** radial gradient, lit from the upper left like everything else here */
+  const vol = (id, light, dark) =>
+    '<radialGradient id="' + id + '" cx="36%" cy="26%">' +
+    '<stop offset="0%" stop-color="' + light + '"/>' +
+    '<stop offset="100%" stop-color="' + dark + '"/></radialGradient>';
+
+  /** white, pupil, highlight — the pupil carries the gaze */
+  const eye = (x, y, r) => {
+    r = r || 7.4;
+    return '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="#FFFDF8"/>' +
+      '<circle class="pup" cx="' + x + '" cy="' + (y + 0.5) + '" r="' + (r * 0.44).toFixed(1) +
+      '" fill="' + INK + '" stroke="none"/>' +
+      '<circle cx="' + (x - r * 0.3).toFixed(1) + '" cy="' + (y - r * 0.36).toFixed(1) +
+      '" r="' + (r * 0.2).toFixed(1) + '" fill="#fff" stroke="none"/>';
+  };
+  const blush = (x1, x2, y) =>
+    '<g stroke="none" fill="#FF6FA5" opacity=".38">' +
+    '<ellipse cx="' + x1 + '" cy="' + y + '" rx="7" ry="4.2"/>' +
+    '<ellipse cx="' + x2 + '" cy="' + y + '" rx="7" ry="4.2"/></g>';
+
+  /* ---- shared shapes -------------------------------------------------- */
+
+  /** the shiba head the whole dog half of this market is built on */
+  const shibaHead = (grad, cheek, opts) => {
+    const o = opts || {};
+    return '<g class="head">' +
+      (o.ears === false ? "" :
+        '<path d="M27 40 L20 12 L48 26 Z" fill="url(#' + grad + ')"/>' +
+        '<path d="M73 40 L80 12 L52 26 Z" fill="url(#' + grad + ')"/>') +
+      '<path d="M50 22 C74 22 88 40 88 58 C88 78 71 90 50 90 C29 90 12 78 12 58 C12 40 26 22 50 22 Z" ' +
+        'fill="url(#' + grad + ')"/>' +
+      '<ellipse cx="27" cy="66" rx="14" ry="12" fill="' + cheek + '" stroke="none"/>' +
+      '<ellipse cx="73" cy="66" rx="14" ry="12" fill="' + cheek + '" stroke="none"/>' +
+      '<ellipse cx="50" cy="70" rx="18" ry="14" fill="' + cheek + '" stroke-width="3.6"/>' +
+      (o.face || "") +
+      '<ellipse cx="50" cy="63" rx="6" ry="4.6" fill="' + INK + '" stroke="none"/>' +
+      '<path d="M50 68 v4 M50 72 q-6 5 -10 0 M50 72 q6 5 10 0" stroke-width="3.2"/>' +
+      "</g>";
+  };
+
+  /* ---- the roster ------------------------------------------------------ */
+
+  const ART = {
+    /* gold coin, cream shiba, the knowing look */
+    DOGE: open(vol("gDOGE", "#F7E3B6", "#D9A94F")) +
+      '<g class="body">' + shibaHead("gDOGE", "#FFF8E8", {
+        face: '<g class="eyes">' + eye(34, 47, 7.2) + eye(66, 47, 7.2) + "</g>" +
+              '<path d="M23 35 q10 -7 20 -2" stroke-width="3.8"/>' +
+              '<path d="M77 32 q-10 -4 -20 1" stroke-width="3.8"/>' }) +
+      blush(20, 80, 60) + "</g></svg>",
+
+    /* the red-and-orange scowl */
+    SHIB: open(vol("gSHIB", "#FFB65C", "#EE7B12")) +
+      '<g class="body">' + shibaHead("gSHIB", "#FFF6E9", {
+        face: '<g class="eyes">' +
+              '<path d="M22 46 q13 -10 26 1 q-13 8 -26 -1 z" fill="' + INK + '" stroke="none"/>' +
+              '<path d="M78 46 q-13 -10 -26 1 q13 8 26 -1 z" fill="' + INK + '" stroke="none"/>' +
+              '<circle class="pup" cx="35" cy="45" r="2" fill="#fff" stroke="none"/>' +
+              '<circle class="pup" cx="65" cy="45" r="2" fill="#fff" stroke="none"/></g>' +
+              '<path d="M19 33 q14 -8 28 -1" stroke-width="4.6"/>' +
+              '<path d="M81 33 q-14 -8 -28 -1" stroke-width="4.6"/>' }) +
+      "</g></svg>",
+
+    /* the beanie is the whole identity, so it is drawn properly */
+    WIF: open(vol("gWIF", "#F8E6C6", "#DCB273") + vol("gHAT", "#F7BDBB", "#DE8F92")) +
+      '<g class="body">' + shibaHead("gWIF", "#FFFAF0", {
+        face: '<g class="eyes">' + eye(35, 52, 6.6) + eye(65, 52, 6.6) + "</g>" }) +
+      '<g class="hat">' +
+      '<path d="M17 28 q4 -25 33 -25 q29 0 33 25 q-33 -10 -66 0 Z" fill="url(#gHAT)"/>' +
+      '<path d="M14 28 q36 -11 72 0 q-2 10 -7 10 q-29 -9 -58 0 q-5 0 -7 -10 Z" fill="#E8A0A2"/>' +
+      '<g stroke="#C07E82" stroke-width="2.2" opacity=".85">' +
+      '<path d="M29 24 q3 -13 7 -19"/><path d="M43 21 q1 -12 2 -19"/>' +
+      '<path d="M57 21 q-1 -12 -2 -19"/><path d="M71 24 q-3 -13 -7 -19"/></g></g>' +
+      blush(22, 78, 62) + "</g></svg>",
+
+    /* tilted head, white muzzle, three red alarms */
+    BONK: open(vol("gBONK", "#FFCE86", "#E58A24")) +
+      '<g class="body"><g transform="rotate(-11 50 58)">' + shibaHead("gBONK", "#FFF9EE", {
+        face: '<g class="eyes">' +
+              '<path d="M26 48 q9 -7 17 0" stroke-width="4.4"/>' +
+              '<path d="M74 48 q-9 -7 -17 0" stroke-width="4.4"/></g>' }) + "</g>" +
+      '<g fill="#E8302A" stroke-width="3">' +
+      '<path d="M22 6 l7 1 l-3 15 l-5 -1 z"/><circle cx="24" cy="27" r="3.2"/>' +
+      '<path d="M47 1 l7 0 l-1 16 l-5 0 z"/><circle cx="50" cy="22" r="3.2"/>' +
+      '<path d="M71 7 l7 -2 l3 15 l-5 1 z"/><circle cx="77" cy="27" r="3.2"/></g></g></svg>',
+
+    /* a green frog with big eyes and a wide mouth — our own, not anyone's character */
+    PEPE: open(vol("gPEPE", "#A7DE8C", "#5CA346")) +
+      '<g class="body">' +
+      '<ellipse cx="50" cy="72" rx="32" ry="22" fill="url(#gPEPE)"/>' +
+      '<path d="M20 66 q-11 5 -13 17M80 66 q11 5 13 17" stroke-width="4"/>' +
+      '<ellipse cx="50" cy="46" rx="33" ry="24" fill="url(#gPEPE)"/>' +
+      '<g class="eyes"><circle cx="30" cy="26" r="13" fill="#FFFDF8"/>' +
+      '<circle cx="70" cy="26" r="13" fill="#FFFDF8"/>' +
+      '<circle class="pup" cx="30" cy="27" r="5.2" fill="' + INK + '" stroke="none"/>' +
+      '<circle class="pup" cx="70" cy="27" r="5.2" fill="' + INK + '" stroke="none"/>' +
+      '<circle cx="26" cy="22" r="2.6" fill="#fff" stroke="none"/>' +
+      '<circle cx="66" cy="22" r="2.6" fill="#fff" stroke="none"/></g>' +
+      '<path d="M27 52 q23 16 46 0" stroke-width="4.2"/>' +
+      '<path d="M27 52 q23 16 46 0 q-23 6 -46 0 z" fill="#C2544F" stroke="none"/></g></svg>',
+
+    /* Pudgy proportions: dark cap with the swoosh, orange beak */
+    PENGU: open(vol("gPENGU", "#9CC8F4", "#4C86D6")) +
+      '<g class="body">' +
+      '<path d="M14 64 q-11 15 2 24 q11 4 17 -8 z" fill="#4C86D6"/>' +
+      '<path d="M86 64 q11 15 -2 24 q-11 4 -17 -8 z" fill="#4C86D6"/>' +
+      '<ellipse cx="50" cy="56" rx="36" ry="38" fill="url(#gPENGU)"/>' +
+      '<path d="M50 18 q30 0 34 30 q-15 -13 -34 -13 q-19 0 -34 13 q4 -30 34 -30 z" fill="#2F63B0"/>' +
+      '<path d="M50 38 q23 0 25 25 q-3 28 -25 28 q-22 0 -25 -28 q2 -25 25 -25 z" fill="#FFFDF8" stroke-width="3.6"/>' +
+      '<g class="eyes">' +
+      '<circle class="pup" cx="39" cy="54" r="4.6" fill="' + INK + '" stroke="none"/>' +
+      '<circle class="pup" cx="61" cy="54" r="4.6" fill="' + INK + '" stroke="none"/>' +
+      '<circle cx="37.4" cy="52" r="1.7" fill="#fff" stroke="none"/>' +
+      '<circle cx="59.4" cy="52" r="1.7" fill="#fff" stroke="none"/></g>' +
+      '<path d="M43 65 q7 -5 14 0 q-7 8 -14 0 z" fill="#F5A623" stroke-width="3.2"/>' +
+      '<path d="M29 20 q11 -6 20 -1" stroke="#2F63B0" stroke-width="4.6"/></g></svg>',
+
+    /* the mouth is the meme, so the mouth gets the room */
+    POPCAT: open(vol("gPOP", "#E7C9A6", "#B98F63")) +
+      '<g class="body">' +
+      '<path d="M23 40 L17 14 L41 27 Z" fill="url(#gPOP)"/>' +
+      '<path d="M77 40 L83 14 L59 27 Z" fill="url(#gPOP)"/>' +
+      '<ellipse cx="50" cy="54" rx="35" ry="36" fill="url(#gPOP)"/>' +
+      '<g class="eyes">' +
+      '<path d="M27 40 q9 -7 17 -1" stroke-width="4.2"/>' +
+      '<path d="M73 40 q-9 -7 -17 -1" stroke-width="4.2"/></g>' +
+      '<ellipse cx="50" cy="66" rx="19" ry="21" fill="#6E2233" stroke-width="4"/>' +
+      '<ellipse cx="50" cy="60" rx="11" ry="9" fill="#C1566B" stroke="none"/>' +
+      blush(19, 81, 52) + "</g></svg>",
+
+    /* white cat, wide grey-blue eyes, pink inner ears */
+    MEW: open(vol("gMEW", "#FFFFFF", "#DCDCE6")) +
+      '<g class="body">' +
+      '<path d="M24 38 L18 10 L43 25 Z" fill="url(#gMEW)"/>' +
+      '<path d="M76 38 L82 10 L57 25 Z" fill="url(#gMEW)"/>' +
+      '<path d="M27 33 L24 19 L38 27 Z" fill="#F4A9BE" stroke="none"/>' +
+      '<path d="M73 33 L76 19 L62 27 Z" fill="#F4A9BE" stroke="none"/>' +
+      '<ellipse cx="50" cy="56" rx="35" ry="34" fill="url(#gMEW)"/>' +
+      '<g class="eyes">' +
+      '<ellipse cx="34" cy="52" rx="9" ry="10.5" fill="#BFD6E8"/>' +
+      '<ellipse cx="66" cy="52" rx="9" ry="10.5" fill="#BFD6E8"/>' +
+      '<ellipse class="pup" cx="34" cy="53" rx="3.6" ry="5" fill="' + INK + '" stroke="none"/>' +
+      '<ellipse class="pup" cx="66" cy="53" rx="3.6" ry="5" fill="' + INK + '" stroke="none"/>' +
+      '<circle cx="31" cy="48" r="2" fill="#fff" stroke="none"/>' +
+      '<circle cx="63" cy="48" r="2" fill="#fff" stroke="none"/></g>' +
+      '<path d="M50 66 l-3.5 3 l3.5 3 l3.5 -3 z" fill="#F4A9BE" stroke-width="2.6"/>' +
+      '<path d="M50 72 q-6 5 -11 1 M50 72 q6 5 11 1" stroke-width="3"/>' +
+      '<g stroke-width="2.4" opacity=".8"><path d="M14 58 H2 M14 65 H3M86 58 H98 M86 65 H97"/></g>' +
+      "</g></svg>",
+
+    /* baby hippo, mouth wide open */
+    MOODENG: open(vol("gMOO", "#DCAFB2", "#A2757A")) +
+      '<g class="body">' +
+      '<ellipse cx="50" cy="74" rx="33" ry="20" fill="url(#gMOO)"/>' +
+      '<ellipse cx="26" cy="34" rx="8" ry="7" fill="url(#gMOO)"/>' +
+      '<ellipse cx="74" cy="34" rx="8" ry="7" fill="url(#gMOO)"/>' +
+      '<ellipse cx="50" cy="48" rx="33" ry="27" fill="url(#gMOO)"/>' +
+      '<g class="eyes">' + eye(34, 40, 6.8) + eye(66, 40, 6.8) + "</g>" +
+      '<path d="M22 58 q28 -8 56 0 q-6 22 -28 22 q-22 0 -28 -22 z" fill="#C56C7E" stroke-width="4"/>' +
+      '<path d="M30 61 q20 -5 40 0 q-4 6 -20 6 q-16 0 -20 -6 z" fill="#F0C0C8" stroke="none"/>' +
+      blush(18, 82, 48) + "</g></svg>",
+
+    /* white goat: swept horns, long ears, and the beard that settles it */
+    GOAT: open(vol("gGOAT", "#FFFFFF", "#DAD3C4")) +
+      '<g class="body">' +
+      '<path d="M38 36 L47 34 Q41 21 29 9 Q24 13 26 22 Q30 31 38 36 Z" fill="#A9752F"/>' +
+      '<path d="M62 36 L53 34 Q59 21 71 9 Q76 13 74 22 Q70 31 62 36 Z" fill="#A9752F"/>' +
+      '<g stroke="#7C531F" stroke-width="2.2" fill="none">' +
+      '<path d="M31 17 l7 -4M34 25 l8 -4M63 13 l7 4M59 21 l8 4"/></g>' +
+      '<path d="M28 60 q-22 7 -22 19 q13 4 24 -11 z" fill="url(#gGOAT)"/>' +
+      '<path d="M72 60 q22 7 22 19 q-13 4 -24 -11 z" fill="url(#gGOAT)"/>' +
+      '<ellipse cx="50" cy="79" rx="23" ry="15" fill="url(#gGOAT)"/>' +
+      '<ellipse cx="50" cy="55" rx="25" ry="25" fill="url(#gGOAT)"/>' +
+      '<g class="eyes">' + eye(39, 51, 6.4) + eye(61, 51, 6.4) + "</g>" +
+      '<ellipse cx="50" cy="68" rx="12" ry="9" fill="#EFE7D6" stroke="none"/>' +
+      '<ellipse cx="50" cy="65" rx="4" ry="3" fill="' + INK + '" stroke="none"/>' +
+      '<path d="M50 69 q-5 5 -9 1 M50 69 q5 5 9 1" stroke-width="3"/>' +
+      '<path d="M44 80 q6 4 12 0 q-1 13 -6 14 t-6 -14 z" fill="url(#gGOAT)"/>' +
+      "</g></svg>",
+
+    /* sloth: dark mask, heavy lids, permanent smile */
+    SLERF: open(vol("gSLERF", "#D7C4A6", "#9C8465")) +
+      '<g class="body">' +
+      '<ellipse cx="50" cy="74" rx="28" ry="20" fill="url(#gSLERF)"/>' +
+      '<path d="M22 62 q-13 7 -10 22M78 62 q13 7 10 22" stroke-width="4.4"/>' +
+      '<circle cx="50" cy="46" r="29" fill="url(#gSLERF)"/>' +
+      '<ellipse cx="35" cy="44" rx="12" ry="11" fill="#7C6244" stroke="none"/>' +
+      '<ellipse cx="65" cy="44" rx="12" ry="11" fill="#7C6244" stroke="none"/>' +
+      '<g class="eyes">' + eye(35, 44, 6.2) + eye(65, 44, 6.2) + "</g>" +
+      '<ellipse cx="50" cy="58" rx="5" ry="3.8" fill="' + INK + '" stroke="none"/>' +
+      '<path d="M40 66 q10 8 20 0" stroke-width="3.4"/>' + "</g></svg>",
+
+    /* squirrel: the tail carries the read, so it rides high */
+    PNUT: open(vol("gPNUT", "#C99A6E", "#8E6039")) +
+      '<g class="body">' +
+      '<path d="M74 78 q28 -16 21 -47 q-7 -23 -27 -15 q-15 6 -8 18" fill="url(#gPNUT)"/>' +
+      '<ellipse cx="46" cy="74" rx="25" ry="19" fill="url(#gPNUT)"/>' +
+      '<circle cx="31" cy="30" r="8.5" fill="url(#gPNUT)"/>' +
+      '<circle cx="59" cy="28" r="8.5" fill="url(#gPNUT)"/>' +
+      '<circle cx="45" cy="48" r="26" fill="url(#gPNUT)"/>' +
+      '<g class="eyes">' + eye(35, 44, 6.6) + eye(56, 44, 6.6) + "</g>" +
+      '<ellipse cx="45" cy="58" rx="5" ry="4" fill="' + INK + '" stroke="none"/>' +
+      '<path d="M45 62 v3 M45 65 q-5 4 -8 0 M45 65 q5 4 8 0" stroke-width="3"/>' +
+      blush(24, 66, 54) + "</g></svg>",
+  };
+
+  /* the captain: nobody in particular, which is the point */
+  const CAPTAIN = open(vol("gCAP", "#7FA0CC", "#3F5F92") + vol("gSKIN", "#FBE3C8", "#E4B98E")) +
+    '<g class="body">' +
+    '<path d="M33 94 q0 -32 17 -32 q17 0 17 32 z" fill="url(#gCAP)"/>' +
+    '<path d="M50 64 v28" stroke-width="3"/>' +
+    '<circle cx="50" cy="70" r="3" fill="#F8D49B"/><circle cx="50" cy="82" r="3" fill="#F8D49B"/>' +
+    '<path d="M40 72 q-11 9 -9 21M60 72 q11 9 9 21" stroke-width="5"/>' +
+    '<circle cx="50" cy="44" r="21" fill="url(#gSKIN)"/>' +
+    '<path d="M30 47 q1 27 20 27 t20 -27 q-5 11 -20 11 t-20 -11 z" fill="#F3EDE6"/>' +
+    '<g class="eyes">' + eye(42, 38, 5.6) + eye(58, 38, 5.6) + "</g>" +
+    blush(31, 69, 46) +
+    '<path d="M32 20 h36 l-3 -8 H35 z" fill="#2F4A72"/>' +
+    '<path d="M27 20 h46 v6 H27 z" fill="#22395A"/>' +
+    '<circle cx="50" cy="16" r="2.8" fill="#F8D49B"/></g></svg>';
+
+  const ROSTER = [
+    /* ---- upper deck (5) ---- */
+    { sym: "PEPE",    x: 28, y: 49.1, move: "hop",     voice: "ribbit",  art: ART.PEPE },
+    { sym: "PENGU",   x: 39, y: 49.1, move: "waddle",  voice: "squawk",  art: ART.PENGU },
+    { sym: "MOODENG", x: 50, y: 49.1, move: "heavy",   voice: "grunt",   art: ART.MOODENG },
+    { sym: "GOAT",    x: 61, y: 49.1, move: "butt",    voice: "bleat",   art: ART.GOAT },
+    { sym: "SLERF",   x: 72, y: 49.1, move: "slow",    voice: "yawn",    art: ART.SLERF },
+    /* ---- lower deck (7) ---- */
+    { sym: "DOGE",    x: 17, y: 70.6, move: "hop",     voice: "woof",    art: ART.DOGE },
+    { sym: "SHIB",    x: 28, y: 70.6, move: "wag",     voice: "yip",     art: ART.SHIB },
+    { sym: "WIF",     x: 39, y: 70.6, move: "hop",     voice: "bork",    art: ART.WIF },
+    { sym: "BONK",    x: 50, y: 70.6, move: "wag",     voice: "snap",    art: ART.BONK },
+    { sym: "POPCAT",  x: 61, y: 70.6, move: "stretch", voice: "pop",     art: ART.POPCAT },
+    { sym: "MEW",     x: 72, y: 70.6, move: "stretch", voice: "meow",    art: ART.MEW },
+    { sym: "PNUT",    x: 83, y: 70.6, move: "shiver",  voice: "chitter", art: ART.PNUT },
+  ];
+
+  /* ---------- build the deck ---------- */
+  const crew = document.getElementById("crew");
+  const mk = (p) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.style.left = p.x + "%";
+    b.style.top = p.y + "%";
+    b.style.setProperty("--move", p.move);
+    if (p.dur) b.style.setProperty("--dur", p.dur);
+    if (p.cap) b.className = "cap";
+    b.setAttribute("aria-label", p.label || ("$" + p.sym + ", hover to hear it"));
+    // The captain says nothing of his own: the two thought clouds are his
+    // voice, and a name pill on top of them would only be clutter.
+    b.innerHTML = p.art + (p.cap ? "" : '<span class="tag">$' + p.sym + "</span>");
+    b.dataset.voice = p.voice;
+    crew.appendChild(b);
+    return b;
+  };
+  ROSTER.forEach(mk);
+  mk({ sym: "NOAH", x: 50, y: 16.7, move: "dance", dur: "1.1s", voice: "horn", cap: true,
+       art: CAPTAIN,
+       label: "The captain. Approach from either side to hear what he is thinking" });
+
+  /* ---------- waking a passenger ----------
+     A hover only counts once the pointer has settled for a moment, otherwise
+     dragging the mouse across the deck fires everything at once. */
+  const DWELL = 170;
+  let timer = null, armed = null;
+
+  function wake(b) {
+    if (b.classList.contains("awake")) return;
+    b.classList.add("awake");
+    play(b.dataset.voice);
+    setTimeout(() => b.classList.remove("awake"), 1200);
+  }
+
+  crew.addEventListener("pointerenter", (e) => {
+    const b = e.target.closest("button"); if (!b || b === armed) return;
+    if (e.pointerType === "touch") return;           // taps are handled by click
+    armed = b;
+    clearTimeout(timer);
+    timer = setTimeout(() => wake(b), DWELL);
+  }, true);
+
+  crew.addEventListener("pointerleave", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b === armed) { armed = null; clearTimeout(timer); }
+  }, true);
+
+  crew.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    clearTimeout(timer); wake(b);
+  });
+  crew.addEventListener("focusin", (e) => {
+    const b = e.target.closest("button"); if (b) wake(b);
+  });
+
+  /* ---------- fitting the story to the cloud ----------
+     The cloud is a fixed shape, so a longer story has to meet it halfway: step
+     the size down until it fits. There is a floor, because past a point the
+     honest answer is that the text is too long for a thought bubble, and
+     shrinking it further would only make it unreadable. */
+  (() => {
+    const R = document.getElementById("thought"), L = document.getElementById("thoughtL");
+    if (!R || !L) return;
+    // the mirrored cloud borrows the first one's drawing, so they cannot drift apart
+    L.prepend(R.querySelector("svg").cloneNode(true));
+
+    const MAX = 1.42, MIN = 1.02;                 // cqi — a share of the boat's width
+    const fit = () => {
+      for (const box of document.querySelectorAll(".thought-text")) {
+        const copy = box.firstElementChild;
+        if (!copy) continue;
+        let size = MAX;
+        copy.style.fontSize = size + "cqi";
+        while (copy.scrollHeight > box.clientHeight + 1 && size > MIN) {
+          size = +(size - 0.04).toFixed(2);
+          copy.style.fontSize = size + "cqi";
+        }
+      }
+    };
+    fit();
+    addEventListener("resize", fit, { passive: true });
+    window.__arkFitThought = fit;                 // so new copy can be re-fitted
+
+    /* Which side he is approached from decides which thought surfaces, and the
+       bubble always opens away from the pointer so it is never covered by the
+       hand reaching for him. A tap or a keyboard focus has no side, so it gets
+       the story. */
+    const cap = crew.querySelector("button.cap");
+    if (!cap) return;
+    const stage = document.querySelector(".stage");
+    let fade = null;
+
+    /* Where the boat is wider than the screen the cloud can open off to one
+       side of it, so pan the deck until it is actually in view. */
+    const reveal = (el) => {
+      if (!stage || stage.scrollWidth <= stage.clientWidth) return;
+      const s = stage.getBoundingClientRect(), e = el.getBoundingClientRect();
+      if (e.left < s.left + 8) stage.scrollBy({ left: e.left - s.left - 8, behavior: "smooth" });
+      else if (e.right > s.right - 8) stage.scrollBy({ left: e.right - s.right + 8, behavior: "smooth" });
+    };
+    const hide = () => {
+      clearTimeout(fade);
+      R.classList.remove("show"); L.classList.remove("show");
+    };
+    const show = (el, ms) => {
+      hide();
+      el.classList.add("show");
+      reveal(el);
+      if (ms) fade = setTimeout(hide, ms);
+    };
+
+    let via = "mouse", turn = 0;
+    cap.addEventListener("pointerdown", (e) => { via = e.pointerType; });
+    cap.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") via = "key";
+    });
+
+    cap.addEventListener("pointerenter", (e) => {
+      if (e.pointerType === "touch") return;      // a tap is not an approach
+      const b = cap.getBoundingClientRect();
+      show(e.clientX < b.left + b.width / 2 ? R : L);
+    });
+    cap.addEventListener("pointerleave", (e) => { if (e.pointerType !== "touch") hide(); });
+
+    /* A phone has no side to approach from, so the captain works the way the
+       walrus on izzetc.com does: poke him again and he thinks something else.
+       The cloud jumping from one side of him to the other is itself the hint
+       that there is more than one thought to find. */
+    cap.addEventListener("click", () => {
+      if (via === "mouse") return;                // the hover already chose one
+      show(turn++ % 2 ? L : R, 7000);             // nothing un-hovers on a phone
+    });
+    // only a keyboard visit opens it; a tap must not fight the cycle above
+    cap.addEventListener("focus", () => { if (cap.matches(":focus-visible")) show(R); });
+    cap.addEventListener("blur", hide);
+    // and a tap anywhere else puts the thought away
+    addEventListener("pointerdown", (e) => { if (!cap.contains(e.target)) hide(); }, true);
+  })();
+
+  /* ---------- the gaze ----------
+     Every pupil turns toward the cursor, so walking up to the boat makes twelve
+     animals look up. The positions are measured once and re-measured only when
+     the page moves under them: asking thirteen elements for their geometry on
+     every pointer event would be a layout thrash for no gain. */
+  (() => {
+    const EYE_REACH = 2.2;          // SVG user units — about a third of a pupil
+    let mx = -1e4, my = -1e4, queued = false;
+    let boxes = [];
+    const remeasure = () => {
+      boxes = [...crew.children].map((el) => {
+        const r = el.getBoundingClientRect();
+        return { el, cx: r.left + r.width / 2, cy: r.top + r.height * 0.42 };
+      });
+    };
+    const paint = () => {
+      queued = false;
+      for (const b of boxes) {
+        const dx = mx - b.cx, dy = my - b.cy;
+        const d = Math.hypot(dx, dy) || 1;
+        // ease the last few pixels so the eyes settle instead of jittering
+        // when the pointer sits right on top of an animal
+        const reach = EYE_REACH * Math.min(1, d / 40);
+        b.el.style.setProperty("--px", ((dx / d) * reach).toFixed(2));
+        b.el.style.setProperty("--py", ((dy / d) * reach).toFixed(2));
+      }
+    };
+    addEventListener("pointermove", (e) => {
+      if (e.pointerType === "touch") return;
+      mx = e.clientX; my = e.clientY;
+      if (!queued) { queued = true; requestAnimationFrame(paint); }
+    }, { passive: true });
+    let settle = null;
+    const later = () => { clearTimeout(settle); settle = setTimeout(remeasure, 120); };
+    addEventListener("resize", later, { passive: true });
+    addEventListener("scroll", later, { passive: true });
+    document.querySelector(".stage").addEventListener("scroll", later, { passive: true });
+    remeasure();
+    window.__arkRemeasure = remeasure;   // the gate calls this once the deck is laid out
+  })();
+
+  /* ---------- the name on the hull ----------
+     A pentatonic scale, so the letters sound right in any order: running across
+     $NOAH plays a little rising phrase instead of five unrelated beeps. These
+     get a shorter gate than the animals on purpose — a sweep across five small
+     letters takes about 200ms, and the animal throttle would eat half the tune. */
+  const NOTE = [523.25, 587.33, 659.25, 783.99, 880.0];
+  let lastNote = 0;
+  function blip(i) {
+    if (muted) return;
+    const now = performance.now();
+    if (now - lastNote < 55) return;
+    lastNote = now;
+    const C = audio(); if (!C) return;
+    if (C.state === "suspended") C.resume();
+    try { voice({ type: "triangle", pts: [[0, NOTE[i]], [1, NOTE[i]]],
+                  dur: 0.24, peak: 0.14, lp: 4200 }); } catch (e) {}
+  }
+  [...document.getElementById("plaque").children].forEach((b, i) => {
+    b.addEventListener("pointerenter", (e) => { if (e.pointerType !== "touch") blip(i); });
+    b.addEventListener("click", () => {
+      blip(i);
+      b.classList.add("pop");                       // phones have no hover to lean on
+      setTimeout(() => b.classList.remove("pop"), 280);
+    });
+  });
+
+  /* ---------- gate, mute, close ---------- */
+  const gate = document.getElementById("gate"), deck = document.getElementById("deck");
+  document.getElementById("board").addEventListener("click", () => {
+    const C = audio(); if (C && C.state === "suspended") C.resume();
+    gate.classList.add("away");
+    deck.setAttribute("aria-hidden", "false");
+    setTimeout(() => { gate.style.display = "none"; }, 520);
+    // where the boat is wider than the phone, open on the middle of it
+    const stage = document.querySelector(".stage");
+    if (stage.scrollWidth > stage.clientWidth)
+      stage.scrollLeft = (stage.scrollWidth - stage.clientWidth) / 2;
+    // the deck only has its real geometry now, so the gaze needs to re-aim
+    window.__arkRemeasure?.();
+    // a hello from the boat, so the first thing you learn is that it makes sound
+    setTimeout(() => play("horn"), 220);
+    /* Then quietly pull the rest down. It is 86 KB for the whole roster and the
+       page has nothing else to fetch, so paying it up front buys an instant
+       answer on every hover instead of a stutter on the first one. Staggered so
+       it never competes with the horn that is already playing. */
+    setTimeout(() => {
+      const slugs = [...new Set([...ROSTER.map((p) => p.voice), "horn"])];
+      slugs.forEach((s, i) => setTimeout(() => load(s), i * 90));
+    }, 900);
+  });
+
+  const mIcon = document.getElementById("muteIcon"), mTxt = document.getElementById("muteTxt");
+  const paintMute = () => {
+    mIcon.textContent = muted ? "🔇" : "🔊";
+    mTxt.textContent = muted ? "Sound off" : "Sound on";
+    document.getElementById("muteBtn").setAttribute("aria-pressed", muted ? "true" : "false");
+    if (master) master.gain.value = muted ? 0 : 0.9;
+  };
+  document.getElementById("muteBtn").addEventListener("click", () => {
+    muted = !muted;
+    try { localStorage.setItem("ark.muted", muted ? "1" : "0"); } catch (e) {}
+    paintMute();
+    if (!muted) play("horn");
+  });
+  paintMute();
+
+  /* The header opens the ark in its own tab, so closing should give the tab
+     back. A tab the browser will not let us close falls back to the floor. */
+  document.getElementById("closeBtn").addEventListener("click", () => {
+    window.close();
+    setTimeout(() => { location.href = "../index.html"; }, 140);
+  });
+})();
+</script>
+</body>
+</html>
