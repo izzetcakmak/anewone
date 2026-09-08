@@ -219,10 +219,20 @@ async function probe(url) {
   return { url, chainId, block: parseInt(blockHex, 16) };
 }
 
-/** Probe every candidate in parallel; return the first hit in list-priority order. */
+/**
+ * Probe every candidate in parallel; return the first hit in list-priority order.
+ *
+ * Every endpoint that answered correctly is kept, not just the winner: the site
+ * reads through a pool, and on launch day there is nobody to assemble one by
+ * hand. One endpoint is a single point of failure and, as this week showed, also
+ * what decides how many visitors can be served at once.
+ */
+let verifiedRpcs = [];
 async function sweep(candidates) {
   const results = await Promise.all(candidates.map((u) => probe(u).catch(() => null)));
-  return results.find(Boolean) ?? null;
+  const ok = results.filter(Boolean);
+  if (ok.length) verifiedRpcs = ok.map((r) => r.url);
+  return ok[0] ?? null;
 }
 
 // ---------------------------------------------------------------- deploy
@@ -278,12 +288,19 @@ function updateFrontendConfig(rpcUrl, chainId, platform, noah) {
       return false;
     }
     const head = src.slice(0, src.indexOf("\n", i) + 1);
+    // the winner leads, then every other endpoint that verified on the same chain
+    const pool = [rpcUrl, ...verifiedRpcs.filter((u) => u !== rpcUrl)];
     const block = [
       "  mainnet: {",
       "    live: true,",
       "    chainId: " + chainId + ",",
       '    chainIdHex: "0x' + chainId.toString(16) + '",',
       '    rpc: "' + rpcUrl + '",',
+      // Read pools, seeded with everything that verified. Reorder by hand once
+      // each endpoint's limits AND history retention are measured: for logs the
+      // deciding property is history — a pruning node serves no token artwork.
+      "    rpcs: [" + pool.map((u) => '"' + u + '"').join(", ") + "],",
+      "    logRpcs: [" + pool.map((u) => '"' + u + '"').join(", ") + "],",
       "    explorer: null,",
       '    platform: "' + platform + '",',
       '    noah: "' + noah + '",',
