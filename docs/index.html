@@ -1636,6 +1636,10 @@ async function hydrateFromFloor() {
   shownAddrs = addrs;
   $("empty").dataset.none = "0";
   renderGrid();
+  // A shared link is #t=<address>, and the only thing that read it used to be the
+  // full pass this hydration replaces — so every link posted to X opened the site
+  // and not the coin it was about.
+  openFromHash();
   // the list and the ERC20 names came with the file, so the live pass that
   // follows only has to re-read each curve — not rediscover the whole floor
   saveImmutable(addrs);
@@ -3714,7 +3718,8 @@ $("tShare").onclick = async () => {
   const text = `$${sym} on A NEW ONE — ${url}`;
   try {
     if (navigator.share) await navigator.share({ title: `$${sym}`, text: `$${sym} on A NEW ONE`, url });
-    else { await navigator.clipboard.writeText(text); toast("Link copied!"); }
+    else if (await copyText(text)) toast("Link copied!");
+    else toast(url);   // clipboard refused: show it so it can still be selected
   } catch { toast(url); }
 };
 
