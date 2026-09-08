@@ -169,6 +169,10 @@ contract ANewOne {
         string calldata imageURI_
     ) external payable nonReentrant returns (address token) {
         require(bytes(metadataURI_).length <= MAX_METADATA_BYTES, "metadata too large");
+        // A coin with no artwork is an unreadable card on a floor people scan by
+        // picture, and nothing off-chain can enforce this: the front end can ask
+        // politely, but createToken is permissionless and callable directly.
+        require(bytes(imageURI_).length > 0, "image required");
         require(bytes(imageURI_).length <= MAX_IMAGE_BYTES, "image too large");
         token = address(new ANewOneToken(name_, symbol_, TOTAL_SUPPLY, address(this)));
         info[token] = TokenInfo({
@@ -182,9 +186,7 @@ contract ANewOne {
         });
         allTokens.push(token);
         emit TokenCreated(token, msg.sender, name_, symbol_, metadataURI_);
-        if (bytes(imageURI_).length > 0) {
-            emit TokenImage(token, imageURI_);
-        }
+        emit TokenImage(token, imageURI_); // required above, so always present
 
         if (msg.value > 0) {
             _buy(token, msg.sender, msg.value, 0);

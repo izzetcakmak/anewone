@@ -4,10 +4,13 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {ANewOne, ANewOneToken} from "../src/ANewOne.sol";
 
+string constant IMG = "data:image/png;base64,iVBORw0KGgo=";
+
 /// @notice Drives the platform with random sequences of every state-changing action across
 ///         several actors and many tokens. Reverting actions (anti-snipe cap, slippage,
 ///         empty pots) are swallowed so the fuzzer keeps exploring instead of dead-ending.
 contract Handler is Test {
+
     ANewOne public arcade;
     address[] public actors;
     address[] public tokens;
@@ -30,7 +33,7 @@ contract Handler is Test {
         uint256 value = bound(valueSeed, 0, 200e18);
         if (value > a.balance) value = 0;
         vm.prank(a);
-        try arcade.createToken{value: value}("T", "T", "", "") returns (address t) {
+        try arcade.createToken{value: value}("T", "T", "", IMG) returns (address t) {
             tokens.push(t);
         } catch {}
     }

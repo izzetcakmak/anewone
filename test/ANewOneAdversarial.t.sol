@@ -4,8 +4,11 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {ANewOne, ANewOneToken} from "../src/ANewOne.sol";
 
+string constant IMG = "data:image/png;base64,iVBORw0KGgo=";
+
 /// @notice A trader that tries to re-enter sell() from inside its own payout.
 contract ReentrantTrader {
+
     ANewOne public arcade;
     address public token;
     bool public attempted;
@@ -50,7 +53,7 @@ contract RejectsEther {
     }
 
     function create() external returns (address) {
-        return arcade.createToken("R", "R", "", "");
+        return arcade.createToken("R", "R", "", IMG);
     }
 
     function claim() external {
@@ -81,7 +84,7 @@ contract ANewOneAdversarialTest is Test {
 
     function _launch(address who) internal returns (address t) {
         vm.prank(who);
-        t = arcade.createToken("T", "T", "", "");
+        t = arcade.createToken("T", "T", "", IMG);
         vm.roll(block.number + arcade.ANTI_SNIPE_BLOCKS() + 1); // past the early cap window
     }
 
@@ -294,7 +297,7 @@ contract ANewOneAdversarialTest is Test {
     ///      clears 4% of supply and is rejected outright, which would test nothing.
     function test_attack_antiSnipeCapHoldsAcrossManyBuys() public {
         vm.prank(alice);
-        address t = arcade.createToken("T", "T", "", ""); // deliberately stay inside the window
+        address t = arcade.createToken("T", "T", "", IMG); // deliberately stay inside the window
         uint256 cap = arcade.ANTI_SNIPE_MAX();
 
         uint256 landed;
@@ -314,7 +317,7 @@ contract ANewOneAdversarialTest is Test {
     ///      real question is what it costs an attacker to buy the whole graduation target.
     function test_measure_antiSnipeBudgetPerWalletAndBypassCost() public {
         vm.prank(alice);
-        address t = arcade.createToken("T", "T", "", "");
+        address t = arcade.createToken("T", "T", "", IMG);
 
         uint256 spent;
         for (uint256 i = 0; i < 400; i++) {

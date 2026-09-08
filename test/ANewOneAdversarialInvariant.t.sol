@@ -4,9 +4,12 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {ANewOne, ANewOneToken} from "../src/ANewOne.sol";
 
+string constant IMG = "data:image/png;base64,iVBORw0KGgo=";
+
 /// @notice An actor that is a contract and refuses native payments. The existing invariant suite
 ///         drives only EOAs by design, so nothing there ever exercises a failing payout.
 contract HostileActor {
+
     ANewOne public arcade;
 
     constructor(ANewOne a) {
@@ -14,7 +17,7 @@ contract HostileActor {
     }
 
     function create() external returns (address) {
-        return arcade.createToken("H", "H", "", "");
+        return arcade.createToken("H", "H", "", IMG);
     }
 
     function buy(address t, uint256 value) external {
@@ -59,7 +62,7 @@ contract AdversarialHandler is Test {
         uint256 value = bound(valueSeed, 0, 200e18);
         if (value > a.balance) value = 0;
         vm.prank(a);
-        try arcade.createToken{value: value}("T", "T", "", "") returns (address t) {
+        try arcade.createToken{value: value}("T", "T", "", IMG) returns (address t) {
             tokens.push(t);
         } catch {}
     }

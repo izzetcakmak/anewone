@@ -4,7 +4,9 @@ pragma solidity ^0.8.24;
 import {Test, Vm} from "forge-std/Test.sol";
 import {ANewOne, ANewOneToken} from "../src/ANewOne.sol";
 
+string constant IMG = "data:image/png;base64,iVBORw0KGgo=";
 contract ANewOneTest is Test {
+
     ANewOne arcade;
     address creator = address(0xC0FFEE);
     address alice = address(0xA11CE);
@@ -22,7 +24,7 @@ contract ANewOneTest is Test {
 
     function _create() internal returns (address token) {
         vm.prank(creator);
-        token = arcade.createToken("Noah's Arc", "NOAH", "ipfs://noah", "");
+        token = arcade.createToken("Noah's Arc", "NOAH", "ipfs://noah", IMG);
     }
 
     function test_createToken() public {
@@ -135,14 +137,14 @@ contract ANewOneTest is Test {
     function test_initialDevBuyOnCreate() public {
         // dev buy at creation is allowed but still subject to the anti-snipe cap (fair launch)
         vm.prank(creator);
-        address token = arcade.createToken{value: 50e18}("Test", "TST", "", "");
+        address token = arcade.createToken{value: 50e18}("Test", "TST", "", IMG);
         uint256 got = ANewOneToken(token).balanceOf(creator);
         assertGt(got, 0);
         assertLe(got, arcade.ANTI_SNIPE_MAX());
 
         vm.prank(creator);
         vm.expectRevert("anti-snipe cap");
-        arcade.createToken{value: 150e18}("Test2", "TST2", "", "");
+        arcade.createToken{value: 150e18}("Test2", "TST2", "", IMG);
     }
 
     function test_slippageProtection() public {
@@ -275,20 +277,29 @@ contract ANewOneTest is Test {
         assertEq(stored, "{\"v\":1}");
     }
 
-    function test_noImageEventWhenImageEmpty() public {
+    /// A launch without artwork is refused outright, and the one that carries it
+    /// emits the image event the front end reads the picture back from.
+    function test_imageIsRequired() public {
+        vm.prank(creator);
+        vm.expectRevert("image required");
+        arcade.createToken("NoPic", "NOPIC", "", "");
+
         vm.recordLogs();
         vm.prank(creator);
-        arcade.createToken("NoPic", "NOPIC", "", "");
+        arcade.createToken("Pic", "PIC", "", IMG);
         Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool sawImage = false;
         for (uint256 i = 0; i < logs.length; i++) {
-            assertTrue(logs[i].topics[0] != IMAGE_TOPIC);
+            if (logs[i].topics[0] == IMAGE_TOPIC) sawImage = true;
         }
+        assertTrue(sawImage, "TokenImage not emitted");
     }
 
     function test_metadataAndImageSizeCaps() public {
         vm.prank(creator);
         vm.expectRevert("metadata too large");
-        arcade.createToken("Big", "BIG", string(new bytes(2049)), "");
+        // a real image, so this asserts the metadata cap and not the image rule
+        arcade.createToken("Big", "BIG", string(new bytes(2049)), IMG);
 
         vm.prank(creator);
         vm.expectRevert("image too large");
