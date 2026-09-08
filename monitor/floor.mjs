@@ -14,7 +14,7 @@
  * consumer — charts, trust panel, dev profile, ticker, sorting — keeps working
  * untouched. Prices are still re-read live before anyone trades.
  */
-import { readFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { rpc, fetchLogs, atomicWrite } from "./snapshot.mjs";
@@ -37,6 +37,11 @@ const SEL = {
 };
 const TOPIC_TRADE = "0xf7dd8a134438de4c59401760e24ef5c6cc9c74583b2b022085697f3021e59768";
 const TOPIC_COMMENT = "0x83e5a18f10338a7eb46107a07561cf75d2e07dc4f8d10230f6cfed01cd98b505";
+const TOPIC_IMAGE = "0x4fe20d8f61958f75787f29537de90577ad84befe73f9f2c69d2b8a0d95770e16";
+
+/** Where the cards are served from; og:image has to be an absolute URL. */
+const SITE = "https://anewone.xyz";
+const CARD_DIR = path.join(ROOT, "docs", "t");
 
 // 24h at Arc's ~0.5s blocks. Matches the front end's own window.
 const DAY_BLOCKS = 172_800;
@@ -193,14 +198,144 @@ function buildIndex(logs, lo, hi, prior = null) {
  * visitors traded on another. config.js is our own source, so it is evaluated
  * rather than pattern-matched.
  */
-export function livePlatform() {
+function liveNetwork() {
   const src = readFileSync(path.join(ROOT, "docs", "config.js"), "utf8");
   const win = {};
   new Function("window", src)(win);
   const c = win.ANEWONE_CONFIG;
-  const net = c && c.mainnet && c.mainnet.live ? c.mainnet : c && c.testnet;
+  const mainnet = !!(c && c.mainnet && c.mainnet.live);
+  const net = mainnet ? c.mainnet : c && c.testnet;
   if (!net || !net.platform) throw new Error("config.js: no live platform address");
-  return net.platform;
+  return { platform: net.platform, mainnet };
+}
+export function livePlatform() { return liveNetwork().platform; }
+
+// ---------------------------------------------------------------- share cards
+// A link shared to X shows whatever the URL's og tags say, and the crawler never
+// runs our JavaScript nor sees anything after "#". So each coin gets a tiny page
+// of its own at /t/<address>/ that carries its title, artwork and market cap, and
+// sends a real browser on to the app. pump.fun and pons both work this way.
+
+const MIME_EXT = { "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif",
+                   "image/webp": "webp", "image/svg+xml": "svg" };
+
+/** The artwork, as bytes to write or an absolute URL to point at. */
+async function tokenArtwork(t) {
+  const fromDataUri = (s) => {
+    const m = /^data:([^;,]+);base64,(.+)$/i.exec(s || "");
+    const mime = m ? m[1].toLowerCase() : "";
+    if (!m || !MIME_EXT[mime] || mime === "image/svg+xml") return null;
+    return { bytes: Buffer.from(m[2], "base64"), ext: MIME_EXT[m[1].toLowerCase()] };
+  };
+  // v6+ coins carry the picture in the launch event
+  try {
+    const logs = await fetchLogs(t.platform, BigInt(t.createdBlock), BigInt(t.createdBlock),
+                                 [TOPIC_IMAGE], () => {});
+    const mine = logs.find((l) => l.topics[1] && l.topics[1].toLowerCase().endsWith(t.addr.slice(2).toLowerCase()));
+    if (mine) {
+      const hit = fromDataUri(decodeString(mine.data, 0));
+      if (hit) return hit;
+    }
+  } catch {}
+  // older ones keep it in the metadata document
+  const meta = String(t.metadataURI || "");
+  try {
+    if (meta.startsWith("{")) {
+      const j = JSON.parse(meta);
+      if (j.i) return fromDataUri(j.i) || (/^https:\/\//.test(j.i) ? { url: j.i } : null);
+    } else if (/^https:\/\//.test(meta)) {
+      const j = await (await fetch(meta)).json();
+      // X renders JPG, PNG, WEBP and GIF on a card — never SVG, which would
+      // silently come back blank, so vector art falls through to the site icon
+      // unless a raster card has already been placed next to the page.
+      if (j.image && !/\.svg(\?|$)/i.test(j.image)) {
+        if (/^https?:\/\//.test(j.image)) return { url: j.image };
+        return { url: `${SITE}/${String(j.image).replace(/^\//, "")}` };
+      }
+    }
+  } catch {}
+  return null;
+}
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
+  (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+const compactUsd = (wei) => {
+  const n = Number(wei) / 1e18;
+  if (!isFinite(n)) return "—";
+  if (n >= 1e9) return "$" + (n / 1e9).toFixed(2) + "B";
+  if (n >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";
+  if (n >= 1e3) return "$" + (n / 1e3).toFixed(1) + "K";
+  return "$" + n.toFixed(2);
+};
+
+function cardHtml(t, imageUrl, chainLabel) {
+  const title = `$${t.symbol} · ${t.name}`;
+  const mcap = compactUsd((BigInt(t.vUsdc) * 10n ** 18n / BigInt(t.tReserve)) * 1_000_000_000n);
+  const desc = `${t.graduated ? "Graduated · " : ""}MC ${mcap} · ${chainLabel} · A NEW ONE`;
+  const app = `${SITE}/#t=${t.addr}`;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(desc)}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(desc)}">
+<meta property="og:image" content="${esc(imageUrl)}">
+<meta property="og:url" content="${esc(app)}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${esc(title)}">
+<meta name="twitter:description" content="${esc(desc)}">
+<meta name="twitter:image" content="${esc(imageUrl)}">
+<link rel="canonical" href="${esc(app)}">
+<link rel="icon" type="image/png" sizes="32x32" href="${SITE}/favicon.png">
+</head>
+<body style="font-family:system-ui,sans-serif;background:#0d0d10;color:#eee;padding:40px">
+<!-- A crawler reads the tags above and stops. A browser is sent straight on;
+     the link below is what a reader without JavaScript still gets. -->
+<script>location.replace(${JSON.stringify(app)});</script>
+<p><a href="${esc(app)}" style="color:#3ee6a0">${esc(title)} — open on A NEW ONE</a></p>
+</body>
+</html>
+`;
+}
+
+/**
+ * Writes /t/<address>/ for every coin. Artwork is fetched once and then left
+ * alone: at any real number of coins, rewriting every card on every run would
+ * cost a chain call each and a deploy full of unchanged bytes.
+ */
+async function writeCards(tokens, platform, chainLabel, log) {
+  let made = 0, kept = 0;
+  for (const t of tokens) {
+    const dir = path.join(CARD_DIR, t.addr.toLowerCase());
+    const page = path.join(dir, "index.html");
+    let imageUrl = null;
+    const existing = ["png", "jpg", "gif", "webp", "svg"]
+      .map((e) => path.join(dir, "card." + e)).find((f) => existsSync(f));
+    if (existing) {
+      imageUrl = `${SITE}/t/${t.addr.toLowerCase()}/card.${existing.split(".").pop()}`;
+    } else {
+      const art = await tokenArtwork({ ...t, platform });
+      if (art && art.bytes) {
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(path.join(dir, "card." + art.ext), art.bytes);
+        imageUrl = `${SITE}/t/${t.addr.toLowerCase()}/card.${art.ext}`;
+      } else if (art && art.url) {
+        imageUrl = art.url;
+      } else {
+        imageUrl = `${SITE}/apple-touch-icon.png`; // launched without artwork
+      }
+    }
+    // the page itself is cheap and carries live numbers, so it is always rewritten
+    const html = cardHtml(t, imageUrl, chainLabel);
+    mkdirSync(dir, { recursive: true });
+    const before = existsSync(page) ? readFileSync(page, "utf8") : "";
+    if (before !== html) { writeFileSync(page, html); made++; } else kept++;
+  }
+  log(`floor: share cards ${made} written, ${kept} unchanged -> docs/t/`);
 }
 
 // ---------------------------------------------------------------- cache
@@ -278,6 +413,10 @@ export async function runFloor({ platform, log = console.log } = {}) {
   };
   mkdirSync(path.dirname(OUT_FILE), { recursive: true });
   atomicWrite(OUT_FILE, JSON.stringify(payload));
+
+  // one shareable page per coin, so a link posted to X shows the coin
+  const chainLabel = liveNetwork().mainnet ? "Arc Network" : "Arc Testnet";
+  await writeCards(tokens, platform, chainLabel, log);
   const kb = Math.round(JSON.stringify(payload).length / 1024);
   log(`floor: ${tokens.length} tokens, ${index.recent.length} recent trades, ${kb} KB` +
       `${changed ? "" : " (unchanged)"} -> docs/data/floor.json`);

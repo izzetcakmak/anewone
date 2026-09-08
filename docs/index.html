@@ -3723,7 +3723,9 @@ $("tCommentInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $
 function shareText(addr) {
   const m = tokenMeta[addr] || {}, inf = tokenInfo[addr];
   const sym = m.symbol || "";
-  const url = location.origin + location.pathname + "#t=" + addr;
+  // the /t/ page is what carries og tags, so this is the link that renders a card
+  // on X; it redirects a real browser straight back to #t= on the app
+  const url = `${location.origin}/t/${addr.toLowerCase()}/`;
   const holding = userTokenBal > 0n;
   const lines = [
     holding ? `I'm in $${sym} on A NEW ONE.` : `$${sym} on A NEW ONE.`,
