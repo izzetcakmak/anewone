@@ -3711,14 +3711,44 @@ $("tCommentGo").onclick = async () => {
 };
 $("tCommentInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("tCommentGo").click(); });
 
+/**
+ * The post someone actually wants to send.
+ *
+ * pump.fun and pons prefill nothing and lean entirely on the link's preview card;
+ * a hash URL cannot produce one of those, because the fragment never reaches the
+ * server and X does not run our JavaScript. So the text carries the facts a
+ * trader would otherwise have to go and look up: ticker, contract, pair, chain.
+ * The opening line claims a purchase only when the wallet is actually holding.
+ */
+function shareText(addr) {
+  const m = tokenMeta[addr] || {}, inf = tokenInfo[addr];
+  const sym = m.symbol || "";
+  const url = location.origin + location.pathname + "#t=" + addr;
+  const holding = userTokenBal > 0n;
+  const lines = [
+    holding ? `I'm in $${sym} on A NEW ONE.` : `$${sym} on A NEW ONE.`,
+    "",
+    `Ticker: $${sym}`,
+    `CA: ${addr}`,
+    `Pair: $${sym} / USDC`,
+    // say "Testnet" out loud there, so nobody reads the post as real money
+    `Chain: ${CFG === window.ANEWONE_CONFIG.mainnet ? "Arc Network" : "Arc Testnet"}`,
+  ];
+  if (inf) lines.push(`MC: ${compactUsd(marketCapWei(inf))}`);
+  lines.push("", url);
+  return lines.join("\n");
+}
+
 $("tShare").onclick = async () => {
   if (!currentToken) return;
   const sym = (tokenMeta[currentToken] || {}).symbol || "";
   const url = location.origin + location.pathname + "#t=" + currentToken;
-  const text = `$${sym} on A NEW ONE — ${url}`;
+  const text = shareText(currentToken);
   try {
-    if (navigator.share) await navigator.share({ title: `$${sym}`, text: `$${sym} on A NEW ONE`, url });
-    else if (await copyText(text)) toast("Link copied!");
+    // text already ends with the link; passing `url` as well makes some targets
+    // append it a second time
+    if (navigator.share) await navigator.share({ title: `$${sym}`, text });
+    else if (await copyText(text)) toast("Post copied — paste it into X");
     else toast(url);   // clipboard refused: show it so it can still be selected
   } catch { toast(url); }
 };
