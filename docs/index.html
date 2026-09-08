@@ -1627,6 +1627,10 @@ async function hydrateFromFloor() {
     indexFloor = idx.lo;
     latestBlock = Math.max(latestBlock || 0, d.tip || 0);
     rebuildStats();
+    // The ticker used to be drawn by the history scan this hydration replaces,
+    // so nothing painted it at boot any more: on a quiet chain the bar stayed
+    // hidden until the next trade happened to arrive.
+    renderFeed();
   }
 
   shownAddrs = addrs;
