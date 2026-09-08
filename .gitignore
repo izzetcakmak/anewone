@@ -20,3 +20,6 @@ monitor/bridge-attestation.json
 monitor/snapshot-cache.json
 monitor/snapshot-run.log
 monitor/state-cache.json
+.vercel
+monitor/floor-cache.json
+monitor/state.json.bak
