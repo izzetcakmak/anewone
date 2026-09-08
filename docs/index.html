@@ -355,7 +355,7 @@
     border-bottom: 1px solid var(--border); }
   .topbar-inner { max-width: 1560px; margin: 0 auto; padding: 10px 20px; display: flex;
     align-items: center; gap: 10px; }
-  .tb-brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+  .tb-brand { display: flex; align-items: center; gap: 10px; }
   .tb-brand:hover { text-decoration: none; }
   .tb-brand img { width: 30px; height: 30px; border-radius: 8px; }
   .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px;
@@ -383,6 +383,53 @@
   .tb-link-quiet { border-color: var(--border-2); background: transparent; color: var(--dim); }
   .tb-link-quiet:hover { color: var(--text); border-color: var(--border-2);
     background: rgba(var(--ink-rgb),.05); }
+  /* ---- the ark: a door rather than a feature.
+     An auto margin on BOTH sides centres it in whatever room is left between
+     the brand and the nav cluster, so it stands alone in the middle of the gap
+     rather than hanging off the logo. */
+  .tb-ark { display: inline-flex; align-items: center; gap: 8px;
+    margin-left: auto; margin-right: auto; position: relative;
+    padding: 5px 15px 5px 7px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid var(--border-2); background: transparent; color: var(--dim);
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: .8px; text-transform: uppercase;
+    transition: color .2s, border-color .2s, background .2s; }
+
+  /* The invitation. It is deliberately warm and round while the header around it
+     is dark and square: a glimpse of the room on the other side of the door. */
+  .ark-tip { position: absolute; top: calc(100% + 11px); left: 50%; z-index: 60;
+    transform: translateX(-50%) scale(.86); transform-origin: 50% 0;
+    opacity: 0; pointer-events: none; white-space: nowrap;
+    background: #fffdf8; color: #5f4128; border: 2px solid #e8d9c2; border-radius: 13px;
+    padding: 9px 15px; box-shadow: 0 12px 30px rgba(0,0,0,.3);
+    font-family: Inter, system-ui, sans-serif; font-size: 12.5px; font-weight: 600;
+    letter-spacing: 0; text-transform: none;
+    transition: opacity .18s, transform .24s cubic-bezier(.34,1.6,.64,1); }
+  .ark-tip::after { content: ""; position: absolute; left: 50%; top: -7px;
+    width: 12px; height: 12px; margin-left: -6px; background: #fffdf8;
+    border-left: 2px solid #e8d9c2; border-top: 2px solid #e8d9c2; transform: rotate(45deg); }
+  .ark-tip b { color: #4e9d7c; }
+  .tb-ark:hover .ark-tip,
+  .tb-ark:focus-visible .ark-tip { opacity: 1; transform: translateX(-50%) scale(1); }
+  @media (prefers-reduced-motion: reduce) { .ark-tip { transition: opacity .18s; } }
+  .tb-ark:hover { text-decoration: none; color: var(--text);
+    border-color: rgba(var(--accent-rgb),.45); background: rgba(var(--accent-rgb),.07); }
+  .tb-ark svg { width: 26px; height: 26px; display: block; flex: none; transform-origin: 50% 78%; }
+  .tb-ark svg { transition: transform .2s ease; }
+  .tb-ark:hover svg { animation: ark-rock 1.7s ease-in-out infinite; }
+  @keyframes ark-rock { 0%,100% { transform: rotate(-6deg) translateY(0); }
+                        50%     { transform: rotate(6deg) translateY(-2px); } }
+  /* rocking is travel, so it goes; a lift on the spot still answers the pointer */
+  @media (prefers-reduced-motion: reduce) {
+    .tb-ark:hover svg { animation: none; transform: scale(1.12); }
+  }
+  /* the header is already fighting for room on a phone; the footer carries it there */
+  /* only the label folds away on a narrower header — not the bubble, which is
+     the whole point of the badge once the words are gone */
+  @media (max-width: 1080px) {
+    .tb-ark > span:not(.ark-tip) { display: none; }
+    .tb-ark { padding: 5px 7px; }
+  }
+  @media (max-width: 700px)  { .tb-ark { display: none; } }
   .wrap { max-width: 1560px; margin: 0 auto; padding: 16px 20px 40px; }
   /* ---- hero: full-bleed, procedural constellation background (no image assets) */
   .hero { position: relative; overflow: hidden; text-align: center;
@@ -952,6 +999,20 @@
       <img src="brand/mark.png" alt="">
       <span>A NEW ONE</span>
     </a>
+    <!-- no title attribute: the browser's own tooltip would fight the bubble -->
+    <a class="tb-ark" id="arkTab" href="ark/" target="_blank"
+       aria-label="The ark, the story behind A NEW ONE">
+      <!-- The door should look like the room behind it: the same near-black
+           outline and the same paintbox as the ark, not a grey outline icon. -->
+      <svg viewBox="0 0 60 48" fill="none" stroke="#12080E" stroke-width="3.6"
+           stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 23 L30 8 L51 23 Z" fill="#E08A86"/>
+        <path d="M18 23 H42 V32 H18 Z" fill="#F8D49B"/>
+        <path d="M5 32 H55 Q51 44 30 46 Q9 44 5 32 Z" fill="#C9925E"/>
+      </svg>
+      <span>the ark</span>
+      <span class="ark-tip">If you're curious about our story, <b>CLICK</b></span>
+    </a>
     <a class="tb-link" href="boarding/" title="Boarding Pass: the 33 most active testnet wallets enter the mainnet-day draw">🎟 Boarding Pass</a>
     <!-- Docs lives in the footer; one link is enough -->
     <div class="theme-sw" id="themeSw" role="group" aria-label="Colour theme">
@@ -1111,6 +1172,10 @@
         <a class="foot-btn" href="https://x.com/ano_xyz" target="_blank" rel="noopener noreferrer" aria-label="Follow on X">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M18.244 2H21.5l-7.5 8.57L23 22h-6.75l-5.28-6.9L4.9 22H1.64l8.02-9.17L1 2h6.92l4.77 6.31L18.244 2Zm-1.18 18h1.83L7.02 3.9H5.06l12 16.1Z"/></svg>
           <span>Follow on X</span>
+        </a>
+        <a class="foot-btn" href="ark/" target="_blank" aria-label="The ark">
+          <svg viewBox="0 0 60 46" width="15" height="15" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 14 30 6 42 14"/><path d="M22 14h16v9"/><path d="M6 23h48q-4 17-24 19Q10 40 6 23Z"/></svg>
+          <span>The ark</span>
         </a>
         <a class="foot-btn" href="docs.html" aria-label="Docs">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4a2 2 0 0 1 2-2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
@@ -3863,6 +3928,67 @@ async function liveTail() {
   finally { indexing = false; }
 }
 setInterval(liveTail, 15_000);
+
+/* ---- the ark badge -------------------------------------------------------
+   The door in the header answers when you brush against it: a dog, a cat or a
+   frog, picked at random, as a hint that there is a zoo on the other side.
+   The clips are the same CC0 recordings the ark itself uses, fetched only when
+   somebody actually hovers — so a visitor who never touches the badge pays
+   nothing, and one who does pays about 5 KB. The AudioContext is built only
+   after a real interaction, because creating one before that is refused by the
+   browser AND logged as a warning, and an empty console is worth keeping. */
+(() => {
+  const tab = $("arkTab");
+  if (!tab) return;
+  const CALLS = ["woof", "meow", "ribbit"];
+  let acted = false, AC = null, master = null, hold = null, last = 0;
+  const buf = {}, loading = {};
+  addEventListener("pointerdown", () => { acted = true; }, { once: true, passive: true });
+  addEventListener("keydown", () => { acted = true; }, { once: true });
+
+  function ctx() {
+    if (AC) return AC;
+    const K = window.AudioContext || window.webkitAudioContext;
+    if (!K) return null;
+    AC = new K();
+    master = AC.createGain();
+    master.gain.value = 0.85;
+    master.connect(AC.destination);
+    return AC;
+  }
+  function load(slug) {
+    if (buf[slug]) return Promise.resolve(buf[slug]);
+    if (!loading[slug]) {
+      const C = ctx();
+      loading[slug] = !C ? Promise.resolve(null) :
+        fetch("ark/snd/" + slug + ".mp3")
+          .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(r.status)))
+          .then((b) => C.decodeAudioData(b))
+          .then((d) => (buf[slug] = d))
+          .catch(() => null);
+    }
+    return loading[slug];
+  }
+  function call() {
+    if (!acted) return;               // the browser would refuse it anyway
+    const now = performance.now();
+    if (now - last < 420) return;     // sweeping the header is not a stampede
+    const C = ctx(); if (!C) return;
+    if (C.state === "suspended") C.resume();
+    last = now;
+    load(CALLS[Math.floor(Math.random() * CALLS.length)]).then((b) => {
+      if (!b) return;
+      const s = C.createBufferSource();
+      s.buffer = b; s.connect(master); s.start();
+    });
+  }
+  // a moment of dwell, so passing over the header on the way to Connect is silent
+  tab.addEventListener("pointerenter", (e) => {
+    if (e.pointerType === "touch") return;
+    clearTimeout(hold); hold = setTimeout(call, 150);
+  });
+  tab.addEventListener("pointerleave", () => clearTimeout(hold));
+})();
 
 // last, so every UI hook it touches is already wired
 restoreWallet();
