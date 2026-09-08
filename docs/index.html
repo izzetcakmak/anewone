@@ -3743,16 +3743,16 @@ function shareText(addr) {
 
 $("tShare").onclick = async () => {
   if (!currentToken) return;
-  const sym = (tokenMeta[currentToken] || {}).symbol || "";
-  const url = location.origin + location.pathname + "#t=" + currentToken;
   const text = shareText(currentToken);
-  try {
-    // text already ends with the link; passing `url` as well makes some targets
-    // append it a second time
-    if (navigator.share) await navigator.share({ title: `$${sym}`, text });
-    else if (await copyText(text)) toast("Post copied — paste it into X");
-    else toast(url);   // clipboard refused: show it so it can still be selected
-  } catch { toast(url); }
+  // Straight to X's composer, prefilled. The system share sheet was offering
+  // Outlook and whatever else Windows had registered, which is no use to someone
+  // who came here to post to X; on a phone this opens the X app the same way.
+  const intent = "https://x.com/intent/post?text=" + encodeURIComponent(text);
+  const w = window.open(intent, "_blank", "noopener");
+  if (w) return;
+  // popup blocked: leave them the post rather than nothing
+  if (await copyText(text)) toast("Post copied — paste it into X");
+  else toast(text);
 };
 
 function closeModals() { document.querySelectorAll(".modal-bg").forEach(m => m.classList.remove("open")); }
