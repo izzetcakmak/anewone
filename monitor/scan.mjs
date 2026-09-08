@@ -15,8 +15,8 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { bridgeStep } from "./bridge.mjs";
-import { runSnapshot, CURRENT_PLATFORM } from "./snapshot.mjs";
-import { runFloor } from "./floor.mjs";
+import { runSnapshot } from "./snapshot.mjs";
+import { runFloor, livePlatform } from "./floor.mjs";
 
 const TESTNET_RPC = "https://rpc.testnet.arc.network";
 // Leaderboard refresh cadence. Daily was too slow once the campaign was being
@@ -406,7 +406,8 @@ function deployToVercel() {
 async function refreshFloor(state, env) {
   state.lastFloorAt = Date.now();
   try {
-    const r = await runFloor({ platform: CURRENT_PLATFORM, log });
+    // whatever config.js currently points the site at — mainnet once it flips
+    const r = await runFloor({ platform: livePlatform(), log });
     if (!r.changed) { log("floor: nothing new, nothing to publish"); return; }
     const ok = await publishViaGit(state, env, `chore: floor index @ block ${r.tip}`,
                                    ["docs/data/floor.json"]);

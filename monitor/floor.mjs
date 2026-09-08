@@ -184,6 +184,25 @@ function buildIndex(logs, lo, hi, prior = null) {
   };
 }
 
+/**
+ * The platform the site is actually pointed at — mainnet the moment the scanner
+ * flips it live, testnet until then.
+ *
+ * Read from docs/config.js rather than hardcoded, because that file is what the
+ * page loads: if the two ever disagree the floor would index one contract while
+ * visitors traded on another. config.js is our own source, so it is evaluated
+ * rather than pattern-matched.
+ */
+export function livePlatform() {
+  const src = readFileSync(path.join(ROOT, "docs", "config.js"), "utf8");
+  const win = {};
+  new Function("window", src)(win);
+  const c = win.ANEWONE_CONFIG;
+  const net = c && c.mainnet && c.mainnet.live ? c.mainnet : c && c.testnet;
+  if (!net || !net.platform) throw new Error("config.js: no live platform address");
+  return net.platform;
+}
+
 // ---------------------------------------------------------------- cache
 // Separate from snapshot-cache.json: that one aggregates wallets across every
 // platform deployment for the campaign, this one is per-token state for the floor.
@@ -267,11 +286,7 @@ export async function runFloor({ platform, log = console.log } = {}) {
 
 // allow a direct run for testing: node monitor/floor.mjs 0x<platform>
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
-  const arg = process.argv[2] || (() => {
-    const cfg = readFileSync(path.join(ROOT, "docs", "config.js"), "utf8");
-    const m = cfg.match(/platform:\s*"(0x[0-9a-fA-F]{40})"/g) || [];
-    return m.length ? m[m.length - 1].match(/0x[0-9a-fA-F]{40}/)[0] : null;
-  })();
+  const arg = process.argv[2] || livePlatform();
   if (!arg) { console.error("platform address not found"); process.exit(1); }
   await runFloor({ platform: arg });
 }
