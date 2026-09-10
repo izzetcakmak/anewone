@@ -316,6 +316,81 @@ contract ANewOneMigrationTest is UniV3Fixture {
         _assertBooks();
     }
 
+    /// @dev The owners' way out: an hour after graduation an owner may put a coin back on its
+    ///      curve, which then trades as before until migrate() closes it for good.
+    function test_ownerReopensAGraduatedCurveAfterAnHour() public {
+        _graduate(tLow);
+        vm.expectRevert("too early");
+        arcade.reopenCurve(tLow);
+        vm.warp(block.timestamp + arcade.REOPEN_DELAY() - 1);
+        vm.expectRevert("too early");
+        arcade.reopenCurve(tLow);
+        vm.warp(block.timestamp + 1);
+        vm.prank(mallory);
+        vm.expectRevert("owner");
+        arcade.reopenCurve(tLow);
+
+        arcade.reopenCurve(tLow);
+        assertTrue(arcade.curveReopened(tLow));
+        vm.expectRevert("already open");
+        arcade.reopenCurve(tLow);
+
+        // back on the curve: buys and sells go through again, and the books stay whole
+        vm.prank(bob);
+        arcade.buy{value: 100e18}(tLow, 0);
+        uint256 bag = ANewOneToken(tLow).balanceOf(bob);
+        vm.startPrank(bob);
+        ANewOneToken(tLow).approve(address(arcade), bag);
+        arcade.sell(tLow, bag, 0);
+        vm.stopPrank();
+        _assertBooks();
+
+        // when the move can happen it does, and the curve closes for good
+        _migrate(tLow);
+        vm.prank(bob);
+        vm.expectRevert("graduated");
+        arcade.buy{value: 1e18}(tLow, 0);
+        vm.expectRevert("already migrated");
+        arcade.reopenCurve(tLow);
+        _assertBooks();
+    }
+
+    function test_reopenNeedsAGraduatedCoinOnAPlatformWithUniswap() public {
+        vm.expectRevert("not graduated");
+        arcade.reopenCurve(tLow);
+
+        ANewOne plain = new ANewOne(V0, GRAD, address(0), address(0), address(0));
+        vm.prank(creator);
+        address t = plain.createToken("T", "T", "", IMG);
+        vm.roll(block.number + 21);
+        _graduateOn(plain, t);
+        vm.warp(block.timestamp + 2 hours);
+        vm.expectRevert("no dex");
+        plain.reopenCurve(t);
+    }
+
+    /// @dev A reopened curve can be sold back under the target; its move then waits for buys.
+    function test_reopenedCurveUnderTargetWaitsForBuys() public {
+        _graduate(tLow);
+        vm.warp(block.timestamp + arcade.REOPEN_DELAY());
+        arcade.reopenCurve(tLow);
+        uint256 half = ANewOneToken(tLow).balanceOf(alice) / 2;
+        vm.startPrank(alice);
+        ANewOneToken(tLow).approve(address(arcade), half);
+        arcade.sell(tLow, half, 0);
+        vm.stopPrank();
+        assertLt(_raised(tLow), GRAD);
+        _open();
+        vm.expectRevert("below target");
+        arcade.migrate(tLow);
+
+        vm.prank(bob);
+        arcade.buy{value: 10_000e18}(tLow, 0);
+        arcade.migrate(tLow);
+        assertTrue(arcade.migrated(tLow));
+        _assertBooks();
+    }
+
     /// @dev A platform built without Uniswap has nowhere to move a coin to: graduation stays a
     ///      badge there, and the curve keeps trading.
     function test_withoutDex_graduationIsOnlyABadge() public {

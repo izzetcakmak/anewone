@@ -140,6 +140,12 @@ contract MigrationHandler is Test {
         vm.stopPrank();
     }
 
+    /// @dev this handler is an owner: it puts a graduated coin back on its curve when it may
+    function reopen(uint256 t) public {
+        if (tokens.length == 0) return;
+        try arcade.reopenCurve(_token(t)) {} catch {}
+    }
+
     function collect(uint256 a, uint256 t) public {
         if (tokens.length == 0) return;
         vm.prank(_actor(a));
@@ -191,7 +197,7 @@ contract ANewOneMigrationInvariant is UniV3Fixture {
         handler = new MigrationHandler(arcade, factory, nfpm, router, actors);
         arcade.addOwner(address(handler));
 
-        bytes4[] memory sel = new bytes4[](16);
+        bytes4[] memory sel = new bytes4[](17);
         sel[0] = MigrationHandler.createToken.selector;
         sel[1] = MigrationHandler.buy.selector;
         sel[2] = MigrationHandler.buy.selector; // weight buying so curves actually graduate
@@ -208,6 +214,7 @@ contract ANewOneMigrationInvariant is UniV3Fixture {
         sel[13] = MigrationHandler.withdraw.selector;
         sel[14] = MigrationHandler.advanceTime.selector;
         sel[15] = MigrationHandler.advanceBlocks.selector;
+        sel[16] = MigrationHandler.reopen.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: sel}));
         targetContract(address(handler));
     }
