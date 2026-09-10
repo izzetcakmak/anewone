@@ -8,11 +8,11 @@
  "criteria": "Every launch (TokenCreated) and trade (Trade) on any ANEWONE platform deployment counts as 1 action. Wallets ranked by total actions; ties broken by earliest activity. Team wallets excluded from ranking. Top 33 wallets enter the raffle: 90,000 / 60,000 / 30,000 $NOAH.",
  "final": false,
  "catchingUp": false,
- "generatedAt": "2026-09-10T16:20:45.517Z",
+ "generatedAt": "2026-09-10T22:21:45.281Z",
  "fromBlock": 52625041,
- "toBlock": 61424315,
- "totalWallets": 65,
- "totalTxs": 788,
+ "toBlock": 61466519,
+ "totalWallets": 66,
+ "totalTxs": 793,
  "wallets": [
   {
    "address": "0xfe2282be943ddb6500bad74f9d6e2d21af7e1249",
@@ -185,13 +185,23 @@
    "boarding": true
   },
   {
+   "address": "0x9b360962b5cf43e4aebe792f4790451a94dbf9b3",
+   "launches": 1,
+   "trades": 9,
+   "total": 10,
+   "firstBlock": 60301612,
+   "team": false,
+   "rank": 16,
+   "boarding": true
+  },
+  {
    "address": "0x3a51a380330d7dbb1739153223b5a5a2f5f160a4",
    "launches": 0,
    "trades": 10,
    "total": 10,
    "firstBlock": 60892498,
    "team": false,
-   "rank": 16,
+   "rank": 17,
    "boarding": true
   },
   {
@@ -201,7 +211,7 @@
    "total": 10,
    "firstBlock": 60902085,
    "team": false,
-   "rank": 17,
+   "rank": 18,
    "boarding": true
   },
   {
@@ -210,16 +220,6 @@
    "trades": 9,
    "total": 9,
    "firstBlock": 58346911,
-   "team": false,
-   "rank": 18,
-   "boarding": true
-  },
-  {
-   "address": "0x9b360962b5cf43e4aebe792f4790451a94dbf9b3",
-   "launches": 1,
-   "trades": 8,
-   "total": 9,
-   "firstBlock": 60301612,
    "team": false,
    "rank": 19,
    "boarding": true
@@ -435,13 +435,23 @@
    "boarding": false
   },
   {
+   "address": "0xe40436d5a74ddfccd94a585fba798c522c76f632",
+   "launches": 0,
+   "trades": 4,
+   "total": 4,
+   "firstBlock": 61455472,
+   "team": false,
+   "rank": 41,
+   "boarding": false
+  },
+  {
    "address": "0x601ad7e0f15b4e2c5e5f3295468aecf4953296e1",
    "launches": 1,
    "trades": 2,
    "total": 3,
    "firstBlock": 54393972,
    "team": false,
-   "rank": 41,
+   "rank": 42,
    "boarding": false
   },
   {
@@ -451,7 +461,7 @@
    "total": 3,
    "firstBlock": 57324748,
    "team": false,
-   "rank": 42,
+   "rank": 43,
    "boarding": false
   },
   {
@@ -461,7 +471,7 @@
    "total": 3,
    "firstBlock": 57333092,
    "team": false,
-   "rank": 43,
+   "rank": 44,
    "boarding": false
   },
   {
@@ -471,7 +481,7 @@
    "total": 3,
    "firstBlock": 57333850,
    "team": false,
-   "rank": 44,
+   "rank": 45,
    "boarding": false
   },
   {
@@ -481,7 +491,7 @@
    "total": 2,
    "firstBlock": 53926632,
    "team": false,
-   "rank": 45,
+   "rank": 46,
    "boarding": false
   },
   {
@@ -491,7 +501,7 @@
    "total": 2,
    "firstBlock": 54498126,
    "team": false,
-   "rank": 46,
+   "rank": 47,
    "boarding": false
   },
   {
@@ -501,7 +511,7 @@
    "total": 2,
    "firstBlock": 57334001,
    "team": false,
-   "rank": 47,
+   "rank": 48,
    "boarding": false
   },
   {
@@ -511,7 +521,7 @@
    "total": 2,
    "firstBlock": 60132922,
    "team": false,
-   "rank": 48,
+   "rank": 49,
    "boarding": false
   },
   {
@@ -521,7 +531,7 @@
    "total": 2,
    "firstBlock": 60134103,
    "team": false,
-   "rank": 49,
+   "rank": 50,
    "boarding": false
   },
   {
@@ -531,7 +541,7 @@
    "total": 2,
    "firstBlock": 60138232,
    "team": false,
-   "rank": 50,
+   "rank": 51,
    "boarding": false
   },
   {
@@ -541,7 +551,7 @@
    "total": 2,
    "firstBlock": 60139586,
    "team": false,
-   "rank": 51,
+   "rank": 52,
    "boarding": false
   },
   {
@@ -551,7 +561,7 @@
    "total": 2,
    "firstBlock": 60139880,
    "team": false,
-   "rank": 52,
+   "rank": 53,
    "boarding": false
   },
   {
@@ -561,7 +571,7 @@
    "total": 2,
    "firstBlock": 60140571,
    "team": false,
-   "rank": 53,
+   "rank": 54,
    "boarding": false
   },
   {
@@ -571,7 +581,7 @@
    "total": 1,
    "firstBlock": 52625926,
    "team": false,
-   "rank": 54,
+   "rank": 55,
    "boarding": false
   },
   {
@@ -581,7 +591,7 @@
    "total": 1,
    "firstBlock": 54239091,
    "team": false,
-   "rank": 55,
+   "rank": 56,
    "boarding": false
   },
   {
@@ -591,7 +601,7 @@
    "total": 1,
    "firstBlock": 55963607,
    "team": false,
-   "rank": 56,
+   "rank": 57,
    "boarding": false
   },
   {
@@ -601,7 +611,7 @@
    "total": 1,
    "firstBlock": 57305858,
    "team": false,
-   "rank": 57,
+   "rank": 58,
    "boarding": false
   },
   {
@@ -611,7 +621,7 @@
    "total": 1,
    "firstBlock": 60141103,
    "team": false,
-   "rank": 58,
+   "rank": 59,
    "boarding": false
   },
   {
@@ -621,7 +631,7 @@
    "total": 1,
    "firstBlock": 60891335,
    "team": false,
-   "rank": 59,
+   "rank": 60,
    "boarding": false
   },
   {
@@ -631,7 +641,7 @@
    "total": 1,
    "firstBlock": 60891462,
    "team": false,
-   "rank": 60,
+   "rank": 61,
    "boarding": false
   },
   {
@@ -641,7 +651,7 @@
    "total": 1,
    "firstBlock": 60891554,
    "team": false,
-   "rank": 61,
+   "rank": 62,
    "boarding": false
   },
   {
@@ -651,7 +661,7 @@
    "total": 1,
    "firstBlock": 60891733,
    "team": false,
-   "rank": 62,
+   "rank": 63,
    "boarding": false
   },
   {
@@ -661,7 +671,7 @@
    "total": 1,
    "firstBlock": 60891804,
    "team": false,
-   "rank": 63,
+   "rank": 64,
    "boarding": false
   },
   {
@@ -671,7 +681,7 @@
    "total": 1,
    "firstBlock": 60891958,
    "team": false,
-   "rank": 64,
+   "rank": 65,
    "boarding": false
   },
   {
@@ -681,7 +691,7 @@
    "total": 1,
    "firstBlock": 61126174,
    "team": false,
-   "rank": 65,
+   "rank": 66,
    "boarding": false
   }
  ]
