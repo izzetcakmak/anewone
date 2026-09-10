@@ -1127,8 +1127,8 @@
   <div class="hero-inner">
     <h1>Insert coin.<span class="l2">Launch a new one.</span></h1>
     <p class="hero-sub">Bonding curves priced in <b>USDC</b>, not in a volatile gas token.
-      <b>No LP, no migration, nothing to pull</b>, and half of every trade fee goes
-      straight to the creator.</p>
+      <b>Nothing to pull</b>: at graduation the curve moves into a Uniswap v3 pool whose
+      liquidity is locked for good, and half of every trade fee goes straight to the creator.</p>
     <div class="hero-row">
       <a class="hbtn primary" href="#floor">Explore the floor →</a>
       <div class="hero-stats">
@@ -1263,7 +1263,7 @@
       </div>
     </div>
     <div class="foot-meta">
-      <span><span class="arc-pill">⚡ Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a></span> · gas is USDC · rug-proof: reserves locked, no LP to pull.</span>
+      <span><span class="arc-pill">⚡ Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a></span> · gas is USDC · rug-proof: reserves locked, pool liquidity locked for good.</span>
       <span id="footPlatformLine" style="display:none">Platform: <span id="footPlatform">–</span></span>
     </div>
   </footer>
@@ -3398,7 +3398,7 @@ window.addEventListener("hashchange", openFromHash);
 
 function tickerText(n) {
   const names = Object.values(tokenMeta).map(t => "$" + t.symbol).join("  ·  ");
-  return `${n} TOKEN${n === 1 ? "" : "S"} LIVE  ·  ${names}  ·  1% FEE: HALF TO CREATORS  ·  NO LP, NO RUG: RESERVES LOCKED IN THE CURVE  ·  GAS IS USDC — BUILT ON ARC`;
+  return `${n} TOKEN${n === 1 ? "" : "S"} LIVE  ·  ${names}  ·  1% FEE: HALF TO CREATORS  ·  NO RUG: RESERVES LOCKED, THEN A UNISWAP V3 POOL LOCKED FOR GOOD  ·  GAS IS USDC  ·  BUILT ON ARC`;
 }
 
 // ------- image upload (pump.fun-style criteria: .jpg/.jpeg/.png, ≤5MB, ≥100×100)

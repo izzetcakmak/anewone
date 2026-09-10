@@ -135,8 +135,8 @@
 
   <h1>A NEW ONE Docs</h1>
   <p class="lede">The meme launchpad built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a>,
-    Circle's stablecoin L1 where gas <em>is</em> USDC. Launch a token in seconds, trade on a
-    rug-proof bonding curve with no LP to pull, ever.</p>
+    Circle's stablecoin L1 where gas <em>is</em> USDC. Launch a token in seconds, trade it on a
+    rug-proof bonding curve, and watch it graduate into a Uniswap v3 pool nobody can pull, ever.</p>
 
   <div class="toc">
     <a href="#what">What it is</a>
@@ -157,8 +157,9 @@
     curve</strong> priced in <strong>USDC</strong>. There is no order book, no seeding liquidity, and
     no listing step. The contract itself is the market maker.</p>
   <div class="grid">
-    <div class="card"><span class="tag good">rug-proof</span><h3>No LP to pull</h3><p>Reserves are locked inside
-      the contract for the token's whole life. There is no liquidity pool a dev can drain and no migration step.</p></div>
+    <div class="card"><span class="tag good">rug-proof</span><h3>Nothing to pull</h3><p>Reserves are locked in
+      the curve. At graduation they move into a Uniswap v3 pool, and the position stays inside the platform
+      contract, which has no function that can withdraw it. There is no liquidity a dev, or we, could drain.</p></div>
     <div class="card"><span class="tag good">USDC-native</span><h3>One asset</h3><p>On Arc, USDC pays gas
       <em>and</em> buys tokens. No volatile gas coin, no priority-fee auctions.</p></div>
     <div class="card"><span class="tag good">fair launch</span><h3>Anti-snipe</h3><p>A per-wallet cap in the
@@ -176,7 +177,10 @@
     every sell pushes it down, smoothly and predictably.</p>
   <ul>
     <li><strong>Market cap</strong> = current price × 1B supply. The app shows this (not a raw price) so numbers mean something.</li>
-    <li><strong>Graduation</strong> is a milestone badge at a set amount of USDC raised. Trading continues on the same curve, and there is no forced migration.</li>
+    <li><strong>Graduation</strong> comes at 5,000 USDC raised. The curve then moves into a Uniswap v3 pool (1% fee tier,
+      full range) at the price it ended on, so nobody who bought on the curve is marked down. Only as many tokens as the
+      raised USDC pairs with at that price go into the pool; the rest of the unsold supply is burned. Anyone can
+      trigger the move once a coin has graduated.</li>
     <li>Buys and sells always clear against the contract, so there is always liquidity to exit.</li>
   </ul>
 
@@ -189,10 +193,15 @@
   </table>
   <p>That's a bigger day-one creator cut than most launchpads. If a creator doesn't claim within 7
     days, the pot rolls into platform fees (anyone can trigger the sweep), so claim your earnings.</p>
+  <p>After graduation the Uniswap pool charges the same 1%. Its USDC side is split between creator and platform
+    exactly the same way; its token side is burned.</p>
 
   <h2 id="safety">Safety by design</h2>
   <ul>
-    <li><strong>Rug-proof:</strong> no LP exists, and curve reserves can never be withdrawn, only traded against. Fees are held in separate accounting from reserves.</li>
+    <li><strong>Rug-proof:</strong> curve reserves can never be withdrawn, only traded against, and at graduation they
+      move once into a Uniswap v3 position the contract keeps for good. The Uniswap addresses are fixed in the
+      contract at deploy, so nobody can point a migration anywhere else. Fees are held in separate accounting from
+      reserves.</li>
     <li><strong>Anti-snipe:</strong> for the first 20 blocks after launch, each wallet can buy at most 2% of supply.</li>
     <li><strong>Verified &amp; open:</strong> the contract is public and the frontend is a static, no-backend page you can inspect. Token names, images and comments are escaped, so a hostile token can't attack you.</li>
   </ul>
