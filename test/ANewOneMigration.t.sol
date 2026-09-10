@@ -223,6 +223,10 @@ contract ANewOneMigrationTest is UniV3Fixture {
         address t = early.createToken("T", "T", "", IMG);
         vm.roll(block.number + 21);
         _graduateOn(early, t);
+        // graduated with no Uniswap yet: the curve waits, closed
+        vm.prank(bob);
+        vm.expectRevert("graduated");
+        early.buy{value: 1e18}(t, 0);
         vm.expectRevert("dex: not live");
         early.setMigrationsOpen(true);
         vm.expectRevert("migration off");
@@ -274,22 +278,59 @@ contract ANewOneMigrationTest is UniV3Fixture {
         arcade.migrate(tLow);
 
         _graduate(tLow);
-        // sells take the curve back under the target: graduated for good, not deep enough yet
-        uint256 half = ANewOneToken(tLow).balanceOf(alice) / 2;
-        vm.startPrank(alice);
-        ANewOneToken(tLow).approve(address(arcade), half);
-        arcade.sell(tLow, half, 0);
-        vm.stopPrank();
-        assertLt(_raised(tLow), GRAD);
-        vm.expectRevert("below target");
-        arcade.migrate(tLow);
-
-        // buys lift it again
-        vm.prank(bob);
-        arcade.buy{value: 10_000e18}(tLow, 0);
         arcade.migrate(tLow);
         vm.expectRevert("already migrated");
         arcade.migrate(tLow);
+    }
+
+    /// @dev The buy that crosses the target goes through; the curve is closed after it, whole,
+    ///      until the coin moves into its pool.
+    function test_graduationClosesTheCurve() public {
+        _graduate(tLow);
+        uint256 raised = _raised(tLow);
+
+        vm.prank(bob);
+        vm.expectRevert("graduated");
+        arcade.buy{value: 1e18}(tLow, 0);
+
+        uint256 bag = ANewOneToken(tLow).balanceOf(alice);
+        vm.startPrank(alice);
+        ANewOneToken(tLow).approve(address(arcade), bag);
+        vm.expectRevert("graduated");
+        arcade.sell(tLow, bag, 0);
+        vm.stopPrank();
+
+        vm.expectRevert("graduated");
+        arcade.quoteBuy(tLow, 1e18);
+        vm.expectRevert("graduated");
+        arcade.quoteSell(tLow, 1e18);
+
+        // the reserve waits intact for the pool, and the other curves trade as usual
+        assertEq(_raised(tLow), raised);
+        vm.prank(bob);
+        arcade.buy{value: 1e18}(tHigh, 0);
+        _assertBooks();
+
+        _migrate(tLow);
+        assertTrue(arcade.migrated(tLow));
+        _assertBooks();
+    }
+
+    /// @dev A platform built without Uniswap has nowhere to move a coin to: graduation stays a
+    ///      badge there, and the curve keeps trading.
+    function test_withoutDex_graduationIsOnlyABadge() public {
+        ANewOne plain = new ANewOne(V0, GRAD, address(0), address(0), address(0));
+        vm.prank(creator);
+        address t = plain.createToken("T", "T", "", IMG);
+        vm.roll(block.number + 21);
+        _graduateOn(plain, t);
+        vm.prank(bob);
+        plain.buy{value: 1e18}(t, 0);
+        uint256 bag = ANewOneToken(t).balanceOf(bob);
+        vm.startPrank(bob);
+        ANewOneToken(t).approve(address(plain), bag);
+        plain.sell(t, bag, 0);
+        vm.stopPrank();
     }
 
     // ------------------------------------------------------------ the move itself
@@ -358,18 +399,18 @@ contract ANewOneMigrationTest is UniV3Fixture {
         assertEq(arcade.priceWad(token), s.price);
 
         vm.prank(alice);
-        vm.expectRevert("migrated");
+        vm.expectRevert("graduated");
         arcade.buy{value: 1e18}(token, 0);
 
         vm.startPrank(alice);
         ANewOneToken(token).approve(address(arcade), 1e18);
-        vm.expectRevert("migrated");
+        vm.expectRevert("graduated");
         arcade.sell(token, 1e18, 0);
         vm.stopPrank();
 
-        vm.expectRevert("migrated");
+        vm.expectRevert("graduated");
         arcade.quoteBuy(token, 1e18);
-        vm.expectRevert("migrated");
+        vm.expectRevert("graduated");
         arcade.quoteSell(token, 1e18);
     }
 
@@ -640,17 +681,18 @@ contract ANewOneMigrationTest is UniV3Fixture {
         vm.revertToState(snap);
     }
 
-    function test_foreignLiquidityTooDeep_isRefused_curveStaysOpen() public {
+    function test_foreignLiquidityTooDeep_isRefused_nothingMoves() public {
         (, uint256 price) = _deepForeign(tHigh);
         uint256 raised = _raised(tHigh);
         _open();
         _expectMigrationRefused(tHigh, "pool price out of reach");
 
-        // the curve still trades and still holds every wei
+        // nothing moved: the closed curve still holds every wei, waiting for the pool
         assertFalse(arcade.migrated(tHigh));
         assertEq(_raised(tHigh), raised);
         assertEq(arcade.priceWad(tHigh), price);
         vm.prank(alice);
+        vm.expectRevert("graduated");
         arcade.buy{value: 10e18}(tHigh, 0);
         _assertBooks();
     }

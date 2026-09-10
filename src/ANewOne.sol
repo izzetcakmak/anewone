@@ -138,8 +138,10 @@ contract ANewOne {
 
     /// @notice Virtual USDC seeded into every curve (sets the starting price).
     uint256 public immutable virtualUsdc0;
-    /// @notice Real USDC raised at which a token "graduates": a badge and an event, after which
-    ///         trading carries on on the curve until somebody calls migrate().
+    /// @notice Real USDC raised at which a token "graduates". The buy that crosses it goes
+    ///         through; after it the curve is closed, and the coin waits for migrate() to move
+    ///         it into Uniswap v3, where trading resumes. On a platform built without Uniswap
+    ///         graduation is only a badge and trading carries on.
     uint256 public immutable gradTarget;
 
     /// @notice Creators must claim accrued fees within this window; afterwards the pot
@@ -374,8 +376,8 @@ contract ANewOne {
     function _buy(address token, address to, uint256 value, uint256 minTokensOut) internal {
         TokenInfo storage t = info[token];
         require(t.creator != address(0), "unknown token");
-        // the reserves left for a pool; there is nothing here to trade against
-        require(!migrated[token], "migrated");
+        // a graduated curve is done: it waits, closed, for its move into Uniswap v3
+        require(_curveOpen(t), "graduated");
 
         uint256 fee = (value * FEE_BPS) / 10_000;
         uint256 usdcIn = value - fee;
@@ -408,7 +410,7 @@ contract ANewOne {
     function sell(address token, uint256 tokenAmount, uint256 minUsdcOut) external nonReentrant {
         TokenInfo storage t = info[token];
         require(t.creator != address(0), "unknown token");
-        require(!migrated[token], "migrated");
+        require(_curveOpen(t), "graduated");
         require(tokenAmount > 0, "no amount");
 
         require(ANewOneToken(token).transferFrom(msg.sender, address(this), tokenAmount), "transferFrom");
@@ -449,7 +451,8 @@ contract ANewOne {
     }
 
     /// @notice Move a graduated token's curve into a full-range Uniswap v3 position that this
-    ///         contract holds for good. Trading on the curve ends here.
+    ///         contract holds for good. Trading on the curve already ended at graduation; it
+    ///         resumes in the pool.
     /// @dev Permissionless on purpose: once a token has graduated, nobody should have to wait
     ///      on us for it to reach a pool every indexer can see. A separate call rather than part
     ///      of the graduating buy, so one unlucky buyer is not charged for a pool deployment and
@@ -466,8 +469,8 @@ contract ANewOne {
         require(t.creator != address(0), "unknown token");
         require(t.graduated, "not graduated");
         require(!migrated[token], "already migrated");
-        // Graduated is for good, but a pool should open at least as deep as the target that
-        // earned it. If sells took the curve back under, it trades on until buys lift it again.
+        // A graduated curve is closed, so it cannot slip back under the target. Checked anyway:
+        // a pool should never open shallower than the target that earned it.
         require(t.raised >= gradTarget, "below target");
 
         Move memory m = _plan(token, t);
@@ -810,17 +813,17 @@ contract ANewOne {
     }
 
     function quoteBuy(address token, uint256 usdcIn) external view returns (uint256 tokensOut) {
-        // a quote for a curve that no longer trades would be a price nobody can get
-        require(!migrated[token], "migrated");
         TokenInfo storage t = info[token];
+        // a quote for a curve that no longer trades would be a price nobody can get
+        require(_curveOpen(t), "graduated");
         uint256 usdcAfterFee = usdcIn - (usdcIn * FEE_BPS) / 10_000;
         uint256 k = t.vUsdc * t.tReserve;
         tokensOut = t.tReserve - _ceilDiv(k, t.vUsdc + usdcAfterFee);
     }
 
     function quoteSell(address token, uint256 tokenAmount) external view returns (uint256 usdcOut) {
-        require(!migrated[token], "migrated");
         TokenInfo storage t = info[token];
+        require(_curveOpen(t), "graduated");
         uint256 k = t.vUsdc * t.tReserve;
         uint256 gross = t.vUsdc - _ceilDiv(k, t.tReserve + tokenAmount);
         if (gross > t.raised) gross = t.raised;
@@ -832,6 +835,13 @@ contract ANewOne {
         TokenInfo storage t = info[token];
         if (t.graduated) return 10_000;
         return (t.raised * 10_000) / gradTarget;
+    }
+
+    /// @dev A curve trades until it graduates. On a platform built with Uniswap v3 it then closes
+    ///      for good: its reserve waits for migrate(), and trading resumes in the pool. Without
+    ///      Uniswap there is nowhere to move to, so graduation stays a badge.
+    function _curveOpen(TokenInfo storage t) internal view returns (bool) {
+        return !t.graduated || address(v3Factory) == address(0);
     }
 
     function _priceWad(TokenInfo storage t) internal view returns (uint256) {
