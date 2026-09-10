@@ -61,6 +61,13 @@ window.ANEWONE_CONFIG = {
     platform: "0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf",
     noah: "0x0D1ac2a7FCdd8bF74EEC839DF4ED909071296a49",
   },
+  // Where a coin trades once it has graduated into Uniswap v3; {token} and {usdc} are filled
+  // in. Left empty until the link has been checked by hand against the live Uniswap app:
+  // while it is empty, the trade panel links the pool on the explorer instead.
+  uniswap: {
+    mainnet: { swapUrl: "" },
+    testnet: { swapUrl: "" },
+  },
   // "Continue with Google" (embedded wallet via Web3Auth), configured PER blockchain network.
   // While testnet is live the testnet clientId is used; the moment the scanner flips
   // mainnet.live=true the mainnet entry takes over automatically. Before launch, create a

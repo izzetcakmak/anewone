@@ -296,6 +296,7 @@
   .cbadge { position: absolute; top: 8px; left: 8px; background: rgba(10,10,14,.78); color: #fff;
     font-size: 10px; font-weight: 600; letter-spacing: .3px; border-radius: 999px; padding: 3px 8px; }
   .cbadge.grad { background: var(--accent); color: #04241a; }
+  .cbadge.uni { background: #ff007a; color: #fff; }
   .cab .star { position: absolute; top: 6px; right: 6px; left: auto; z-index: 2;
     background: rgba(10,10,14,.5); border-radius: 999px; width: 24px; height: 24px;
     display: grid; place-items: center; color: #fff; font-size: 13px; }
@@ -827,6 +828,28 @@
   .tconnect button { flex: 0 0 auto; padding: 12px 22px; font-size: 14px; font-weight: 600;
     border-radius: var(--r-sm); border: 0; background: var(--accent); color: #04241a; }
   .tconnect button:hover { filter: brightness(1.07); }
+  /* a coin that graduated into Uniswap v3 trades there; the curve form gives way to this */
+  .tuni { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin: 16px 0 0; padding: 16px 18px; border-radius: var(--r-md);
+    background: rgba(255,0,122,.07); border: 1px solid rgba(255,0,122,.32); }
+  .tuni .tc-copy { flex: 1 1 220px; min-width: 0; }
+  .tuni b { display: block; color: var(--text); font-size: 14.5px; font-weight: 600; }
+  .tuni span { display: block; color: var(--dim); font-size: 12.5px; margin-top: 3px; }
+  .tuni-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tuni-links a { padding: 11px 18px; font-size: 14px; font-weight: 600; border-radius: var(--r-sm);
+    border: 1px solid rgba(255,0,122,.45); color: var(--text); }
+  .tuni-links a.go { background: #ff007a; border-color: #ff007a; color: #fff; }
+  .tuni-links a:hover { filter: brightness(1.07); text-decoration: none; }
+  /* the address row: a whole line to itself, so it never shares one with the buttons */
+  .tuni-ca { display: block; flex: 1 1 100%; width: 100%; text-align: left; cursor: pointer;
+    padding: 10px 12px; border-radius: var(--r-sm); border: 1px dashed rgba(255,0,122,.45);
+    background: rgba(var(--ink-rgb),.03); box-shadow: none; }
+  .tuni-ca:hover { border-style: solid; }
+  .tuni .tuni-ca .lbl { display: block; margin: 0 0 3px; font-size: 11px; letter-spacing: .4px;
+    text-transform: uppercase; color: var(--faint); }
+  .tuni-ca code { display: block; font-family: var(--mono); font-size: 12.5px; line-height: 1.45;
+    color: var(--text); word-break: break-all; white-space: normal; }
+  .tuni .tuni-ca.done .lbl { color: var(--green); }
   /* the form stays visible while disconnected, but reads as inert */
   .tform-locked { opacity: .45; pointer-events: none; }
   .tabs { display: flex; gap: 6px; margin: 16px 0 0; }
@@ -1329,6 +1352,18 @@
     <div class="tsocials" id="tSocials" style="display:none"></div>
     <div class="bar" style="margin-top:14px"><i id="tBar" style="width:0%"></i></div>
     <div class="bar-label" id="tBarLabel">0% to graduation</div>
+    <div class="tuni" id="tUni" style="display:none">
+      <div class="tc-copy">
+        <b>This coin graduated to Uniswap v3</b>
+        <span>Its curve moved into a Uniswap pool and it trades there now. The position sits
+          inside the platform contract, which has no way to withdraw it.</span>
+      </div>
+      <button type="button" class="tuni-ca" id="tUniCa" title="Copy the token address">
+        <span class="lbl">Tap to copy the token address</span>
+        <code id="tUniCaAddr"></code>
+      </button>
+      <div class="tuni-links" id="tUniLinks"></div>
+    </div>
     <div class="tconnect" id="tConnect" style="display:none">
       <div class="tc-copy">
         <b>Connect a wallet to trade</b>
@@ -1485,7 +1520,12 @@ const ABI = [
   "function creatorFeeExpired(address) view returns (bool)",
   "function claimCreatorFees()",
   "function withdrawPlatformFees(address)",
-  "function sweepExpired(address)"
+  "function sweepExpired(address)",
+  // graduation into Uniswap v3: only on a platform built with it, see detectMigration()
+  "function migrated(address) view returns (bool)",
+  "function migrationsOpen() view returns (bool)",
+  "function v3Factory() view returns (address)",
+  "function usdc() view returns (address)"
 ];
 const ERC20 = [
   "function name() view returns (string)",
@@ -1521,6 +1561,71 @@ const readProvider = _readUrls.length > 1
       ARC_NET, { quorum: 1 })
   : mkProvider(_readUrls[0]);
 const platform = new ethers.Contract(CFG.platform, ABI, readProvider);
+
+// Graduation into Uniswap v3 exists only on a platform built with it (the mainnet one); the
+// testnet platform predates it. Its bytecode is asked once for migrated(address)'s selector,
+// which tells the two apart without a call that reverts and then gets retried with backoff.
+let migrationOn = false;
+const migratedSet = new Set();       // a move into Uniswap is final, so this only ever grows
+let migrationProbe = null;
+function detectMigration() {
+  if (!migrationProbe) {
+    migrationProbe = rpc(() => readProvider.getCode(CFG.platform))
+      .then((code) => (migrationOn = String(code).toLowerCase().includes("4ba0a5ee")))
+      .catch(() => false);
+  }
+  return migrationProbe;
+}
+// Only a graduated coin can have moved, so only those are asked.
+async function checkMigrated(addrs) {
+  if (!(await detectMigration())) return false;
+  let changed = false;
+  for (const a of addrs) {
+    if (migratedSet.has(a) || !tokenInfo[a]?.graduated) continue;
+    try {
+      if (await rpc(() => platform.migrated(a))) { migratedSet.add(a); changed = true; }
+    } catch {}
+  }
+  return changed;
+}
+// Whether migrations are open yet. Uniswap may reach Arc after the platform does; until an
+// owner opens migrations a graduated coin keeps trading on its curve, and the panel says so.
+// Asked at most once a minute.
+let openCache = { at: 0, open: false };
+async function migrationsOpenNow() {
+  if (Date.now() - openCache.at > 60_000) {
+    try { openCache = { at: Date.now(), open: await rpc(() => platform.migrationsOpen()) }; } catch {}
+  }
+  return openCache.open;
+}
+// The pool a migrated coin trades in, found the way anyone would: through the factory the
+// platform was deployed with, this coin against USDC in the 1% tier.
+let dex = null;
+async function poolOf(addr) {
+  if (!dex) {
+    const factory = await rpc(() => platform.v3Factory());
+    const usdc = await rpc(() => platform.usdc());
+    dex = { usdc, factory: new ethers.Contract(factory,
+      ["function getPool(address,address,uint24) view returns (address)"], readProvider) };
+  }
+  return rpc(() => dex.factory.getPool(addr, dex.usdc, 10000));
+}
+async function renderUniLinks(addr) {
+  const cfg = window.ANEWONE_CONFIG.uniswap || {};
+  const uni = cfg[window.ANEWONE_CONFIG.mainnet.live ? "mainnet" : "testnet"] || {};
+  let pool = null;
+  try { pool = await poolOf(addr); } catch {}
+  if (currentToken !== addr) return;
+  const links = [];
+  if (uni.swapUrl && dex) {
+    const href = uni.swapUrl.replace("{token}", addr).replace("{usdc}", dex.usdc);
+    links.push(`<a class="go" href="${esc(href)}" target="_blank" rel="noopener noreferrer">Trade on Uniswap ↗</a>`);
+  }
+  if (pool && pool !== ethers.ZeroAddress && CFG.explorer) {
+    links.push(`<a href="${esc(CFG.explorer)}/address/${esc(pool)}" target="_blank" rel="noopener">Pool on explorer ↗</a>`);
+  }
+  $("tUniLinks").innerHTML = links.join("");
+}
 // eth_getLogs goes to the public RPC only: the keyed QuickNode "Discover" plan caps getLogs
 // at a 5-block range (413), while the public RPC serves the wide ranges the trade/comment/
 // image history scan needs. The high-volume eth_call traffic stays on readProvider (QuickNode).
@@ -2508,6 +2613,7 @@ let lastCountPoll = 0, hydrated = false;
 async function loadTokens() {
   if (loading) return;
   loading = true;
+  detectMigration(); // cached; started early so the first panel already knows
   try {
     if (gradTarget === null) {
       gradTarget = BigInt(await rpc(() => platform.gradTarget()));
@@ -2567,6 +2673,8 @@ async function loadTokens() {
     shownAddrs = addrs;
     $("empty").dataset.none = count === 0 ? "1" : "0";
     renderGrid();
+    // coins that moved into Uniswap get their badge once the flags are in
+    checkMigrated(addrs).then((changed) => { if (changed) renderGrid(); });
     const tk = $("ticker"); if (tk) tk.textContent = tickerText(count);
     openFromHash();
     if (addrs.length) {
@@ -2655,7 +2763,9 @@ function cardHtml(addr) {
   // The artwork is the card. Everything else is one line of numbers underneath,
   // so a wall of tokens reads by picture first — which is how people actually
   // scan a launchpad.
-  const badge = inf.graduated
+  const badge = migratedSet.has(addr)
+    ? '<span class="cbadge uni">ON UNISWAP</span>'
+    : inf.graduated
     ? '<span class="cbadge grad">GRADUATED</span>'
     : pct >= 50 ? '<span class="cbadge">GRADUATING</span>'
     : (latestBlock && inf.createdBlock && latestBlock - Number(inf.createdBlock) < 20000)
@@ -3595,8 +3705,24 @@ async function refreshTrade() {
   $("tVol").textContent = covers24h ? compactUsd(st.vol24 || 0n) : "…";
   const pct = Number(progBps(inf)) / 100;
   $("tBar").style.width = Math.min(Math.max(pct, 1.5), 100) + "%";
-  $("tBarLabel").textContent = (inf.graduated ? "★ GRADUATED · trading continues" : pct.toFixed(1) + "% to graduation")
-    + ` · raised ${fmt(inf.raised, 2)} USDC`;
+  await checkMigrated([currentToken]);
+  const moved = migratedSet.has(currentToken);
+  const raisedTxt = ` · raised ${fmt(inf.raised, 2)} USDC`;
+  if (moved) $("tBarLabel").textContent = "★ GRADUATED · now trading on Uniswap v3";
+  else if (!inf.graduated) $("tBarLabel").textContent = pct.toFixed(1) + "% to graduation" + raisedTxt;
+  else if (!migrationOn) $("tBarLabel").textContent = "★ GRADUATED · trading continues" + raisedTxt;
+  else $("tBarLabel").textContent = ((await migrationsOpenNow())
+    ? "★ GRADUATED · moving to Uniswap v3"
+    : "★ GRADUATED · moves to Uniswap v3 soon, trading continues here until then") + raisedTxt;
+  // the curve no longer trades: its form gives way to where the coin trades now
+  $("tUni").style.display = moved ? "flex" : "none";
+  $("tForm").style.display = moved ? "none" : "";
+  $("tGo").style.display = moved ? "none" : "";
+  if (moved) {
+    $("tConnect").style.display = "none";
+    $("tUniCaAddr").textContent = currentToken;
+    renderUniLinks(currentToken);
+  }
   if (userAddr) {
     const tk = new ethers.Contract(currentToken, ERC20, readProvider);
     userTokenBal = await rpc(() => tk.balanceOf(userAddr));
@@ -3641,7 +3767,7 @@ function applyPct(p) {
 // visitor who opened a token sees the one action that's actually available to them.
 function syncTradeAuth() {
   const connected = !!signer;
-  $("tConnect").style.display = connected ? "none" : "flex";
+  $("tConnect").style.display = connected || migratedSet.has(currentToken) ? "none" : "flex";
   $("tForm").classList.toggle("tform-locked", !connected);
   if (!connected && currentToken) {
     const sym = tokenMeta[currentToken]?.symbol;
@@ -3683,6 +3809,7 @@ $("pctRow").querySelectorAll("button").forEach((b) => {
 });
 $("tGo").onclick = async () => {
   if (!signer) return connect(); // the picker, not a dead-end toast
+  if (migratedSet.has(currentToken)) return toast("This coin trades on Uniswap now");
   const wei = exactWei !== null ? exactWei : (parseFloat($("tAmt").value || "0") ? ethers.parseEther($("tAmt").value) : 0n);
   if (!wei || wei <= 0n) return toast("Enter an amount");
   try {
@@ -3793,8 +3920,10 @@ async function computeTrust(addr) {
     ? `<a href="${esc(CFG.explorer)}/address/${esc(addr)}" target="_blank" rel="noopener">verified contract ↗</a>`
     : "the contract";
   box.innerHTML = `<div class="tbadges">${badges.join("")}</div>
-    <div class="tnote">Reserves are locked in the bonding curve. There is no LP to pull and no
-      migration step. Dev % is the creator's live balance vs circulating supply.
+    <div class="tnote">${migrationOn
+      ? "Reserves are locked in the bonding curve, and at graduation they move into a Uniswap v3 pool whose position the platform contract holds for good."
+      : "Reserves are locked in the bonding curve. There is no LP to pull and no migration step."}
+      Dev % is the creator's live balance vs circulating supply.
       ${topPct >= 30 || sniperPct > 0 ? "<br>*Estimated from trades (ignores direct wallet-to-wallet transfers). Snipers = wallets that bought inside the 20-block anti-snipe window." : ""}
       <br>See the ${link}.</div>`;
 }
@@ -4096,6 +4225,26 @@ setInterval(liveTail, 15_000);
     const was = lbl.textContent;
     lbl.textContent = "Copied";
     setTimeout(() => { btn.classList.remove("done"); lbl.textContent = was; }, 1400);
+  });
+})();
+
+/* ---- a migrated coin's address, next to the Uniswap button -------------------
+   Whether that link opens the coin against USDC by itself depends on Uniswap's app
+   supporting Arc. Pasting the address into its token search always works, so the
+   address is one tap away instead of somewhere else on the page. */
+(() => {
+  const btn = $("tUniCa");
+  if (!btn) return;
+  const lbl = btn.querySelector(".lbl");
+  const label = lbl.textContent;
+  btn.addEventListener("click", async () => {
+    const addr = currentToken;
+    if (!addr) return;
+    if (!(await copyText(addr))) return toast(addr); // last resort: show it
+    toast("Token address copied");
+    btn.classList.add("done");
+    lbl.textContent = "Copied";
+    setTimeout(() => { btn.classList.remove("done"); lbl.textContent = label; }, 1400);
   });
 })();
 
