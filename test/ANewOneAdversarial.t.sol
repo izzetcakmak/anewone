@@ -76,7 +76,7 @@ contract ANewOneAdversarialTest is Test {
     address bob = address(0xB0B);
 
     function setUp() public {
-        arcade = new ANewOne(V0, GRAD);
+        arcade = new ANewOne(V0, GRAD, address(0), address(0), address(0));
         vm.deal(alice, 1_000_000e18);
         vm.deal(bob, 1_000_000e18);
         vm.deal(address(this), 1_000_000e18);

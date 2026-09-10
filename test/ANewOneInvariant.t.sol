@@ -93,7 +93,7 @@ contract ANewOneInvariant is Test {
     uint256 constant GRAD = 5_000e18;
 
     function setUp() public {
-        arcade = new ANewOne(V0, GRAD);
+        arcade = new ANewOne(V0, GRAD, address(0), address(0), address(0));
         for (uint256 i = 0; i < 4; i++) {
             address a = address(uint160(0xACC0 + i)); // above precompiles, plain EOAs
             actors.push(a);

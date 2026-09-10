@@ -10,18 +10,20 @@ import {ANewOne, ANewOneToken} from "../src/ANewOne.sol";
 ///      SECOND_OWNER=0x.. to grant a second owner at deploy time (shared platform-fee pool),
 ///      DEV_BUY_VALUE=<wei of native USDC> to make the dev buy inside the createToken tx
 ///      (same-tx buy: nothing can front-run it, and it stays under the anti-snipe cap).
+///      Uniswap v3 for graduation: DEX_FACTORY, DEX_POSITION_MANAGER, USDC_ERC20. On Arc
+///      mainnet (chain 5042) they default to Uniswap's official deployment and Arc's USDC; on
+///      any other chain they default to zero, which builds a platform that can never migrate.
+///      USDC is checked at deploy. Uniswap need not exist yet: it may reach Arc after the chain
+///      opens, and $NOAH launches with the chain. Opening migrations checks it instead.
 contract Deploy is Script {
     function run() external {
         uint256 pk = vm.envUint("PRIVATE_KEY");
-        uint256 v0 = vm.envOr("VIRTUAL_USDC0", uint256(4_000e18));
-        uint256 grad = vm.envOr("GRAD_TARGET", uint256(5_000e18));
         bool skipFirst = vm.envOr("SKIP_FIRST_TOKEN", uint256(0)) == 1;
         address secondOwner = vm.envOr("SECOND_OWNER", address(0));
         uint256 devBuy = vm.envOr("DEV_BUY_VALUE", uint256(0));
 
         vm.startBroadcast(pk);
-        ANewOne arcade = new ANewOne(v0, grad);
-        console.log("ANEWONE_PLATFORM:", address(arcade));
+        ANewOne arcade = _deployPlatform();
 
         if (secondOwner != address(0)) {
             arcade.addOwner(secondOwner);
@@ -44,5 +46,31 @@ contract Deploy is Script {
             }
         }
         vm.stopBroadcast();
+    }
+
+    /// @dev Its own function rather than inline in run(): with the Uniswap addresses added,
+    ///      run() held more locals than the legacy code generator can reach.
+    function _deployPlatform() internal returns (ANewOne arcade) {
+        // Uniswap's own Arc mainnet deployment (sdk-core ARC_ADDRESSES) and Arc's USDC
+        // ERC-20 face. Only the mainnet chain id gets these as defaults.
+        bool arcMainnet = block.chainid == 5042;
+        address dexFactory =
+            vm.envOr("DEX_FACTORY", arcMainnet ? 0xf0db7b58379503491d857dB50AC9ece64c653918 : address(0));
+        address dexPositionManager =
+            vm.envOr("DEX_POSITION_MANAGER", arcMainnet ? 0x39654A85A4C05127f5Fd6ED22CAeC077A0fB1377 : address(0));
+        address usdcErc20 =
+            vm.envOr("USDC_ERC20", arcMainnet ? 0x3600000000000000000000000000000000000000 : address(0));
+
+        arcade = new ANewOne(
+            vm.envOr("VIRTUAL_USDC0", uint256(4_000e18)),
+            vm.envOr("GRAD_TARGET", uint256(5_000e18)),
+            dexFactory,
+            dexPositionManager,
+            usdcErc20
+        );
+        console.log("ANEWONE_PLATFORM:", address(arcade));
+        console.log("DEX_FACTORY:", dexFactory);
+        console.log("DEX_POSITION_MANAGER:", dexPositionManager);
+        console.log("USDC_ERC20:", usdcErc20);
     }
 }

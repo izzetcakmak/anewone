@@ -7,6 +7,10 @@ script = "script"
 solc_version = "0.8.24"
 optimizer = true
 optimizer_runs = 200
+# only what src/ imports, vendored: see lib/openzeppelin-contracts/README.md
+remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
+# the migration tests deploy Uniswap's published v3 bytecode from here (PROVENANCE.md)
+fs_permissions = [{ access = "read", path = "./test/fixtures" }]
 
 [rpc_endpoints]
 arc_testnet = "https://rpc.testnet.arc.network"

@@ -16,7 +16,7 @@ contract ANewOneTest is Test {
     uint256 constant GRAD = 5_000e18; // graduation target
 
     function setUp() public {
-        arcade = new ANewOne(V0, GRAD);
+        arcade = new ANewOne(V0, GRAD, address(0), address(0), address(0));
         vm.deal(creator, 100_000e18);
         vm.deal(alice, 100_000e18);
         vm.deal(bob, 100_000e18);
