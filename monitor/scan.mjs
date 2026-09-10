@@ -538,6 +538,20 @@ async function main() {
         }
         saveState(state);
       }
+      // Graduations into Uniswap v3, once an owner opens migrations. Loaded on demand and
+      // fenced off with its own catch: nothing in migrate.mjs can reach the launch, which is
+      // over by the time this phase runs.
+      try {
+        const { migrateStep } = await import("./migrate.mjs");
+        await migrateStep({
+          env, state, saveState, log,
+          notify: (text) => notify(env, text),
+          rpc: state.rpc,
+          platform: state.platform,
+        });
+      } catch (e) {
+        log(`migrate step error: ${(e && e.stack) || e}`);
+      }
       return;
     }
 
