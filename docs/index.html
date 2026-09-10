@@ -1524,6 +1524,7 @@ const ABI = [
   // graduation into Uniswap v3: only on a platform built with it, see detectMigration()
   "function migrated(address) view returns (bool)",
   "function migrationsOpen() view returns (bool)",
+  "function curveReopened(address) view returns (bool)",
   "function v3Factory() view returns (address)",
   "function usdc() view returns (address)"
 ];
@@ -1567,11 +1568,17 @@ const platform = new ethers.Contract(CFG.platform, ABI, readProvider);
 // which tells the two apart without a call that reverts and then gets retried with backoff.
 let migrationOn = false;
 const migratedSet = new Set();       // a move into Uniswap is final, so this only ever grows
+let reopenOn = false;
+const reopenedSet = new Set();       // graduated coins an owner put back on their curve
 let migrationProbe = null;
 function detectMigration() {
   if (!migrationProbe) {
     migrationProbe = rpc(() => readProvider.getCode(CFG.platform))
-      .then((code) => (migrationOn = String(code).toLowerCase().includes("4ba0a5ee")))
+      .then((code) => {
+        const c = String(code).toLowerCase();
+        reopenOn = c.includes("8812de84"); // curveReopened(address)
+        return (migrationOn = c.includes("4ba0a5ee")); // migrated(address)
+      })
       .catch(() => false);
   }
   return migrationProbe;
@@ -1583,7 +1590,11 @@ async function checkMigrated(addrs) {
   for (const a of addrs) {
     if (migratedSet.has(a) || !tokenInfo[a]?.graduated) continue;
     try {
-      if (await rpc(() => platform.migrated(a))) { migratedSet.add(a); changed = true; }
+      if (await rpc(() => platform.migrated(a))) { migratedSet.add(a); changed = true; continue; }
+      if (reopenOn && !reopenedSet.has(a) && await rpc(() => platform.curveReopened(a))) {
+        reopenedSet.add(a);
+        changed = true;
+      }
     } catch {}
   }
   return changed;
@@ -1600,7 +1611,8 @@ async function migrationsOpenNow() {
 }
 // A curve that no longer takes trades: moved into Uniswap, or graduated and waiting to. Only on
 // a platform built with migration; on the testnet one graduation is just a badge.
-const curveClosed = (a) => migratedSet.has(a) || (migrationOn && !!tokenInfo[a]?.graduated);
+const curveClosed = (a) =>
+  migratedSet.has(a) || (migrationOn && !!tokenInfo[a]?.graduated && !reopenedSet.has(a));
 // The pool a migrated coin trades in, found the way anyone would: through the factory the
 // platform was deployed with, this coin against USDC in the 1% tier.
 let dex = null;
@@ -3711,13 +3723,15 @@ async function refreshTrade() {
   await checkMigrated([currentToken]);
   const moved = migratedSet.has(currentToken);
   // on a platform built with Uniswap v3 a graduated curve is closed, waiting for its move
-  const waiting = !moved && inf.graduated && migrationOn;
+  const reopened = !moved && reopenedSet.has(currentToken);
+  const waiting = !moved && inf.graduated && migrationOn && !reopened;
   const open = waiting ? await migrationsOpenNow() : false;
   const raisedTxt = ` · raised ${fmt(inf.raised, 2)} USDC`;
   if (moved) $("tBarLabel").textContent = "★ GRADUATED · now trading on Uniswap v3";
   else if (waiting) $("tBarLabel").textContent = (open
     ? "★ GRADUATED · moving to Uniswap v3"
     : "★ GRADUATED · trading resumes on Uniswap v3 once it is live on Arc") + raisedTxt;
+  else if (reopened) $("tBarLabel").textContent = "★ GRADUATED · back on the curve until it moves to Uniswap v3" + raisedTxt;
   else if (inf.graduated) $("tBarLabel").textContent = "★ GRADUATED · trading continues" + raisedTxt;
   else $("tBarLabel").textContent = pct.toFixed(1) + "% to graduation" + raisedTxt;
   // a closed curve's form gives way to where the coin trades now, or is about to
