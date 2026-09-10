@@ -1354,8 +1354,8 @@
     <div class="bar-label" id="tBarLabel">0% to graduation</div>
     <div class="tuni" id="tUni" style="display:none">
       <div class="tc-copy">
-        <b>This coin graduated to Uniswap v3</b>
-        <span>Its curve moved into a Uniswap pool and it trades there now. The position sits
+        <b id="tUniTitle">This coin graduated to Uniswap v3</b>
+        <span id="tUniText">Its curve moved into a Uniswap pool and it trades there now. The position sits
           inside the platform contract, which has no way to withdraw it.</span>
       </div>
       <button type="button" class="tuni-ca" id="tUniCa" title="Copy the token address">
@@ -1598,6 +1598,9 @@ async function migrationsOpenNow() {
   }
   return openCache.open;
 }
+// A curve that no longer takes trades: moved into Uniswap, or graduated and waiting to. Only on
+// a platform built with migration; on the testnet one graduation is just a badge.
+const curveClosed = (a) => migratedSet.has(a) || (migrationOn && !!tokenInfo[a]?.graduated);
 // The pool a migrated coin trades in, found the way anyone would: through the factory the
 // platform was deployed with, this coin against USDC in the 1% tier.
 let dex = null;
@@ -3707,21 +3710,32 @@ async function refreshTrade() {
   $("tBar").style.width = Math.min(Math.max(pct, 1.5), 100) + "%";
   await checkMigrated([currentToken]);
   const moved = migratedSet.has(currentToken);
+  // on a platform built with Uniswap v3 a graduated curve is closed, waiting for its move
+  const waiting = !moved && inf.graduated && migrationOn;
+  const open = waiting ? await migrationsOpenNow() : false;
   const raisedTxt = ` · raised ${fmt(inf.raised, 2)} USDC`;
   if (moved) $("tBarLabel").textContent = "★ GRADUATED · now trading on Uniswap v3";
-  else if (!inf.graduated) $("tBarLabel").textContent = pct.toFixed(1) + "% to graduation" + raisedTxt;
-  else if (!migrationOn) $("tBarLabel").textContent = "★ GRADUATED · trading continues" + raisedTxt;
-  else $("tBarLabel").textContent = ((await migrationsOpenNow())
+  else if (waiting) $("tBarLabel").textContent = (open
     ? "★ GRADUATED · moving to Uniswap v3"
-    : "★ GRADUATED · moves to Uniswap v3 soon, trading continues here until then") + raisedTxt;
-  // the curve no longer trades: its form gives way to where the coin trades now
-  $("tUni").style.display = moved ? "flex" : "none";
-  $("tForm").style.display = moved ? "none" : "";
-  $("tGo").style.display = moved ? "none" : "";
-  if (moved) {
+    : "★ GRADUATED · trading resumes on Uniswap v3 once it is live on Arc") + raisedTxt;
+  else if (inf.graduated) $("tBarLabel").textContent = "★ GRADUATED · trading continues" + raisedTxt;
+  else $("tBarLabel").textContent = pct.toFixed(1) + "% to graduation" + raisedTxt;
+  // a closed curve's form gives way to where the coin trades now, or is about to
+  const closed = moved || waiting;
+  $("tUni").style.display = closed ? "flex" : "none";
+  $("tForm").style.display = closed ? "none" : "";
+  $("tGo").style.display = closed ? "none" : "";
+  if (closed) {
     $("tConnect").style.display = "none";
     $("tUniCaAddr").textContent = currentToken;
-    renderUniLinks(currentToken);
+    $("tUniTitle").textContent = moved ? "This coin graduated to Uniswap v3" : "This coin graduated";
+    $("tUniText").textContent = moved
+      ? "Its curve moved into a Uniswap pool and it trades there now. The position sits inside the platform contract, which has no way to withdraw it."
+      : open
+      ? "Its curve closed at graduation and is moving into a Uniswap v3 pool. Trading resumes there within a minute or two."
+      : "Its curve closed at graduation. It moves into a Uniswap v3 pool as soon as Uniswap is live on Arc, and trading resumes there.";
+    if (moved) renderUniLinks(currentToken);
+    else $("tUniLinks").innerHTML = "";
   }
   if (userAddr) {
     const tk = new ethers.Contract(currentToken, ERC20, readProvider);
@@ -3767,7 +3781,7 @@ function applyPct(p) {
 // visitor who opened a token sees the one action that's actually available to them.
 function syncTradeAuth() {
   const connected = !!signer;
-  $("tConnect").style.display = connected || migratedSet.has(currentToken) ? "none" : "flex";
+  $("tConnect").style.display = connected || curveClosed(currentToken) ? "none" : "flex";
   $("tForm").classList.toggle("tform-locked", !connected);
   if (!connected && currentToken) {
     const sym = tokenMeta[currentToken]?.symbol;
@@ -3809,7 +3823,9 @@ $("pctRow").querySelectorAll("button").forEach((b) => {
 });
 $("tGo").onclick = async () => {
   if (!signer) return connect(); // the picker, not a dead-end toast
-  if (migratedSet.has(currentToken)) return toast("This coin trades on Uniswap now");
+  if (curveClosed(currentToken)) {
+    return toast(migratedSet.has(currentToken) ? "This coin trades on Uniswap now" : "This coin graduated: trading resumes on Uniswap v3");
+  }
   const wei = exactWei !== null ? exactWei : (parseFloat($("tAmt").value || "0") ? ethers.parseEther($("tAmt").value) : 0n);
   if (!wei || wei <= 0n) return toast("Enter an amount");
   try {
