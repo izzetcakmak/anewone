@@ -33,7 +33,9 @@ contract Deploy is Script {
                 "Noah's Arc",
                 "NOAH",
                 "https://anewone.xyz/meta/noah.json",
-                "" // $NOAH's art ships with the site; no need to carry it in the event
+                // createToken refuses a launch with no image. The art the metadata points
+                // at, as a URL the site's image filter accepts (it rejects SVG data URIs).
+                "https://anewone.xyz/meta/noah.svg"
             );
             console.log("NOAH_TOKEN:", noah);
             if (devBuy > 0) {
