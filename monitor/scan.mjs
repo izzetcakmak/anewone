@@ -253,6 +253,12 @@ function runDeploy(env, rpcUrl, devBuy) {
         ...(env.GRAD_TARGET ? { GRAD_TARGET: env.GRAD_TARGET } : {}),
         ...(env.SECOND_OWNER ? { SECOND_OWNER: env.SECOND_OWNER } : {}),
         ...(env.SKIP_FIRST_TOKEN ? { SKIP_FIRST_TOKEN: env.SKIP_FIRST_TOKEN } : {}),
+        // Uniswap v3 for graduation. Deploy.s.sol already defaults these to Uniswap's official
+        // Arc mainnet deployment; set them in ../.env only to override that, e.g. all three to
+        // the zero address to launch on purpose without migration if Uniswap were not live.
+        ...(env.DEX_FACTORY ? { DEX_FACTORY: env.DEX_FACTORY } : {}),
+        ...(env.DEX_POSITION_MANAGER ? { DEX_POSITION_MANAGER: env.DEX_POSITION_MANAGER } : {}),
+        ...(env.USDC_ERC20 ? { USDC_ERC20: env.USDC_ERC20 } : {}),
       },
     }
   );
@@ -508,21 +514,21 @@ async function main() {
       .map((s) => (s || "").trim()).filter((s) => s.length >= 8);
     const state = loadState();
     if (state.phase === "deployed") {
-      // The deploy path has failed for reasons that were never reproduced off the scheduler,
-      // and one missed attempt would leave anewone.xyz on testnet with mainnet contracts live.
-      // So the flip is retried every tick until the site actually serves the mainnet config.
+      // One missed attempt would leave anewone.xyz on testnet with mainnet contracts live, so
+      // the flip is retried every tick until it ships. A push is the deploy; the CLI is only
+      // the fallback for a push that fails.
       if (state.configShipped === false) {
-        const retry = deployToVercel();
+        const retry = publishConfig() ? { ok: true, err: "" } : deployToVercel();
         if (retry.ok) {
           state.configShipped = true;
           saveState(state);
-          await notify(env, "✅ anewone.xyz is now serving the mainnet config (deploy retry succeeded).");
+          await notify(env, "✅ The mainnet config.js is shipped (retry succeeded); anewone.xyz flips within a minute or two.");
         } else if (!state.shipRetryNotified) {
           state.shipRetryNotified = true;
           saveState(state);
           await notify(env,
-            `🚨 anewone.xyz is STILL ON TESTNET — the deploy keeps failing.\n` +
-            `Run by hand: cd "${path.join(ROOT, "docs")}" && vercel deploy --prod\n${retry.err}`);
+            `🚨 anewone.xyz is STILL ON TESTNET — neither the git push nor the Vercel CLI works.\n` +
+            `Run by hand: cd "${ROOT}" && git push origin main\n${retry.err}`);
         }
       }
       // launch is done; take the pending FINAL boarding snapshot if it hasn't run yet
@@ -690,7 +696,10 @@ async function main() {
       if (!state.deployFailNotified) {
         state.deployFailNotified = true;
         saveState(state);
-        await notify(env, `❌ Mainnet deploy attempt failed — check monitor/scan.log. Will keep retrying every minute.`);
+        // the constructor's own refusals name themselves ("dex: ..."): pass the reason along
+        const reason = (dep.out.match(/dex: [a-z0-9% ]+/i) || [])[0];
+        const why = reason ? ` Reason: "${reason}".` : "";
+        await notify(env, `❌ Mainnet deploy attempt failed — check monitor/scan.log.${why} Will keep retrying every minute.`);
       }
       return;
     }
@@ -705,13 +714,15 @@ async function main() {
     saveState(state);
 
     const wrote = updateFrontendConfig(found.url, found.chainId, dep.platform, dep.noah);
-    // A git push does NOT deploy: this Vercel project has no git integration and
-    // every deployment is CLI-driven. Shipping the new config.js is its own step,
-    // not a side effect of the final snapshot that may or may not run afterwards.
-    const shipped = wrote ? deployToVercel() : { ok: false, err: "config.js was not rewritten" };
-    if (wrote && !shipped.ok) log(`MAINNET VERCEL DEPLOY FAILED: ${shipped.err}`);
-    state.configShipped = shipped.ok;
+    // The push IS the deploy: the Vercel project builds from this repo (verified 10 Sep
+    // 2026; snapshots have shipped that way since). The CLI stays only as the fallback for a
+    // push that fails, because under the scheduled task it cannot find its own install.
     const published = wrote && publishConfig();
+    const shipped = !wrote ? { ok: false, err: "config.js was not rewritten" }
+      : published ? { ok: true, err: "" }
+      : deployToVercel();
+    if (wrote && !shipped.ok) log(`MAINNET CONFIG NOT SHIPPED: ${shipped.err}`);
+    state.configShipped = shipped.ok;
     const devLine = devBuy > 0n
       ? `Dev buy: ${(Number(devBuy) / 1e18).toFixed(2)} USDC` +
         (dep.devTokens ? ` → ${(Number(BigInt(dep.devTokens)) / 1e18).toLocaleString("en-US", { maximumFractionDigits: 0 })} $NOAH` : "") + "\n"
@@ -720,13 +731,13 @@ async function main() {
       `🎉 ANEWONE.XYZ IS LIVE ON ARC MAINNET!\nPlatform: ${dep.platform}\n$NOAH: ${dep.noah}\n` + devLine +
       `RPC: ${found.url} (chainId ${found.chainId})\n` +
       (!wrote
-        ? "⚠️ docs/config.js could NOT be rewritten — anewone.xyz is STILL ON TESTNET. Set the mainnet block by hand, then deploy."
+        ? "⚠️ docs/config.js could NOT be rewritten — anewone.xyz is STILL ON TESTNET. Set the mainnet block by hand, then push."
         : !shipped.ok
-        ? `🚨 config.js is correct but the VERCEL DEPLOY FAILED — anewone.xyz is STILL ON TESTNET.\n` +
-          `Fix by hand: cd "${path.join(ROOT, "docs")}" && vercel deploy --prod\n${shipped.err}`
+        ? `🚨 config.js is correct but neither the git push nor the Vercel CLI shipped it — anewone.xyz is STILL ON TESTNET.\n` +
+          `Fix by hand: cd "${ROOT}" && git push origin main\n${shipped.err}`
         : published
-        ? "anewone.xyz is now serving the mainnet config."
-        : "anewone.xyz is now serving the mainnet config, but the git push FAILED — only the public repo record is behind."));
+        ? "config.js is pushed and Vercel deploys it from the push: anewone.xyz serves the mainnet config within a minute or two."
+        : "The git push failed but the Vercel CLI deployed config.js: anewone.xyz is on mainnet, only the public repo record is behind."));
     log(`DEPLOYED platform=${dep.platform} noah=${dep.noah}`);
   } finally {
     clearInterval(lockTimer);
