@@ -354,7 +354,7 @@
     -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
     border-bottom: 1px solid var(--border); }
   .topbar-inner { max-width: 1560px; margin: 0 auto; padding: 10px 20px; display: flex;
-    align-items: center; gap: 10px; }
+    align-items: center; gap: 10px; position: relative; }
   .tb-brand { display: flex; align-items: center; gap: 10px; }
   .tb-brand:hover { text-decoration: none; }
   .tb-brand img { width: 30px; height: 30px; border-radius: 8px; }
@@ -383,6 +383,27 @@
   .tb-link-quiet { border-color: var(--border-2); background: transparent; color: var(--dim); }
   .tb-link-quiet:hover { color: var(--text); border-color: var(--border-2);
     background: rgba(var(--ink-rgb),.05); }
+  /* ---- the fold-away nav.
+     display:contents means this wrapper draws nothing and its children stay direct
+     flex items of the bar, so a wide screen is laid out exactly as before. Only the
+     phone rules turn it into a panel. */
+  .tb-nav { display: contents; }
+  .tb-menu { display: none; align-items: center; justify-content: center;
+    width: 40px; height: 40px; padding: 0; flex: none; border-radius: 12px;
+    border: 1px solid var(--border-2); background: transparent; color: var(--text); }
+  .tb-menu svg { width: 19px; height: 19px; }
+  .nav-only { display: none; }   /* only ever shown inside the panel */
+
+  /* ---- the address row in the wallet menu ---- */
+  .wm-copy { display: block; width: 100%; text-align: left; border: none;
+    border-bottom: 1px solid var(--border); border-radius: 0; background: transparent;
+    box-shadow: none; padding: 10px 12px; }
+  .wm-copy .wm-lbl { display: block; font-size: 11px; letter-spacing: .4px;
+    text-transform: uppercase; color: var(--faint); margin-bottom: 3px; }
+  .wm-copy code { display: block; font-family: var(--mono); font-size: 11.5px;
+    line-height: 1.45; color: var(--text); word-break: break-all; white-space: normal; }
+  .wm-copy.done .wm-lbl { color: var(--green); }
+
   /* ---- the ark: a door rather than a feature.
      An auto margin on BOTH sides centres it in whatever room is left between
      the brand and the nav cluster, so it stands alone in the middle of the gap
@@ -429,7 +450,34 @@
     .tb-ark > span:not(.ark-tip) { display: none; }
     .tb-ark { padding: 5px 7px; }
   }
-  @media (max-width: 700px)  { .tb-ark { display: none; } }
+  /* ---- phone: the bar keeps the logo, the wallet and Create; everything else
+     folds into one panel. Without this the ark, the Boarding Pass, the network
+     badge and the balance were simply gone on a phone, with no way to reach them. */
+  @media (max-width: 760px) {
+    .tb-menu { display: inline-flex; }
+    .tb-nav { display: none; position: absolute; top: 100%; right: 10px; margin-top: 8px;
+      flex-direction: column; align-items: stretch; gap: 8px; padding: 10px;
+      min-width: 232px; z-index: 60; background: var(--bg-2);
+      border: 1px solid var(--border-2); border-radius: 14px; box-shadow: var(--shadow-lg); }
+    .tb-nav.open { display: flex; }
+    /* inside the panel every item is a full-width row, and the width rules that
+       hide these in the bar must not follow them in here */
+    .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav #netBadge,
+    .tb-nav #balChip:not([hidden]) {
+      display: flex !important; margin: 0; justify-content: flex-start;
+      width: 100%; min-height: 42px; align-items: center; }
+    .tb-nav .tb-ark > span:not(.ark-tip) { display: inline !important; }
+    .tb-nav .ark-tip { display: none; }      /* no room for a bubble in a dropdown */
+    .tb-nav .nav-only { display: flex !important; }
+    .tb-nav .theme-sw { align-self: flex-start; margin: 0; }
+    /* The wallet menu was pinned to the right edge of the Connect button. With the
+       theme switch folded away that button sits further left, and the menu ran off
+       the left of the screen, address row first. Hang it off the bar instead, full
+       width, the same way the nav panel does. Both carry inline styles, hence the
+       !important. */
+    #walletWrap { position: static !important; }
+    #walletMenu { left: 10px !important; right: 10px !important; min-width: 0 !important; }
+  }
   .wrap { max-width: 1560px; margin: 0 auto; padding: 16px 20px 40px; }
   /* ---- hero: full-bleed, procedural constellation background (no image assets) */
   .hero { position: relative; overflow: hidden; text-align: center;
@@ -798,7 +846,7 @@
     background: rgba(var(--bg-rgb),.98); border: 1px solid var(--border-2); color: var(--text);
     border-left: 3px solid var(--accent);
     padding: 13px 22px; border-radius: 12px; box-shadow: var(--shadow);
-    display: none; z-index: 2000; max-width: 90vw; font-weight: 500; font-size: 14px;
+    display: none; z-index: 2000; max-width: 90vw; overflow-wrap: anywhere; font-weight: 500; font-size: 14px;
   }
   .empty { text-align: center; color: var(--dim); padding: 60px 24px; font-size: 15px;
     border: 1px dashed var(--border-2); border-radius: var(--r); background: var(--surface);
@@ -999,6 +1047,10 @@
       <img src="brand/mark.png" alt="">
       <span>A NEW ONE</span>
     </a>
+    <!-- One wrapper for everything that folds away on a phone. It is display:contents
+         on a wide screen, so these stay direct flex children of the bar and the
+         desktop layout is untouched; on a narrow one it becomes the dropdown. -->
+    <div class="tb-nav" id="navMenu">
     <!-- no title attribute: the browser's own tooltip would fight the bubble -->
     <a class="tb-ark" id="arkTab" href="ark/" target="_blank"
        aria-label="The ark, the story behind A NEW ONE">
@@ -1014,7 +1066,8 @@
       <span class="ark-tip">If you're curious about our story, <b>CLICK</b></span>
     </a>
     <a class="tb-link" href="boarding/" title="Boarding Pass: the 33 most active testnet wallets enter the mainnet-day draw">🎟 Boarding Pass</a>
-    <!-- Docs lives in the footer; one link is enough -->
+    <!-- Docs is in the footer on a wide screen; inside the menu a phone gets it too -->
+    <a class="tb-link tb-link-quiet nav-only" href="docs.html">📄 Docs</a>
     <div class="theme-sw" id="themeSw" role="group" aria-label="Colour theme">
       <button type="button" data-theme-set="light" title="Light" aria-pressed="false" aria-label="Light theme">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
@@ -1027,16 +1080,29 @@
       </button>
     </div>
     <span id="netBadge" class="badge">Testnet</span>
-    <span id="balChip" class="badge" style="display:none" title="Your USDC on Arc. Pays gas and trades"></span>
+    <span id="balChip" class="badge" hidden title="Your USDC on Arc. Pays gas and trades"></span>
+    </div>
     <span id="walletWrap" style="position:relative;display:inline-block">
       <button id="connectBtn">Connect</button>
       <div id="walletMenu" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-2);border:1px solid var(--border-2);border-radius:12px;z-index:50;min-width:184px;box-shadow:var(--shadow);overflow:hidden">
+        <!-- A wallet made by signing in with Google has an address the owner has
+             never seen, and the button only ever shows six characters of it. Without
+             this there is no way to get it into a faucet from a phone. -->
+        <button id="copyAddrBtn" class="wm-copy" type="button">
+          <span class="wm-lbl">Tap to copy your address</span>
+          <code id="wmAddr"></code>
+        </button>
         <button id="switchBtn" style="display:block;width:100%;box-shadow:none;border:none;border-bottom:1px solid var(--border);border-radius:0;text-align:left;background:transparent">Switch account</button>
         <button id="changeWalletBtn" style="display:block;width:100%;box-shadow:none;border:none;border-bottom:1px solid var(--border);border-radius:0;text-align:left;background:transparent">Change wallet</button>
         <button id="disconnectBtn" style="display:block;width:100%;box-shadow:none;border:none;border-radius:0;text-align:left;background:transparent;color:var(--red)">Disconnect</button>
       </div>
     </span>
     <button id="createBtn" class="alt">+ Create Coin</button>
+    <button class="tb-menu" id="navBtn" type="button" aria-expanded="false"
+            aria-controls="navMenu" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+           stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
   </div>
 </nav>
 
@@ -2260,6 +2326,7 @@ async function connect(forcePicker, silent) {
   signer = await bp.getSigner();
   userAddr = await signer.getAddress();
   $("connectBtn").textContent = userAddr.slice(0, 6) + "…" + userAddr.slice(-4);
+  $("wmAddr").textContent = userAddr;
   $("walletMenu").style.display = "none";
   try { localStorage.setItem(LAST_WALLET_KEY, activeRdns || "injected"); } catch {}
   if (!silent) toast("READY PLAYER ONE");
@@ -2279,7 +2346,7 @@ async function refreshNativeBalance() {
     userNativeBal = await rpc(() => readProvider.getBalance(userAddr));
   } catch { return; }
   $("balChip").textContent = "◎ " + fmt(userNativeBal, 2) + " USDC";
-  $("balChip").style.display = "inline-block";
+  $("balChip").hidden = false;
   const low = userNativeBal < LOW_BAL;
   if (low) {
     $("fundAddr").textContent = userAddr;
@@ -2311,8 +2378,9 @@ function disconnect() {
   syncTradeAuth();
   userNativeBal = 0n; userTokenBal = 0n; exactWei = null;
   $("connectBtn").textContent = "Connect";
+  $("wmAddr").textContent = "";
   $("walletMenu").style.display = "none";
-  $("balChip").style.display = "none";
+  $("balChip").hidden = true;
   $("fundBanner").style.display = "none";
   if (fundPoll) { clearInterval(fundPoll); fundPoll = null; }
   wasLow = false;
@@ -3988,6 +4056,47 @@ setInterval(liveTail, 15_000);
     clearTimeout(hold); hold = setTimeout(call, 150);
   });
   tab.addEventListener("pointerleave", () => clearTimeout(hold));
+})();
+
+/* ---- the phone menu -------------------------------------------------------
+   A phone had no way to reach the ark, the Boarding Pass, Docs, the network
+   badge or the balance: every one of them was hidden to make room for Connect
+   and Create. They all live in here now. */
+(() => {
+  const btn = $("navBtn"), menu = $("navMenu");
+  if (!btn || !menu) return;
+  const shut = () => { menu.classList.remove("open"); btn.setAttribute("aria-expanded", "false"); };
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = menu.classList.toggle("open");
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  // following a link inside it should not leave the panel hanging open behind
+  menu.addEventListener("click", (e) => { if (e.target.closest("a")) shut(); });
+  addEventListener("click", (e) => {
+    if (!menu.contains(e.target) && e.target !== btn) shut();
+  });
+  addEventListener("keydown", (e) => { if (e.key === "Escape") shut(); });
+})();
+
+/* ---- the address, in a form somebody can actually take ---------------------
+   Signing in with Google mints a wallet whose address the owner has never seen,
+   and the header only ever shows six characters of it. On a phone that made
+   funding it from the faucet impossible. */
+(() => {
+  const btn = $("copyAddrBtn");
+  if (!btn) return;
+  btn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!userAddr) return;
+    if (!(await copyText(userAddr))) return toast(userAddr); // last resort: show it
+    toast("Address copied");
+    btn.classList.add("done");
+    const lbl = btn.querySelector(".wm-lbl");
+    const was = lbl.textContent;
+    lbl.textContent = "Copied";
+    setTimeout(() => { btn.classList.remove("done"); lbl.textContent = was; }, 1400);
+  });
 })();
 
 // last, so every UI hook it touches is already wired
