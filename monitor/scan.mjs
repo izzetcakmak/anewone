@@ -9,6 +9,8 @@
  *   deployed        -> platform + $NOAH live (incl. same-tx dev buy); config.js updated
  *
  * On every phase transition it notifies via Telegram (creds in ../.env) and scan.log.
+ * An optional ARC_MAINNET_RPC in ../.env, the owner's own endpoint, carries the launch
+ * transactions once the public mainnet is found (private-rpc.mjs); it is never published.
  */
 import { readFileSync, writeFileSync, existsSync, statSync, appendFileSync, unlinkSync, renameSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -95,6 +97,23 @@ function isTrustedRpc(u) {
   let host;
   try { host = new URL(u).hostname.toLowerCase(); } catch { return false; }
   return TRUSTED_RPC_HOST_SUFFIXES.some((s) => host === s || host.endsWith("." + s));
+}
+
+// The owner's own Arc mainnet RPC, ARC_MAINNET_RPC in ../.env (optional; see private-rpc.mjs).
+// It may carry an API key, so it is masked like one in everything logged or sent: the whole
+// URL, and its path and query on their own.
+function ownRpc(env) {
+  return String(env.ARC_MAINNET_RPC || "").trim().replace(/^(['"])(.*)\1$/, "$2").trim();
+}
+function ownRpcSecrets(env) {
+  const u = ownRpc(env);
+  if (!u) return [];
+  try {
+    const p = new URL(u);
+    return [u, p.pathname + p.search];
+  } catch {
+    return [u];
+  }
 }
 
 // ---------------------------------------------------------------- helpers
@@ -540,7 +559,8 @@ async function main() {
 
   try {
     const env = loadEnv();
-    SECRETS = [env.PRIVATE_KEY, (env.PRIVATE_KEY || "").replace(/^0x/i, ""), env.TELEGRAM_BOT_TOKEN]
+    SECRETS = [env.PRIVATE_KEY, (env.PRIVATE_KEY || "").replace(/^0x/i, ""), env.TELEGRAM_BOT_TOKEN,
+      ...ownRpcSecrets(env)]
       .map((s) => (s || "").trim()).filter((s) => s.length >= 8);
     const state = loadState();
     if (state.phase === "deployed") {
@@ -691,12 +711,36 @@ async function main() {
       } catch (e) { log(`bridge step error: ${e.stack || e}`); }
     }
 
+    // ---- the RPC the launch transactions go through
+    // The owner's own Arc mainnet RPC (ARC_MAINNET_RPC in ../.env) when it is set and proves to
+    // serve the very chain the public RPC serves; otherwise the public RPC. It never decides
+    // WHEN to launch (the public sweep above did, and froze the cutoff), and it is never
+    // published: config.js below still gets found.url.
+    let sendRpc = found.url;
+    if (ownRpc(env) && !state.ownRpcFailed) {
+      try {
+        const { pickSendRpc } = await import("./private-rpc.mjs");
+        sendRpc = await pickSendRpc({
+          url: ownRpc(env), found, state, saveState, log,
+          notify: (text) => notify(env, text),
+          rpcCall, probe,
+        });
+      } catch (e) {
+        sendRpc = found.url;
+        log(`own rpc step error: ${(e && e.stack) || e}`);
+      }
+    }
+    const viaOwn = sendRpc !== found.url;
+    // reads that decide the launch fall back to the public RPC if the own one stops answering
+    const read = async (method, params) =>
+      (await rpcCall(sendRpc, method, params)) ?? (viaOwn ? await rpcCall(found.url, method, params) : null);
+
     let dep = null;
     let devBuy = 0n;
     // ---- an earlier attempt whose transactions landed after it was judged failed: adopt it
     // rather than deploy a second platform and a second $NOAH over it
     for (const a of [...(state.attempts ?? [])].reverse()) {
-      const seen = await landed([found.url], a);
+      const seen = await landed([sendRpc, found.url], a);
       if (seen === null) {
         log(`cannot check an earlier deploy attempt (platform ${a.platform}) yet; waiting`);
         return;
@@ -712,9 +756,9 @@ async function main() {
     if (!dep) {
       // ---- funds check: deploy gas + the same-tx dev buy
       const deployer = env.DEPLOYER_ADDRESS;
-      const balHex = await rpcCall(found.url, "eth_getBalance", [deployer, "latest"]);
+      const balHex = await read("eth_getBalance", [deployer, "latest"]);
       const bal = balHex ? BigInt(balHex) : 0n;
-      const gasPriceHex = await rpcCall(found.url, "eth_gasPrice");
+      const gasPriceHex = await read("eth_gasPrice", []);
       const gasPrice = gasPriceHex ? BigInt(gasPriceHex) : 0n;
       const need = gasPrice > 0n ? gasPrice * 4_500_000n * 2n : 10n ** 17n; // ~2x deploy estimate
 
@@ -751,23 +795,27 @@ async function main() {
       }
 
       // ---- deploy!
-      log(`deploying to ${found.url} (chainId ${found.chainId}) devBuy=${devBuy}…`);
-      const run = runDeploy(env, found.url, devBuy);
+      log(`deploying to ${viaOwn ? "ARC_MAINNET_RPC" : found.url} (chainId ${found.chainId}) devBuy=${devBuy}…`);
+      const run = runDeploy(env, sendRpc, devBuy);
       if (run.platform && run.noah) {
         // kept before the chain is asked: if these transactions land late, the next tick adopts
         // them above instead of deploying again
         state.attempts = [...(state.attempts ?? []), {
           platform: run.platform, noah: run.noah, devTokens: run.devTokens ?? null,
-          devBuy: devBuy.toString(), at: new Date().toISOString(),
+          devBuy: devBuy.toString(), via: viaOwn ? "own" : "public", at: new Date().toISOString(),
         }].slice(-5);
         saveState(state);
       }
       // The chain decides, not forge's output: forge prints the addresses from its local
       // simulation, before a single transaction is sent, so a broadcast that failed still names
       // a platform. Both contracts must have code where it said.
-      const seen = run.platform && run.noah ? await landed([found.url], run, 10) : false;
+      const seen = run.platform && run.noah ? await landed([sendRpc, found.url], run, 10) : false;
       if (seen !== true) {
         log(`DEPLOY FAILED (${seen === null ? "no RPC could confirm it" : "not on chain"}, forge exit ${run.status}):\n${run.out}`);
+        if (viaOwn) {
+          state.ownRpcFailed = true; // the next attempts go through the public RPC
+          saveState(state);
+        }
         if (!state.deployFailNotified) {
           state.deployFailNotified = true;
           saveState(state);
@@ -775,11 +823,12 @@ async function main() {
           const reason = (run.out.match(/dex: [a-z0-9% ]+/i) || [])[0];
           const why = reason ? ` Reason: "${reason}".` : "";
           await notify(env, `❌ Mainnet deploy attempt did not land on chain. Check monitor/scan.log.${why}` +
+            (viaOwn ? " It went through ARC_MAINNET_RPC; the next attempts use the public RPC." : "") +
             " Will keep retrying every minute.");
         }
         return;
       }
-      dep = run;
+      dep = { ...run, via: viaOwn ? "own" : "public" };
     }
 
     // The deploy is irreversible and real funds have already moved. Persist that
@@ -809,6 +858,7 @@ async function main() {
     await notify(env,
       `🎉 ANEWONE.XYZ IS LIVE ON ARC MAINNET!\nPlatform: ${dep.platform}\n$NOAH: ${dep.noah}\n` + devLine +
       `RPC: ${found.url} (chainId ${found.chainId})\n` +
+      (dep.via === "own" ? "The launch transactions went through your ARC_MAINNET_RPC.\n" : "") +
       (!wrote
         ? "⚠️ docs/config.js could NOT be rewritten — anewone.xyz is STILL ON TESTNET. Set the mainnet block by hand, then push."
         : !shipped.ok
