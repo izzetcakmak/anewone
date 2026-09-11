@@ -1,59 +1,97 @@
-# 🕹 A NEW ONE — anewone.xyz
+# 🕹 A NEW ONE: anewone.xyz
 
 **Insert Coin. Launch a New One.**
 
-A pump.fun-style meme token launchpad built on **Arc Network** (Circle's stablecoin L1, gas = USDC) — with quality upgrades pump.fun doesn't have. Every token on the floor is… a new one.
+A memecoin launchpad on **Arc Network**, Circle's stablecoin L1 where gas is paid in USDC. Coins launch on a
+USDC bonding curve and graduate into a Uniswap v3 pool whose liquidity nobody can withdraw. Every token on the
+floor is... a new one.
 
-**First token on the platform: [$NOAH — Noah's Arc](docs/meta/noah.json).** Everyone's boarding the Arc. Two by two. 🦒🦒
+**First coin on the platform: [$NOAH, Noah's Arc](docs/meta/noah.json).** Everyone's boarding the Arc. Two by two. 🦒🦒
 
-## Why it's better than pump.fun
+## At a glance
 
-| Feature | pump.fun | A NEW ONE |
-|---|---|---|
-| Trade fee | 1% to platform | 1% — **half goes to the token creator** |
-| Sniping | bots eat launches | **anti-snipe: 2% max per wallet for the first 20 blocks** (creator included) |
-| Rug vector | LP migration step | **none — curve reserves are locked in the contract forever**, fees are segregated |
-| Pricing | SOL | **USDC** (Arc's native gas token) — prices mean something |
-| Graduation | forced migration | badge + event at 5,000 USDC raised; trading never halts |
+| | A NEW ONE |
+|---|---|
+| Launching | Free, gas only. 1B fixed supply, no mint function. Optional dev buy in the same transaction. |
+| Pricing | USDC, Arc's native gas token, so prices mean something |
+| Trade fee | 1%: half to the token's creator, half to the platform |
+| Sniping | Anti-snipe: at most 2% of supply per wallet for the first 20 blocks, creator included |
+| Graduation | At 5,000 USDC raised the curve moves into a Uniswap v3 pool at the price it ended on |
+| Liquidity | The pool position stays in the platform contract forever; there is no function that can withdraw it |
+| Sign-in | Any browser wallet (MetaMask, OKX, Rabby) or Continue with Google for a non-custodial wallet |
 
-## Mechanics
+## How it works
 
-- 1B supply per token, 100% on a constant-product bonding curve (virtual reserve: 4,000 USDC)
-- Token images live in the `TokenImage` launch event, never in storage (log data is ~78×
-  cheaper per byte) — a launch with a full-size image costs ~2M gas instead of ~20M+
-- Buy/sell any time; the contract is the AMM — no LP, no migration, nothing to pull
-- Launching a token is free (gas only), optional dev-buy at creation
-- Creator claims accrued fees with `claimCreatorFees()` — **within 7 days** of the pot starting
-  to accrue; unclaimed pots expire and roll into platform fees (`sweepExpired` is permissionless)
+**The curve.** Every coin trades from its first block on its own constant-product bonding curve against a
+virtual 4,000 USDC reserve. Buy or sell any time; the contract is the market maker. Token images live in the
+`TokenImage` launch event rather than in storage, so a launch with a full-size image costs about 2M gas
+instead of 20M+.
+
+**Fees.** Every trade pays 1%. The creator's half is collected with `claimCreatorFees()` within 7 days of the
+pot starting to accrue; unclaimed pots expire into platform fees (`sweepExpired` is permissionless).
+
+**Graduation.** The buy that crosses 5,000 USDC raised goes through, then the curve closes. `migrate(token)`,
+which anyone can call once migrations are open, opens a Uniswap v3 pool (1% fee tier, full range) at the
+curve's last price with the raised USDC and as many tokens as that USDC pairs with; the rest of the unsold
+supply is burned. In the pool the USDC side of the fees keeps paying creator and platform, and the token side
+is burned.
+
+**Uniswap never holds up a launch.** The Uniswap v3 addresses are fixed at deploy with no setter. Migrations
+open only once Uniswap checks out at those addresses: code present, the 1% fee tier, the position manager
+belonging to the factory, and the factory byte for byte the build Uniswap published. If a move cannot happen,
+the owners may put a graduated coin back on its curve after an hour; that moves no funds and changes no price.
+The full runbook is in [MIGRATION.md](MIGRATION.md).
+
+## Safety
+
+- The site never asks for a seed phrase, private key or password. Every transaction is shown and approved in
+  the user's own wallet.
+- The site is static: no backend, no accounts, no trackers. See the [privacy page](https://anewone.xyz/privacy.html)
+  and the [terms](https://anewone.xyz/terms.html).
+- Creator links must be https; X and Telegram links are restricted to their own domains. Names, descriptions
+  and comments are escaped, and images are raster only (no SVG).
+- Security contact: [security.txt](https://anewone.xyz/.well-known/security.txt).
+- 83 forge tests, including migrations against Uniswap's published v3 bytecode and invariant campaigns.
 
 ## Deployments
 
 | Network | Platform | $NOAH |
 |---|---|---|
 | Arc Testnet (5042002) | `0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf` | `0x0D1ac2a7FCdd8bF74EEC839DF4ED909071296a49` |
-| Arc Mainnet | ⏳ auto-deploys the minute mainnet is detected | ⏳ |
+| Arc Mainnet (5042) | Deploys itself the minute mainnet is detected | Launched in the same deployment |
 
+On Arc mainnet the platform points at Uniswap's official v3 deployment: factory
+`0xf0db7b58379503491d857dB50AC9ece64c653918`, position manager `0x39654A85A4C05127f5Fd6ED22CAeC077A0fB1377`.
 
+## Repository layout
 
-## Layout
-
-- `src/ANewOne.sol` — platform + minimal ERC20 (no external deps), 21/21 forge tests.
-  Multiple owners share the platform-fee pool; any owner can `addOwner`/`removeOwner`
-  (the last owner cannot be removed). Seed a second owner at deploy via `SECOND_OWNER`.
-- `script/Deploy.s.sol` — deploys platform and launches $NOAH
-- `docs/` — static retro UI served at anewone.xyz via GitHub Pages, rate-limit-friendly RPC usage
-- `monitor/scan.mjs` — runs every minute via Windows Task Scheduler (`AnewoneMainnetScan`):
-  probes candidate Arc mainnet RPCs + the chainid.network registry; on detection checks
-  deployer gas, auto-deploys, updates `docs/config.js`, and pings Telegram
+- `src/ANewOne.sol`: the platform and a minimal ERC-20. Uses OpenZeppelin's `Math` and `SafeCast`, vendored in
+  `lib/openzeppelin-contracts`. Several owners share the platform fee pool (`addOwner` / `removeOwner`; the
+  last owner cannot be removed).
+- `script/Deploy.s.sol`: deploys the platform and launches $NOAH with its dev buy in the same transaction.
+- `script/DeployUniswapV3.s.sol`: stands up Uniswap v3 from its npm bytecode for testnet and anvil rehearsals.
+- `test/`: the forge test suite and the Uniswap v3 fixtures (provenance in `test/fixtures/uniswap-v3/PROVENANCE.md`).
+- `docs/`: the static site, deployed by Vercel on every push: the app, docs, the ark, the Boarding Pass,
+  privacy and terms.
+- `monitor/`: the jobs behind the launch, run every minute by Windows Task Scheduler (`AnewoneMainnetScan`):
+  - `scan.mjs` finds Arc mainnet, bridges USDC, deploys, confirms the launch on chain and flips `docs/config.js`
+  - `bridge.mjs` moves 10 USDC from Base to Arc with CCTP V2 and Circle's Forwarding Service
+  - `migrate.mjs` opens migrations once Uniswap checks out and moves every graduated coin
+  - `private-rpc.mjs` lets an optional `ARC_MAINNET_RPC` carry the launch transactions; `--check` tests it
+  - `snapshot.mjs` builds the Boarding Pass leaderboard, `floor.mjs` the prebuilt front-page index,
+    `ark-card.mjs` the ark's share image
+- `MIGRATION.md`: the mainnet runbook for Uniswap v3 migrations.
 
 ## Dev
 
 ```bash
 forge test
-forge script script/Deploy.s.sol --rpc-url arc_testnet --broadcast  # needs PRIVATE_KEY in .env
-node monitor/scan.mjs                                               # one scan pass
+forge script script/Deploy.s.sol --rpc-url arc_testnet --broadcast   # needs PRIVATE_KEY in .env (see .env.example)
+node monitor/scan.mjs                                                # one scan pass
+node monitor/migrate.mjs --rpc <url> --platform <address>            # read-only migration status
+node monitor/private-rpc.mjs --check                                 # is ARC_MAINNET_RPC usable?
 ```
 
-Built on [Arc Network](https://www.arc.network) — this project follows the
-[Arc brand guidelines](https://www.arc.io/brand-guidelines-and-partner-toolkit): text-only
-"Built on Arc" references, no Arc logo usage, no "Arc" in the product name.
+Built on [Arc Network](https://www.arc.network). This project follows the
+[Arc brand guidelines](https://www.arc.io/brand-guidelines-and-partner-toolkit): text-only "Built on Arc"
+references, no Arc logo usage, no "Arc" in the product name.
