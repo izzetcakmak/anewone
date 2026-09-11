@@ -92,6 +92,12 @@ node monitor/migrate.mjs --rpc <url> --platform <address>            # read-only
 node monitor/private-rpc.mjs --check                                 # is ARC_MAINNET_RPC usable?
 ```
 
+## License
+
+[MIT](LICENSE). Use it, change it, ship it; keep the copyright notice. Vendored dependencies keep their own
+licenses: `lib/forge-std` is Apache-2.0 or MIT, the `lib/openzeppelin-contracts` subset is MIT, and the Uniswap v3 build in
+`test/fixtures/uniswap-v3` is Uniswap's own published artifact (GPL-2.0-or-later), used only in tests.
+
 Built on [Arc Network](https://www.arc.network). This project follows the
 [Arc brand guidelines](https://www.arc.io/brand-guidelines-and-partner-toolkit): text-only "Built on Arc"
 references, no Arc logo usage, no "Arc" in the product name.
