@@ -240,7 +240,9 @@ async function sweep(candidates) {
 function runDeploy(env, rpcUrl, devBuy) {
   const res = spawnSync(
     FORGE,
-    ["script", "script/Deploy.s.sol", "--rpc-url", rpcUrl, "--broadcast", "-vv"],
+    // --slow: one transaction at a time, each confirmed before the next is sent, so a failed
+    // send never leaves later transactions of the same deploy in flight
+    ["script", "script/Deploy.s.sol", "--rpc-url", rpcUrl, "--broadcast", "--slow", "-vv"],
     {
       cwd: ROOT,
       encoding: "utf8",
@@ -266,7 +268,35 @@ function runDeploy(env, rpcUrl, devBuy) {
   const platform = out.match(/ANEWONE_PLATFORM:\s*(0x[0-9a-fA-F]{40})/)?.[1];
   const noah = out.match(/NOAH_TOKEN:\s*(0x[0-9a-fA-F]{40})/)?.[1];
   const devTokens = out.match(/DEV_BUY_TOKENS:\s*(\d+)/)?.[1];
-  return { ok: !!(platform && noah), platform, noah, devTokens, out: out.slice(-2500) };
+  // These come from forge's local simulation, printed before a single transaction is sent: they
+  // say where the platform and $NOAH WOULD be, not that they are there. landed() decides that.
+  return { platform, noah, devTokens, status: res.status, out: out.slice(-2500) };
+}
+
+/** Code at addr per the first RPC that answers: true or false, or null if none answered. */
+async function codeAt(rpcs, addr) {
+  for (const u of [...new Set(rpcs)]) {
+    const code = await rpcCall(u, "eth_getCode", [addr, "latest"]);
+    if (typeof code === "string") return code !== "0x";
+  }
+  return null;
+}
+
+/**
+ * Did a deploy land? Both the platform and $NOAH must have code where forge named them. True,
+ * false, or null when no RPC answered. With tries > 1 it looks again every 2 s, for
+ * transactions that were sent but not yet included.
+ */
+async function landed(rpcs, { platform, noah }, tries = 1) {
+  let verdict = null;
+  for (let i = 0; i < tries; i++) {
+    if (i) await new Promise((r) => setTimeout(r, 2000));
+    const p = await codeAt(rpcs, platform);
+    const n = await codeAt(rpcs, noah);
+    if (p === true && n === true) return true;
+    verdict = p === null || n === null ? null : false;
+  }
+  return verdict;
 }
 
 /** Rewrite the marked mainnet block in docs/config.js. Returns true only when the
@@ -661,61 +691,95 @@ async function main() {
       } catch (e) { log(`bridge step error: ${e.stack || e}`); }
     }
 
-    // ---- funds check: deploy gas + the same-tx dev buy
-    const deployer = env.DEPLOYER_ADDRESS;
-    const balHex = await rpcCall(found.url, "eth_getBalance", [deployer, "latest"]);
-    const bal = balHex ? BigInt(balHex) : 0n;
-    const gasPriceHex = await rpcCall(found.url, "eth_gasPrice");
-    const gasPrice = gasPriceHex ? BigInt(gasPriceHex) : 0n;
-    const need = gasPrice > 0n ? gasPrice * 4_500_000n * 2n : 10n ** 17n; // ~2x deploy estimate
-
-    const devTarget = parseUnits18(env.DEV_BUY_USDC ?? "9");
-    const bridgePending = !env.BRIDGE_DISABLE &&
-      ["idle", "burning", "burned", "attested"].includes(state.bridge?.phase ?? "idle");
-    const burnAgeMin = state.bridge?.burnAt
-      ? (Date.now() - Date.parse(state.bridge.burnAt)) / 60_000 : 0;
-
+    let dep = null;
     let devBuy = 0n;
-    if (bal >= need + devTarget) {
-      devBuy = devTarget; // full 9 USDC dev buy
-    } else if (bal >= need && (!bridgePending || burnAgeMin > 45)) {
-      // bridge finished short / disabled / stuck for 45 min — launch with what we have
-      devBuy = bal - need;
-      if (devBuy > devTarget) devBuy = devTarget;
-    } else {
-      if (!state.fundsNotified) {
-        state.fundsNotified = true;
-        saveState(state);
-        await notify(env,
-          `⛽ Deployer ${deployer} has ${bal} wei on Arc mainnet — waiting for ~${(need + devTarget)} ` +
-          `(gas + ${env.DEV_BUY_USDC ?? "9"} USDC dev buy). Bridge phase: ${state.bridge?.phase ?? "n/a"}.`);
+    // ---- an earlier attempt whose transactions landed after it was judged failed: adopt it
+    // rather than deploy a second platform and a second $NOAH over it
+    for (const a of [...(state.attempts ?? [])].reverse()) {
+      const seen = await landed([found.url], a);
+      if (seen === null) {
+        log(`cannot check an earlier deploy attempt (platform ${a.platform}) yet; waiting`);
+        return;
       }
-      log(`awaiting funds: bal=${bal} need=${need} devTarget=${devTarget} bridge=${state.bridge?.phase ?? "n/a"}`);
-      // NO heavy work here: the deploy can become possible within seconds (CCTP
-      // forwarding mints in ~1 min) and must never wait behind a leaderboard job —
-      // the FINAL snapshot runs in the deployed phase. Only retry the cheap cutoff
-      // freeze if it failed at detection.
-      if (state.snapshotFinalDone === false && state.snapshotBlock == null) {
-        const tb = await rpcCall(TESTNET_RPC, "eth_blockNumber");
-        if (tb) { state.snapshotBlock = parseInt(tb, 16); saveState(state); }
+      if (seen) {
+        log(`an earlier deploy attempt landed after all (platform ${a.platform}); adopting it`);
+        dep = a;
+        devBuy = BigInt(a.devBuy ?? "0");
+        break;
       }
-      return;
     }
 
-    // ---- deploy!
-    log(`deploying to ${found.url} (chainId ${found.chainId}) devBuy=${devBuy}…`);
-    const dep = runDeploy(env, found.url, devBuy);
-    if (!dep.ok) {
-      log(`DEPLOY FAILED:\n${dep.out}`);
-      if (!state.deployFailNotified) {
-        state.deployFailNotified = true;
-        saveState(state);
-        // the constructor's own refusals name themselves ("dex: ..."): pass the reason along
-        const reason = (dep.out.match(/dex: [a-z0-9% ]+/i) || [])[0];
-        const why = reason ? ` Reason: "${reason}".` : "";
-        await notify(env, `❌ Mainnet deploy attempt failed — check monitor/scan.log.${why} Will keep retrying every minute.`);
+    if (!dep) {
+      // ---- funds check: deploy gas + the same-tx dev buy
+      const deployer = env.DEPLOYER_ADDRESS;
+      const balHex = await rpcCall(found.url, "eth_getBalance", [deployer, "latest"]);
+      const bal = balHex ? BigInt(balHex) : 0n;
+      const gasPriceHex = await rpcCall(found.url, "eth_gasPrice");
+      const gasPrice = gasPriceHex ? BigInt(gasPriceHex) : 0n;
+      const need = gasPrice > 0n ? gasPrice * 4_500_000n * 2n : 10n ** 17n; // ~2x deploy estimate
+
+      const devTarget = parseUnits18(env.DEV_BUY_USDC ?? "9");
+      const bridgePending = !env.BRIDGE_DISABLE &&
+        ["idle", "burning", "burned", "attested"].includes(state.bridge?.phase ?? "idle");
+      const burnAgeMin = state.bridge?.burnAt
+        ? (Date.now() - Date.parse(state.bridge.burnAt)) / 60_000 : 0;
+
+      if (bal >= need + devTarget) {
+        devBuy = devTarget; // full 9 USDC dev buy
+      } else if (bal >= need && (!bridgePending || burnAgeMin > 45)) {
+        // bridge finished short / disabled / stuck for 45 min — launch with what we have
+        devBuy = bal - need;
+        if (devBuy > devTarget) devBuy = devTarget;
+      } else {
+        if (!state.fundsNotified) {
+          state.fundsNotified = true;
+          saveState(state);
+          await notify(env,
+            `⛽ Deployer ${deployer} has ${bal} wei on Arc mainnet — waiting for ~${(need + devTarget)} ` +
+            `(gas + ${env.DEV_BUY_USDC ?? "9"} USDC dev buy). Bridge phase: ${state.bridge?.phase ?? "n/a"}.`);
+        }
+        log(`awaiting funds: bal=${bal} need=${need} devTarget=${devTarget} bridge=${state.bridge?.phase ?? "n/a"}`);
+        // NO heavy work here: the deploy can become possible within seconds (CCTP
+        // forwarding mints in ~1 min) and must never wait behind a leaderboard job —
+        // the FINAL snapshot runs in the deployed phase. Only retry the cheap cutoff
+        // freeze if it failed at detection.
+        if (state.snapshotFinalDone === false && state.snapshotBlock == null) {
+          const tb = await rpcCall(TESTNET_RPC, "eth_blockNumber");
+          if (tb) { state.snapshotBlock = parseInt(tb, 16); saveState(state); }
+        }
+        return;
       }
-      return;
+
+      // ---- deploy!
+      log(`deploying to ${found.url} (chainId ${found.chainId}) devBuy=${devBuy}…`);
+      const run = runDeploy(env, found.url, devBuy);
+      if (run.platform && run.noah) {
+        // kept before the chain is asked: if these transactions land late, the next tick adopts
+        // them above instead of deploying again
+        state.attempts = [...(state.attempts ?? []), {
+          platform: run.platform, noah: run.noah, devTokens: run.devTokens ?? null,
+          devBuy: devBuy.toString(), at: new Date().toISOString(),
+        }].slice(-5);
+        saveState(state);
+      }
+      // The chain decides, not forge's output: forge prints the addresses from its local
+      // simulation, before a single transaction is sent, so a broadcast that failed still names
+      // a platform. Both contracts must have code where it said.
+      const seen = run.platform && run.noah ? await landed([found.url], run, 10) : false;
+      if (seen !== true) {
+        log(`DEPLOY FAILED (${seen === null ? "no RPC could confirm it" : "not on chain"}, forge exit ${run.status}):\n${run.out}`);
+        if (!state.deployFailNotified) {
+          state.deployFailNotified = true;
+          saveState(state);
+          // the constructor's own refusals name themselves ("dex: ..."): pass the reason along
+          const reason = (run.out.match(/dex: [a-z0-9% ]+/i) || [])[0];
+          const why = reason ? ` Reason: "${reason}".` : "";
+          await notify(env, `❌ Mainnet deploy attempt did not land on chain. Check monitor/scan.log.${why}` +
+            " Will keep retrying every minute.");
+        }
+        return;
+      }
+      dep = run;
     }
 
     // The deploy is irreversible and real funds have already moved. Persist that
@@ -725,6 +789,7 @@ async function main() {
     state.platform = dep.platform;
     state.noah = dep.noah;
     state.deployedAt = new Date().toISOString();
+    delete state.attempts; // settled: nothing left to adopt
     saveState(state);
 
     const wrote = updateFrontendConfig(found.url, found.chainId, dep.platform, dep.noah);
