@@ -1,0 +1,5 @@
+Contact: mailto:support@anewone.xyz
+Contact: https://github.com/izzetcakmak/anewone/issues
+Expires: 2027-09-11T00:00:00.000Z
+Preferred-Languages: en, tr
+Canonical: https://anewone.xyz/.well-known/security.txt
