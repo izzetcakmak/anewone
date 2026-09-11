@@ -1088,7 +1088,7 @@
       <span>the ark</span>
       <span class="ark-tip">If you're curious about our story, <b>CLICK</b></span>
     </a>
-    <a class="tb-link" href="boarding/" title="Boarding Pass: the 33 most active testnet wallets enter the mainnet-day draw">🎟 Boarding Pass</a>
+    <a class="tb-link" href="boarding/" title="Boarding Pass: rewards for the 33 most active testnet wallets on mainnet day">🎟 Boarding Pass</a>
     <!-- Docs is in the footer on a wide screen; inside the menu a phone gets it too -->
     <a class="tb-link tb-link-quiet nav-only" href="docs.html">📄 Docs</a>
     <div class="theme-sw" id="themeSw" role="group" aria-label="Colour theme">
@@ -1231,7 +1231,7 @@
     <div class="rail-h"><h3>Boarding Pass</h3><span class="rail-count">top 33</span></div>
     <div id="bpList" class="rail-list"></div>
     <a class="bp-note" href="boarding/">
-      Mainnet day draw: <b>90,000 / 60,000 / 30,000 $NOAH</b> to three of the 33 most
+      Boarding Pass rewards: <b>90,000 / 60,000 / 30,000 $NOAH</b> to three of the 33 most
       active testnet wallets. Every launch and trade moves you up. <u>Full list →</u>
     </a>
   </aside>
@@ -1241,9 +1241,9 @@
     <div class="feepanel-title">YOUR FEES</div>
     <div class="row" style="justify-content:center">
       <div class="stat">CREATOR FEES <b id="cfAmt">—</b> <span id="cfNote" style="color:var(--gold)"></span></div>
-      <button id="cfClaim" disabled>Claim creator fees</button>
+      <button id="cfClaim" disabled>Collect creator fees</button>
       <div class="stat" id="pfStat" style="display:none">PLATFORM FEES <b id="pfAmt">—</b></div>
-      <button id="pfClaim" class="alt" style="display:none">Claim platform fees</button>
+      <button id="pfClaim" class="alt" style="display:none">Collect platform fees</button>
       <button id="pfSweep" class="alt" style="display:none">Sweep expired</button>
     </div>
   </div>
@@ -1286,7 +1286,7 @@
       </div>
     </div>
     <div class="foot-meta">
-      <span><span class="arc-pill">⚡ Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a></span> · gas is USDC · rug-proof: reserves locked, pool liquidity locked for good.</span>
+      <span><span class="arc-pill">⚡ Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a></span> · gas is USDC · rug-proof: reserves locked, pool liquidity locked for good. · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></span>
       <span id="footPlatformLine" style="display:none">Platform: <span id="footPlatform">–</span></span>
     </div>
   </footer>
@@ -2557,7 +2557,7 @@ function renderCreatorFee() {
     $("cfClaim").disabled = true;
   } else {
     const d = Math.floor(left / 86400), h = Math.floor((left % 86400) / 3600), m = Math.floor((left % 3600) / 60);
-    $("cfNote").textContent = `claim in ${d}d ${h}h ${m}m`;
+    $("cfNote").textContent = `collect within ${d}d ${h}h ${m}m`;
     $("cfClaim").disabled = false;
   }
 }
@@ -2566,7 +2566,7 @@ $("cfClaim").onclick = async () => {
   if (!signer) return toast("Connect first");
   try {
     const tx = await platform.connect(signer).claimCreatorFees();
-    toast("Claiming…"); await tx.wait();
+    toast("Collecting…"); await tx.wait();
     toast("CREATOR FEES CLAIMED! +" + fmt(cfPot, 4) + " USDC");
     refreshFees(); refreshNativeBalance();   // the pot just landed in the wallet
   } catch (e) { toast(e.shortMessage || e.message); }
@@ -2575,7 +2575,7 @@ $("pfClaim").onclick = async () => {
   if (!signer) return toast("Connect first");
   try {
     const tx = await platform.connect(signer).withdrawPlatformFees(userAddr);
-    toast("Claiming…"); await tx.wait();
+    toast("Collecting…"); await tx.wait();
     toast("PLATFORM FEES CLAIMED!");
     refreshFees(); refreshNativeBalance();
   } catch (e) { toast(e.shortMessage || e.message); }
