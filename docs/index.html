@@ -596,6 +596,49 @@
   .marquee span { display: inline-block; padding: 4px 0; animation: scroll 45s linear infinite; }
   @keyframes scroll { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(186px, 1fr)); gap: 12px; margin-top: 14px; }
+
+  /* ---- list view: the same floor as a table, for people who scan numbers
+     rather than pictures. Cards stay the default; the choice is remembered.
+     The table scrolls inside its own box so a phone never scrolls the page
+     sideways. */
+  /* sits at the end of the toolbar row, and stays at the right edge on the line
+     of its own it takes when the row runs out of width */
+  #viewTabs { margin-left: auto; }
+  .tblwrap { margin-top: 14px; overflow-x: auto; border: 1px solid var(--border);
+    border-radius: var(--r-md); background: var(--surface); }
+  .tbl { width: 100%; min-width: 780px; border-collapse: collapse; }
+  .tbl th { padding: 10px 12px; text-align: right; white-space: nowrap;
+    font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--faint); border-bottom: 1px solid var(--border); }
+  .tbl th.sortable { cursor: pointer; user-select: none; }
+  .tbl th.sortable:hover { color: var(--text); }
+  .tbl th.on { color: var(--accent); }
+  .tbl td { padding: 9px 12px; text-align: right; white-space: nowrap;
+    font-size: 13px; font-family: var(--mono); border-bottom: 1px solid var(--border); }
+  .tbl th:first-child, .tbl td:first-child { text-align: left; font-family: inherit; }
+  .tbl tbody tr { cursor: pointer; }
+  .tbl tbody tr:hover { background: var(--surface-2); }
+  .tbl tbody tr:last-child td { border-bottom: none; }
+  .tcell { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .tcell .timg, .tcell .tph { width: 30px; height: 30px; border-radius: 8px; flex: none; }
+  .tcell .timg { object-fit: cover; }
+  .tcell .tph { display: grid; place-items: center; font-weight: 700;
+    background: var(--surface-2); color: var(--faint); }
+  .tstar { cursor: pointer; color: var(--faint); font-size: 13px; flex: none; }
+  .tstar.on { color: var(--gold); }
+  .tnm { min-width: 0; }
+  .tnm b { display: block; font-size: 13px; font-weight: 600; max-width: 190px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tnm span { font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
+  .tbadge { font-size: 10px; font-weight: 600; letter-spacing: .3px; border-radius: 999px;
+    padding: 3px 8px; background: rgba(10,10,14,.78); color: #fff; }
+  .tbadge.grad { background: var(--accent); color: #04241a; }
+  .tbadge.uni { background: #ff007a; color: #fff; }
+  .tbar { display: inline-block; vertical-align: middle; width: 62px; height: 5px;
+    margin-right: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .tbar i { display: block; height: 100%; background: var(--accent); }
+  .tspark { display: inline-block; width: 92px; height: 26px; }
+  .tspark svg { width: 100%; height: 100%; }
   .cab {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
     padding: 18px; cursor: pointer; position: relative; backdrop-filter: blur(8px);
@@ -1007,10 +1050,14 @@
     margin-left: 8px; }
   .chip24.up { color: var(--accent); } .chip24.down { color: var(--red); }
   /* two-column floor: grid + sticky live rail */
-  .floorwrap { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
+  /* minmax(0,1fr), not 1fr: a plain fr track is min-content wide at its narrowest,
+     so the list view's 780px table would widen the whole page instead of scrolling
+     inside its own box — on a phone that zooms the entire site out to fit. */
+  .floorwrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
+  .floor-main { min-width: 0; }
   @media (min-width: 1180px) {
     /* the rail column exists only while the feed has rows (renderFeed toggles has-rail) */
-    .floorwrap.has-rail { grid-template-columns: 1fr 292px; }
+    .floorwrap.has-rail { grid-template-columns: minmax(0, 1fr) 292px; }
     .floorwrap #feedWrap { position: sticky; top: 76px; max-height: calc(100vh - 96px);
       overflow-y: auto; margin-top: 20px; scrollbar-width: thin; }
   }
@@ -1182,6 +1229,10 @@
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
       Filters
     </button>
+    <div class="sorts" id="viewTabs">
+      <button data-view="cards" class="on">Cards</button>
+      <button data-view="list">List</button>
+    </div>
   </div>
 
   <div id="filterPanel" class="filters" style="display:none">
@@ -2812,6 +2863,41 @@ function cardHtml(addr) {
   </div>`;
 }
 
+// The same token as one table row. It carries the figures a card has no room for —
+// 24h volume, distinct traders, holders — which the indexer already computes for
+// the trending score. Coverage honesty is the card's: a figure the index cannot
+// stand behind yet shows as "…" rather than as a wrong number.
+function rowHtml(addr) {
+  const { name, symbol } = tokenMeta[addr];
+  const inf = tokenInfo[addr];
+  const st = tradeStats[addr] || {};
+  const pct = Number(progBps(inf)) / 100;
+  const a = esc(addr);
+  const age = ageText(latestBlock && inf.createdBlock ? latestBlock - Number(inf.createdBlock) : null);
+  const curve = migratedSet.has(addr)
+    ? '<span class="tbadge uni">ON UNISWAP</span>'
+    : inf.graduated
+    ? '<span class="tbadge grad">GRADUATED</span>'
+    : `<span class="tbar"><i style="width:${Math.min(Math.max(pct, 1.5), 100)}%"></i></span>${pct.toFixed(0)}%`;
+  return `<tr onclick="openTrade('${a}')">
+    <td><div class="tcell">
+      <span class="tstar ${isWatched(addr) ? "on" : ""}" onclick="toggleWatch('${a}', event)"
+        title="Watchlist">${isWatched(addr) ? "★" : "☆"}</span>
+      <div class="tph" id="ph-${a}" aria-hidden="true">${esc(String(symbol || "?").slice(0, 1))}</div>
+      <img class="timg" id="img-${a}" alt="" style="display:none">
+      <div class="tnm"><b>${esc(name)}</b><span>$${esc(symbol)}</span></div>
+    </div></td>
+    <td>${compactUsd(marketCapWei(inf))}</td>
+    <td>${chip24Html(addr) || "—"}</td>
+    <td>${covers24h ? compactUsd(st.vol24 || 0n) : "…"}</td>
+    <td>${covers24h ? (st.traders24 || 0) : "…"}</td>
+    <td>${fullyIndexed ? (st.holders || 0) : "…"}</td>
+    <td>${curve}</td>
+    <td>${esc(age)}</td>
+    <td><span class="tspark">${sparkSvg(addr, 26)}</span></td>
+  </tr>`;
+}
+
 // The full address, not the shortened label on screen — this is what gets pasted
 // into a wallet. stopPropagation keeps the click off the card's openTrade handler.
 async function copyCa(addr, ev) {
@@ -3117,6 +3203,13 @@ function renderChart(addr) {
 
 // ---- discovery: sorting, search, filters, watchlist, creator profiles, deep links
 let sortMode = "trending", searchQ = "", shownAddrs = [];
+// Cards or the table. Cards are the default — the artwork is what a launchpad is
+// for — but the choice survives a reload, because someone who wants numbers wants
+// them every time.
+let viewMode = (() => {
+  try { return localStorage.getItem("anewone_view") === "list" ? "list" : "cards"; }
+  catch { return "cards"; }
+})();
 let watchOnly = false, creatorFilter = null;
 const filterState = { holders: null, vol: null, mcapMin: null, mcapMax: null, ageH: null, grad: "", socials: false };
 
@@ -3258,7 +3351,24 @@ function visibleAddrs() {
 // passes cost more than the reads it was interleaved with.
 function paintGrid() {
   const list = visibleAddrs();
-  $("grid").innerHTML = list.map(cardHtml).join("");
+  const box = $("grid");
+  if (viewMode === "list") {
+    // Three of the headers are the sorts the tabs already offer, so clicking one
+    // drives the same state rather than a second, competing notion of order.
+    const th = (label, mode) => mode
+      ? `<th class="sortable${sortMode === mode ? " on" : ""}" onclick="setSort('${mode}')">${label}</th>`
+      : `<th>${label}</th>`;
+    box.className = "tblwrap";
+    box.innerHTML = list.length
+      ? `<table class="tbl"><thead><tr>
+          ${th("Token")}${th("Market cap", "mcap")}${th("24h")}${th("24h vol")}
+          ${th("Traders")}${th("Holders")}${th("Curve", "grad")}${th("Age", "new")}${th("Chart")}
+        </tr></thead><tbody>${list.map(rowHtml).join("")}</tbody></table>`
+      : "";
+  } else {
+    box.className = "grid";
+    box.innerHTML = list.map(cardHtml).join("");
+  }
   fillImages(list);
   return list;
 }
@@ -3334,10 +3444,22 @@ $("liveTabs")?.querySelectorAll("button").forEach((b) => {
   };
 });
 
+// One way to change the order, whether it came from a tab or a table header.
+function setSort(mode) {
+  sortMode = mode;
+  $("sortTabs").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.sort === mode));
+  renderGrid();
+}
 $("sortTabs").querySelectorAll("button").forEach((b) => {
+  b.onclick = () => setSort(b.dataset.sort);
+});
+
+$("viewTabs").querySelectorAll("button").forEach((b) => {
+  b.classList.toggle("on", b.dataset.view === viewMode);
   b.onclick = () => {
-    sortMode = b.dataset.sort;
-    $("sortTabs").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    viewMode = b.dataset.view;
+    try { localStorage.setItem("anewone_view", viewMode); } catch {}
+    $("viewTabs").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
     renderGrid();
   };
 });
