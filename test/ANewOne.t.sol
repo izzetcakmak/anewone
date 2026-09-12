@@ -48,11 +48,11 @@ contract ANewOneTest is Test {
 
         assertEq(ANewOneToken(token).balanceOf(alice), quoted);
         assertGt(quoted, 0);
-        // 1% fee split: 0.5 creator / 0.5 platform
+        // 1.5% fee: 0.5 creator, 1.0 platform
         assertEq(arcade.creatorFees(creator), 0.5e18);
-        assertEq(arcade.platformFees(), 0.5e18);
+        assertEq(arcade.platformFees(), 1e18);
         (,,,,, uint256 raised,) = arcade.info(token);
-        assertEq(raised, 99e18);
+        assertEq(raised, 98.5e18);
     }
 
     function test_priceIncreasesWithBuys() public {
@@ -131,7 +131,7 @@ contract ANewOneTest is Test {
 
         uint256 ownerBefore = address(this).balance;
         arcade.withdrawPlatformFees(address(this));
-        assertEq(address(this).balance - ownerBefore, 5e18);
+        assertEq(address(this).balance - ownerBefore, 10e18);
     }
 
     function test_initialDevBuyOnCreate() public {
@@ -241,7 +241,7 @@ contract ANewOneTest is Test {
 
         // old pot rolled to platform, fresh cut got its own full window
         assertEq(arcade.creatorFees(creator), 5e18);
-        assertEq(arcade.platformFees(), platBefore + 5e18 + 5e18); // old pot + new platform half
+        assertEq(arcade.platformFees(), platBefore + 5e18 + 10e18); // expired pot + the new platform cut
         assertFalse(arcade.creatorFeeExpired(creator));
         assertEq(arcade.creatorFeeDeadline(creator), block.timestamp + 7 days);
 
@@ -366,25 +366,55 @@ contract ANewOneTest is Test {
         assertEq(arcade.owners(0), address(this));
     }
 
-    function test_secondOwnerSharesFeePool() public {
+    /// Each owner's share is their own: credited as it accrues, withdrawn only by them.
+    /// Joining earns nothing retroactively, and no owner can reach another's balance.
+    function test_ownersEachWithdrawTheirOwnShare() public {
         address token = _create();
         vm.roll(block.number + 21);
         vm.prank(alice);
-        arcade.buy{value: 1_000e18}(token, 0); // platformFees += 5e18
+        arcade.buy{value: 1_000e18}(token, 0); // platform cut 10 USDC, one owner at the time
 
+        assertEq(arcade.ownerFees(address(this)), 10e18);
         assertFalse(arcade.isOwner(bob));
         arcade.addOwner(bob);
-        assertTrue(arcade.isOwner(bob));
         assertEq(arcade.ownersCount(), 2);
+        assertEq(arcade.ownerFees(bob), 0); // nothing earned before he joined
 
-        // the second owner can withdraw the whole shared pool (Option A semantics)
-        uint256 pf = arcade.platformFees();
-        assertGt(pf, 0);
+        vm.prank(alice);
+        arcade.buy{value: 1_000e18}(token, 0); // platform cut 10 USDC, now split 5/5
+        assertEq(arcade.ownerFees(address(this)), 15e18);
+        assertEq(arcade.ownerFees(bob), 5e18);
+        assertEq(arcade.platformFees(), 20e18);
+
         uint256 before = bob.balance;
         vm.prank(bob);
         arcade.withdrawPlatformFees(bob);
-        assertEq(bob.balance - before, pf);
-        assertEq(arcade.platformFees(), 0);
+        assertEq(bob.balance - before, 5e18); // his own share, not the pool
+        assertEq(arcade.ownerFees(bob), 0);
+        assertEq(arcade.ownerFees(address(this)), 15e18); // the other owner's is untouched
+        assertEq(arcade.platformFees(), 15e18);
+
+        vm.prank(bob);
+        vm.expectRevert(bytes("nothing"));
+        arcade.withdrawPlatformFees(bob);
+    }
+
+    /// Removal must not strand money: only the owner themselves can move their balance.
+    function test_removeOwnerRequiresEmptyBalance() public {
+        address token = _create();
+        vm.roll(block.number + 21);
+        arcade.addOwner(bob);
+        vm.prank(alice);
+        arcade.buy{value: 1_000e18}(token, 0);
+        assertGt(arcade.ownerFees(bob), 0);
+
+        vm.expectRevert(bytes("claim fees first"));
+        arcade.removeOwner(bob);
+
+        vm.prank(bob);
+        arcade.withdrawPlatformFees(bob);
+        arcade.removeOwner(bob);
+        assertFalse(arcade.isOwner(bob));
     }
 
     function test_nonOwnerCannotWithdrawOrAdmin() public {

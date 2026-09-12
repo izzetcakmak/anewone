@@ -124,15 +124,18 @@ interface INonfungiblePositionManager {
 
 /// @title ANewOne — meme token launchpad with a bonding curve, native-USDC denominated (Arc L1).
 /// @notice pump.fun-style constant-product curve with quality upgrades:
-///         - creator earns half of every trade fee (0.5% of 1%)
+///         - creator earns 0.5% of every trade (a third of the 1.5% fee); the platform's 1%
+///           is split evenly between the owners as it accrues, each withdrawing only their own
 ///         - anti-snipe: per-wallet cap during the first blocks after launch
 ///         - rug-proof: curve reserves can only be traded against, or moved once into a
 ///           Uniswap v3 position this contract holds and has no way to withdraw; fees are
 ///           segregated from reserves.
 contract ANewOne {
     uint256 public constant TOTAL_SUPPLY = 1_000_000_000e18; // 1B tokens per launch
-    uint16 public constant FEE_BPS = 100; // 1% total trade fee
+    uint16 public constant FEE_BPS = 150; // 1.5% total trade fee
     uint16 public constant CREATOR_FEE_BPS = 50; // 0.5% of trade goes to token creator
+    // The remaining 1% is the platform's, and it is split evenly between the owners
+    // as it accrues: with the two owners this launches with, half a percent each.
     uint256 public constant ANTI_SNIPE_BLOCKS = 20;
     uint256 public constant ANTI_SNIPE_MAX = TOTAL_SUPPLY / 50; // 2% per wallet early on
 
@@ -149,11 +152,15 @@ contract ANewOne {
     ///         is sweepable into platform fees by anyone.
     uint256 public constant CLAIM_WINDOW = 7 days;
 
-    /// @notice Platform owners. Any owner can withdraw the shared platform-fee pool and
-    ///         add/remove other owners. There must always be at least one owner.
+    /// @notice Platform owners. Each owner has their own fee balance and withdraws only that;
+    ///         no owner can touch another's. Any owner can add or remove owners, and there
+    ///         must always be at least one.
     mapping(address => bool) public isOwner;
     address[] public owners;
-    uint256 public platformFees;
+    /// @notice Each owner's unclaimed platform fees. The platform's share of a trade is split
+    ///         evenly across the owners at the moment it accrues, so a later change to the owner
+    ///         set never moves fees that were already earned.
+    mapping(address => uint256) public ownerFees;
     mapping(address => uint256) public creatorFees;
     /// @notice When the creator's current unclaimed pot started accruing (set when pot goes 0 -> >0).
     mapping(address => uint256) public creatorFeeSince;
@@ -578,7 +585,7 @@ contract ANewOne {
 
         // The reserves stay frozen rather than zeroed: _priceWad divides by tReserve, and the
         // last curve price is worth keeping readable.
-        platformFees += t.raised - usdcIn * NATIVE_PER_USDC_UNIT;
+        _creditPlatform(t.raised - usdcIn * NATIVE_PER_USDC_UNIT);
         migrated[token] = true;
         t.raised = 0;
     }
@@ -658,7 +665,7 @@ contract ANewOne {
             if (tokenDelta < 0) m.tokensBurned += uint256(-tokenDelta);
             leftUsdc -= uint256(usdcDelta);
         }
-        if (leftUsdc > 0) platformFees += leftUsdc * NATIVE_PER_USDC_UNIT;
+        if (leftUsdc > 0) _creditPlatform(leftUsdc * NATIVE_PER_USDC_UNIT);
     }
 
     /// @dev A swap this contract pays for in uniswapV3SwapCallback.
@@ -714,6 +721,29 @@ contract ANewOne {
 
     // ---------------------------------------------------------------- fees
 
+    /// @dev The platform's share of anything — a trade fee, migration dust, an expired creator
+    ///      pot — divided evenly across the owners there and then. Splitting at accrual rather
+    ///      than at withdrawal is what makes each owner's balance theirs: adding or removing an
+    ///      owner later changes who earns from the next trade, never who owns the last one.
+    ///      The remainder of an odd wei goes to the first owner; at 1e-18 USDC it is dust, and
+    ///      leaving it unassigned would strand it in the contract.
+    function _creditPlatform(uint256 amount) internal {
+        if (amount == 0) return;
+        uint256 n = owners.length;
+        uint256 each = amount / n;
+        if (each > 0) {
+            for (uint256 i = 0; i < n; i++) ownerFees[owners[i]] += each;
+        }
+        uint256 dust = amount - each * n;
+        if (dust > 0) ownerFees[owners[0]] += dust;
+    }
+
+    /// @notice Every owner's unclaimed fees added up — what the platform has earned and not
+    ///         yet withdrawn. The money itself sits in the per-owner balances.
+    function platformFees() public view returns (uint256 total) {
+        for (uint256 i = 0; i < owners.length; i++) total += ownerFees[owners[i]];
+    }
+
     function _splitFee(address creator, uint256 fee) internal {
         uint256 creatorCut = (fee * CREATOR_FEE_BPS) / FEE_BPS;
         if (creatorCut > 0) {
@@ -721,14 +751,14 @@ contract ANewOne {
             if (pot > 0 && block.timestamp > creatorFeeSince[creator] + CLAIM_WINDOW) {
                 // enforce expiry before adding fresh fees, so new earnings always
                 // start their own full 7-day window instead of inheriting a dead one
-                platformFees += pot;
+                _creditPlatform(pot);
                 emit CreatorFeesExpired(creator, pot);
                 pot = 0;
             }
             if (pot == 0) creatorFeeSince[creator] = block.timestamp;
             creatorFees[creator] = pot + creatorCut;
         }
-        platformFees += fee - creatorCut;
+        _creditPlatform(fee - creatorCut);
     }
 
     /// @notice True when the creator's pot sat unclaimed past the 7-day window.
@@ -748,7 +778,7 @@ contract ANewOne {
         creatorFees[msg.sender] = 0;
         if (block.timestamp > creatorFeeSince[msg.sender] + CLAIM_WINDOW) {
             // window missed: pot rolls into platform fees instead of paying out
-            platformFees += amount;
+            _creditPlatform(amount);
             emit CreatorFeesExpired(msg.sender, amount);
             return;
         }
@@ -762,14 +792,17 @@ contract ANewOne {
         require(creatorFeeExpired(creator), "not expired");
         uint256 amount = creatorFees[creator];
         creatorFees[creator] = 0;
-        platformFees += amount;
+        _creditPlatform(amount);
         emit CreatorFeesExpired(creator, amount);
     }
 
+    /// @notice Withdraw your own share of the platform fees. An owner can send it wherever they
+    ///         like, but can only ever send their own: there is no path from one owner's balance
+    ///         to another's, and none from an owner to the curve reserves.
     function withdrawPlatformFees(address to) external nonReentrant onlyOwner {
-        uint256 amount = platformFees;
+        uint256 amount = ownerFees[msg.sender];
         require(amount > 0, "nothing");
-        platformFees = 0;
+        ownerFees[msg.sender] = 0;
         (bool ok,) = to.call{value: amount}("");
         require(ok, "send");
         emit FeesClaimed(to, amount);
@@ -807,6 +840,10 @@ contract ANewOne {
     function removeOwner(address who) external onlyOwner {
         require(isOwner[who], "not owner");
         require(owners.length > 1, "last owner");
+        // Removal must not orphan money. A departing owner's balance is theirs and nobody else
+        // can move it, so it has to be withdrawn before the owner set shrinks, or it would sit
+        // in the contract outside every accounting view.
+        require(ownerFees[who] == 0, "claim fees first");
         isOwner[who] = false;
         for (uint256 i = 0; i < owners.length; i++) {
             if (owners[i] == who) {

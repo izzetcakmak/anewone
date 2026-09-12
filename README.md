@@ -14,7 +14,7 @@ floor is... a new one.
 |---|---|
 | Launching | Free, gas only. 1B fixed supply, no mint function. Optional dev buy in the same transaction. |
 | Pricing | USDC, Arc's native gas token, so prices mean something |
-| Trade fee | 1%: half to the token's creator, half to the platform |
+| Trade fee | 1.5%: 0.5% to the token's creator, 1% to the platform, split evenly between its owners |
 | Sniping | Anti-snipe: at most 2% of supply per wallet for the first 20 blocks, creator included |
 | Graduation | At 5,000 USDC raised the curve moves into a Uniswap v3 pool at the price it ended on |
 | Liquidity | The pool position stays in the platform contract forever; there is no function that can withdraw it |
@@ -27,8 +27,10 @@ virtual 4,000 USDC reserve. Buy or sell any time; the contract is the market mak
 `TokenImage` launch event rather than in storage, so a launch with a full-size image costs about 2M gas
 instead of 20M+.
 
-**Fees.** Every trade pays 1%. The creator's half is collected with `claimCreatorFees()` within 7 days of the
-pot starting to accrue; unclaimed pots expire into platform fees (`sweepExpired` is permissionless).
+**Fees.** Every trade pays 1.5%. The creator's 0.5% is collected with `claimCreatorFees()` within 7 days of the
+pot starting to accrue; unclaimed pots expire into platform fees (`sweepExpired` is permissionless). The
+platform's 1% is credited to the owners in equal shares as it accrues, and each owner withdraws only their
+own with `withdrawPlatformFees(to)`; an owner holding a balance cannot be removed until it is withdrawn.
 
 **Graduation.** The buy that crosses 5,000 USDC raised goes through, then the curve closes. `migrate(token)`,
 which anyone can call once migrations are open, opens a Uniswap v3 pool (1% fee tier, full range) at the

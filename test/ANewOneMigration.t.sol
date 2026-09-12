@@ -520,7 +520,7 @@ contract ANewOneMigrationTest is UniV3Fixture {
 
     function testFuzz_migrate_anyRaise(bool low, uint256 buyValue) public {
         address token = low ? tLow : tHigh;
-        buyValue = bound(buyValue, 5_051e18, 300_000e18);
+        buyValue = bound(buyValue, 5_080e18, 300_000e18); // 1.5% fee: 5,000 net needs >5,076
         vm.prank(alice);
         arcade.buy{value: buyValue}(token, 0);
         Snap memory s = _snap(token);
@@ -616,7 +616,7 @@ contract ANewOneMigrationTest is UniV3Fixture {
         assertEq(ANewOneToken(token).balanceOf(address(arcade)), 0);
         _assertBooks();
 
-        // the creator's half is claimed the usual way
+        // the creator's share is claimed the usual way
         uint256 cBal = creator.balance;
         vm.prank(creator);
         arcade.claimCreatorFees();
@@ -632,8 +632,8 @@ contract ANewOneMigrationTest is UniV3Fixture {
         uint256 toPlatform = arcade.platformFees() - f.platform;
         // 1% of the buy, give or take the pool's rounding
         assertApproxEqAbs(toCreator + toPlatform, (buyUnits * 1e12) / 100, 2e12);
-        // split down the middle, as a curve fee is
-        assertApproxEqAbs(toCreator, toPlatform, 1);
+        // split as a curve fee is: a third to the creator, two thirds to the platform
+        assertApproxEqAbs(toCreator * 2, toPlatform, 2);
         // the token side, 1% of bob's sell, is burned
         assertApproxEqAbs(ANewOneToken(token).balanceOf(BURN) - f.burned, sellAmount / 100, sellAmount / 1e9);
     }

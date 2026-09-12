@@ -1198,12 +1198,12 @@
     <h1>Insert coin.<span class="l2">Launch a new one.</span></h1>
     <p class="hero-sub">Bonding curves priced in <b>USDC</b>, not in a volatile gas token.
       <b>Nothing to pull</b>: at graduation the curve moves into a Uniswap v3 pool whose
-      liquidity is locked for good, and half of every trade fee goes straight to the creator.</p>
+      liquidity is locked for good, and 0.5% of every trade goes straight to the creator.</p>
     <div class="hero-row">
       <a class="hbtn primary" href="#floor">Explore the floor →</a>
       <div class="hero-stats">
         <div class="hstat"><b id="statCount">–</b><span>Tokens live</span></div>
-        <div class="hstat"><b>1%</b><span>Fee · ½ to creators</span></div>
+        <div class="hstat"><b id="statFee">1.5%</b><span id="statFeeSplit">Fee · ⅓ to creators</span></div>
         <div class="hstat"><b id="statGrad">–</b><span>Graduation</span></div>
       </div>
     </div>
@@ -1352,10 +1352,10 @@
     <label>Symbol</label><input id="cSymbol" placeholder="NOAH" maxlength="12">
     <div class="dupe" id="cDupe" style="display:none"></div>
     <label>Image <span style="color:var(--red)">*</span></label>
-    <div class="criteria">.jpg / .jpeg / .png &nbsp;·&nbsp; max 5 MB &nbsp;·&nbsp; min 100×100 px &nbsp;·&nbsp; square is best</div>
+    <div class="criteria">.jpg / .png / .webp / .gif &nbsp;·&nbsp; max 5 MB &nbsp;·&nbsp; min 100×100 px &nbsp;·&nbsp; square is best</div>
     <div class="row" style="margin-top:8px">
       <button id="cUpBtn" type="button">📷 Upload image</button>
-      <input id="cFile" type="file" accept="image/png,image/jpeg" style="display:none">
+      <input id="cFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.jpg,.jpeg,.jfif,.png,.webp,.gif" style="display:none">
     </div>
     <div class="upl-prev" id="cPrev">
       <img id="cPrevImg" alt="preview">
@@ -1566,6 +1566,9 @@ const ABI = [
   "function comment(address,string)",
   "function isOwner(address) view returns (bool)",
   "function platformFees() view returns (uint256)",
+  "function ownerFees(address) view returns (uint256)",
+  "function FEE_BPS() view returns (uint16)",
+  "function CREATOR_FEE_BPS() view returns (uint16)",
   "function creatorFees(address) view returns (uint256)",
   "function creatorFeeDeadline(address) view returns (uint256)",
   "function creatorFeeExpired(address) view returns (bool)",
@@ -1705,13 +1708,41 @@ const logProvider = _logUrls.length > 1
       ARC_NET, { quorum: 1 })
   : mkProvider(_logUrls[0]);
 
-const FEE_BPS = 100n, BPS = 10_000n, WAD = 10n ** 18n;
+const BPS = 10_000n, WAD = 10n ** 18n;
+// Replaced by the platform's own FEE_BPS() / CREATOR_FEE_BPS() as soon as they are read
+// (feeReady). 100/50 is only the fallback for a platform that cannot be asked.
+let FEE_BPS = 100n, CREATOR_FEE_BPS = 50n;
 // Trade.usdcAmount is trader-centric: on a buy it is what the wallet PAID (fee included),
 // on a sell what the wallet RECEIVED (fee already taken out). That is the right number for
 // the live feed and for PnL, but the two sides are not the same quantity, so summing them
-// as volume overstates buys by the 1% fee and a price implied from u/t is off by the same.
+// as volume overstates buys by the fee and a price implied from u/t is off by the same.
 // This converts either side to the amount that actually moved through the curve.
 const curveSide = (u, isBuy) => (isBuy ? (u * (BPS - FEE_BPS)) / BPS : (u * BPS) / (BPS - FEE_BPS));
+// The fee is read from the platform, not written here. Quotes, slippage limits and volume all
+// depend on it, and a hard-coded figure is silently wrong the moment the site points at a
+// platform built with a different one: the testnet platform charges 1%, mainnet 1.5%.
+const feeReady = (async () => {
+  try {
+    const [f, c] = await Promise.all([platform.FEE_BPS(), platform.CREATOR_FEE_BPS()]);
+    FEE_BPS = BigInt(f); CREATOR_FEE_BPS = BigInt(c);
+  } catch (e) { console.warn("fee read failed, assuming 1%", e); }
+  renderFeeCopy();
+})();
+function feePctText() {
+  const n = Number(FEE_BPS) / 100;
+  return (Number.isInteger(n) ? String(n) : n.toFixed(1)) + "%";
+}
+// The creator's cut as the fraction of the fee it is, when it is a simple one.
+function creatorShareText() {
+  if (FEE_BPS === CREATOR_FEE_BPS * 2n) return "½";
+  if (FEE_BPS === CREATOR_FEE_BPS * 3n) return "⅓";
+  return Number(CREATOR_FEE_BPS) / 100 + "%";
+}
+function renderFeeCopy() {
+  const f = $("statFee"), s = $("statFeeSplit");
+  if (f) f.textContent = feePctText();
+  if (s) s.textContent = "Fee · " + creatorShareText() + " to creators";
+}
 let signer = null, userAddr = null, currentToken = null, isBuy = true;
 let gradTarget = null, loading = false;
 const tokenMeta = {}; // addr -> {name, symbol} — immutable, fetched once
@@ -2099,6 +2130,7 @@ async function indexUntilDone(earliest) {
 }
 
 async function loadStats(earliestBlock, onTick) {
+  await feeReady; // volume is converted with the fee, so it has to be known first
   try {
     latestBlock = await rpc(() => readProvider.getBlockNumber());
     if (!blockTimeSec) {
@@ -2593,7 +2625,9 @@ async function refreshFees() {
     $("pfClaim").style.display = isOwner ? "inline-block" : "none";
     $("pfSweep").style.display = isOwner ? "inline-block" : "none";
     if (isOwner) {
-      const pf = await rpc(() => platform.platformFees());
+      // Each owner withdraws only their own share. A platform from before per-owner fees
+      // has no ownerFees(), only the shared pool, so fall back to that.
+      const pf = await rpc(() => platform.ownerFees(userAddr)).catch(() => rpc(() => platform.platformFees()));
       $("pfAmt").textContent = fmt(pf, 4) + " USDC";
       $("pfClaim").disabled = pf === 0n;
     }
@@ -2680,6 +2714,7 @@ async function loadTokens() {
   if (loading) return;
   loading = true;
   detectMigration(); // cached; started early so the first panel already knows
+  await feeReady; // local quotes need the platform's own fee
   try {
     if (gradTarget === null) {
       gradTarget = BigInt(await rpc(() => platform.gradTarget()));
@@ -3645,7 +3680,7 @@ window.addEventListener("hashchange", openFromHash);
 
 function tickerText(n) {
   const names = Object.values(tokenMeta).map(t => "$" + t.symbol).join("  ·  ");
-  return `${n} TOKEN${n === 1 ? "" : "S"} LIVE  ·  ${names}  ·  1% FEE: HALF TO CREATORS  ·  NO RUG: RESERVES LOCKED, THEN A UNISWAP V3 POOL LOCKED FOR GOOD  ·  GAS IS USDC  ·  BUILT ON ARC`;
+  return `${n} TOKEN${n === 1 ? "" : "S"} LIVE  ·  ${names}  ·  ${feePctText()} FEE: ${creatorShareText()} TO CREATORS  ·  NO RUG: RESERVES LOCKED, THEN A UNISWAP V3 POOL LOCKED FOR GOOD  ·  GAS IS USDC  ·  BUILT ON ARC`;
 }
 
 // ------- image upload (pump.fun-style criteria: .jpg/.jpeg/.png, ≤5MB, ≥100×100)
@@ -3655,29 +3690,32 @@ $("cPrevX").onclick = () => { cImageDataUri = ""; $("cFile").value = ""; $("cPre
 $("cFile").onchange = async (e) => {
   const f = e.target.files[0];
   if (!f) return;
-  const typeOk = ["image/jpeg", "image/png"].includes(f.type) && /\.(jpe?g|png)$/i.test(f.name);
-  if (!typeOk) { $("cFile").value = ""; return toast("Only .jpg, .jpeg or .png files"); }
+  // Phone pickers and wallet browsers often report an empty or odd MIME type, so either a known
+  // type or a known extension is enough. Whatever comes in is re-encoded as a 200×200 JPEG.
+  const typeOk = /^image\/(jpeg|pjpeg|png|webp|gif)$/i.test(f.type) || /\.(jpe?g|jfif|png|webp|gif)$/i.test(f.name);
+  if (!typeOk) { $("cFile").value = ""; return toast("Only .jpg, .png, .webp or .gif files"); }
   if (f.size > 5 * 1024 * 1024) { $("cFile").value = ""; return toast("Max file size is 5 MB"); }
-  const url = URL.createObjectURL(f);
+  const src = await openImage(f);
+  if (!src) {
+    $("cFile").value = "";
+    return toast("This browser could not open that image. Try a regular browser like Chrome or Safari, or upload a screenshot of it");
+  }
   try {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
-    if (img.naturalWidth < 100 || img.naturalHeight < 100) {
+    if (src.w < 100 || src.h < 100) {
       $("cFile").value = "";
       return toast("Image must be at least 100×100 px");
     }
     // center-crop to square, resize to 200×200, compress until ≤24KB
-    const side = Math.min(img.naturalWidth, img.naturalHeight);
+    const side = Math.min(src.w, src.h);
     const cv = document.createElement("canvas");
     cv.width = 200; cv.height = 200;
-    cv.getContext("2d").drawImage(
-      img,
-      (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side,
-      0, 0, 200, 200
-    );
+    const g = cv.getContext("2d");
+    g.fillStyle = "#fff"; // transparent PNG corners would turn black in JPEG
+    g.fillRect(0, 0, 200, 200);
+    g.drawImage(src.el, (src.w - side) / 2, (src.h - side) / 2, side, side, 0, 0, 200, 200);
     let q = 0.85, uri = cv.toDataURL("image/jpeg", q);
     while (uri.length > 32_000 && q > 0.3) { q -= 0.1; uri = cv.toDataURL("image/jpeg", q); }
+    if (!uri.startsWith("data:image/jpeg")) throw new Error("canvas export");
     if (uri.length > 32_000) { $("cFile").value = ""; return toast("Could not compress under 24 KB. Try a simpler image"); }
     cImageDataUri = uri;
     $("cPrevImg").src = uri;
@@ -3685,11 +3723,46 @@ $("cFile").onchange = async (e) => {
     $("cPrev").style.display = "flex";
     updateMetaSize();
   } catch {
-    toast("Could not read that image");
+    $("cFile").value = "";
+    toast("This browser could not process that image. Try a regular browser like Chrome or Safari");
   } finally {
-    URL.revokeObjectURL(url);
+    src.done();
   }
 };
+
+// Opens an uploaded file as something a canvas can draw, trying each way a browser can decode it.
+// Wallet in-app browsers are the reason for the ladder: some reject img.decode(), some block blob:
+// URLs, and some lack createImageBitmap. Returns null only when every route fails.
+async function openImage(f) {
+  const viaImg = (url, cleanup) => new Promise((resolve) => {
+    const img = new Image();
+    const t = setTimeout(() => { cleanup(); resolve(null); }, 15000);
+    img.onload = () => { clearTimeout(t); img.naturalWidth ? resolve({ el: img, w: img.naturalWidth, h: img.naturalHeight, done: cleanup }) : (cleanup(), resolve(null)); };
+    img.onerror = () => { clearTimeout(t); cleanup(); resolve(null); };
+    img.src = url;
+  });
+  if (window.createImageBitmap) {
+    try {
+      const bmp = await createImageBitmap(f);
+      if (bmp.width) return { el: bmp, w: bmp.width, h: bmp.height, done: () => bmp.close && bmp.close() };
+    } catch {}
+  }
+  try {
+    const url = URL.createObjectURL(f);
+    const r = await viaImg(url, () => URL.revokeObjectURL(url));
+    if (r) return r;
+  } catch {}
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result);
+      fr.onerror = () => reject(fr.error);
+      fr.readAsDataURL(f);
+    });
+    return await viaImg(dataUrl, () => {});
+  } catch {}
+  return null;
+}
 
 // ------- metadata document written to the token at launch
 // Kept as compact JSON with short keys: the whole string is stored on-chain, so bytes = gas.

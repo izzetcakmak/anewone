@@ -49,10 +49,12 @@ const MAX_RECENT = 5000;
 const MAX_SERIES = 600;
 
 // The Trade event reports the trader's side of the swap: a buy is quoted before
-// the 1% fee is taken out, a sell after. Summing the two raw would overstate
+// the fee is taken out, a sell after. Summing the two raw would overstate
 // buys, so both are converted to the amount that actually crossed the curve —
 // identical to curveSide() in docs/index.html, and it must stay identical.
-const BPS = 10_000n, FEE_BPS = 100n;
+const BPS = 10_000n;
+// Replaced by the platform's own FEE_BPS() at the start of runFloor, as the page does.
+let FEE_BPS = 100n;
 const curveSide = (u, isBuy) => (isBuy ? (u * (BPS - FEE_BPS)) / BPS : (u * BPS) / (BPS - FEE_BPS));
 
 // ---------------------------------------------------------------- abi helpers
@@ -356,6 +358,8 @@ function saveFloorCache(c) {
 // ---------------------------------------------------------------- entry point
 export async function runFloor({ platform, log = console.log } = {}) {
   if (!platform) throw new Error("runFloor: platform address required");
+  // FEE_BPS(): the fee this platform was built with. curveSide() has to match it exactly.
+  try { FEE_BPS = BigInt(await ethCall(platform, "0xbf333f2c")); } catch {}
 
   const tipHex = await rpc("eth_blockNumber", []);
   const tip = BigInt(tipHex);
