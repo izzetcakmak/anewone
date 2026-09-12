@@ -1702,11 +1702,37 @@ async function renderUniLinks(addr) {
 // ones that serve eth_call well, and this traffic is the steady drip every open
 // tab makes — so it must never land on the shared keyed endpoint.
 const _logUrls = (CFG.logRpcs && CFG.logRpcs.length) ? CFG.logRpcs : [CFG.rpc];
-const logProvider = _logUrls.length > 1
-  ? new ethers.FallbackProvider(
-      _logUrls.map((u, i) => ({ provider: mkProvider(u), priority: i + 1, stallTimeout: 1500, weight: 1 })),
-      ARC_NET, { quorum: 1 })
-  : mkProvider(_logUrls[0]);
+// Logs are read from one endpoint at a time, in order, moving on at any error.
+// FallbackProvider was the wrong tool for this: when dRPC's free plan began refusing
+// getLogs ranges with a 400, it returned that refusal as the answer instead of asking
+// the next endpoint. The live tail then failed on every tick, and since a failed tick
+// keeps its watermark it never caught up again: trades, 24h volume, the ticker and
+// the rail froze for every visitor while two healthy endpoints sat unused behind it.
+// Starting from whichever endpoint answered last means a bad one costs one try once,
+// not one try on every call.
+function makeLogProvider(urls) {
+  const pool = urls.map((u) => ({ url: u, p: mkProvider(u) }));
+  let good = 0;
+  const tryEach = async (fn) => {
+    let lastErr;
+    for (let k = 0; k < pool.length; k++) {
+      const i = (good + k) % pool.length;
+      try {
+        const out = await fn(pool[i].p);
+        good = i;
+        return out;
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr;
+  };
+  return {
+    urls: pool.map((x) => x.url),
+    get current() { return pool[good].url; },
+    getBlockNumber: () => tryEach((p) => p.getBlockNumber()),
+    getLogs: (filter) => tryEach((p) => p.getLogs(filter)),
+  };
+}
+const logProvider = makeLogProvider(_logUrls);
 
 const BPS = 10_000n, WAD = 10n ** 18n;
 // Replaced by the platform's own FEE_BPS() / CREATOR_FEE_BPS() as soon as they are read
@@ -4343,6 +4369,9 @@ setInterval(renderBoardingRail, 10 * 60_000);
 // ---- live tail: one cheap forward-only getLogs every 15s keeps the trade rail and
 // spotlight feeling real-time between the full 60s passes. Single call, well inside
 // the public RPC budget; skipped while a full index pass runs or the tab is hidden.
+// Consecutive failed ticks. A tail that fails keeps its watermark and retries, which is
+// right for a blip and silent for an outage, so a streak is said out loud once.
+let tailFails = 0;
 async function liveTail() {
   // shares the `indexing` mutex with indexUntilDone/loadStats: ingestLogs has no
   // trade dedup, so two overlapping forward scans would double-count volume and
@@ -4362,6 +4391,7 @@ async function liveTail() {
       toBlock: to,
     }), 1, "logs");
     statsIdx.hi = to;
+    tailFails = 0;
     // A launch is not a trade. ingestLogs() reads anything that is not a comment as a
     // Trade and would take a launch's three strings for amounts, so launches are split
     // off first and used for one thing only: putting the new coin on the floor now,
@@ -4377,14 +4407,17 @@ async function liveTail() {
       renderFeed();
       renderSpotlight();
       paintGrid();   // prices moved; the cards say so without asking the chain
+      renderLiveRail(); // the left rail ranks by 24h volume, which a trade just changed
       // A trade against a token we have never seen is a launch that happened after
       // the prebuilt floor was published. Until it is discovered its trades are
       // filtered out of the ticker, so go and find it now rather than at the next
       // poll — this is the one case where waiting is visible to everyone.
       if ([...dirtyTokens].some((a) => !tokenInfo[a])) discoverNow();
     }
-  } catch {} // transient RPC noise — the next tick retries from the same watermark
-  finally { indexing = false; }
+  } catch (e) {
+    // transient RPC noise: the next tick retries from the same watermark
+    if (++tailFails === 3) console.warn("live tail: three ticks in a row failed to read logs", e);
+  } finally { indexing = false; }
 }
 setInterval(liveTail, 15_000);
 

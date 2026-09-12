@@ -52,8 +52,11 @@ window.ANEWONE_CONFIG = {
     // concurrency) silently emptied every card on the floor for anyone without a
     // warm cache. Full-history endpoints lead; blockdaemon still earns its place
     // on the recent ranges the live tail asks for.
+    // dRPC is not in this list. On 13 Sep 2026 its free plan was found refusing
+    // getLogs past a few hundred blocks ("ranges over 10000 blocks are not
+    // supported on free plan", returned even for 1,000), and leading this list it
+    // froze live trades for every visitor. It still serves eth_call in rpcs above.
     logRpcs: [
-      "https://rpc.drpc.testnet.arc.network",
       "https://rpc.testnet.arc.network",
       "https://rpc.blockdaemon.testnet.arc.network",
     ],
