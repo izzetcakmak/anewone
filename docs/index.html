@@ -1862,6 +1862,7 @@ let blockTimeSec = 0, latestBlock = 0, statsReady = false;
 let fullyIndexed = false, covers24h = false, indexPct = 0, indexFloor = 0;
 const tradeStats = {};
 const TRADE_TOPIC = ethers.id("Trade(address,address,bool,uint256,uint256,uint256)");
+const CREATED_TOPIC = ethers.id("TokenCreated(address,address,string,string,string)");
 const COMMENT_TOPIC = ethers.id("Comment(address,address,string)");
 const topicAddr = (t) => ethers.getAddress("0x" + t.slice(26));
 const CHUNK = 10_000;
@@ -1983,6 +1984,13 @@ async function hydrateFromFloor() {
   // liveTail replaying the gap — off the public endpoint, for free. So start
   // the count poll's clock here instead of spending a full pass on arrival.
   lastCountPoll = Date.now();
+  // ...but the file is rebuilt only every half hour, and each reload re-read it and
+  // restarted that clock, so a coin launched since it was published stayed off the
+  // floor for as long as people kept refreshing. One tokensCount() says whether the
+  // file is behind the chain, and only then is there anything to go and find.
+  rpc(() => platform.tokensCount())
+    .then((n) => { if (Number(n) > addrs.length) discoverNow(); })
+    .catch(() => {});
   return true;
 }
 
@@ -2709,6 +2717,23 @@ const dirtyTokens = new Set();
 // token takes to appear on the floor.
 const COUNT_POLL_MS = 5 * 60 * 1000;
 let lastCountPoll = 0, hydrated = false;
+
+// Put a new coin on the floor now, for whoever launched it and for everyone watching.
+// loadTokens() only asks the chain for new tokens when its count poll is due, so this
+// makes it due. The read endpoints can trail the wallet's by a block, and a pass may
+// already be running, so with a coin in mind it keeps asking until that coin has
+// actually arrived, and gives up after a few tries to leave it to the regular poll.
+async function discoverNow(expect = null, tries = 8) {
+  for (let i = 0; i < tries; i++) {
+    if (!loading) {
+      lastCountPoll = 0;
+      await loadTokens();
+      if (!expect || tokenInfo[expect]) return true;
+    }
+    await sleep(1500);
+  }
+  return false;
+}
 
 async function loadTokens() {
   if (loading) return;
@@ -3848,15 +3873,19 @@ $("cGo").onclick = async () => {
     const c = platform.connect(signer);
     const tx = await c.createToken(name, sym, meta, cImageDataUri, { value: ethers.parseEther(String(buyVal || 0)) });
     toast("Launching…");
-    await tx.wait();
+    const rcpt = await tx.wait();
     toast(`$${sym} IS LIVE!`);
     refreshNativeBalance();   // gas, plus the dev buy if one was made
     closeModals();
     cImageDataUri = ""; $("cFile").value = ""; $("cPrev").style.display = "none";
     $("cName").value = ""; $("cSymbol").value = ""; $("cBuy").value = "";
     ["cDesc", "cX", "cTg", "cWeb"].forEach((id) => { $(id).value = ""; });
-    await sleep(800);
-    loadTokens();
+    // Straight onto the floor, using the address the launch itself reports. Calling
+    // loadTokens() here did nothing while its count poll was not due, so a creator
+    // could not find the coin they had just launched, which reads as a failed launch.
+    const created = rcpt && rcpt.logs.find((l) =>
+      l.topics[0] === CREATED_TOPIC && String(l.address).toLowerCase() === String(CFG.platform).toLowerCase());
+    discoverNow(created ? topicAddr(created.topics[1]) : null);
   } catch (e) { toast(e.shortMessage || e.message); }
 };
 
@@ -4328,13 +4357,21 @@ async function liveTail() {
     const to = Math.min(tip, statsIdx.hi + CHUNK);
     const logs = await rpc(() => logProvider.getLogs({
       address: CFG.platform,
-      topics: [[TRADE_TOPIC, COMMENT_TOPIC]],
+      topics: [[TRADE_TOPIC, COMMENT_TOPIC, CREATED_TOPIC]],
       fromBlock: statsIdx.hi + 1,
       toBlock: to,
     }), 1, "logs");
     statsIdx.hi = to;
-    if (logs.length) {
-      ingestLogs(logs);
+    // A launch is not a trade. ingestLogs() reads anything that is not a comment as a
+    // Trade and would take a launch's three strings for amounts, so launches are split
+    // off first and used for one thing only: putting the new coin on the floor now,
+    // including one launched with no dev buy, which produces no trade at all.
+    const launches = logs.filter((l) => l.topics[0] === CREATED_TOPIC);
+    const tradeLogs = launches.length ? logs.filter((l) => l.topics[0] !== CREATED_TOPIC) : logs;
+    const unseen = launches.map((l) => topicAddr(l.topics[1])).filter((a) => !tokenInfo[a]);
+    if (unseen.length) discoverNow(unseen[unseen.length - 1]); // not awaited: this holds the indexing lock
+    if (tradeLogs.length) {
+      ingestLogs(tradeLogs);
       rebuildStats();
       saveStatsCache(statsIdx);
       renderFeed();
@@ -4344,7 +4381,7 @@ async function liveTail() {
       // the prebuilt floor was published. Until it is discovered its trades are
       // filtered out of the ticker, so go and find it now rather than at the next
       // poll — this is the one case where waiting is visible to everyone.
-      if ([...dirtyTokens].some((a) => !tokenInfo[a])) { lastCountPoll = 0; loadTokens(); }
+      if ([...dirtyTokens].some((a) => !tokenInfo[a])) discoverNow();
     }
   } catch {} // transient RPC noise — the next tick retries from the same watermark
   finally { indexing = false; }
