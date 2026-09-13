@@ -75,3 +75,24 @@ cd build-web3auth && npm ci
 ```
 
 `npm ci` fails if any package does not match the integrity hash in the lockfile.
+
+---
+
+## arc-bridge-kit.js
+
+| | |
+|---|---|
+| Package | `arc-bridge-kit` (in-house, izzetcakmak) |
+| Version | 0.2.0 |
+| File | `arc-bridge-kit.js` |
+| Size | 83,831 bytes |
+| SHA-256 | `15331cda9dc468804af229bc06d798e200155041b1f6afb7d134e34d685c0ac6` |
+
+Built here, not fetched: the source repository lives at `C:\Users\Monster\arc-bridge-kit`
+(demo at https://arc-bridge-kit.vercel.app) and is copied verbatim. It is plain JavaScript on
+top of the vendored ethers v6: Circle CCTP V2 + Forwarding Service for the bridge, LI.FI's
+public API for same-chain swaps (through this site's `/api/lifi` proxy, which holds the key),
+and the platform's own `buy` for the last leg. It builds no swap calldata of its own; LI.FI
+transactions are sent exactly as quoted, CCTP calls go to Circle's uniform contract addresses.
+
+To re-verify after an update: `sha256sum docs/vendor/arc-bridge-kit.js` against the kit repo.
