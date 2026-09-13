@@ -1127,6 +1127,7 @@
     border-top: 1px solid var(--border); }
   .cab .cchart svg { display: block; width: 100%; height: 100%; }
   .cab .cfoot { margin-top: 8px; }
+  .spot .ss b.spot-px sub { font-size: .65em; vertical-align: -.2em; margin: 0 1px; }
 
   /* mobile: cards collapse into a ranked compact list (rank · avatar · name · spark) */
   @media (max-width: 640px) {
@@ -2178,6 +2179,8 @@ function rebuildStats() {
       trades: a.trades,
       vol24: vol24[token] || 0n,
       traders24: traders24[token] ? traders24[token].size : 0,
+      // every wallet that ever traded it, sold out or not; holders below are the ones still in
+      traders: Object.keys(statsIdx.net[token] || {}).length,
       lastBlock: a.lastBlock || 0,
       holders: Object.values(statsIdx.net[token] || {}).filter((v) => v.t > 0n).length,
     };
@@ -2983,6 +2986,12 @@ function priceUsdHtml(wei) {
   return m[1].length >= 4 ? `$0.0<sub>${m[1].length}</sub>${m[2]}` : `$0.${m[1]}${m[2]}`;
 }
 
+// True once the index reaches back to this token's launch, which is when a lifetime
+// figure for it (every trader it ever had) can be shown instead of a partial one.
+function coversLife(inf) {
+  return !!statsIdx && statsIdx.lo !== null && inf && statsIdx.lo <= Number(inf.createdBlock);
+}
+
 function cardHtml(addr) {
   const { name, symbol } = tokenMeta[addr];
   const inf = tokenInfo[addr];
@@ -3014,7 +3023,7 @@ function cardHtml(addr) {
     ? '<b class="cdim">—</b>'
     : `<b class="${ch >= 0 ? "up" : "down"}">${ch >= 0 ? "+" : ""}${ch.toFixed(2)}%</b>`;
   const vol = covers24h ? compactUsd(st.vol24 || 0n) : "…";
-  const traders = covers24h ? String(st.traders24 || 0) : "…";
+  const traders = coversLife(inf) ? String(st.traders || 0) : "…";
   const prog = done ? "" : `<span class="cprog">${pct < 1 ? "&lt;1" : Math.floor(pct)}% to graduation</span>`;
   const barW = done ? 100 : Math.min(Math.max(pct, 1.5), 100);
   return `<div class="cab" onclick="openTrade('${a}')">
@@ -3085,7 +3094,7 @@ function rowHtml(addr) {
     <td>${compactUsd(marketCapWei(inf))}</td>
     <td>${chip24Html(addr) || "—"}</td>
     <td>${covers24h ? compactUsd(st.vol24 || 0n) : "…"}</td>
-    <td>${covers24h ? (st.traders24 || 0) : "…"}</td>
+    <td>${coversLife(inf) ? (st.traders || 0) : "…"}</td>
     <td>${fullyIndexed ? (st.holders || 0) : "…"}</td>
     <td>${curve}</td>
     <td>${esc(age)}</td>
@@ -3614,6 +3623,7 @@ function renderSpotlight() {
     </div>
     <div class="spot-stats">
       <div class="ss"><b>${compactUsd(marketCapWei(inf))}</b><span>MARKET CAP</span></div>
+      <div class="ss"><b class="spot-px" title="${Number(ethers.formatEther(priceOf(inf)))} USDC" aria-label="Price ${Number(ethers.formatEther(priceOf(inf)))} USDC">${priceUsdHtml(priceOf(inf))}</b><span>PRICE</span></div>
       ${ch !== null ? `<div class="ss ${ch >= 0 ? "up" : "down"}"><b>${ch >= 0 ? "+" : ""}${ch.toFixed(1)}%</b><span>24H</span></div>` : ""}
       <div class="ss"><b>${covers24h ? compactUsd(st.vol24 || 0n) : "…"}</b><span>24H VOL</span></div>
       <div class="ss"><b>${fullyIndexed ? (st.holders || 0) : "…"}</b><span>HOLDERS</span></div>
