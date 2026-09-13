@@ -8,11 +8,11 @@
  "criteria": "Every launch (TokenCreated) and trade (Trade) on any ANEWONE platform deployment counts as 1 action. Wallets ranked by total actions; ties broken by earliest activity. Team wallets excluded from ranking. Top 33 wallets enter the raffle: 90,000 / 60,000 / 30,000 $NOAH.",
  "final": false,
  "catchingUp": false,
- "generatedAt": "2026-09-13T10:58:10.478Z",
+ "generatedAt": "2026-09-13T16:58:04.841Z",
  "fromBlock": 52625041,
- "toBlock": 61887530,
+ "toBlock": 61929919,
  "totalWallets": 70,
- "totalTxs": 825,
+ "totalTxs": 829,
  "wallets": [
   {
    "address": "0xfe2282be943ddb6500bad74f9d6e2d21af7e1249",
@@ -85,6 +85,16 @@
    "boarding": true
   },
   {
+   "address": "0x74aa6bee181d6c2ff011d1622ef1addc07a5b885",
+   "launches": 1,
+   "trades": 21,
+   "total": 22,
+   "firstBlock": 57811238,
+   "team": false,
+   "rank": 7,
+   "boarding": true
+  },
+  {
    "address": "0x61a4490d589e580ec3d8b29eb87064b1bc61b33f",
    "launches": 2,
    "trades": 19,
@@ -95,13 +105,13 @@
    "boarding": false
   },
   {
-   "address": "0x74aa6bee181d6c2ff011d1622ef1addc07a5b885",
-   "launches": 1,
-   "trades": 19,
-   "total": 20,
-   "firstBlock": 57811238,
+   "address": "0x57c8e021f2863d9a7795db56c2aa95312275c903",
+   "launches": 0,
+   "trades": 15,
+   "total": 15,
+   "firstBlock": 61074351,
    "team": false,
-   "rank": 7,
+   "rank": 8,
    "boarding": true
   },
   {
@@ -111,7 +121,7 @@
    "total": 13,
    "firstBlock": 52818115,
    "team": false,
-   "rank": 8,
+   "rank": 9,
    "boarding": true
   },
   {
@@ -121,7 +131,7 @@
    "total": 13,
    "firstBlock": 52818329,
    "team": false,
-   "rank": 9,
+   "rank": 10,
    "boarding": true
   },
   {
@@ -130,16 +140,6 @@
    "trades": 10,
    "total": 13,
    "firstBlock": 61001756,
-   "team": false,
-   "rank": 10,
-   "boarding": true
-  },
-  {
-   "address": "0x57c8e021f2863d9a7795db56c2aa95312275c903",
-   "launches": 0,
-   "trades": 13,
-   "total": 13,
-   "firstBlock": 61074351,
    "team": false,
    "rank": 11,
    "boarding": true
