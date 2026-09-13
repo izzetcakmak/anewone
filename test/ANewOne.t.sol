@@ -327,11 +327,16 @@ contract ANewOneTest is Test {
         arcade.comment(token, "to the ark!");
     }
 
-    function test_creatorAndOwnerCanCommentWithoutHolding() public {
+    function test_creatorAndAdminCanCommentWithoutHolding() public {
         address token = _create();
         vm.prank(creator); // creator holds no tokens
         arcade.comment(token, "dev here");
-        arcade.comment(token, "owner here"); // this test contract is a platform owner
+        arcade.comment(token, "admin here"); // this test contract is the platform admin
+        // an owner that is not the admin gets no such privilege
+        arcade.addOwner(bob);
+        vm.prank(bob);
+        vm.expectRevert("hold to comment");
+        arcade.comment(token, "owner here");
     }
 
     function test_nonHolderCannotComment() public {
@@ -422,10 +427,10 @@ contract ANewOneTest is Test {
         vm.expectRevert("owner");
         arcade.withdrawPlatformFees(alice);
         vm.prank(alice);
-        vm.expectRevert("owner");
+        vm.expectRevert("admin");
         arcade.addOwner(alice);
         vm.prank(alice);
-        vm.expectRevert("owner");
+        vm.expectRevert("admin");
         arcade.removeOwner(address(this));
     }
 
@@ -439,7 +444,6 @@ contract ANewOneTest is Test {
 
     function test_removeOwnerRevokesAccess() public {
         arcade.addOwner(bob);
-        vm.prank(bob); // a second owner has full admin rights
         arcade.addOwner(alice);
         assertEq(arcade.ownersCount(), 3);
 
@@ -449,7 +453,38 @@ contract ANewOneTest is Test {
 
         vm.prank(bob);
         vm.expectRevert("owner");
-        arcade.addOwner(address(0xDEAD));
+        arcade.withdrawPlatformFees(bob);
+    }
+
+    /// The admin is the only wallet that can change anything. An owner's one power is
+    /// withdrawing its own share: it cannot add or remove owners, the admin included, and it
+    /// cannot touch migrations or curves.
+    function test_ownersCanOnlyClaim_adminHoldsEveryPower() public {
+        assertEq(arcade.admin(), address(this));
+        address token = _create();
+        vm.roll(block.number + 21);
+        arcade.addOwner(bob);
+        vm.prank(alice);
+        arcade.buy{value: 1_000e18}(token, 0); // platform cut 10 USDC, 5 of it bob's
+
+        vm.startPrank(bob);
+        vm.expectRevert("admin");
+        arcade.addOwner(alice);
+        vm.expectRevert("admin");
+        arcade.removeOwner(address(this));
+        vm.expectRevert("admin");
+        arcade.removeOwner(bob);
+        vm.expectRevert("admin");
+        arcade.setMigrationsOpen(true);
+        vm.expectRevert("admin");
+        arcade.reopenCurve(token);
+        uint256 before = bob.balance;
+        arcade.withdrawPlatformFees(bob); // ...but its own share is its to take
+        vm.stopPrank();
+
+        assertEq(bob.balance - before, 5e18);
+        assertEq(arcade.ownersCount(), 2);
+        assertEq(arcade.admin(), address(this));
     }
 
     function test_cannotRemoveLastOwner() public {

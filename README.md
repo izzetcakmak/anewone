@@ -31,6 +31,8 @@ instead of 20M+.
 pot starting to accrue; unclaimed pots expire into platform fees (`sweepExpired` is permissionless). The
 platform's 1% is credited to the owners in equal shares as it accrues, and each owner withdraws only their
 own with `withdrawPlatformFees(to)`; an owner holding a balance cannot be removed until it is withdrawn.
+Withdrawing is the only thing an owner can do. Adding and removing owners, opening migrations and reopening
+curves belong to the `admin`: the wallet that deployed the platform, fixed for good with no way to hand it over.
 
 **Graduation.** The buy that crosses 5,000 USDC raised goes through, then the curve closes. `migrate(token)`,
 which anyone can call once migrations are open, opens a Uniswap v3 pool (1% fee tier, full range) at the
@@ -41,7 +43,7 @@ is burned.
 **Uniswap never holds up a launch.** The Uniswap v3 addresses are fixed at deploy with no setter. Migrations
 open only once Uniswap checks out at those addresses: code present, the 1% fee tier, the position manager
 belonging to the factory, and the factory byte for byte the build Uniswap published. If a move cannot happen,
-the owners may put a graduated coin back on its curve after an hour; that moves no funds and changes no price.
+the admin may put a graduated coin back on its curve after an hour; that moves no funds and changes no price.
 The full runbook is in [MIGRATION.md](MIGRATION.md).
 
 ## Safety
@@ -68,8 +70,8 @@ On Arc mainnet the platform points at Uniswap's official v3 deployment: factory
 ## Repository layout
 
 - `src/ANewOne.sol`: the platform and a minimal ERC-20. Uses OpenZeppelin's `Math` and `SafeCast`, vendored in
-  `lib/openzeppelin-contracts`. Several owners share the platform fee pool (`addOwner` / `removeOwner`; the
-  last owner cannot be removed).
+  `lib/openzeppelin-contracts`. Owners share the platform fees and can only withdraw their own share; the
+  `admin` (the deployer) alone adds and removes them (`addOwner` / `removeOwner`; the last owner cannot be removed).
 - `script/Deploy.s.sol`: deploys the platform and launches $NOAH with its dev buy in the same transaction.
 - `script/DeployUniswapV3.s.sol`: stands up Uniswap v3 from its npm bytecode for testnet and anvil rehearsals.
 - `test/`: the forge test suite and the Uniswap v3 fixtures (provenance in `test/fixtures/uniswap-v3/PROVENANCE.md`).

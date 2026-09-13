@@ -16,11 +16,19 @@ import {ANewOne, ANewOneToken} from "../src/ANewOne.sol";
 ///      USDC is checked at deploy. Uniswap need not exist yet: it may reach Arc after the chain
 ///      opens, and $NOAH launches with the chain. Opening migrations checks it instead.
 contract Deploy is Script {
+    /// @dev The main wallet. The deployer becomes the platform's admin, the only wallet that can
+    ///      change anything, so on Arc mainnet no other key may deploy it.
+    address internal constant MAINNET_ADMIN = 0xD4F1254C803662c46D9c21f80F4F3c15FF57e2c9;
+
     function run() external {
         uint256 pk = vm.envUint("PRIVATE_KEY");
         bool skipFirst = vm.envOr("SKIP_FIRST_TOKEN", uint256(0)) == 1;
         address secondOwner = vm.envOr("SECOND_OWNER", address(0));
         uint256 devBuy = vm.envOr("DEV_BUY_VALUE", uint256(0));
+
+        if (block.chainid == 5042) {
+            require(vm.addr(pk) == MAINNET_ADMIN, "mainnet deploy must come from the main wallet");
+        }
 
         vm.startBroadcast(pk);
         ANewOne arcade = _deployPlatform();

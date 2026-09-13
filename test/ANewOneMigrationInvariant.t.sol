@@ -140,10 +140,15 @@ contract MigrationHandler is Test {
         vm.stopPrank();
     }
 
-    /// @dev this handler is an owner: it puts a graduated coin back on its curve when it may
+    /// @dev Reopening is the admin's call, so the handler makes it as the admin, putting a
+    ///      graduated coin back on its curve whenever that is allowed. Both arguments are
+    ///      read before the prank so that the prank lands on reopenCurve itself.
     function reopen(uint256 t) public {
         if (tokens.length == 0) return;
-        try arcade.reopenCurve(_token(t)) {} catch {}
+        address token = _token(t);
+        address adm = arcade.admin();
+        vm.prank(adm);
+        try arcade.reopenCurve(token) {} catch {}
     }
 
     function collect(uint256 a, uint256 t) public {

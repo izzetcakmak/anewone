@@ -167,7 +167,7 @@ contract ANewOneAdversarialInvariant is Test {
         vm.deal(address(hostile), 1_000_000e18);
 
         handler = new AdversarialHandler(arcade, actors, hostile);
-        arcade.addOwner(address(handler)); // so the withdraw / owner-churn paths are reachable
+        arcade.addOwner(address(handler)); // an owner, not the admin: it can withdraw, and every churn attempt must fail
 
         bytes4[] memory sel = new bytes4[](14);
         sel[0] = AdversarialHandler.createToken.selector;
@@ -231,6 +231,14 @@ contract ANewOneAdversarialInvariant is Test {
     }
 
     /// @dev There must always be someone able to administer the platform.
+    /// @dev The handler is an owner but not the admin, so none of its attempts to add or remove
+    ///      owners may ever land: the owner set it starts with is the one it ends with.
+    function invariant_onlyAdminChangesOwners() public view {
+        assertEq(arcade.admin(), address(this), "admin changed");
+        assertEq(arcade.ownersCount(), 2, "an owner that is not the admin changed the owner set");
+        assertTrue(arcade.isOwner(address(this)) && arcade.isOwner(address(handler)), "owner set changed");
+    }
+
     function invariant_atLeastOneOwnerAlways() public view {
         assertGt(arcade.ownersCount(), 0, "platform was left with no owner");
     }

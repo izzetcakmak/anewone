@@ -143,7 +143,7 @@ contract ANewOne {
     uint256 public immutable virtualUsdc0;
     /// @notice Real USDC raised at which a token "graduates". The buy that crosses it goes
     ///         through; after it the curve is closed, and the coin waits for migrate() to move
-    ///         it into Uniswap v3, where trading resumes. If that move cannot happen, an owner may
+    ///         it into Uniswap v3, where trading resumes. If that move cannot happen, the admin may
     ///         reopen the curve from REOPEN_DELAY after graduation (reopenCurve). On a platform
     ///         built without Uniswap graduation is only a badge and trading carries on.
     uint256 public immutable gradTarget;
@@ -152,9 +152,14 @@ contract ANewOne {
     ///         is sweepable into platform fees by anyone.
     uint256 public constant CLAIM_WINDOW = 7 days;
 
-    /// @notice Platform owners. Each owner has their own fee balance and withdraws only that;
-    ///         no owner can touch another's. Any owner can add or remove owners, and there
-    ///         must always be at least one.
+    /// @notice The one wallet that governs the platform: it adds and removes owners, opens and
+    ///         closes migrations and reopens curves. Owners have no say in any of it. Set to the
+    ///         deployer and fixed for good, with no function to hand it over, so control of the
+    ///         platform can never pass to another wallet.
+    address public immutable admin;
+    /// @notice Platform owners share the platform's fees: each has its own balance, withdraws
+    ///         only that, and cannot touch another's. Withdrawing is the only thing an owner can
+    ///         do. Only the admin adds or removes owners, and there must always be at least one.
     mapping(address => bool) public isOwner;
     address[] public owners;
     /// @notice Each owner's unclaimed platform fees. The platform's share of a trade is split
@@ -309,6 +314,11 @@ contract ANewOne {
         _;
     }
 
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "admin");
+        _;
+    }
+
     constructor(
         uint256 virtualUsdc0_,
         uint256 gradTarget_,
@@ -317,6 +327,7 @@ contract ANewOne {
         address usdc_
     ) {
         require(virtualUsdc0_ > 0 && gradTarget_ > 0, "params");
+        admin = msg.sender;
         _addOwner(msg.sender);
         virtualUsdc0 = virtualUsdc0_;
         gradTarget = gradTarget_;
@@ -456,7 +467,7 @@ contract ANewOne {
     /// @notice Open or close migration. Closed is how this ships. Opening requires Uniswap v3 to
     ///         be live at the addresses fixed at deploy, and to be the Uniswap v3 this contract
     ///         expects; closing never needs it.
-    function setMigrationsOpen(bool open) external onlyOwner {
+    function setMigrationsOpen(bool open) external onlyAdmin {
         require(address(v3Factory) != address(0), "no dex");
         if (open) {
             require(address(v3Factory).code.length > 0 && address(positionManager).code.length > 0, "dex: not live");
@@ -467,12 +478,12 @@ contract ANewOne {
         emit MigrationsSet(open);
     }
 
-    /// @notice The owners' way out for a graduated coin whose move into Uniswap cannot happen:
+    /// @notice The admin's way out for a graduated coin whose move into Uniswap cannot happen:
     ///         Uniswap not live yet, or something blocking its pool. From REOPEN_DELAY after
-    ///         graduation an owner may put the coin back on its curve, which then trades exactly
+    ///         graduation the admin may put the coin back on its curve, which then trades exactly
     ///         as before graduation until migrate() succeeds and closes it for good. Reopening
     ///         moves no funds and changes no price.
-    function reopenCurve(address token) external onlyOwner {
+    function reopenCurve(address token) external onlyAdmin {
         TokenInfo storage t = info[token];
         require(address(v3Factory) != address(0), "no dex"); // without Uniswap it never closed
         require(t.graduated, "not graduated");
@@ -814,14 +825,14 @@ contract ANewOne {
 
     /// @notice Post a public comment on a token's thread. Event-only — nothing is stored,
     ///         so a comment costs little more than base gas. Spam guard: you must hold the
-    ///         token, be its creator, or be a platform owner.
+    ///         token, be its creator, or be the platform admin.
     function comment(address token, string calldata text) external {
         TokenInfo storage t = info[token];
         require(t.creator != address(0), "unknown token");
         uint256 len = bytes(text).length;
         require(len > 0 && len <= MAX_COMMENT_BYTES, "length");
         require(
-            ANewOneToken(token).balanceOf(msg.sender) > 0 || msg.sender == t.creator || isOwner[msg.sender],
+            ANewOneToken(token).balanceOf(msg.sender) > 0 || msg.sender == t.creator || msg.sender == admin,
             "hold to comment"
         );
         emit Comment(token, msg.sender, text);
@@ -829,15 +840,16 @@ contract ANewOne {
 
     // ---------------------------------------------------------------- owners
 
-    /// @notice Grant owner rights (shared fee pool + owner admin) to another wallet.
-    function addOwner(address newOwner) external onlyOwner {
+    /// @notice Give a wallet a share of the platform fees. Admin only. The owner it creates can
+    ///         withdraw its own share and do nothing else.
+    function addOwner(address newOwner) external onlyAdmin {
         require(newOwner != address(0), "zero addr");
         require(!isOwner[newOwner], "already owner");
         _addOwner(newOwner);
     }
 
-    /// @notice Revoke an owner. The last remaining owner cannot be removed.
-    function removeOwner(address who) external onlyOwner {
+    /// @notice Revoke an owner. Admin only. The last remaining owner cannot be removed.
+    function removeOwner(address who) external onlyAdmin {
         require(isOwner[who], "not owner");
         require(owners.length > 1, "last owner");
         // Removal must not orphan money. A departing owner's balance is theirs and nobody else

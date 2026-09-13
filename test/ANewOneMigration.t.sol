@@ -256,9 +256,14 @@ contract ANewOneMigrationTest is UniV3Fixture {
         arcade.migrate(tLow);
     }
 
-    function test_onlyOwnerCanOpen() public {
+    function test_onlyAdminCanOpen() public {
         vm.prank(mallory);
-        vm.expectRevert("owner");
+        vm.expectRevert("admin");
+        arcade.setMigrationsOpen(true);
+        // being an owner is not enough: owners only withdraw their share
+        arcade.addOwner(mallory);
+        vm.prank(mallory);
+        vm.expectRevert("admin");
         arcade.setMigrationsOpen(true);
     }
 
@@ -316,9 +321,9 @@ contract ANewOneMigrationTest is UniV3Fixture {
         _assertBooks();
     }
 
-    /// @dev The owners' way out: an hour after graduation an owner may put a coin back on its
+    /// @dev The admin's way out: an hour after graduation the admin may put a coin back on its
     ///      curve, which then trades as before until migrate() closes it for good.
-    function test_ownerReopensAGraduatedCurveAfterAnHour() public {
+    function test_adminReopensAGraduatedCurveAfterAnHour() public {
         _graduate(tLow);
         vm.expectRevert("too early");
         arcade.reopenCurve(tLow);
@@ -327,7 +332,7 @@ contract ANewOneMigrationTest is UniV3Fixture {
         arcade.reopenCurve(tLow);
         vm.warp(block.timestamp + 1);
         vm.prank(mallory);
-        vm.expectRevert("owner");
+        vm.expectRevert("admin");
         arcade.reopenCurve(tLow);
 
         arcade.reopenCurve(tLow);

@@ -1,6 +1,6 @@
 # Opening migrations on Arc mainnet
 
-The platform ships with migrations **closed**. Nothing moves into Uniswap until an owner calls
+The platform ships with migrations **closed**. Nothing moves into Uniswap until the admin calls
 `setMigrationsOpen(true)`: the scanner does so by itself once the checks in section 4 pass, and
 the owner console can do it by hand. Closing again (`setMigrationsOpen(false)`) is always
 possible; it holds migrations back, moves no funds, and the scanner does not overrule it.
@@ -64,7 +64,7 @@ Uniswap v3 has code at the fixed addresses, the 1% tier has tick spacing 200, th
 manager belongs to the factory, the factory's runtime code with its own address masked out
 hashes to the npm build (`0xc66c27d7...18af`), and the position manager's WETH9 is not the USDC
 face. Anything else, and it keeps them closed and says why on Telegram every few hours. The
-owner console opens them by hand either way. Once an owner closes them again, the scanner
+owner console opens them by hand either way. Once the admin closes them again, the scanner
 leaves them closed.
 
 `setMigrationsOpen(true)` itself reverts with `dex: not live` until Uniswap's contracts exist
@@ -76,7 +76,7 @@ no implementation of the native-balance precompile at `0x1800...0000` that every
 goes through, so `forge script` and `cast call --trace` both fail on it. Use plain `cast call`.
 
 ```bash
-cast send $PLATFORM "setMigrationsOpen(bool)" true --rpc-url $RPC --private-key <owner>
+cast send $PLATFORM "setMigrationsOpen(bool)" true --rpc-url $RPC --private-key <admin: the main wallet>
 cast call $PLATFORM "migrate(address)" <graduated token> --from <any address> --rpc-url $RPC
 ```
 
@@ -103,7 +103,7 @@ For the migrated token (the testnet rehearsal script checks exactly these):
 ## 7. If a move cannot happen
 
 A graduated coin's curve is closed while it waits for its move. If the move cannot happen,
-because Uniswap is not live yet or somebody blocked its pool, an owner may put the coin back
+because Uniswap is not live yet or somebody blocked its pool, the admin may put the coin back
 on its curve from one hour after graduation (`reopenCurve(token)`, or the owner console, a
 local file kept outside the repo). It then trades exactly as before graduation until `migrate` succeeds, which
 closes it for good. Reopening moves no funds and changes no price.
