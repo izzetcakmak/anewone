@@ -120,3 +120,49 @@ once and then at most every six hours while it lasts. To see what it sees withou
 ```bash
 node monitor/migrate.mjs --rpc $RPC --platform $PLATFORM --from <deployer address>
 ```
+
+## 9. Bridge kit: USDC in from any chain, then buy
+
+`arc-bridge-kit` (`C:\Users\Monster\arc-bridge-kit`, demo at https://arc-bridge-kit.vercel.app)
+brings USDC to Arc over Circle CCTP V2 with the Forwarding Service (one signature on the source
+chain, no gas on Arc) and can chain a `buy` on the platform once it lands. Circle already quotes
+forwarded routes into Arc (domain 26) from every major mainnet and Base's TokenMessengerV2 has
+Arc registered; what is missing at the time of writing is only Arc's public mainnet RPC.
+Steps, in order, once the chain is up:
+
+1. Arc mainnet RPC + explorer go into `docs/config.js` (`mainnet.rpcs`, `mainnet.explorer`);
+   the scanner writes them with the rest of the block. The kit reads them through `arcRpcs`
+   and `arcExplorer`, nothing is hard-coded on its side.
+2. Confirm the route from the kit folder, read-only:
+
+   ```bash
+   npm run preflight:mainnet     # every source chain: chainId, USDC decimals, Arc registered, Iris forward quote
+   ```
+
+   Also fill `ARC.mainnet.rpcs` in `arc-bridge-kit.js` with the same RPC so the preflight
+   checks Arc itself (USDC face `0x3600…0000` = 6 decimals, `MessageTransmitterV2.localDomain() == 26`).
+3. Ship it: copy `arc-bridge-kit.js` to `docs/vendor/`, add its line to `docs/vendor/PROVENANCE.md`,
+   load it after `ethers.umd.min.js` and `config.js`. Mount as in
+   `arc-bridge-kit/INTEGRATION-ANEWONE.md`: `network` from `cfg.mainnet.live`, the site's own
+   EIP-1193 provider, `onConnect` = the site's connect flow, and for Web3Auth the `switchChain`
+   option (its embedded wallet needs `addChain`/`switchChain`, not `wallet_switchEthereumChain`).
+4. On a coin page pass `destination` = `buy(token, minOut)` with `value = received * 1e12 - gas`
+   (CCTP mints 6-decimal units, Arc's native USDC is 18-decimal). `quoteBuy` reverts on a
+   graduated curve before the wallet opens; the anti-snipe cap still applies in the first blocks.
+5. First real run, small: 2 USDC from Base mainnet, Fast, recipient = the connected wallet,
+   then buy $NOAH with it. Expect ~0.02 USDC of Circle fees and 20-60 s. If the forwarder is
+   late the widget offers "Mint on Arc" (`receiveMessage` from the user's wallet, needs a little
+   USDC on Arc); the attestation is kept in localStorage.
+6. Paying with something other than USDC is in the kit (14 Sep 2026): LI.FI quotes the
+   same-chain swap into USDC, the kit sends it, measures the USDC that arrived and burns that.
+   Works on Base Sepolia today (ETH → USDC → Arc → $NOAH can be rehearsed end to end) and on
+   12 of the 14 mainnet sources (`npm run preflight:mainnet` prints an `info` line per chain;
+   World Chain and Sei have no LI.FI swap, they bridge USDC only). Keyless LI.FI is ~200
+   requests / 2 h per visitor IP, which showed up on the very first testnet try. Before launch:
+   free partner key from portal.li.fi → `LIFI_API_KEY` in the anewone Vercel project → copy the
+   kit's `api/lifi/[...path].js` into anewone's `api/` → mount with
+   `lifiApi: location.origin + "/api/lifi"`. The key never reaches the browser.
+7. LI.FI into Arc: the kit's `router: "auto"` asks LI.FI for a route into chain 5042 on every
+   quote (cached 10 min). Today it answers "not supported"; the day it does, any-token → USDC on
+   Arc becomes one LI.FI transaction and CCTP stays the fallback, no redeploy needed. Check with
+   `npm run preflight:mainnet` ("LI.FI direct route into Arc: YES").
