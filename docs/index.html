@@ -1064,31 +1064,95 @@
   .frow { animation: frowIn .35s ease; }
   @keyframes frowIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .frow { animation: none; } }
+  /* ---- token card v3: the artwork, then the numbers a trader scans for ----
+     This sits after every older card rule on purpose. The floor carried two
+     generations of .cab styles, and the later, older block kept quietly winning
+     (padding, border, the star). The badge modifiers are is-grad / is-uni because a
+     leftover `.cab .grad` rule turned a plain `grad` class into a gold pill. The rows are
+     .cstat and the chart .cchart because .crow and .cspark already style the comment
+     list and an older card, and borrowing those names borrowed their padding and borders. */
+  .grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .cab { padding: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-md); backdrop-filter: none; }
+  .cab::before { display: none; }
+  .cab:hover { transform: translateY(-2px); border-color: var(--border-2); box-shadow: var(--shadow-lg);
+    background: var(--surface); }
+  .cab .cart { position: relative; aspect-ratio: 4 / 3; border-radius: 0; overflow: hidden; background: var(--card); }
+  .cab .cimg { width: 100%; height: 100%; object-fit: cover; border: 0; border-radius: 0;
+    display: block; background: var(--card); }
+  .cab .cimg.ph { display: grid; place-items: center; font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 44px; color: var(--faint); background: var(--card); }
+  .cab .cbadge { position: absolute; top: 10px; left: 10px; z-index: 2; margin: 0; border: 0;
+    font-size: 10px; font-weight: 700; letter-spacing: .4px; line-height: 1.2; border-radius: 999px;
+    padding: 4px 9px; background: rgba(10,10,14,.72); color: #fff; backdrop-filter: blur(6px); }
+  .cab .cbadge.is-grad { background: var(--accent); color: #04241a; }
+  .cab .cbadge.is-uni { background: #ff007a; color: #fff; }
+  .cab .star { position: absolute; top: 8px; right: 8px; left: auto; z-index: 2; width: 28px; height: 28px;
+    display: grid; place-items: center; border-radius: 999px; background: rgba(10,10,14,.45);
+    color: #fff; font-size: 14px; line-height: 1; cursor: pointer; backdrop-filter: blur(6px); }
+  .cab .star.on { color: var(--gold); }
+  .cab .cprog { position: absolute; left: 10px; bottom: 12px; z-index: 2; font-size: 10.5px; font-weight: 600;
+    color: #fff; background: rgba(10,10,14,.62); border-radius: 999px; padding: 3px 9px;
+    backdrop-filter: blur(6px); font-variant-numeric: tabular-nums; }
+  .cab .cbar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(10,10,14,.22); }
+  .cab .cbar i { display: block; height: 100%; background: var(--accent); }
+  .cab .cbody { padding: 12px 14px; }
+  .cab .csym { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -.2px;
+    color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 2px; }
+  .cab .cname { font-size: 12.5px; font-weight: 500; color: var(--dim); margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cab .cstat { display: grid; gap: 6px; margin-top: 11px; }
+  .cab .cstat.two { grid-template-columns: 1fr 1fr; }
+  .cab .cstat.three { grid-template-columns: 1fr 1fr 1fr; margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border); }
+  .cab .cstat > div { min-width: 0; }
+  .cab .cstat > div:last-child { text-align: right; }
+  .cab .cstat.three > div:nth-child(2) { text-align: center; }
+  .cab .cstat span { display: block; font-size: 10.5px; color: var(--faint); }
+  .cab .cstat b { display: block; margin-top: 1px; font-family: var(--mono); font-size: 13px; font-weight: 600;
+    color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; border-radius: 4px; }
+  .cab .cstat b.up { color: var(--green); }
+  .cab .cstat b.down { color: var(--red); }
+  .cab .cstat b.cdim { color: var(--faint); }
+  .cab .cpx sub { font-size: .72em; vertical-align: -.2em; margin: 0 1px; }
+  .cab .cpx.flash-up { animation: pxUp 1.4s ease-out; }
+  .cab .cpx.flash-down { animation: pxDown 1.4s ease-out; }
+  @keyframes pxUp { from { color: var(--green); background: rgba(var(--green-rgb), .22);
+    box-shadow: 0 0 0 3px rgba(var(--green-rgb), .22); } to { background: transparent; box-shadow: 0 0 0 3px transparent; } }
+  @keyframes pxDown { from { color: var(--red); background: rgba(var(--red-rgb), .22);
+    box-shadow: 0 0 0 3px rgba(var(--red-rgb), .22); } to { background: transparent; box-shadow: 0 0 0 3px transparent; } }
+  @media (prefers-reduced-motion: reduce) { .cab .cpx.flash-up, .cab .cpx.flash-down { animation: none; } }
+  .cab .cchart { height: 30px; margin-top: 10px; padding-top: 8px; box-sizing: content-box;
+    border-top: 1px solid var(--border); }
+  .cab .cchart svg { display: block; width: 100%; height: 100%; }
+  .cab .cfoot { margin-top: 8px; }
+
   /* mobile: cards collapse into a ranked compact list (rank · avatar · name · spark) */
   @media (max-width: 640px) {
     /* The floor becomes a list on phones. Every child is placed explicitly: the
        card's children are laid out for the desktop tile, and left to auto-flow
        they land in whatever cell is free and overlap each other. */
     .grid { grid-template-columns: 1fr; gap: 9px; }
-    .cab { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto;
-      column-gap: 11px; row-gap: 1px; align-items: center; padding: 11px 12px; }
-    .cab::before { display: none; }          /* the desktop hover strip */
-    /* static, so the star below anchors to the card instead of the 46px thumb */
-    .cab .cart { grid-column: 1; grid-row: 1 / span 2; width: 46px; height: 46px;
-      aspect-ratio: auto; position: static; }
-    .cab .cbadge { display: none; }          /* no room beside a 46px thumb */
-    /* anchored to the card, not the thumb; the dark pill was drawn to sit on
-       artwork and reads as a smudge on a plain card row */
-    .cab .star { top: 7px; right: 8px; background: none; color: var(--faint);
-      width: 22px; height: 22px; font-size: 15px; }
-    .cab .cname { grid-column: 2; grid-row: 1; margin: 0; font-size: 14px; }
-    .cab .ctick { grid-column: 2; grid-row: 2; }
-    .cab .cmc { grid-column: 3; grid-row: 1 / span 2; margin: 0 26px 0 0;
-      justify-self: end; text-align: right; }
-    .cab .bar { grid-column: 1 / -1; grid-row: 3; margin-top: 9px; }
-    /* the address gets its own full-width line — it is 20 monospace characters
-       and will not share a row with anything else on a 390px screen */
-    .cab .cfoot { grid-column: 1 / -1; grid-row: 4; margin-top: 2px; }
+    /* a row: the thumb, then symbol and live price side by side, then the day's numbers */
+    .cab { display: grid; grid-template-columns: 52px minmax(0, 1fr); column-gap: 12px;
+      align-items: center; padding: 10px 12px; }
+    /* static, so the star anchors to the card instead of the 52px thumb */
+    .cab .cart { width: 52px; height: 52px; aspect-ratio: auto; border-radius: 12px; position: static; }
+    .cab .cbadge, .cab .cprog, .cab .cbar, .cab .cchart { display: none; }
+    .cab .star { top: 8px; right: 8px; width: 22px; height: 22px; background: none; color: var(--faint);
+      font-size: 15px; backdrop-filter: none; }
+    .cab .cbody { padding: 0 26px 0 0; display: grid; grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 10px; row-gap: 4px; align-items: center; }
+    .cab .chead { grid-column: 1; grid-row: 1; min-width: 0; }
+    .cab .csym { font-size: 15px; }
+    .cab .cstat.two { grid-column: 2; grid-row: 1; margin: 0; display: block; text-align: right; }
+    .cab .cstat.two .cmcap, .cab .cstat.two span { display: none; }
+    .cab .cstat.two b { font-size: 14px; }
+    .cab .cstat.three { grid-column: 1 / -1; grid-row: 2; margin: 0; padding: 0; border: 0; }
+    .cab .cstat.three span { display: inline; margin-right: 4px; }
+    .cab .cstat.three b { display: inline; font-size: 12px; }
+    .cab .cfoot { grid-column: 1 / -1; grid-row: 3; margin-top: 0; }
     /* an 11px icon is not a thumb target; pad the button, pull the row back up */
     .cab .cfoot .ca { padding: 7px 8px 7px 0; }
     .cab .cfoot .ca svg { width: 13px; height: 13px; }
@@ -2904,6 +2968,21 @@ function sparkSvg(addr, h = 34) {
   </svg>`;
 }
 
+// Last price each card showed, so a card can flash when a trade moves it.
+const cardPx = {};
+// A price the way people read one on a screener. A memecoin price is mostly zeros,
+// so from four of them on the zeros are counted and written small: $0.0₄2139 is
+// $0.00002139. Above that, four significant digits.
+function priceUsdHtml(wei) {
+  const n = Number(ethers.formatEther(wei));
+  if (!isFinite(n) || n <= 0) return "—";
+  if (n >= 1) return "$" + n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  if (n >= 0.001) return "$" + n.toPrecision(4);
+  const m = n.toFixed(20).match(/^0\.(0+)(\d{4})/);
+  if (!m) return "$" + n.toPrecision(4);
+  return m[1].length >= 4 ? `$0.0<sub>${m[1].length}</sub>${m[2]}` : `$0.${m[1]}${m[2]}`;
+}
+
 function cardHtml(addr) {
   const { name, symbol } = tokenMeta[addr];
   const inf = tokenInfo[addr];
@@ -2912,16 +2991,32 @@ function cardHtml(addr) {
   const age = ageText(latestBlock && inf.createdBlock ? latestBlock - Number(inf.createdBlock) : null);
   const a = esc(addr);
   const short = addr.slice(0, 6) + "…" + addr.slice(-4);
-  // The artwork is the card. Everything else is one line of numbers underneath,
-  // so a wall of tokens reads by picture first — which is how people actually
-  // scan a launchpad.
-  const badge = migratedSet.has(addr)
-    ? '<span class="cbadge uni">ON UNISWAP</span>'
+  const migrated = migratedSet.has(addr);
+  const done = migrated || inf.graduated;
+  // The artwork is still what a wall of tokens is scanned by. Under it now sit the
+  // numbers a trader actually decides on: the live price in USDC, the day's move,
+  // how much traded and how many wallets did it.
+  const badge = migrated
+    ? '<span class="cbadge is-uni">ON UNISWAP</span>'
     : inf.graduated
-    ? '<span class="cbadge grad">GRADUATED</span>'
-    : pct >= 50 ? '<span class="cbadge">GRADUATING</span>'
+    ? '<span class="cbadge is-grad">GRADUATED</span>'
+    : pct >= GRADUATING_MIN_PCT ? '<span class="cbadge">GRADUATING</span>'
     : (latestBlock && inf.createdBlock && latestBlock - Number(inf.createdBlock) < 20000)
       ? '<span class="cbadge">NEW</span>' : "";
+  // a trade moves pxWad through the live tail, which repaints the floor: comparing
+  // with what this card last showed is what makes the move visible
+  const px = priceOf(inf);
+  const prev = cardPx[addr];
+  cardPx[addr] = px;
+  const flash = prev !== undefined && px !== prev ? (px > prev ? " flash-up" : " flash-down") : "";
+  const ch = pct24(addr);
+  const chHtml = ch === null
+    ? '<b class="cdim">—</b>'
+    : `<b class="${ch >= 0 ? "up" : "down"}">${ch >= 0 ? "+" : ""}${ch.toFixed(2)}%</b>`;
+  const vol = covers24h ? compactUsd(st.vol24 || 0n) : "…";
+  const traders = covers24h ? String(st.traders24 || 0) : "…";
+  const prog = done ? "" : `<span class="cprog">${pct < 1 ? "&lt;1" : Math.floor(pct)}% to graduation</span>`;
+  const barW = done ? 100 : Math.min(Math.max(pct, 1.5), 100);
   return `<div class="cab" onclick="openTrade('${a}')">
     <div class="cart">
       <div class="cimg ph" id="ph-${a}" aria-hidden="true">${esc(String(symbol || "?").slice(0, 1))}</div>
@@ -2929,22 +3024,36 @@ function cardHtml(addr) {
       ${badge}
       <span class="star ${isWatched(addr) ? "on" : ""}" onclick="toggleWatch('${a}', event)"
         title="Watchlist">${isWatched(addr) ? "★" : "☆"}</span>
+      ${prog}
+      <div class="cbar"><i style="width:${barW}%"></i></div>
     </div>
-    <div class="cname">${esc(name)}</div>
-    <div class="ctick">$${esc(symbol)}</div>
-    <div class="cmc">${compactUsd(marketCapWei(inf))} <small>MC</small>${chip24Html(addr)}</div>
-    <div class="bar"><i style="width:${Math.min(Math.max(pct, 1.5), 100)}%"></i></div>
-    <div class="cfoot">
-      <button type="button" class="ca" onclick="copyCa('${a}', event)"
-        title="Copy contract address&#10;${a}">
-        <em>CA</em> ${esc(short)}
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="9" y="9" width="12" height="12" rx="2"/>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-        </svg>
-      </button>
-      <span class="age">${esc(age)}</span>
+    <div class="cbody">
+      <div class="chead">
+        <div class="csym">$${esc(symbol)}</div>
+        <div class="cname">${esc(name)}</div>
+      </div>
+      <div class="cstat two">
+        <div class="cmcap"><span>Market cap</span><b>${compactUsd(marketCapWei(inf))}</b></div>
+        <div><span>Price</span><b class="cpx${flash}" title="${Number(ethers.formatEther(px))} USDC" aria-label="Price ${Number(ethers.formatEther(px))} USDC">${priceUsdHtml(px)}</b></div>
+      </div>
+      <div class="cstat three">
+        <div><span>24h</span>${chHtml}</div>
+        <div><span>Volume</span><b>${vol}</b></div>
+        <div><span>Traders</span><b>${traders}</b></div>
+      </div>
+      <div class="cchart">${sparkSvg(addr, 30)}</div>
+      <div class="cfoot">
+        <button type="button" class="ca" onclick="copyCa('${a}', event)"
+          title="Copy contract address&#10;${a}">
+          <em>CA</em> ${esc(short)}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="12" height="12" rx="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+        <span class="age">${esc(age)}</span>
+      </div>
     </div>
   </div>`;
 }
