@@ -99,6 +99,11 @@
   .sel { position: relative; }
   .sel:after { content: ""; position: absolute; right: 12px; top: 50%; width: 7px; height: 7px; border-right: 1.5px solid var(--dim); border-bottom: 1.5px solid var(--dim); transform: translateY(-70%) rotate(45deg); pointer-events: none; }
   .hint { font-size: 12px; color: var(--faint); margin-top: 8px; }
+  .hint.bad { color: var(--red); }
+  .hint.good { color: var(--green); }
+  .field.mono { font-family: var(--mono); font-size: 12.5px; }
+  .or { display: flex; align-items: center; gap: 10px; margin: 12px 0 8px; font-size: 11.5px; color: var(--faint); font-family: var(--mono); letter-spacing: .4px; }
+  .or:before, .or:after { content: ""; flex: 1; height: 1px; background: var(--border); }
   .pill { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--mono); padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--dim); }
   .pill.test { color: var(--gold); }
   .chains { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
@@ -145,7 +150,10 @@
       <div class="card">
         <h3>Then buy a coin with it</h3>
         <div class="sel"><select class="field" id="buy"><option value="">just bring USDC aboard</option></select></div>
-        <div class="hint" id="buyHint">Loading the open curves…</div>
+        <div class="hint" id="buyHint">Ranking the floor by market cap…</div>
+        <div class="or"><span>or paste a coin's contract address</span></div>
+        <input class="field mono" id="ca" placeholder="0x… any A NEW ONE coin, wherever you found it" spellcheck="false" autocomplete="off">
+        <div class="hint" id="caHint"></div>
       </div>
       <div class="card">
         <h3>How the trip goes</h3>
@@ -184,7 +192,26 @@
   // read pool: strings as-is, keyed entries only on the hosts their domain lock accepts
   const arcRpcs = (arcCfg.rpcs || [arcCfg.rpc]).filter(Boolean)
     .map((r) => (typeof r === "string" ? r : (r.hosts && r.hosts.includes(host) ? r.url : null))).filter(Boolean);
-  const readProvider = new ethers.JsonRpcProvider(arcRpcs[0] || arcCfg.rpc, undefined, { staticNetwork: true });
+  // One provider per read RPC. Reads walk the pool in config order and move on when one throttles.
+  const readProviders = (arcRpcs.length ? arcRpcs : [arcCfg.rpc]).map((u) =>
+    new ethers.JsonRpcProvider(u, undefined, { staticNetwork: true, polling: false }));
+  let readProvider = readProviders[0];
+  async function readAny(fn) {
+    let last;
+    for (const p of readProviders) {
+      try { return await fn(p); }
+      catch (e) { last = e; if (!/429|500|502|503|limit|timeout|failed to fetch|network/i.test(String(e && (e.shortMessage || e.message)))) throw e; }
+    }
+    throw last;
+  }
+  // a few reads at a time: enough to load the floor in a couple of seconds, not enough to trip throttles
+  async function mapLimit(items, limit, fn) {
+    const out = new Array(items.length); let i = 0;
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+      for (;;) { const k = i++; if (k >= items.length) return; out[k] = await fn(items[k], k); }
+    }));
+    return out;
+  }
 
   // ---- theme switcher (same key as the floor)
   const KEY = "anewone_theme";
@@ -213,67 +240,169 @@
     "function tokensCount() view returns (uint256)",
     "function allTokens(uint256) view returns (address)",
     "function info(address) view returns (address creator, uint64 createdBlock, bool graduated, uint256 vUsdc, uint256 tReserve, uint256 raised, string metadataURI)",
+    "function v3Factory() view returns (address)",
+    "function migrated(address) view returns (bool)",
+    "function curveReopened(address) view returns (bool)",
     "function quoteBuy(address token, uint256 usdcIn) view returns (uint256)",
     "function buy(address token, uint256 minTokensOut) payable",
   ];
+  const ERC20_ABI = ["function symbol() view returns (string)", "function name() view returns (string)",
+    "function approve(address,uint256) returns (bool)", "function allowance(address,address) view returns (uint256)"];
+  // Graduated coins live in Uniswap v3 (1% tier, USDC/token). Buying there needs Uniswap's router
+  // and quoter on Arc; both come from config.js (uniswap.<net>.router / .quoter) once Uniswap
+  // publishes its Arc deployment. USDC's ERC-20 face is approved to the router, never wrapped.
+  const FACTORY_ABI = ["function getPool(address,address,uint24) view returns (address)"];
+  const POOL_ABI = ["function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16,uint16,uint16,uint8,bool)", "function token0() view returns (address)"];
+  const ROUTER_ABI = ["function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96)) payable returns (uint256)"];
+  const QUOTER_ABI = ["function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96)) returns (uint256 amountOut,uint160,uint32,uint256)"];
+  const POOL_FEE = 10000;
+  const uni = (cfg.uniswap && cfg.uniswap[net]) || {};
+  let uniOk = false;   // router has code on this chain and reports the platform's factory
+  async function checkRouter() {
+    uniOk = false;
+    if (!uni.router || !dexFactory || dexFactory === ethers.ZeroAddress) return;
+    try {
+      const code = await readAny((p) => p.getCode(uni.router));
+      if (!code || code === "0x") return;
+      const f = await readAny((p) => new ethers.Contract(uni.router, ["function factory() view returns (address)"], p).factory());
+      uniOk = f.toLowerCase() === dexFactory.toLowerCase();
+    } catch { uniOk = false; }
+  }
+  const SUPPLY = 1_000_000_000n; // every launch mints 1B tokens, so market cap = price × 1B
+  const fmtUsd = (wei) => { const n = Number(wei) / 1e18; return n >= 1e6 ? "$" + (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? "$" + (n / 1e3).toFixed(1) + "K" : "$" + n.toFixed(n >= 100 ? 0 : 2); };
   const platformAddr = arcCfg.platform;
-  const platform = platformAddr ? new ethers.Contract(platformAddr, PLATFORM_ABI, readProvider) : null;
+  const platformOn = (p) => new ethers.Contract(platformAddr, PLATFORM_ABI, p);
+  const platform = platformAddr ? new Proxy({}, { get: (_, fn) => (...args) => readAny((p) => platformOn(p)[fn](...args)) }) : null;
+  const erc20On = (addr) => new Proxy({}, { get: (_, fn) => (...args) => readAny((p) => new ethers.Contract(addr, ERC20_ABI, p)[fn](...args)) });
   const buySel = document.getElementById("buy");
   const buyHint = document.getElementById("buyHint");
   const wanted = (new URLSearchParams(location.search).get("token") || "").toLowerCase();
-  let tokens = [];
+  let tokens = [];          // menu entries (top 10 by market cap) + any coin resolved by address
+  let dexFactory = null;    // address(0) on a platform without Uniswap: graduated curves keep trading
+
+  /** Where a coin trades: "curve" (bonding curve), "pool" (Uniswap v3 after migration), or "closed"
+   *  (graduated, waiting for its move). Returns null when the address is not an A NEW ONE coin. */
+  async function describe(addr) {
+    const inf = await platform.info(addr);
+    if (inf.creator === ethers.ZeroAddress) return null;
+    const t = erc20On(addr);
+    let symbol = addr.slice(0, 8), name = "";
+    try { symbol = await t.symbol(); name = await t.name(); } catch {}
+    const d = { address: ethers.getAddress(addr), symbol, name, graduated: inf.graduated, venue: "curve", pool: null, mcap: 0n };
+    if (inf.graduated && dexFactory && dexFactory !== ethers.ZeroAddress) {
+      let migrated = false, reopened = false;
+      try { migrated = await platform.migrated(addr); reopened = await platform.curveReopened(addr); } catch {}
+      if (migrated) {
+        d.venue = "pool";
+        try {
+          d.pool = await readAny((p) => new ethers.Contract(dexFactory, FACTORY_ABI, p).getPool(arcCfg.usdc || "0x3600000000000000000000000000000000000000", addr, POOL_FEE));
+          if (d.pool && d.pool !== ethers.ZeroAddress) {
+            const slot0 = await readAny((p) => new ethers.Contract(d.pool, POOL_ABI, p).slot0());
+            const token0 = await readAny((p) => new ethers.Contract(d.pool, POOL_ABI, p).token0());
+            // price of 1 token in USDC-wei from sqrtPriceX96 (both sides 18 decimals on Arc)
+            const q = BigInt(slot0.sqrtPriceX96);
+            const p1per0 = (q * q * 10n ** 18n) >> 192n;               // token1 per token0, ×1e18
+            const usdcIsToken0 = token0.toLowerCase() === (arcCfg.usdc || "0x3600000000000000000000000000000000000000").toLowerCase();
+            const priceWad = usdcIsToken0 ? (p1per0 > 0n ? (10n ** 36n) / p1per0 : 0n) : p1per0;
+            d.mcap = priceWad * SUPPLY;
+            d.priceWad = priceWad;
+          } else d.venue = "closed";
+        } catch { d.venue = "closed"; }
+      } else if (!reopened) d.venue = "closed";
+    }
+    if (d.venue === "curve") d.mcap = inf.tReserve > 0n ? (inf.vUsdc * SUPPLY * 10n ** 18n) / inf.tReserve : 0n;
+    return d;
+  }
+
+  const venueTag = (t) => t.venue === "pool" ? "Uniswap" : "curve";
+  function addOption(t) {
+    if ([...buySel.options].some((o) => o.value === t.address)) return;
+    buySel.add(new Option("$" + t.symbol + " · " + t.name + " · " + fmtUsd(t.mcap) + " mcap · " + venueTag(t), t.address));
+  }
 
   async function loadTokens() {
     if (!platform) { buyHint.textContent = "The floor is not deployed on " + net + " yet; bridging only."; return; }
     try {
+      try { dexFactory = await platform.v3Factory(); } catch { dexFactory = ethers.ZeroAddress; }
+      await checkRouter();
       const n = Number(await platform.tokensCount());
-      const out = [];
-      for (let i = n - 1; i >= 0 && out.length < 12; i--) {
-        const a = await platform.allTokens(i);
-        const inf = await platform.info(a);
-        if (inf.graduated) continue;
-        const t = new ethers.Contract(a, ["function symbol() view returns (string)", "function name() view returns (string)"], readProvider);
-        let symbol = a.slice(0, 8), name = "";
-        try { symbol = await t.symbol(); name = await t.name(); } catch {}
-        out.push({ address: a, symbol, name });
-      }
-      // a coin linked from its own page but outside the latest 12 still gets an entry
-      if (wanted && !out.some((t) => t.address.toLowerCase() === wanted)) {
-        try {
-          const inf = await platform.info(wanted);
-          if (inf.creator !== ethers.ZeroAddress && !inf.graduated) {
-            const t = new ethers.Contract(wanted, ["function symbol() view returns (string)", "function name() view returns (string)"], readProvider);
-            out.unshift({ address: ethers.getAddress(wanted), symbol: await t.symbol(), name: await t.name() });
-          }
-        } catch {}
-      }
-      tokens = out;
-      for (const t of tokens) buySel.add(new Option("$" + t.symbol + " · " + t.name, t.address));
-      const pre = tokens.find((t) => t.address.toLowerCase() === wanted);
-      if (pre) buySel.value = pre.address;
-      buyHint.textContent = tokens.length + " coins trading on their curve right now. The whole bridged amount (minus gas) is spent, 3% slippage guard.";
+      const all = await mapLimit(Array.from({ length: n }, (_, i) => i), 4, (i) => platform.allTokens(i));
+      const described = await mapLimit(all, 3, (a) => describe(a).catch(() => null));
+      const rows = [];
+      for (const r of described) if (r && (r.venue === "curve" || (r.venue === "pool" && uniOk))) rows.push(r);
+      rows.sort((a, b) => (b.mcap > a.mcap ? 1 : b.mcap < a.mcap ? -1 : 0));
+      tokens = rows.slice(0, 10);
+      for (const t of tokens) addOption(t);
+      const pools = rows.filter((r) => r.venue === "pool").length;
+      buyHint.textContent = "Top 10 by market cap on A NEW ONE, out of " + rows.length + " buyable coins" + (pools ? " (" + pools + " on Uniswap)" : "") +
+        ". The whole bridged amount (minus gas) is spent; 3% slippage guard on curves, 5% in pools.";
+      if (wanted) await pickByAddress(wanted, true);
     } catch (e) { buyHint.textContent = "Could not load the floor: " + (e.shortMessage || e.message); }
   }
+
+  // ---- paste any coin's address: on the floor → buy it wherever it trades; otherwise say what it is
+  const caIn = document.getElementById("ca");
+  const caHint = document.getElementById("caHint");
+  function say(el, text, cls) { el.textContent = text; el.className = "hint" + (cls ? " " + cls : ""); }
+  async function pickByAddress(raw, quiet) {
+    const addr = String(raw || "").trim();
+    if (!addr) { say(caHint, ""); return; }
+    if (!/^0x[0-9a-fA-F]{40}$/.test(addr)) { say(caHint, "That is not a contract address (0x + 40 hex characters).", "bad"); return; }
+    if (!platform) { say(caHint, "The floor is not deployed on " + net + " yet.", "bad"); return; }
+    say(caHint, "Looking it up on the floor…");
+    let d = null;
+    try { d = await describe(addr); } catch (e) { say(caHint, "Could not read it: " + (e.shortMessage || e.message), "bad"); return; }
+    if (!d) { say(caHint, "Not an A NEW ONE coin. The gangway buys what launched on this floor; for coins elsewhere on Arc, bring USDC aboard and trade where they live.", "bad"); return; }
+    if (d.venue === "closed") { say(caHint, "$" + d.symbol + " has graduated and is waiting for its move into Uniswap; nothing trades it right now. Bring USDC aboard and come back once it has moved.", "bad"); return; }
+    if (d.venue === "pool" && !uniOk) { say(caHint, "$" + d.symbol + " trades on Uniswap v3 on Arc. Buying there from the gangway switches on once Uniswap's router on Arc is verified; until then bring USDC aboard and swap on Uniswap.", "bad"); return; }
+    addOption(d);
+    if (!tokens.some((t) => t.address === d.address)) tokens.push(d);
+    buySel.value = d.address;
+    say(caHint, "$" + d.symbol + " · " + d.name + " · " + fmtUsd(d.mcap) + " market cap · " + (d.venue === "pool" ? "on Uniswap v3" : "on its curve") + ". Selected.", "good");
+    if (!quiet) boot();
+  }
+  let caTimer = null;
+  caIn.addEventListener("input", () => { clearTimeout(caTimer); caTimer = setTimeout(() => pickByAddress(caIn.value), 400); });
+  buySel.addEventListener("change", () => { say(caHint, ""); });
 
   function destinationFor() {
     const addr = buySel.value;
     if (!platform || !addr) return null;
-    const tok = tokens.find((t) => t.address === addr) || { symbol: addr.slice(0, 8) };
+    const tok = tokens.find((t) => t.address === addr) || { symbol: addr.slice(0, 8), venue: "curve" };
+    const onPool = tok.venue === "pool";
     return {
-      label: "Buy $" + tok.symbol + " on the floor",
+      label: "Buy $" + tok.symbol + (onPool ? " on Uniswap" : " on the floor"),
       buttonLabel: "Buy $" + tok.symbol,
-      doneLabel: "$" + tok.symbol + " was bought on its curve",
+      doneLabel: "$" + tok.symbol + " was bought " + (onPool ? "on Uniswap v3" : "on its curve"),
       auto: true,
       build: async ({ received, signer, ethers }) => {
-        const c = new ethers.Contract(platformAddr, PLATFORM_ABI, signer);
         const native = received * 10n ** 12n;                 // 6-dec USDC from CCTP -> 18-dec native on Arc
         const fee = await signer.provider.getFeeData();
         const gasPrice = fee.maxFeePerGas || fee.gasPrice || 0n;
         const reserve = gasPrice > 0n ? gasPrice * 400000n * 2n : 10n ** 16n;
-        const value = native - reserve;
+        const value = native - (onPool ? reserve * 2n : reserve); // a pool buy is two transactions on Arc
         if (value <= 0n) throw new Error("bridged amount too small to cover gas on Arc");
-        const quoted = await c.quoteBuy(addr, value);
-        return { to: platformAddr, value, data: c.interface.encodeFunctionData("buy", [addr, quoted * 97n / 100n]) };
+        if (!onPool) {
+          const c = new ethers.Contract(platformAddr, PLATFORM_ABI, signer);
+          const quoted = await c.quoteBuy(addr, value);
+          return { to: platformAddr, value, data: c.interface.encodeFunctionData("buy", [addr, quoted * 97n / 100n]) };
+        }
+        // Uniswap v3: USDC's ERC-20 face is approved to the router and swapped exact-in on the 1% pool.
+        const usdc = arcCfg.usdc || "0x3600000000000000000000000000000000000000";
+        const me = await signer.getAddress();
+        const erc = new ethers.Contract(usdc, ERC20_ABI, signer);
+        if ((await erc.allowance(me, uni.router)) < value) { const tx = await erc.approve(uni.router, value); await tx.wait(); }
+        let minOut = 0n;
+        if (uni.quoter) {
+          const q = new ethers.Contract(uni.quoter, QUOTER_ABI, signer);
+          const r = await q.quoteExactInputSingle.staticCall({ tokenIn: usdc, tokenOut: addr, amountIn: value, fee: POOL_FEE, sqrtPriceLimitX96: 0 });
+          minOut = (r[0] ?? r.amountOut) * 95n / 100n;
+        } else if (tok.priceWad > 0n) {
+          minOut = (value * 10n ** 18n / tok.priceWad) * 99n / 100n * 95n / 100n;   // spot price, 1% fee, 5% guard
+        }
+        const router = new ethers.Contract(uni.router, ROUTER_ABI, signer);
+        return { to: uni.router, value: 0n, data: router.interface.encodeFunctionData("exactInputSingle", [{
+          tokenIn: usdc, tokenOut: addr, fee: POOL_FEE, recipient: me, amountIn: value, amountOutMinimum: minOut, sqrtPriceLimitX96: 0 }]) };
       },
     };
   }
