@@ -190,6 +190,8 @@
   .lrow .mc { font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .lrow .pc { font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .lrow .pc.up { color: var(--green); } .lrow .pc.dn { color: var(--red); }
+  .lrow .pc.dim { color: var(--faint); }
+  .lrow .pc.gradtag { font-size: 9.5px; letter-spacing: .4px; color: var(--accent); }
 
   /* right rail: standings */
   .bprow { display: flex; align-items: center; gap: 10px; padding: 9px 14px;
@@ -2034,11 +2036,26 @@ async function hydrateFromFloor() {
   }
   $("statCount").textContent = String(addrs.length);
 
-  // only adopt the shared index if it reaches further than what this browser
-  // already has cached — a returning visitor may be ahead of the published file
+  // Which index to start from: the published one, unless this browser's own cache
+  // reaches further back. This used to compare only how far FORWARD each one went, and
+  // when the local cache was not ahead it adopted neither: the page started with no
+  // index at all, the live tail (which needs one) stayed idle, and until the five-minute
+  // poll every card read "..." for volume, traders and age. A returning visitor whose
+  // cache the live tail had moved forward hit that on every single load.
   const idx = d.index;
   const local = loadStatsCache();
-  if (idx && typeof idx.hi === "number" && (local.hi === null || idx.hi > local.hi)) {
+  // ages need a current block whichever index is used
+  latestBlock = Math.max(latestBlock || 0, d.tip || 0);
+  const localIsDeeper = local.hi !== null && local.lo !== null &&
+    !(idx && typeof idx.lo === "number" && idx.lo <= local.lo);
+  if (localIsDeeper) {
+    // keep what this browser already knows; the live tail carries it forward from its tip
+    statsIdx = local;
+    indexFloor = Math.min(...addrs.map((a) => Number(tokenInfo[a].createdBlock)));
+    latestBlock = Math.max(latestBlock, local.hi);
+    rebuildStats();
+    renderFeed();
+  } else if (idx && typeof idx.hi === "number") {
     statsIdx = {
       lo: idx.lo, hi: idx.hi,
       agg: rekey(idx.agg, (v) => ({ volAll: BigInt(v.volAll), trades: v.trades, lastBlock: v.lastBlock || 0 })),
@@ -3787,8 +3804,18 @@ function renderLiveRail() {
   box.innerHTML = rows.map(({ a, inf, st, mc, vol }) => {
     const m = tokenMeta[a], img = safeImgSrc(tokenImg[a]);
     const age = ageText(latestBlock && inf.createdBlock ? latestBlock - Number(inf.createdBlock) : null);
-    // there is no price history per token here, so the badge shows curve progress
+    // Under the market cap: the day's price move, as a trader reads that spot. The green
+    // percentage used to be curve progress, which nobody could tell from a 24h change, so
+    // progress now appears only on the Graduating tab and says what it is.
     const prog = Number(progBps(inf)) / 100;
+    const ch = pct24(a);
+    const tag = liveSort === "grad"
+      ? (inf.graduated || migratedSet.has(a)
+        ? `<span class="pc gradtag">GRADUATED</span>`
+        : `<span class="pc" title="Progress to the 5,000 USDC graduation">${prog.toFixed(0)}% grad</span>`)
+      : ch === null
+      ? `<span class="pc dim" title="No price move to show for the last 24h">—</span>`
+      : `<span class="pc ${ch >= 0 ? "up" : "dn"}" title="24h price change">${ch >= 0 ? "+" : ""}${ch.toFixed(1)}%</span>`;
     return `<div class="lrow" onclick="openTrade('${esc(a)}')">
       ${img
         ? `<img class="av" src="${esc(img)}" alt="">`
@@ -3800,11 +3827,11 @@ function renderLiveRail() {
           `<img class="av" id="rimg-${a}" alt="" style="display:none">`}
       <span class="l">
         <span class="nm">$${esc(m.symbol || "")}</span>
-        <span class="sub">${esc(age)} · ${esc(compactUsd(st.vol24 || 0n))} vol</span>
+        <span class="sub">${esc(age)} · ${covers24h ? esc(compactUsd(st.vol24 || 0n)) : "…"} vol</span>
       </span>
       <span class="r">
         <span class="mc">${esc(compactUsd(marketCapWei(inf)))}</span>
-        <span class="pc ${prog >= 50 ? "up" : ""}">${prog.toFixed(1)}%</span>
+        ${tag}
       </span>
     </div>`;
   }).join("") || `<div class="lrow" style="color:var(--faint);cursor:default;font-size:12px">${
