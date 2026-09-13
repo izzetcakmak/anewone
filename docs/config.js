@@ -68,8 +68,12 @@ window.ANEWONE_CONFIG = {
   // in. Left empty until the link has been checked by hand against the live Uniswap app:
   // while it is empty, the trade panel links the pool on the explorer instead.
   uniswap: {
-    mainnet: { swapUrl: "" },
-    testnet: { swapUrl: "" },
+    // router / quoter: Uniswap's own Arc deployment (sdk-core ARC_ADDRESSES: SwapRouter02 and
+    // QuoterV2). The gangway (/bridge/) buys graduated coins in their Uniswap pool through them,
+    // but only after checking on-chain that the router has code and reports the platform's
+    // factory; until then, and on a platform without Uniswap, it says so instead of trading.
+    mainnet: { swapUrl: "", router: "0x53bf6b0684ec7ef91e1387da3d1a1769bc5a6f77", quoter: "0x7dfd4f31be6814d2906bde155c3e1b146eac1468" },
+    testnet: { swapUrl: "", router: "", quoter: "" },
   },
   // "Continue with Google" (embedded wallet via Web3Auth), configured PER blockchain network.
   // While testnet is live the testnet clientId is used; the moment the scanner flips
