@@ -170,7 +170,7 @@
       </div>
       <div class="card">
         <h3>Fees, plainly</h3>
-        <p>Circle takes a few basis points on fast transfers (none on standard) plus about 0.02 USDC to mint on Arc for you. LI.FI swaps carry the pool's price and a fixed fee of a cent or two. The quote shows everything before you sign, and the amount bridged after a swap is what actually arrived in your wallet, not an estimate.</p>
+        <p>Circle takes a few basis points on fast transfers (none on standard) plus about 0.02 USDC to mint on Arc for you. LI.FI swaps carry the pool's price and a fixed fee of a cent or two; on mainnet 0.25% of a non-USDC payment goes to the floor, shown as its own line. The quote shows everything before you sign, and the amount bridged after a swap is what actually arrived in your wallet, not an estimate.</p>
       </div>
     </aside>
   </div>
@@ -426,6 +426,11 @@
       ethers: window.ethers,
       network: net,
       lifiApi,
+      // 0.25% of every non-USDC payment goes to the floor's fee wallet (LI.FI integrator fee,
+      // registered as "anewone" at portal.li.fi). Mainnet only; on testnet nothing is charged.
+      lifiIntegrator: "anewone",
+      lifiFee: net === "mainnet" ? 0.0025 : 0,
+      feeLabel: "the floor",
       getProvider: () => provider,
       arcRpcs,
       arcExplorer: arcCfg.explorer || undefined,
