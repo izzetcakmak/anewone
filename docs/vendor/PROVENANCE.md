@@ -83,10 +83,10 @@ cd build-web3auth && npm ci
 | | |
 |---|---|
 | Package | `arc-bridge-kit` (in-house, izzetcakmak) |
-| Version | 0.2.0 |
+| Version | 0.2.1 |
 | File | `arc-bridge-kit.js` |
-| Size | 83,831 bytes |
-| SHA-256 | `15331cda9dc468804af229bc06d798e200155041b1f6afb7d134e34d685c0ac6` |
+| Size | 84,939 bytes |
+| SHA-256 | `bbaa1999f89e35f81f1dab0836090a7f43a7e1a9a84faec7a703a4f9484d7abb` |
 
 Built here, not fetched: the source repository lives at `C:\Users\Monster\arc-bridge-kit`
 (demo at https://arc-bridge-kit.vercel.app) and is copied verbatim. It is plain JavaScript on

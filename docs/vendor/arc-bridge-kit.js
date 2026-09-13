@@ -1,5 +1,5 @@
 /*!
- * arc-bridge-kit v0.2.0
+ * arc-bridge-kit v0.2.1
  * Drop-in "pay with anything, land USDC on Arc, then buy" kit.
  *
  *  Legs (each optional except the bridge):
@@ -31,7 +31,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.2.0";
+  const VERSION = "0.2.1";
 
   // ------------------------------------------------------------------ constants
 
@@ -412,6 +412,10 @@
    *   lifiApiKey    optional LI.FI partner key (higher rate limits)
    *   lifiApi       base URL for LI.FI calls (default https://li.quest/v1). Point it at your own
    *                 proxy that adds the key server-side, so the key never ships to browsers.
+   *   lifiIntegrator integrator string registered at portal.li.fi (default "arc-bridge-kit")
+   *   lifiFee       integrator fee on LI.FI legs as a fraction, e.g. 0.0025 = 0.25% (default 0).
+   *                 LI.FI deducts it from the swapped amount and forwards it to the integrator's
+   *                 fee wallet at execution; the quote's feeCosts already include it.
    *   slippage      swap slippage as a fraction (default 0.005 = 0.5%)
    *
    * LI.FI without a key allows ~200 requests per 2 hours per IP, so the engine is thrifty:
@@ -435,6 +439,11 @@
       this.router = opts.router || "auto";
       this.lifiApiKey = opts.lifiApiKey || null;
       this.lifiApi = (opts.lifiApi || LIFI.api).replace(/\/$/, "");
+      this.lifiIntegrator = opts.lifiIntegrator || LIFI.integrator;
+      // integrator fee on LI.FI legs, as a fraction of the swapped amount (0.0025 = 0.25%).
+      // Paid straight to the fee wallet registered for `lifiIntegrator` at portal.li.fi.
+      this.lifiFee = Number(opts.lifiFee || 0);
+      if (!(this.lifiFee >= 0 && this.lifiFee < 1)) throw new Error("lifiFee must be a fraction in [0, 1)");
       this.slippage = opts.slippage ?? 0.005;
       this._lifiBlockedUntil = 0;   // set when LI.FI answers 429; no calls until then
       this._quoteCache = new Map();  // key -> { at, value }
@@ -486,14 +495,15 @@
     async lifiQuote({ fromChain, toChain, fromToken, toToken, fromAmount, fromAddress, toAddress, order }) {
       if (Date.now() < this._lifiBlockedUntil) return { available: false, reason: "Rate limit exceeded (paused)" };
       const from = isAddress(fromAddress) ? fromAddress.toLowerCase() : "0x000000000000000000000000000000000000dead";
-      const key = [fromChain, toChain, fromToken, toToken, String(fromAmount), from, toAddress || "", order || ""].join("|").toLowerCase();
+      const key = [fromChain, toChain, fromToken, toToken, String(fromAmount), from, toAddress || "", order || "", this.lifiIntegrator, this.lifiFee].join("|").toLowerCase();
       const hit = this._quoteCache.get(key);
       if (hit && Date.now() - hit.at < 45_000) return hit.value;
       const q = new URLSearchParams({
         fromChain: String(fromChain), toChain: String(toChain), fromToken, toToken,
         fromAddress: from, fromAmount: String(fromAmount), slippage: String(this.slippage),
-        integrator: LIFI.integrator,
+        integrator: this.lifiIntegrator,
       });
+      if (this.lifiFee > 0) q.set("fee", String(this.lifiFee));
       if (toAddress && isAddress(toAddress)) q.set("toAddress", toAddress.toLowerCase());
       if (order) q.set("order", order);
       const j = await fetchJson(`${this.lifiApi}/quote?${q}`, 15000, this._lifiHeaders());
@@ -1348,6 +1358,7 @@
           if (p.swap && !p.swap.identity) {
             rows.push(el("div", {}, "Swap " + tok.symbol + " → USDC (LI.FI · " + p.swap.tool + ")"), el("div", { class: "v" }, "≈ " + formatUsdc(p.swap.toAmount) + " USDC"));
             rows.push(el("div", {}, "Swap min after " + (c0.slippage * 100) + "% slippage"), el("div", { class: "v" }, formatUsdc(p.swap.toAmountMin)));
+            if (c0.lifiFee > 0) rows.push(el("div", {}, "Swap fee to " + (opts.feeLabel || "this site") + " (included)"), el("div", { class: "v" }, (c0.lifiFee * 100).toFixed(2).replace(/\.?0+$/, "") + "%"));
           }
           rows.push(el("div", {}, "Circle protocol fee" + (p.bridge.feeBps ? " (" + p.bridge.feeBps + " bps)" : "")), el("div", { class: "v" }, formatUsdc(p.protocolFee, 4)));
           rows.push(el("div", {}, "Forwarding fee"), el("div", { class: "v" }, formatUsdc(p.forwardFee, 4)));
