@@ -85,8 +85,8 @@ cd build-web3auth && npm ci
 | Package | `arc-bridge-kit` (in-house, izzetcakmak) |
 | Version | 0.2.1 |
 | File | `arc-bridge-kit.js` |
-| Size | 84,939 bytes |
-| SHA-256 | `bbaa1999f89e35f81f1dab0836090a7f43a7e1a9a84faec7a703a4f9484d7abb` |
+| Size | 83,482 bytes (LF line endings, as committed and served) |
+| SHA-256 | `97501f0b03ae0f5c15a523225921e0839e6e7926e9df6c5731370cafc0be15ed` |
 
 Built here, not fetched: the source repository lives at `C:\Users\Monster\arc-bridge-kit`
 (demo at https://arc-bridge-kit.vercel.app) and is copied verbatim. It is plain JavaScript on
@@ -95,4 +95,5 @@ public API for same-chain swaps (through this site's `/api/lifi` proxy, which ho
 and the platform's own `buy` for the last leg. It builds no swap calldata of its own; LI.FI
 transactions are sent exactly as quoted, CCTP calls go to Circle's uniform contract addresses.
 
-To re-verify after an update: `sha256sum docs/vendor/arc-bridge-kit.js` against the kit repo.
+To re-verify after an update: `curl -s https://anewone.xyz/vendor/arc-bridge-kit.js | sha256sum` (or
+`git show HEAD:docs/vendor/arc-bridge-kit.js | sha256sum`); a Windows checkout may carry CRLF and hash differently.
