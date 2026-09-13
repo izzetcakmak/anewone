@@ -162,7 +162,14 @@ Steps, in order, once the chain is up:
    free partner key from portal.li.fi → `LIFI_API_KEY` in the anewone Vercel project → copy the
    kit's `api/lifi/[...path].js` into anewone's `api/` → mount with
    `lifiApi: location.origin + "/api/lifi"`. The key never reaches the browser.
-7. LI.FI into Arc: the kit's `router: "auto"` asks LI.FI for a route into chain 5042 on every
+7. Graduated coins from the gangway: `docs/config.js` → `uniswap.mainnet.router` / `.quoter` hold
+   Uniswap's Arc SwapRouter02 and QuoterV2 (from sdk-core `ARC_ADDRESSES`). The page only trades
+   through them once, on the live chain, `eth_getCode(router)` is non-empty and `router.factory()`
+   equals the platform's `v3Factory()`; a mismatch keeps pool buys off and the page says so. Check
+   by hand before launch: `cast code 0x53bf6b0684ec7ef91e1387da3d1a1769bc5a6f77 --rpc-url $RPC`
+   and `cast call 0x53bf…6f77 "factory()(address)"` == `$FACTORY`. Pool buys are USDC-face
+   `approve` + `exactInputSingle` on the 1% tier; QuoterV2 sets the minimum out with a 5% guard.
+8. LI.FI into Arc: the kit's `router: "auto"` asks LI.FI for a route into chain 5042 on every
    quote (cached 10 min). Today it answers "not supported"; the day it does, any-token → USDC on
    Arc becomes one LI.FI transaction and CCTP stays the fallback, no redeploy needed. Check with
    `npm run preflight:mainnet` ("LI.FI direct route into Arc: YES").
