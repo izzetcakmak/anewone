@@ -381,7 +381,10 @@ const git = (args) => spawnSync("git", args, { cwd: ROOT, encoding: "utf8", time
 function publishConfig() {
   git(["add", "docs/config.js"]);
   git(["commit", "-m", "feat: mainnet is live — flip anewone.xyz to Arc mainnet"]);
-  git(["pull", "--rebase", "origin", "main"]); // snapshot pushes may have landed meanwhile
+  // --autostash: the working tree is never clean here (the floor index and share cards are
+  // rewritten every half hour), and without it git refuses to rebase at all, the push is
+  // then rejected as non-fast-forward whenever origin is ahead, and the site never flips.
+  git(["pull", "--rebase", "--autostash", "origin", "main"]); // snapshot pushes may have landed meanwhile
   const push = git(["push", "origin", "main"]);
   if (push.status !== 0) {
     log(`git push failed: ${(push.stderr || "").slice(0, 400)}`);
@@ -489,7 +492,7 @@ async function publishViaGit(state, env, message, paths) {
   if (commit.status !== 0 && !/nothing to commit/i.test((commit.stdout || "") + (commit.stderr || ""))) {
     log(`publish: commit failed: ${((commit.stderr || "") + (commit.stdout || "")).slice(0, 200)}`);
   }
-  git(["pull", "--rebase", "origin", "main"]);
+  git(["pull", "--rebase", "--autostash", "origin", "main"]); // the tree is never clean here, see publishConfig
   const push = git(["push", "origin", "main"]);
   if (push.status !== 0) {
     const why = ((push.stderr || "") + (push.stdout || "")).slice(0, 300);
