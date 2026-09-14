@@ -2733,7 +2733,17 @@ async function refreshNativeBalance() {
     if (fundPoll) { clearInterval(fundPoll); fundPoll = null; }
     if (wasLow) { wasLow = false; toast("Funded! You're ready to trade 🎉"); }
   }
+  updateBalHint(); // the trade panel shows the same number
 }
+// The header only learned about USDC the site itself moved. Money that arrives
+// from anywhere else (the GangWay bridge, the faucet, a transfer, a trade in
+// another tab) left it at the old figure until the visitor reloaded. One
+// getBalance every 15s while the tab is visible, and one the moment the tab is
+// brought back, since coming back from the bridge is exactly when it changed.
+const BAL_WATCH_MS = 15_000;
+setInterval(() => { if (!document.hidden) refreshNativeBalance(); }, BAL_WATCH_MS);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshNativeBalance(); });
+addEventListener("focus", refreshNativeBalance);
 $("fundCopy").onclick = async () => {
   try { await navigator.clipboard.writeText(userAddr || ""); toast("Address copied"); }
   catch { toast(userAddr || ""); }
