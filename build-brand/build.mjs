@@ -1,37 +1,32 @@
-// Renders every raster brand asset from docs/brand/logo.svg.
-//   node build-brand/build.mjs
-// sharp is resolved from the home directory's node_modules (not a project dep).
-import { readFileSync, writeFileSync } from "node:fs";
+// Renders every raster brand asset from docs/brand/logo.svg (a 1024 square that
+// carries its own ground). Small sizes are cropped to the letters first so the
+// mark stays legible.   node build-brand/build.mjs
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 const sharp = createRequire("C:/Users/Monster/node_modules/")("sharp");
 
 const ROOT = new URL("../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
-const mark = readFileSync(`${ROOT}docs/brand/logo.svg`, "utf8");
-const inner = mark.replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
-const INK = "#07080b";
+const svg = readFileSync(`${ROOT}docs/brand/logo.svg`, "utf8");
+const noGround = svg.replace(/<rect width="1024" height="1024" fill="url\(#ground\)"\/>\s*/, "");
 
-// A square tile: the mark on the site's near-black, scaled to `fill` of the tile.
-function tile(fill, radius = 0) {
-  const s = 512 * fill, off = (512 - s) / 2;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="${radius}" fill="${INK}"/>
-  <g transform="translate(${off} ${off}) scale(${fill})">${inner}</g>
-</svg>`;
-}
+const full = await sharp(Buffer.from(svg), { density: 300 }).resize(1024, 1024).png().toBuffer();
+const clear = await sharp(Buffer.from(noGround), { density: 300 }).resize(1024, 1024).png().toBuffer();
 
+// [file, size, crop as a fraction of the full square centred on the letters]
+const crop = (f) => { const w = Math.round(1024 * f); return { left: Math.round(512 - w / 2 + 6), top: Math.round(512 - w / 2 - 6), width: w, height: w }; };
 const jobs = [
-  ["docs/brand/logo.png",        mark,        1024, { transparent: true }],
-  ["docs/brand/logo-1024.png",   tile(0.92),  1024],
-  ["docs/brand/pfp-512.png",     tile(0.92),   512],
-  ["docs/brand/pfp.png",         tile(0.92),   180],
-  ["docs/brand/mark.png",        tile(1.00),    96],
-  ["docs/apple-touch-icon.png",  tile(0.94),   180],
-  ["docs/favicon.png",           tile(1.12),    32],
+  ["docs/brand/logo-1024.png",   1024, 1],
+  ["docs/brand/pfp-512.png",      512, 1],
+  ["docs/brand/pfp.png",          180, 1],
+  ["docs/apple-touch-icon.png",   180, 0.86],
+  ["docs/brand/mark.png",          96, 0.76],
+  ["docs/favicon.png",             32, 0.66],
 ];
-
-for (const [out, svg, size, opt = {}] of jobs) {
-  let img = sharp(Buffer.from(svg), { density: 600 }).resize(size, size);
-  if (!opt.transparent) img = img.flatten({ background: INK });
-  await img.png().toFile(`${ROOT}${out}`);
+for (const [out, size, f] of jobs) {
+  let img = sharp(full);
+  if (f < 1) img = img.extract(crop(f));
+  await img.resize(size, size).png().toFile(`${ROOT}${out}`);
   console.log("wrote", out, size);
 }
+await sharp(clear).png().toFile(`${ROOT}docs/brand/logo.png`);
+console.log("wrote docs/brand/logo.png 1024 (no ground)");

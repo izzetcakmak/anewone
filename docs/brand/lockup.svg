@@ -1,25 +1,125 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320">
   <!-- Horizontal lockup: the A1 tile and the wordmark. The wordmark is live text in
        Space Grotesk; embed the font or convert to outlines where it is not installed. -->
-  <rect x="40" y="40" width="240" height="240" rx="52" fill="#07080b"/>
-  <g transform="translate(48 48) scale(0.4375)">
-  
+  <defs><clipPath id="tileclip"><rect x="40" y="40" width="240" height="240" rx="52"/></clipPath></defs>
+  <svg x="40" y="40" width="240" height="240" viewBox="0 0 1024 1024" clip-path="url(#tileclip)">
   <defs>
-    <clipPath id="lk-leg"><rect x="0" y="92" width="512" height="300"/></clipPath>
-    <clipPath id="lk-flag"><polygon points="185.3,126.0 350.9,238.0 519.0,-10.4 353.4,-122.5"/><rect x="0" y="0" width="512" height="92"/></clipPath>
-    <clipPath id="lk-top"><rect x="0" y="92" width="512" height="512"/></clipPath>
+    <radialGradient id="ground" cx="50%" cy="45%" r="70%">
+      <stop offset="0" stop-color="#0d2a52"/><stop offset="1" stop-color="#05101f"/>
+    </radialGradient>
+    <linearGradient id="ribbon" x1="200" y1="240" x2="720" y2="800" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7DF3FF"/><stop offset=".45" stop-color="#31C4F0"/><stop offset="1" stop-color="#1E5FD6"/>
+    </linearGradient>
+    <linearGradient id="ribbonEdge" x1="200" y1="240" x2="720" y2="800" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1B7FB8"/><stop offset="1" stop-color="#0E2E7A"/>
+    </linearGradient>
+    <linearGradient id="oneFill" x1="650" y1="230" x2="780" y2="780" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E6FBFF"/><stop offset=".5" stop-color="#8FE4FF"/><stop offset="1" stop-color="#3B8FE8"/>
+    </linearGradient>
+    <linearGradient id="oneEdge" x1="650" y1="230" x2="780" y2="780" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FB6E6"/><stop offset="1" stop-color="#1C4FB0"/>
+    </linearGradient>
+    <linearGradient id="wire" x1="0" y1="230" x2="0" y2="655" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8FF4FF"/><stop offset="1" stop-color="#2E7BD8" stop-opacity=".6"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="16"/></filter>
+    <filter id="nodeGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="5"/></filter>
+    <clipPath id="upper"><rect x="0" y="0" width="1024" height="655"/></clipPath>
   </defs>
-  <!-- A: the leg -->
-  <g clip-path="url(#lk-leg)"><polygon points="338.6,26.1 68.4,425.4 116.4,457.9 386.6,58.6" fill="#00B877"/></g>
-  <!-- A: the crossbar, from the leg to the stem -->
-  <rect x="215.2" y="286" width="88.8" height="46" fill="#00B877"/>
-  <!-- 1: the stem, shared with the A -->
-  <rect x="300" y="92" width="58" height="300" fill="#007A50"/>
-  <!-- 1: the base -->
-  <rect x="267" y="392" width="124" height="30" fill="#007A50"/>
-  <!-- 1: the flag, laid over the top of the A's leg -->
-  <g clip-path="url(#lk-top)"><g clip-path="url(#lk-flag)"><polygon points="338.6,26.1 68.4,425.4 116.4,457.9 386.6,58.6" fill="#007A50"/></g></g>
+  <rect width="1024" height="1024" fill="url(#ground)"/>
+  <!-- background constellation -->
+  <g stroke="#3F8BE0" stroke-opacity=".18" stroke-width="2">
+    <line x1="60" y1="120" x2="150" y2="60"/>
+    <line x1="150" y1="60" x2="230" y2="150"/>
+    <line x1="60" y1="120" x2="110" y2="260"/>
+    <line x1="230" y1="150" x2="110" y2="260"/>
+    <line x1="900" y1="90" x2="960" y2="200"/>
+    <line x1="960" y1="200" x2="850" y2="230"/>
+    <line x1="900" y1="90" x2="850" y2="230"/>
+    <line x1="960" y1="200" x2="980" y2="330"/>
+    <line x1="80" y1="880" x2="170" y2="950"/>
+    <line x1="940" y1="900" x2="880" y2="980"/>
   </g>
+  <g fill="#7CC8FF" fill-opacity=".35">
+    <circle cx="60" cy="120" r="4"/>
+    <circle cx="150" cy="60" r="4"/>
+    <circle cx="230" cy="150" r="4"/>
+    <circle cx="110" cy="260" r="4"/>
+    <circle cx="900" cy="90" r="4"/>
+    <circle cx="960" cy="200" r="4"/>
+    <circle cx="850" cy="230" r="4"/>
+    <circle cx="980" cy="330" r="4"/>
+    <circle cx="80" cy="880" r="4"/>
+    <circle cx="170" cy="950" r="4"/>
+    <circle cx="940" cy="900" r="4"/>
+    <circle cx="880" cy="980" r="4"/>
+  </g>
+  <!-- the dome -->
+  <g clip-path="url(#upper)" fill="none" stroke="url(#wire)" stroke-width="3.5" stroke-linecap="round">
+    <path d="M30 655 A425 425 0 0 1 880 655"/>
+    <path d="M195 655 A260 425 0 0 1 715 655"/>
+    <path d="M360 655 A95 425 0 0 1 550 655"/>
+    <path d="M57.39999999999998 505 A397.6 87.5 0 0 1 852.6 505"/>
+    <path d="M154 355 A301 66.2 0 0 1 756 355"/>
+  </g>
+  <g fill="#9FF6FF" filter="url(#nodeGlow)" opacity=".9">
+    <circle cx="34.1" cy="595.9" r="9"/>
+    <circle cx="86.9" cy="442.5" r="9"/>
+    <circle cx="211.2" cy="306.9" r="9"/>
+    <circle cx="381.2" cy="236.5" r="9"/>
+    <circle cx="565" cy="244.5" r="9"/>
+    <circle cx="716.7" cy="320.1" r="9"/>
+    <circle cx="830.3" cy="455.5" r="9"/>
+    <circle cx="875.9" cy="595.9" r="9"/>
+    <circle cx="715" cy="438.8" r="9"/>
+    <circle cx="550" cy="420.1" r="9"/>
+    <circle cx="360" cy="420.1" r="9"/>
+    <circle cx="195" cy="438.8" r="9"/>
+    <circle cx="715" cy="321.6" r="9"/>
+    <circle cx="550" cy="292.2" r="9"/>
+    <circle cx="360" cy="292.2" r="9"/>
+    <circle cx="195" cy="321.6" r="9"/>
+  </g>
+  <g fill="#E9FDFF">
+    <circle cx="34.1" cy="595.9" r="6"/>
+    <circle cx="86.9" cy="442.5" r="6"/>
+    <circle cx="211.2" cy="306.9" r="6"/>
+    <circle cx="381.2" cy="236.5" r="6"/>
+    <circle cx="565" cy="244.5" r="6"/>
+    <circle cx="716.7" cy="320.1" r="6"/>
+    <circle cx="830.3" cy="455.5" r="6"/>
+    <circle cx="875.9" cy="595.9" r="6"/>
+    <circle cx="715" cy="438.8" r="6"/>
+    <circle cx="550" cy="420.1" r="6"/>
+    <circle cx="360" cy="420.1" r="6"/>
+    <circle cx="195" cy="438.8" r="6"/>
+    <circle cx="715" cy="321.6" r="6"/>
+    <circle cx="550" cy="292.2" r="6"/>
+    <circle cx="360" cy="292.2" r="6"/>
+    <circle cx="195" cy="321.6" r="6"/>
+  </g>
+  <!-- glow under the letters -->
+  <g fill="none" stroke="#2FD4FF" stroke-opacity=".45" stroke-width="80" stroke-linejoin="miter" stroke-miterlimit="3" filter="url(#glow)">
+    <path d="M215 700 C205 775 275 815 300 770 L500,238 L700,782"/><path d="M655 330 L742 236 L772 780"/>
+  </g>
+  <!-- the 1, behind the A -->
+  <g fill="none" stroke-width="66" stroke-linejoin="miter" stroke-miterlimit="3" stroke-linecap="butt">
+    <path d="M655 330 L742 236 L772 780" stroke="url(#oneEdge)" transform="translate(12 12)"/>
+    <path d="M655 330 L742 236 L772 780" stroke="url(#oneFill)"/>
+  </g>
+  <!-- the ribbon A -->
+  <g fill="none" stroke-width="64" stroke-linejoin="miter" stroke-miterlimit="3" stroke-linecap="butt">
+    <path d="M215 700 C205 775 275 815 300 770 L500,238 L700,782" stroke="url(#ribbonEdge)" transform="translate(12 12)"/>
+    <path d="M345.1 650 C410 622 520 662 635.3 606" stroke="url(#ribbonEdge)" stroke-width="44" transform="translate(10 10)" stroke-linecap="round"/>
+    <path d="M215 700 C205 775 275 815 300 770 L500,238 L700,782" stroke="url(#ribbon)"/>
+    <path d="M345.1 650 C410 622 520 662 635.3 606" stroke="url(#ribbon)" stroke-width="44" stroke-linecap="round"/>
+  </g>
+  <!-- a highlight along the ribbon's crest -->
+  <g fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="8" stroke-linecap="round">
+    <path d="M318 738 L494 268"/>
+    <path d="M756 262 L778 690"/>
+  </g>
+</svg>
   <text x="330" y="178" font-family="'Space Grotesk', 'Inter', system-ui, sans-serif" font-weight="700" font-size="132" letter-spacing="6" fill="#07080b">A NEW ONE</text>
   <text x="334" y="236" font-family="'Inter', system-ui, sans-serif" font-weight="500" font-size="34" letter-spacing="1" fill="#6b746f">Insert Coin. Launch a New One.</text>
 </svg>
