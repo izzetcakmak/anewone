@@ -5,22 +5,22 @@
   <svg x="40" y="40" width="240" height="240" viewBox="0 0 1024 1024" clip-path="url(#tileclip)">
   <defs>
     <radialGradient id="ground" cx="50%" cy="45%" r="70%">
-      <stop offset="0" stop-color="#0d2a52"/><stop offset="1" stop-color="#05101f"/>
+      <stop offset="0" stop-color="#0b2b21"/><stop offset="1" stop-color="#04100c"/>
     </radialGradient>
     <linearGradient id="ribbon" x1="200" y1="240" x2="720" y2="800" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#7DF3FF"/><stop offset=".45" stop-color="#31C4F0"/><stop offset="1" stop-color="#1E5FD6"/>
+      <stop offset="0" stop-color="#9DFFD9"/><stop offset=".45" stop-color="#2FE39A"/><stop offset="1" stop-color="#0B8F5C"/>
     </linearGradient>
     <linearGradient id="ribbonEdge" x1="200" y1="240" x2="720" y2="800" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#1B7FB8"/><stop offset="1" stop-color="#0E2E7A"/>
+      <stop offset="0" stop-color="#0E7A50"/><stop offset="1" stop-color="#064A32"/>
     </linearGradient>
     <linearGradient id="oneFill" x1="650" y1="230" x2="780" y2="780" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#E6FBFF"/><stop offset=".5" stop-color="#8FE4FF"/><stop offset="1" stop-color="#3B8FE8"/>
+      <stop offset="0" stop-color="#EAFFF6"/><stop offset=".5" stop-color="#9CF5CF"/><stop offset="1" stop-color="#2FBF85"/>
     </linearGradient>
     <linearGradient id="oneEdge" x1="650" y1="230" x2="780" y2="780" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#4FB6E6"/><stop offset="1" stop-color="#1C4FB0"/>
+      <stop offset="0" stop-color="#3FB98A"/><stop offset="1" stop-color="#0F6B48"/>
     </linearGradient>
     <linearGradient id="wire" x1="0" y1="230" x2="0" y2="655" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#8FF4FF"/><stop offset="1" stop-color="#2E7BD8" stop-opacity=".6"/>
+      <stop offset="0" stop-color="#A8FFE0"/><stop offset="1" stop-color="#1F9F6E" stop-opacity=".6"/>
     </linearGradient>
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="16"/></filter>
     <filter id="nodeGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="5"/></filter>
@@ -28,7 +28,7 @@
   </defs>
   <rect width="1024" height="1024" fill="url(#ground)"/>
   <!-- background constellation -->
-  <g stroke="#3F8BE0" stroke-opacity=".18" stroke-width="2">
+  <g stroke="#2FBF85" stroke-opacity=".18" stroke-width="2">
     <line x1="60" y1="120" x2="150" y2="60"/>
     <line x1="150" y1="60" x2="230" y2="150"/>
     <line x1="60" y1="120" x2="110" y2="260"/>
@@ -40,7 +40,7 @@
     <line x1="80" y1="880" x2="170" y2="950"/>
     <line x1="940" y1="900" x2="880" y2="980"/>
   </g>
-  <g fill="#7CC8FF" fill-opacity=".35">
+  <g fill="#9CF5CF" fill-opacity=".35">
     <circle cx="60" cy="120" r="4"/>
     <circle cx="150" cy="60" r="4"/>
     <circle cx="230" cy="150" r="4"/>
@@ -62,7 +62,7 @@
     <path d="M57.39999999999998 505 A397.6 87.5 0 0 1 852.6 505"/>
     <path d="M154 355 A301 66.2 0 0 1 756 355"/>
   </g>
-  <g fill="#9FF6FF" filter="url(#nodeGlow)" opacity=".9">
+  <g fill="#B2FFE4" filter="url(#nodeGlow)" opacity=".9">
     <circle cx="34.1" cy="595.9" r="9"/>
     <circle cx="86.9" cy="442.5" r="9"/>
     <circle cx="211.2" cy="306.9" r="9"/>
@@ -80,7 +80,7 @@
     <circle cx="360" cy="292.2" r="9"/>
     <circle cx="195" cy="321.6" r="9"/>
   </g>
-  <g fill="#E9FDFF">
+  <g fill="#EFFFF8">
     <circle cx="34.1" cy="595.9" r="6"/>
     <circle cx="86.9" cy="442.5" r="6"/>
     <circle cx="211.2" cy="306.9" r="6"/>
@@ -99,7 +99,7 @@
     <circle cx="195" cy="321.6" r="6"/>
   </g>
   <!-- glow under the letters -->
-  <g fill="none" stroke="#2FD4FF" stroke-opacity=".45" stroke-width="80" stroke-linejoin="miter" stroke-miterlimit="3" filter="url(#glow)">
+  <g fill="none" stroke="#2FE39A" stroke-opacity=".45" stroke-width="80" stroke-linejoin="miter" stroke-miterlimit="3" filter="url(#glow)">
     <path d="M215 700 C205 775 275 815 300 770 L500,238 L700,782"/><path d="M655 330 L742 236 L772 780"/>
   </g>
   <!-- the 1, behind the A -->
