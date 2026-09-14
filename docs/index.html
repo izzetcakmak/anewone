@@ -2738,9 +2738,9 @@ async function refreshNativeBalance() {
 // The header only learned about USDC the site itself moved. Money that arrives
 // from anywhere else (the GangWay bridge, the faucet, a transfer, a trade in
 // another tab) left it at the old figure until the visitor reloaded. One
-// getBalance every 15s while the tab is visible, and one the moment the tab is
+// getBalance every 5s while the tab is visible, and one the moment the tab is
 // brought back, since coming back from the bridge is exactly when it changed.
-const BAL_WATCH_MS = 15_000;
+const BAL_WATCH_MS = 5_000;
 setInterval(() => { if (!document.hidden) refreshNativeBalance(); }, BAL_WATCH_MS);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshNativeBalance(); });
 addEventListener("focus", refreshNativeBalance);
