@@ -439,7 +439,7 @@
       defaultSource: net === "mainnet" ? "base" : "base-sepolia",
       onDestination: (t) => {
         const tok = tokens.find((x) => x.address === buySel.value);
-        if (tok) { coinLink.innerHTML = ""; const a = document.createElement("a"); a.href = "../t/" + tok.address.toLowerCase() + "/"; a.textContent = "Open $" + tok.symbol + " on the floor →"; coinLink.append(a); coinLink.hidden = false; }
+        if (tok) { coinLink.innerHTML = ""; const a = document.createElement("a"); a.href = "../#t=" + tok.address.toLowerCase(); a.textContent = "Open $" + tok.symbol + " on the floor →"; coinLink.append(a); coinLink.hidden = false; }
       },
     });
   }
