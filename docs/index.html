@@ -4650,6 +4650,18 @@ hydrateFromFloor()
   .then(() => loadTokens());
 setInterval(loadTokens, 60_000);
 
+// Someone else's launch used to reach an open page only with the five-minute count
+// poll. One tokensCount() every 10s is a single eth_call, skipped while the tab is
+// hidden or a pass is already running, and a new coin is on the floor within seconds.
+const LAUNCH_WATCH_MS = 10_000;
+setInterval(async () => {
+  if (document.hidden || loading || !shownAddrs.length) return;
+  try {
+    const n = Number(await rpc(() => platform.tokensCount(), 1));
+    if (n > shownAddrs.length) discoverNow();
+  } catch {} // the next tick asks again
+}, LAUNCH_WATCH_MS);
+
 // standings change once every few hours, so this is deliberately infrequent;
 // the earners board re-renders with every trade the page ingests (see renderLiveRail)
 loadStandings();
