@@ -171,9 +171,11 @@ Steps, in order, once the chain is up:
    `approve` + `exactInputSingle` on the 1% tier; QuoterV2 sets the minimum out with a 5% guard.
 8. Swap revenue: the gangway passes `integrator=anewone` and `fee=0.0025` to LI.FI on mainnet
    (0.25% of every non-USDC payment, forwarded to the integrator's fee wallet on the source
-   chain at execution, per chain and token). Before launch, register the integrator string
-   `anewone` at portal.li.fi with the main wallet as fee wallet, otherwise LI.FI has nowhere to
-   send it. Withdraw from the portal dashboard with that same wallet.
+   chain at execution, per chain and token). **Not registered as of 14 Sep 2026**: the API
+   answers `Integrator "anewone" is not configured for collecting fees` (no other name is,
+   either). Register the integration string `anewone` at portal.li.fi with the main wallet as
+   fee wallet; until then the kit detects the refusal, quotes without the fee (the swap still
+   works) and simply earns nothing. Withdraw from the portal dashboard with that same wallet.
 9. LI.FI into Arc: the kit's `router: "auto"` asks LI.FI for a route into chain 5042 on every
    quote (cached 10 min). Today it answers "not supported"; the day it does, any-token → USDC on
    Arc becomes one LI.FI transaction and CCTP stays the fallback, no redeploy needed. Check with
