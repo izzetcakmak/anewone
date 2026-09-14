@@ -426,9 +426,10 @@
       ethers: window.ethers,
       network: net,
       lifiApi,
-      // 0.25% of every non-USDC payment goes to the floor's fee wallet (LI.FI integrator fee,
-      // registered as "anewone" at portal.li.fi). Mainnet only; on testnet nothing is charged.
-      lifiIntegrator: "anewone",
+      // 0.25% of every non-USDC payment goes to the floor's fee wallet (LI.FI integrator fee;
+      // the portal.li.fi integration is named "A New One", string "a-new-one", 25 bps).
+      // Mainnet only; on testnet nothing is charged.
+      lifiIntegrator: "a-new-one",
       lifiFee: net === "mainnet" ? 0.0025 : 0,
       feeLabel: "the floor",
       onLifiFeeRefused: (m) => console.warn("[gangway] LI.FI refused the integrator fee, swapping without it:", m),

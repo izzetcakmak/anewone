@@ -169,13 +169,14 @@ Steps, in order, once the chain is up:
    by hand before launch: `cast code 0x53bf6b0684ec7ef91e1387da3d1a1769bc5a6f77 --rpc-url $RPC`
    and `cast call 0x53bf…6f77 "factory()(address)"` == `$FACTORY`. Pool buys are USDC-face
    `approve` + `exactInputSingle` on the 1% tier; QuoterV2 sets the minimum out with a 5% guard.
-8. Swap revenue: the gangway passes `integrator=anewone` and `fee=0.0025` to LI.FI on mainnet
+8. Swap revenue: the gangway passes `integrator=a-new-one` and `fee=0.0025` to LI.FI on mainnet
    (0.25% of every non-USDC payment, forwarded to the integrator's fee wallet on the source
-   chain at execution, per chain and token). **Not registered as of 14 Sep 2026**: the API
-   answers `Integrator "anewone" is not configured for collecting fees` (no other name is,
-   either). Register the integration string `anewone` at portal.li.fi with the main wallet as
-   fee wallet; until then the kit detects the refusal, quotes without the fee (the swap still
-   works) and simply earns nothing. Withdraw from the portal dashboard with that same wallet.
+   chain at execution, per chain and token). Registered at portal.li.fi as "A New One"
+   (integration string `a-new-one`, 25 bps) and verified on 14 Sep 2026: fee quotes accepted on
+   Base, Ethereum, Arbitrum and OP; LI.FI shows the integrator share folded into its own
+   "LIFI Fixed Fee" line (0.50% total = 0.25% LI.FI + 0.25% ours). Withdraw from the portal
+   dashboard with the fee wallet. If the integration is ever renamed, the kit falls back to
+   fee-less quotes (the swap keeps working, revenue stops).
 9. LI.FI into Arc: the kit's `router: "auto"` asks LI.FI for a route into chain 5042 on every
    quote (cached 10 min). Today it answers "not supported"; the day it does, any-token → USDC on
    Arc becomes one LI.FI transaction and CCTP stays the fallback, no redeploy needed. Check with
