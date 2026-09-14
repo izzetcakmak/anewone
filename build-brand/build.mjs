@@ -7,7 +7,7 @@ const sharp = createRequire("C:/Users/Monster/node_modules/")("sharp");
 
 const ROOT = new URL("../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const mark = readFileSync(`${ROOT}docs/brand/logo.svg`, "utf8");
-const inner = mark.replace(/^[\s\S]*?<defs>/, "<defs>").replace(/<\/svg>\s*$/, "");
+const inner = mark.replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
 const INK = "#07080b";
 
 // A square tile: the mark on the site's near-black, scaled to `fill` of the tile.
@@ -21,12 +21,12 @@ function tile(fill, radius = 0) {
 
 const jobs = [
   ["docs/brand/logo.png",        mark,        1024, { transparent: true }],
-  ["docs/brand/logo-1024.png",   tile(0.84),  1024],
-  ["docs/brand/pfp-512.png",     tile(0.86),   512],
-  ["docs/brand/pfp.png",         tile(0.86),   180],
-  ["docs/brand/mark.png",        tile(0.92),    96],
-  ["docs/apple-touch-icon.png",  tile(0.88),   180],
-  ["docs/favicon.png",           tile(1.00),    32],
+  ["docs/brand/logo-1024.png",   tile(0.90),  1024],
+  ["docs/brand/pfp-512.png",     tile(0.92),   512],
+  ["docs/brand/pfp.png",         tile(0.92),   180],
+  ["docs/brand/mark.png",        tile(0.98),    96],
+  ["docs/apple-touch-icon.png",  tile(0.94),   180],
+  ["docs/favicon.png",           tile(1.06),    32],
 ];
 
 for (const [out, svg, size, opt = {}] of jobs) {
