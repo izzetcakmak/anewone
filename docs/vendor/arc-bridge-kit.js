@@ -1,5 +1,5 @@
 /*!
- * arc-bridge-kit v0.2.2
+ * arc-bridge-kit v0.3.0
  * Drop-in "pay with anything, land USDC on Arc, then buy" kit.
  *
  *  Legs (each optional except the bridge):
@@ -31,7 +31,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.2.2";
+  const VERSION = "0.3.0";
 
   // ------------------------------------------------------------------ constants
 
@@ -304,6 +304,33 @@
     if (/could not find token/i.test(r)) return "LI.FI does not list that token on " + src.name + ". Pay with USDC to bridge directly.";
     if (/not supported|allowed values/i.test(r)) return "LI.FI does not serve " + src.name + ". Pay with USDC to bridge over CCTP.";
     return "No LI.FI swap into USDC on " + src.name + ": " + r;
+  }
+
+  /** CCTP V2 message header: the nonce is bytes 12..44. Iris also hands it over as eventNonce. */
+  function nonceFromMessage(message) {
+    const m = String(message || "");
+    if (!/^0x[0-9a-fA-F]{296,}$/.test(m)) return null;
+    return "0x" + m.slice(2 + 24, 2 + 24 + 64).toLowerCase();
+  }
+
+  /**
+   * Did the mint on Arc happen? Pure so it can be unit-tested. Evidence, strongest first:
+   *   nonceUsed      1n / 0n from MessageTransmitterV2.usedNonces on Arc, null = RPC did not answer
+   *   irisForward    Iris forwardState (COMPLETE / PENDING / ...) and a destination tx hash
+   *   balance        recipient's Arc USDC now vs the baseline, only meaningful when the baseline was
+   *                  read BEFORE the attestation (a baseline read afterwards may already include the mint)
+   * Returns "minted" | "pending" | "unknown". "unknown" means nothing definitive could be read this
+   * round (RPC trouble): keep polling, do not call the transfer late.
+   */
+  function judgeMint(ev) {
+    const fw = String((ev.irisForward && ev.irisForward.state) || "").toUpperCase();
+    if (ev.nonceUsed === 1n) return "minted";
+    if (fw === "COMPLETE" || fw === "COMPLETED" || (ev.irisForward && ev.irisForward.txHash)) return "minted";
+    if (ev.balance && ev.balance.baselineBeforeAttest && ev.balance.now != null && ev.balance.start != null && ev.balance.now > ev.balance.start) return "minted";
+    if (ev.nonceUsed === 0n) return "pending";
+    if (ev.balance && ev.balance.now != null && ev.balance.start != null) return "pending";
+    if (ev.irisForward && ev.irisForward.state) return "pending";
+    return "unknown";
   }
 
   /** LI.FI transactionRequest -> ethers TransactionRequest (drop legacy gasPrice, keep gasLimit). */
@@ -619,6 +646,21 @@
       if (!this.arc.rpcs.length) return null;
       return erc20Balance(this.arc.rpcs, this.arc.usdc, owner);
     }
+    /** MessageTransmitterV2.usedNonces(nonce) on Arc: 1n once minted, 0n not yet, null = no RPC answer. */
+    async nonceUsed(nonce) {
+      if (!this.arc.rpcs.length || !/^0x[0-9a-fA-F]{64}$/.test(String(nonce || ""))) return null;
+      const r = await rpcAny(this.arc.rpcs, "eth_call", [{ to: this.cctp.messageTransmitter, data: "0xfeb61724" + nonce.slice(2) }, "latest"]);
+      return r ? BigInt(r) : null;
+    }
+    /** What Iris knows about the forward leg, normalised (its casing and field names vary by version). */
+    _irisForward(msg) {
+      if (!msg) return null;
+      return {
+        state: msg.forwardState || msg.forward_state || (msg.forward && msg.forward.state) || null,
+        txHash: msg.destinationMintTxHash || msg.forwardTxHash || msg.forwardTransactionHash || msg.destinationTransactionHash || (msg.forward && msg.forward.transactionHash) || null,
+        feeExecuted: msg.decodedMessage && msg.decodedMessage.decodedMessageBody && msg.decodedMessage.decodedMessageBody.feeExecuted || null,
+      };
+    }
     async nativeBalance(source, owner) {
       const r = await rpcAny(source.rpcs, "eth_getBalance", [owner, "latest"]);
       return r ? BigInt(r) : null;
@@ -844,7 +886,11 @@
       const pollMs = opts.pollMs ?? 4000;
       const startBal = tr.arcStartBalance != null ? BigInt(tr.arcStartBalance)
         : (await this.arcUsdcBalance(tr.recipient));
-      if (tr.arcStartBalance == null && startBal != null) { tr.arcStartBalance = startBal.toString(); this._save(tr); }
+      if (tr.arcStartBalance == null && startBal != null) {
+        tr.arcStartBalance = startBal.toString();
+        // a baseline read after the attestation may already contain the mint, so remember when it was taken
+        tr.arcStartBalanceAt = Date.now(); this._save(tr);
+      }
 
       if (tr.router === "lifi") {
         if (["sending", "sent"].includes(tr.status)) { tr.status = "routing"; this._save(tr); }
@@ -869,9 +915,14 @@
       if (tr.status === "burning" || tr.status === "burned") { tr.status = "attesting"; this._save(tr); }
       onStep({ step: tr.status, transfer: tr });
 
+      // "late" is only ever declared on evidence: the forwarder has had stallAfter since the
+      // attestation AND Arc itself answered, definitively, that the nonce is still unused. A
+      // round where neither Iris nor Arc could be read is "unknown" and just polls again.
+      let lastDefinitivePendingAt = 0, unknownRounds = 0;
       for (;;) {
         if (opts.signal && opts.signal.aborted) return tr;
         const msg = await this.message(tr);
+        let fwd = null;
         if (msg) {
           const attested = msg.status === "complete" && msg.attestation && msg.attestation !== "PENDING";
           if (attested && !tr.attestation) {
@@ -879,26 +930,43 @@
             tr.attestedAt = Date.now(); tr.status = "forwarding"; this._save(tr);
             onStep({ step: "attested", transfer: tr });
           }
-          if (msg.forwardState != null && msg.forwardState !== tr.forwardState) {
-            tr.forwardState = msg.forwardState; this._save(tr);
-            onStep({ step: "forwarding", transfer: tr, forwardState: msg.forwardState });
+          const nonce = msg.eventNonce || (msg.decodedMessage && msg.decodedMessage.nonce) || nonceFromMessage(msg.message);
+          if (nonce && !tr.nonce) { tr.nonce = String(nonce).toLowerCase(); this._save(tr); }
+          fwd = this._irisForward(msg);
+          if (fwd.state && fwd.state !== tr.forwardState) {
+            tr.forwardState = fwd.state; this._save(tr);
+            onStep({ step: "forwarding", transfer: tr, forwardState: fwd.state });
           }
-          const mintTx = msg.forwardTransactionHash || msg.destinationTransactionHash || (msg.forward && msg.forward.transactionHash);
-          if (mintTx && !tr.mintTx) { tr.mintTx = mintTx; this._save(tr); }
+          if (fwd.txHash && !tr.mintTx) { tr.mintTx = fwd.txHash; this._save(tr); }
+          if (fwd.feeExecuted && !tr.feeExecuted) { tr.feeExecuted = String(fwd.feeExecuted); this._save(tr); }
         }
+        if (!tr.nonce && tr.message) { tr.nonce = nonceFromMessage(tr.message); this._save(tr); }
 
-        // The balance on Arc is the ground truth, whatever the forwarder reports.
+        // Arc itself: the nonce flips to used the moment receiveMessage lands, whoever sent it.
+        const nonceUsed = tr.attestation && tr.nonce ? await this.nonceUsed(tr.nonce) : null;
         const bal = await this.arcUsdcBalance(tr.recipient);
-        const minted = (bal != null && startBal != null && bal > startBal) || tr.forwardState === "completed";
-        if (minted) {
+        const verdict = judgeMint({
+          nonceUsed, irisForward: fwd,
+          balance: { now: bal, start: startBal, baselineBeforeAttest: !tr.attestedAt || !tr.arcStartBalanceAt || tr.arcStartBalanceAt <= tr.attestedAt },
+        });
+
+        if (verdict === "minted") {
           tr.status = "minted"; tr.mintedAt = Date.now();
-          if (bal != null && startBal != null) tr.received = (bal - startBal).toString();
+          if (bal != null && startBal != null && bal > startBal) tr.received = (bal - startBal).toString();
+          else if (tr.feeExecuted) tr.received = (BigInt(tr.amount) - BigInt(tr.feeExecuted)).toString();
           this._save(tr);
           onStep({ step: "minted", transfer: tr });
           return tr;
         }
+        if (verdict === "pending") { lastDefinitivePendingAt = Date.now(); unknownRounds = 0; }
+        else {
+          unknownRounds++;
+          if (unknownRounds === 3) onStep({ step: "rpc_degraded", transfer: tr }); // tell the UI, keep going
+        }
 
-        if (tr.attestation && Date.now() - tr.attestedAt > stallAfter && tr.status !== "stalled") {
+        const lateByClock = tr.attestation && Date.now() - tr.attestedAt > stallAfter;
+        const provenPending = nonceUsed === 0n && Date.now() - lastDefinitivePendingAt < 60_000;
+        if (lateByClock && provenPending && tr.status !== "stalled") {
           tr.status = "stalled"; this._save(tr);
           onStep({ step: "stalled", transfer: tr });
           if (opts.returnOnStall !== false) return tr;
@@ -913,6 +981,21 @@
      */
     async manualMint(tr, onStep = () => {}) {
       if (!tr.message || !tr.attestation) throw new Error("transfer is not attested yet");
+      // Replay guard: if the forwarder (or anyone) already minted this nonce, receiveMessage would
+      // only revert and burn gas. Ask Arc and Iris first; a positive answer settles the transfer.
+      if (!tr.nonce) { tr.nonce = nonceFromMessage(tr.message); this._save(tr); }
+      onStep({ step: "checking" });
+      const [used, msg] = await Promise.all([this.nonceUsed(tr.nonce), this.message(tr).catch(() => null)]);
+      const fwd = this._irisForward(msg);
+      if (fwd && fwd.txHash && !tr.mintTx) tr.mintTx = fwd.txHash;
+      if (judgeMint({ nonceUsed: used, irisForward: fwd }) === "minted") {
+        tr.status = "minted"; tr.mintedAt = tr.mintedAt || Date.now();
+        if (!tr.received && (fwd && fwd.feeExecuted)) tr.received = (BigInt(tr.amount) - BigInt(fwd.feeExecuted)).toString();
+        this._save(tr);
+        onStep({ step: "minted", transfer: tr, already: true });
+        return tr;
+      }
+      if (used === null) throw new Error("Arc RPC did not answer; could not confirm the mint is still pending. Try again in a moment.");
       onStep({ step: "switching", chain: this.arc });
       await this.ensureChain(this.arc);
       const signer = await this._signer();
@@ -1259,7 +1342,8 @@
           }
         }
         if (s.step === "failed") { state.error = "The route failed (" + (s.transfer.error || "unknown") + "). LI.FI refunds to the sender on failure."; setStep("attest", "err"); }
-        if (s.step === "stalled") { state.error = "Circle attested the transfer but the mint on Arc is late. Your USDC is safe; you can mint it yourself below."; }
+        if (s.step === "rpc_degraded") { state.error = "Arc's RPC is slow to answer; still checking whether the USDC has landed."; render(); }
+        if (s.step === "stalled") { state.error = "Circle attested the transfer and Arc confirms the mint has not landed yet. Your USDC is safe; you can mint it yourself below."; }
         renderPending();
       });
       state.pendingTracked.delete(tr.id);
@@ -1310,8 +1394,12 @@
     async function manual(tr) {
       state.error = "";
       try {
-        await core().manualMint(tr, (s) => emit({ type: "manual_" + s.step, ...s }));
-        state.done = tr; renderPending(); render();
+        await core().manualMint(tr, (s) => {
+          emit({ type: "manual_" + s.step, ...s });
+          if (s.step === "minted" && s.already) state.error = "";
+        });
+        state.done = tr; setStep("mint", "done", tr.mintTx ? c0.explorerTx(c0.arc, tr.mintTx) : c0.explorerAddress(c0.arc, tr.recipient));
+        renderPending(); render();
       } catch (e) { state.error = msgOf(e); render(); }
     }
 
@@ -1456,6 +1544,6 @@
   return {
     VERSION, ARC_DOMAIN, FORWARD_HOOK, FINALITY, NATIVE, CCTP, LIFI, ARC, SOURCES, ABI, PAY_SYMBOLS,
     ArcBridge, mount,
-    utils: { parseUsdc, formatUsdc, parseUnits, formatUnits, toBytes32Address, computeFees, isAddress, jsonRpc, fetchJson, toTxRequest, payShortlist, explainLifi },
+    utils: { parseUsdc, formatUsdc, parseUnits, formatUnits, toBytes32Address, computeFees, isAddress, jsonRpc, fetchJson, toTxRequest, payShortlist, explainLifi, nonceFromMessage, judgeMint },
   };
 });
