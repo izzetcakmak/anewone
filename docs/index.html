@@ -227,6 +227,12 @@
   /* two boards are taller than a laptop screen: the rail stays pinned and scrolls inside itself */
   #leaders { max-height: calc(100vh - 90px); overflow-y: auto; scrollbar-width: thin; }
   #leaders .bprow { padding: 7px 14px; }
+  /* phone: the rail is not a rail, it is a compact block under the floor — five rows a
+     board, Show more for the rest, no pinning and no inner scrolling */
+  @media (max-width: 900px) {
+    #leaders { display: block; position: static; max-height: none; overflow: visible; margin-top: 18px; }
+    #leaders .rail-h { padding: 12px 14px 8px; }
+  }
 
   /* ---- bottom ticker ---- */
   .tickerbar { position: fixed; left: 16px; right: 16px; bottom: 14px; z-index: 150;
@@ -3900,7 +3906,9 @@ const TEAM_WALLETS = new Set([
   "0xd4f1254c803662c46d9c21f80f4f3c15ff57e2c9", // deployer / platform owner
   "0x61a4490d589e580ec3d8b29eb87064b1bc61b33f", // second owner
 ]);
-const LEADERS_SHORT = 10, ACTIVE_MAX = 33, EARN_MAX = 50;
+const ACTIVE_MAX = 33, EARN_MAX = 50;
+const compactLeaders = matchMedia("(max-width: 900px)");
+const shortRows = () => (compactLeaders.matches ? 5 : 10); // a phone gets five a board, a desktop ten
 let standingsSnap = null, activeOpen = false, earnOpen = false;
 
 async function loadStandings() {
@@ -3946,36 +3954,38 @@ function renderLeaders() {
 
   // most active
   const ranked = standingsSnap ? (standingsSnap.wallets || []).filter((w) => w.rank).slice(0, ACTIVE_MAX) : [];
-  const aShow = activeOpen ? ranked : ranked.slice(0, LEADERS_SHORT);
+  const aShow = activeOpen ? ranked : ranked.slice(0, shortRows());
   aBox.innerHTML = aShow.length ? aShow.map((w) => `<div class="${rowCls(w.address)}">
       <span class="rk${medal(w.rank)}">${w.rank}</span>
       <span class="w">${walletCell(w.address)}</span>
       <span class="acts">${w.total}<small>acts</small></span>
     </div>`).join("")
     : `<div class="bprow" style="color:var(--faint)">${standingsSnap ? "No activity yet" : "Standings unavailable"}</div>`;
-  $("activeCount").textContent = activeOpen ? `top ${aShow.length}` : `top ${Math.min(LEADERS_SHORT, ranked.length) || 10}`;
+  $("activeCount").textContent = activeOpen ? `top ${aShow.length}` : `top ${Math.min(shortRows(), ranked.length) || shortRows()}`;
   const aMore = $("activeMore");
-  aMore.hidden = ranked.length <= LEADERS_SHORT;
+  aMore.hidden = ranked.length <= shortRows();
   aMore.textContent = activeOpen ? "Show less" : `Show more (${ranked.length})`;
 
   // top earners
   const earners = computeEarners().slice(0, EARN_MAX);
-  const eShow = earnOpen ? earners : earners.slice(0, LEADERS_SHORT);
+  const eShow = earnOpen ? earners : earners.slice(0, shortRows());
   eBox.innerHTML = eShow.length ? eShow.map((w, i) => `<div class="${rowCls(w.address)}">
       <span class="rk${medal(i + 1)}">${i + 1}</span>
       <span class="w">${walletCell(w.address)}</span>
       <span class="pnl ${w.pnl > 0n ? "up" : w.pnl < 0n ? "dn" : "flat"}">${fmtPnl(w.pnl)}</span>
     </div>`).join("")
     : `<div class="bprow" style="color:var(--faint)">${fullyIndexed ? "No trades yet" : "Indexing trades…"}</div>`;
-  $("earnCount").textContent = earnOpen ? `top ${eShow.length}` : `top ${Math.min(LEADERS_SHORT, earners.length) || 10}`;
+  $("earnCount").textContent = earnOpen ? `top ${eShow.length}` : `top ${Math.min(shortRows(), earners.length) || shortRows()}`;
   const eMore = $("earnMore");
-  eMore.hidden = earners.length <= LEADERS_SHORT;
+  eMore.hidden = earners.length <= shortRows();
   eMore.textContent = earnOpen ? "Show less" : `Show more (${earners.length})`;
 }
 (() => {
   const a = $("activeMore"), e = $("earnMore");
   if (a) a.onclick = () => { activeOpen = !activeOpen; renderLeaders(); };
   if (e) e.onclick = () => { earnOpen = !earnOpen; renderLeaders(); };
+  // rotating a phone or resizing a window changes how many rows a board shows
+  if (compactLeaders.addEventListener) compactLeaders.addEventListener("change", () => renderLeaders());
   const bp = $("bpLine");
   if (bp && window.ANEWONE_CONFIG.mainnet.live) bp.hidden = true; // the raffle closes with the flood
 })();
