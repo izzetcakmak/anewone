@@ -1,5 +1,5 @@
 /*!
- * arc-bridge-kit v0.3.1
+ * arc-bridge-kit v0.3.2
  * Drop-in "pay with anything, land USDC on Arc, then buy" kit.
  *
  *  Legs (each optional except the bridge):
@@ -31,7 +31,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.3.1";
+  const VERSION = "0.3.2";
 
   // ------------------------------------------------------------------ constants
 
@@ -1089,7 +1089,10 @@
 .abk-amount{display:flex;align-items:center;background:var(--abk-bg2);border:1px solid var(--abk-border);border-radius:var(--abk-rs)}
 .abk-amount input{flex:1;background:none;border:0;padding:10px 12px;font:600 18px var(--abk-mono);color:var(--abk-text);outline:none;min-width:0}
 .abk-amount .abk-tok{position:relative;border-left:1px solid var(--abk-border)}
-.abk-amount .abk-tok select{background:none;border:0;padding:10px 26px 10px 10px;font:600 13px inherit;font-family:inherit;color:var(--abk-text);outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;max-width:120px}
+.abk-amount .abk-tok select{background:transparent;border:0;padding:10px 26px 10px 10px;font:600 13px inherit;font-family:inherit;color:var(--abk-text);outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;max-width:120px}
+/* the browser paints a native dropdown list from the select's own colours; with a transparent
+   select on a dark theme that was white text on a white list, so give the list explicit colours */
+.abk select option{background:var(--abk-bg);color:var(--abk-text)}
 .abk-amount .abk-tok:after{content:"";position:absolute;right:11px;top:50%;width:6px;height:6px;border-right:1.5px solid var(--abk-dim);border-bottom:1.5px solid var(--abk-dim);transform:translateY(-70%) rotate(45deg);pointer-events:none}
 .abk-amount button{margin:0 6px}
 .abk-sel{position:relative}
