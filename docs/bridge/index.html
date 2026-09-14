@@ -122,7 +122,6 @@
   .send .amt button:hover { color: var(--text); }
   .send .btn { width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: var(--r-sm); background: var(--grad); color: var(--bg); font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; }
   .send .btn:disabled { opacity: .55; cursor: default; }
-  .send .paste { margin-top: 6px; }
   footer { max-width: 1160px; margin: 0 auto; padding: 20px; color: var(--faint); font-size: 12px; border-top: 1px solid var(--border); }
   footer a { color: var(--dim); margin-right: 14px; }
 </style>
@@ -163,8 +162,6 @@
         <p>Move USDC or any token on Arc to another wallet. One signature; gas is paid in USDC.</p>
         <div class="lbl"><span>Token</span><span id="sendBal"></span></div>
         <div class="sel"><select class="field" id="sendTok"><option value="native">USDC · Arc's own money</option></select></div>
-        <input class="field mono paste" id="sendCa" placeholder="0x… or paste any token contract on Arc" spellcheck="false" autocomplete="off">
-        <div class="hint" id="sendCaHint"></div>
         <div class="lbl"><span>To</span><span></span></div>
         <input class="field mono" id="sendTo" placeholder="0x… recipient on Arc" spellcheck="false" autocomplete="off">
         <div class="lbl"><span>Amount</span><span id="sendSym"></span></div>
@@ -482,9 +479,9 @@
   // ---- send on Arc: USDC (the chain's own money) or any token, to any wallet.
   // Not part of the bridge kit, which only carries money onto Arc. A native send is one
   // plain transaction; a token send is one transfer(). The list offers what the wallet
-  // holds of the floor's coins, and a pasted address resolves any other token on Arc.
+  // holds on Arc, listed by the explorer and read from each token contract.
   const S = (id) => document.getElementById(id);
-  const sendTok = S("sendTok"), sendCa = S("sendCa"), sendCaHint = S("sendCaHint"), sendTo = S("sendTo"),
+  const sendTok = S("sendTok"), sendTo = S("sendTo"),
         sendAmt = S("sendAmt"), sendGo = S("sendGo"), sendHint = S("sendHint"), sendBal = S("sendBal"), sendSym = S("sendSym");
   S("sendNet").textContent = net === "mainnet" ? "ARC MAINNET" : "ARC TESTNET";
   S("sendNet").classList.toggle("test", net !== "mainnet");
@@ -523,12 +520,8 @@
   // The chain cannot list what a wallet holds: every token is its own contract and only
   // answers for itself. The explorer indexes transfers and can, so its list comes first
   // (any token on Arc, with the decimals it reads from the contract). The floor's coins
-  // are asked directly as well, which is the whole list on a day the explorer is down,
-  // and a pasted address is remembered in this browser so it is back next time.
+  // are asked directly as well, which is the whole list on a day the explorer is down.
   const USDC_ERC20 = "0x3600000000000000000000000000000000000000"; // the same money as "native"
-  const PASTED_KEY = "anewone_send_tokens_" + net;
-  const pasted = () => { try { return JSON.parse(localStorage.getItem(PASTED_KEY) || "[]").filter((a) => ethers.isAddress(a)); } catch { return []; } };
-  function rememberPasted(a) { try { localStorage.setItem(PASTED_KEY, JSON.stringify([...new Set([...pasted(), a])].slice(-30))); } catch {} }
   async function explorerTokens(me) {
     if (!arcCfg.explorer) return null;
     const base = arcCfg.explorer.replace(/\/$/, "") + "/api/v2/addresses/" + me + "/tokens?type=ERC-20";
@@ -561,8 +554,8 @@
     // the explorer's list, when it answers: it supplies addresses, symbols and decimals
     try { for (const t of (await explorerTokens(me)) || []) rows.set(t.address, t); } catch {}
     rows.delete(USDC_ERC20);
-    for (const a of [...Object.keys(coinMeta), ...pasted()]) {
-      if (!rows.has(a)) rows.set(a, { address: a, symbol: (coinMeta[a] && coinMeta[a].symbol) || (known[a] && known[a].symbol) || a.slice(0, 6), decimals: (known[a] && known[a].decimals) || 18, bal: 0n });
+    for (const a of Object.keys(coinMeta)) {
+      if (!rows.has(a)) rows.set(a, { address: a, symbol: coinMeta[a].symbol, decimals: 18, bal: 0n });
     }
     // every balance straight from its contract: the explorer runs a few seconds behind the
     // chain, and right after a send that is the difference between the old number and the new
@@ -581,30 +574,6 @@
     }
     if (sendAsset.address !== "native" && [...sendTok.options].some((o) => o.value === sendAsset.address)) sendTok.value = sendAsset.address;
   }
-  /** Any token on Arc by address: symbol and decimals from the contract itself. */
-  async function sendResolve(raw) {
-    const addr = String(raw || "").trim();
-    if (!addr) { sendCaHint.textContent = ""; sendCaHint.className = "hint"; return; }
-    if (!/^0x[0-9a-fA-F]{40}$/.test(addr)) { sendCaHint.textContent = "That is not a contract address (0x + 40 hex characters)."; sendCaHint.className = "hint bad"; return; }
-    const a = ethers.getAddress(addr);
-    sendCaHint.textContent = "Reading the token…"; sendCaHint.className = "hint";
-    try {
-      const code = await readAny((p) => p.getCode(a));
-      if (!code || code === "0x") throw new Error("no contract at that address on " + (net === "mainnet" ? "Arc" : "Arc testnet"));
-      const c = (p) => new ethers.Contract(a, TOKEN_ABI, p);
-      const symbol = await readAny((p) => c(p).symbol());
-      let decimals = 18; try { decimals = Number(await readAny((p) => c(p).decimals())); } catch {}
-      known[a] = { symbol, decimals };
-      rememberPasted(a);
-      if (![...sendTok.options].some((o) => o.value === a)) sendTok.add(new Option("$" + symbol + " · " + a.slice(0, 6) + "…" + a.slice(-4), a));
-      sendTok.value = a;
-      sendCaHint.textContent = "$" + symbol + " · " + decimals + " decimals. Selected."; sendCaHint.className = "hint good";
-      sendPick();
-    } catch (e) { sendCaHint.textContent = "Could not read a token there: " + (e.shortMessage || e.message); sendCaHint.className = "hint bad"; }
-  }
-  let sendCaTimer = null;
-  sendCa.addEventListener("input", () => { clearTimeout(sendCaTimer); sendCaTimer = setTimeout(() => sendResolve(sendCa.value), 400); });
-
   function sendPick() {
     let v = sendTok.value;
     if (v !== "native" && !known[v]) { v = "native"; sendTok.value = v; } // nothing resolved under that value
