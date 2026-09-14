@@ -431,6 +431,7 @@
       lifiIntegrator: "anewone",
       lifiFee: net === "mainnet" ? 0.0025 : 0,
       feeLabel: "the floor",
+      onLifiFeeRefused: (m) => console.warn("[gangway] LI.FI refused the integrator fee, swapping without it:", m),
       getProvider: () => provider,
       arcRpcs,
       arcExplorer: arcCfg.explorer || undefined,

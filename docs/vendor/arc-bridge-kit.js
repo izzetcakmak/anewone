@@ -1,5 +1,5 @@
 /*!
- * arc-bridge-kit v0.3.0
+ * arc-bridge-kit v0.3.1
  * Drop-in "pay with anything, land USDC on Arc, then buy" kit.
  *
  *  Legs (each optional except the bridge):
@@ -31,7 +31,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.3.0";
+  const VERSION = "0.3.1";
 
   // ------------------------------------------------------------------ constants
 
@@ -442,7 +442,10 @@
    *   lifiIntegrator integrator string registered at portal.li.fi (default "arc-bridge-kit")
    *   lifiFee       integrator fee on LI.FI legs as a fraction, e.g. 0.0025 = 0.25% (default 0).
    *                 LI.FI deducts it from the swapped amount and forwards it to the integrator's
-   *                 fee wallet at execution; the quote's feeCosts already include it.
+   *                 fee wallet at execution; the quote's feeCosts already include it. If the
+   *                 integrator is not set up for fees at portal.li.fi, LI.FI refuses the quote:
+   *                 the engine then retries without the fee, keeps it off for the session and
+   *                 calls onLifiFeeRefused(message) so the host can fix the portal side.
    *   slippage      swap slippage as a fraction (default 0.005 = 0.5%)
    *
    * LI.FI without a key allows ~200 requests per 2 hours per IP, so the engine is thrifty:
@@ -471,6 +474,10 @@
       // Paid straight to the fee wallet registered for `lifiIntegrator` at portal.li.fi.
       this.lifiFee = Number(opts.lifiFee || 0);
       if (!(this.lifiFee >= 0 && this.lifiFee < 1)) throw new Error("lifiFee must be a fraction in [0, 1)");
+      this._lifiFeeRefused = false;             // set when LI.FI refuses the fee for this integrator
+      this.onLifiFeeRefused = opts.onLifiFeeRefused || null;
+      /** true while quotes actually carry the integrator fee */
+      Object.defineProperty(this, "lifiFeeActive", { get: () => this.lifiFee > 0 && !this._lifiFeeRefused });
       this.slippage = opts.slippage ?? 0.005;
       this._lifiBlockedUntil = 0;   // set when LI.FI answers 429; no calls until then
       this._quoteCache = new Map();  // key -> { at, value }
@@ -530,10 +537,19 @@
         fromAddress: from, fromAmount: String(fromAmount), slippage: String(this.slippage),
         integrator: this.lifiIntegrator,
       });
-      if (this.lifiFee > 0) q.set("fee", String(this.lifiFee));
+      if (this.lifiFee > 0 && !this._lifiFeeRefused) q.set("fee", String(this.lifiFee));
       if (toAddress && isAddress(toAddress)) q.set("toAddress", toAddress.toLowerCase());
       if (order) q.set("order", order);
-      const j = await fetchJson(`${this.lifiApi}/quote?${q}`, 15000, this._lifiHeaders());
+      let j = await fetchJson(`${this.lifiApi}/quote?${q}`, 15000, this._lifiHeaders());
+      // An integrator that is not set up for fees at portal.li.fi makes LI.FI refuse the whole
+      // quote, not just the fee. The user's swap must not die for that: retry without the fee,
+      // remember the refusal for this session and tell the host (onLifiFeeRefused) so it gets fixed.
+      if (j && q.has("fee") && /not configured for collecting fees|fee wallet/i.test(String(j.error || j.message || ""))) {
+        this._lifiFeeRefused = true;
+        try { this.onLifiFeeRefused && this.onLifiFeeRefused(String(j.error || j.message)); } catch {}
+        q.delete("fee");
+        j = await fetchJson(`${this.lifiApi}/quote?${q}`, 15000, this._lifiHeaders());
+      }
       let value;
       if (!j) value = { available: false, reason: "LI.FI did not answer" };
       else if (j.error || !j.estimate) {
@@ -1449,7 +1465,7 @@
           if (p.swap && !p.swap.identity) {
             rows.push(el("div", {}, "Swap " + tok.symbol + " → USDC (LI.FI · " + p.swap.tool + ")"), el("div", { class: "v" }, "≈ " + formatUsdc(p.swap.toAmount) + " USDC"));
             rows.push(el("div", {}, "Swap min after " + (c0.slippage * 100) + "% slippage"), el("div", { class: "v" }, formatUsdc(p.swap.toAmountMin)));
-            if (c0.lifiFee > 0) rows.push(el("div", {}, "Swap fee to " + (opts.feeLabel || "this site") + " (included)"), el("div", { class: "v" }, (c0.lifiFee * 100).toFixed(2).replace(/\.?0+$/, "") + "%"));
+            if (c0.lifiFeeActive) rows.push(el("div", {}, "Swap fee to " + (opts.feeLabel || "this site") + " (included)"), el("div", { class: "v" }, (c0.lifiFee * 100).toFixed(2).replace(/\.?0+$/, "") + "%"));
           }
           rows.push(el("div", {}, "Circle protocol fee" + (p.bridge.feeBps ? " (" + p.bridge.feeBps + " bps)" : "")), el("div", { class: "v" }, formatUsdc(p.protocolFee, 4)));
           rows.push(el("div", {}, "Forwarding fee"), el("div", { class: "v" }, formatUsdc(p.forwardFee, 4)));
