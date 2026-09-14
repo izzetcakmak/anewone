@@ -1,5 +1,5 @@
 /*!
- * arc-bridge-kit v0.2.1
+ * arc-bridge-kit v0.2.2
  * Drop-in "pay with anything, land USDC on Arc, then buy" kit.
  *
  *  Legs (each optional except the bridge):
@@ -31,7 +31,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.2.1";
+  const VERSION = "0.2.2";
 
   // ------------------------------------------------------------------ constants
 
@@ -1055,7 +1055,10 @@
       else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
       else if (v != null) n.setAttribute(k, v);
     }
-    for (const c of [].concat(children)) if (c != null) n.append(c);
+    // children may nest ([label, [" ", link], null]); append() would turn an array into
+    // "a,b" text and null into "null", so flatten fully and drop empties first
+    const flat = (x) => (Array.isArray(x) ? x.flatMap(flat) : (x == null || x === false ? [] : [x]));
+    for (const c of flat(children)) n.append(c);
     return n;
   }
 
@@ -1391,12 +1394,13 @@
         const d = state.done;
         const url = d.mintTx ? c0.explorerTx(c0.arc, d.mintTx) : c0.explorerAddress(c0.arc, d.recipient);
         const destDone = d.dest && d.dest.status === "done";
-        okBox.replaceChildren(
+        okBox.replaceChildren(...[
           (destDone ? "Done. " : "USDC landed. ") + formatUsdc(c0.receivedOf(d)) + " USDC arrived on " + c0.arc.name + " (" + short(d.recipient) + ")" +
           (destDone ? " and " + ((opts.destination && opts.destination.doneLabel) || "the swap on Arc went through") + ". " : ". "),
           destDone && d.dest.tx ? el("a", { href: c0.explorerTx(c0.arc, d.dest.tx), target: "_blank", rel: "noopener" }, "swap tx") : null,
           destDone && d.dest.tx ? " · " : null,
-          url ? el("a", { href: url, target: "_blank", rel: "noopener" }, "mint on explorer") : null);
+          url ? el("a", { href: url, target: "_blank", rel: "noopener" }, "mint on explorer") : null,
+        ].filter((x) => x != null));
         okBox.style.display = "";
       } else okBox.style.display = "none";
       // steps
