@@ -162,7 +162,7 @@
     gap: 16px; align-items: start; }
   .col-main { min-width: 0; }
   .rail { background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--r); overflow: hidden; position: sticky; top: 74px; }
+    border-radius: var(--r); overflow: hidden; position: sticky; top: calc(var(--tb-h, 60px) + 50px); }
   .rail-h { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; }
   .rail-h h3 { font-size: 14.5px; font-weight: 600; letter-spacing: -.2px; }
   .rail-count { font-size: 11px; color: var(--dim); background: var(--surface-2);
@@ -225,7 +225,7 @@
   .rail-more[hidden] { display: none; }
   .rail-foot { padding: 8px 14px 14px; font-size: 11px; color: var(--faint); line-height: 1.5; border-top: 1px solid var(--border); }
   /* two boards are taller than a laptop screen: the rail stays pinned and scrolls inside itself */
-  #leaders { max-height: calc(100vh - 90px); overflow-y: auto; scrollbar-width: thin; }
+  #leaders { max-height: calc(100vh - var(--tb-h, 60px) - 66px); overflow-y: auto; scrollbar-width: thin; }
   #leaders .bprow { padding: 7px 14px; }
   /* phone: the rail is not a rail, it is a compact block under the floor — five rows a
      board, Show more for the rest, no pinning and no inner scrolling */
@@ -234,11 +234,11 @@
     #leaders .rail-h { padding: 12px 14px 8px; }
   }
 
-  /* ---- bottom ticker ---- */
-  .tickerbar { position: fixed; left: 16px; right: 16px; bottom: 14px; z-index: 150;
-    height: 42px; display: flex; align-items: center; gap: 16px; padding: 0 8px 0 16px;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
-    box-shadow: var(--shadow-lg); overflow: hidden; }
+  /* ---- live ticker: a strip under the header, sticky just below it ---- */
+  .tickerbar { position: sticky; top: var(--tb-h, 60px); z-index: 190;
+    height: 36px; display: flex; align-items: center; gap: 16px; padding: 0 20px;
+    background: rgba(var(--bg-rgb),.86); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border); overflow: hidden; }
   .tk-lead { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700;
     letter-spacing: 1px; color: var(--accent); flex: none; }
   .tk-lead i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
@@ -258,15 +258,11 @@
   /* No animation means the overflow would be unreachable, so hand the row back
      to the user as a scrollable strip and drop the duplicate that only existed
      to make the loop seamless. */
-  @media (prefers-reduced-motion: reduce) {
-    .tk-run { animation: none; }
-    .tk-run[aria-hidden] { display: none; }
-    .tk-track { overflow-x: auto; scrollbar-width: none; }
-    .tk-track::-webkit-scrollbar { display: none; }
-  }
+  /* reduced motion: the strip still glides, at half speed (set in renderFeed) — a
+     stopped ticker hid everything past the first few trades */
   .tk-item b { color: var(--text); font-weight: 600; }
   .tk-item .up { color: var(--green); } .tk-item .dn { color: var(--red); }
-  body { padding-bottom: 62px; }   /* room for the pinned ticker */
+  body { padding-bottom: 24px; }
 
   /* ---- hero, rebuilt: left-aligned, product-first ---- */
   .hero { background: linear-gradient(160deg, var(--accent-soft), transparent 62%);
@@ -295,7 +291,7 @@
     .strip { font-size: 11.5px; gap: 6px; }
     .strip .s-hi, .strip .s-sep, .strip .s-txt { display: none; }
     .strip .s-short { display: inline; }
-    .tickerbar { left: 8px; right: 8px; }
+    .tickerbar { padding: 0 12px; }
   }
 
 
@@ -1003,6 +999,9 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .001s !important;
       animation-iteration-count: 1 !important; transition-duration: .001s !important; }
+    /* the live ticker is content, not decoration: frozen it hides every trade past the first
+       few, so it keeps gliding under reduced motion, at half speed (renderFeed sets the pace) */
+    .tk-run { animation-duration: var(--tk-dur, 80s) !important; animation-iteration-count: infinite !important; }
   }
 
   /* mobile: fingers need ~44px targets, and the dense rows need room to breathe */
@@ -1104,7 +1103,7 @@
   @media (min-width: 1180px) {
     /* the rail column exists only while the feed has rows (renderFeed toggles has-rail) */
     .floorwrap.has-rail { grid-template-columns: minmax(0, 1fr) 292px; }
-    .floorwrap #feedWrap { position: sticky; top: 76px; max-height: calc(100vh - 96px);
+    .floorwrap #feedWrap { position: sticky; top: calc(var(--tb-h, 60px) + 52px); max-height: calc(100vh - var(--tb-h, 60px) - 72px);
       overflow-y: auto; margin-top: 20px; scrollbar-width: thin; }
   }
   .frow { animation: frowIn .35s ease; }
@@ -1297,6 +1296,13 @@
     </button>
   </div>
 </nav>
+<!-- The live trade flow, pinned right under the header so it is the first thing that moves.
+     A real marquee: two identical runs slide left at a constant speed, the copy takes over
+     as the first leaves, so it never stops and never jumps. -->
+<div class="tickerbar" id="tickerBar" style="display:none">
+  <span class="tk-lead"><i></i>LIVE</span>
+  <div class="tk-track" id="feed"></div>
+</div>
 
 <div class="wrap">
   <div id="rpcStatus" class="rpcstatus" style="display:none"></div>
@@ -1608,11 +1614,6 @@
   </div>
 </div>
 
-<!-- Bottom ticker: the live trade flow, always visible without taking column space -->
-<div class="tickerbar" id="tickerBar" style="display:none">
-  <span class="tk-lead"><i></i>LIVE</span>
-  <div class="tk-track" id="feed"></div>
-</div>
 <div id="toast" class="toast"></div>
 
 <script>
@@ -3777,6 +3778,11 @@ let lastFeedKey = "";
 // preference (no sliding), but keep the content cycling: the row is rebuilt in
 // place every few seconds, which is a swap rather than motion.
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+// the ticker and the rails stick right under the header, whose height depends on the viewport
+(() => {
+  const measure = () => { const tb = document.querySelector(".topbar"); if (tb) document.documentElement.style.setProperty("--tb-h", tb.offsetHeight + "px"); };
+  measure(); addEventListener("resize", measure); addEventListener("load", measure);
+})();
 let tkParts = [], tkRotate = null, tkAt = 0;
 function paintFeedStatic() {
   const feed = $("feed");
@@ -3816,7 +3822,6 @@ function renderFeed() {
       <span style="opacity:.6">${esc(when)}</span>
     </span>`;
   });
-  if (reduceMotion.matches) { show(true); return paintFeedStatic(); }
   stopFeedRotation();
   const items = tkParts.join("");
   // the copy is aria-hidden: it exists only to make the wrap seamless
@@ -3826,8 +3831,8 @@ function renderFeed() {
   const runs = $("feed").querySelectorAll(".tk-run");
   const w = runs[0].scrollWidth;
   if (w) {
-    // ~62px per second reads without being hard to follow
-    $("feed").style.setProperty("--tk-dur", (w / 62).toFixed(1) + "s");
+    // ~62px per second reads without being hard to follow; half that under reduced motion
+    $("feed").style.setProperty("--tk-dur", (w / (reduceMotion.matches ? 31 : 62)).toFixed(1) + "s");
     runs.forEach((el) => { el.style.animationDelay = `-${(at || 0) / 1000}s`; });
   }
 }
