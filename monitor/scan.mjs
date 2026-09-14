@@ -467,8 +467,10 @@ async function refreshFloor(state, env) {
     // whatever config.js currently points the site at — mainnet once it flips
     const r = await runFloor({ platform: livePlatform(), log });
     if (!r.changed) { log("floor: nothing new, nothing to publish"); return; }
+    // floor.mjs also (re)writes the share cards under docs/t/ (og tags + card.jpg per coin);
+    // without them in the publish, a coin's /t/<addr>/ link 404s until someone commits by hand
     const ok = await publishViaGit(state, env, `chore: floor index @ block ${r.tip}`,
-                                   ["docs/data/floor.json"]);
+                                   ["docs/data/floor.json", "docs/t"]);
     if (ok) log(`floor: published @ block ${r.tip}`);
   } catch (e) {
     log(`floor refresh failed: ${(e && e.message) || e}`);
