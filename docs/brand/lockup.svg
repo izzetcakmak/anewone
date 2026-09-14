@@ -1,19 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320">
-  <!-- Horizontal lockup: the ANO lettermark tile and the wordmark.
-       The wordmark is live text in Space Grotesk; embed the font or convert to
-       outlines before using this file where the font is not installed. -->
+  <!-- Horizontal lockup: the A1 tile and the wordmark. The wordmark is live text in
+       Space Grotesk; embed the font or convert to outlines where it is not installed. -->
   <rect x="40" y="40" width="240" height="240" rx="52" fill="#07080b"/>
-  <g transform="translate(40 40) scale(0.46875)">
-    <g fill="none" stroke="#00B877" stroke-width="34" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M60 366 L108 146 L156 366"/>
-      <path d="M76 300 H140"/>
-      <path d="M218 366 V146 L300 366 V146"/>
-      <ellipse cx="405" cy="256" rx="48" ry="110"/>
-    </g>
-    <ellipse cx="405" cy="256" rx="30" ry="92" fill="none" stroke="#00B877" stroke-opacity=".25" stroke-width="6"/>
+  <g transform="translate(48 48) scale(0.4375)">
+  
+  <defs>
+    <clipPath id="lk-leg"><rect x="0" y="92" width="512" height="300"/></clipPath>
+    <clipPath id="lk-flag"><polygon points="185.3,126.0 350.9,238.0 519.0,-10.4 353.4,-122.5"/><rect x="0" y="0" width="512" height="92"/></clipPath>
+    <clipPath id="lk-top"><rect x="0" y="92" width="512" height="512"/></clipPath>
+  </defs>
+  <!-- A: the leg -->
+  <g clip-path="url(#lk-leg)"><polygon points="338.6,26.1 68.4,425.4 116.4,457.9 386.6,58.6" fill="#00B877"/></g>
+  <!-- A: the crossbar, from the leg to the stem -->
+  <rect x="215.2" y="286" width="88.8" height="46" fill="#00B877"/>
+  <!-- 1: the stem, shared with the A -->
+  <rect x="300" y="92" width="58" height="300" fill="#007A50"/>
+  <!-- 1: the base -->
+  <rect x="267" y="392" width="124" height="30" fill="#007A50"/>
+  <!-- 1: the flag, laid over the top of the A's leg -->
+  <g clip-path="url(#lk-top)"><g clip-path="url(#lk-flag)"><polygon points="338.6,26.1 68.4,425.4 116.4,457.9 386.6,58.6" fill="#007A50"/></g></g>
   </g>
-  <text x="330" y="178" font-family="'Space Grotesk', 'Inter', system-ui, sans-serif" font-weight="700"
-        font-size="132" letter-spacing="6" fill="#07080b">A NEW ONE</text>
-  <text x="334" y="236" font-family="'Inter', system-ui, sans-serif" font-weight="500"
-        font-size="34" letter-spacing="1" fill="#6b746f">Insert Coin. Launch a New One.</text>
+  <text x="330" y="178" font-family="'Space Grotesk', 'Inter', system-ui, sans-serif" font-weight="700" font-size="132" letter-spacing="6" fill="#07080b">A NEW ONE</text>
+  <text x="334" y="236" font-family="'Inter', system-ui, sans-serif" font-weight="500" font-size="34" letter-spacing="1" fill="#6b746f">Insert Coin. Launch a New One.</text>
 </svg>

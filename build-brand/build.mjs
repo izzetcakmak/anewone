@@ -21,12 +21,12 @@ function tile(fill, radius = 0) {
 
 const jobs = [
   ["docs/brand/logo.png",        mark,        1024, { transparent: true }],
-  ["docs/brand/logo-1024.png",   tile(0.90),  1024],
+  ["docs/brand/logo-1024.png",   tile(0.92),  1024],
   ["docs/brand/pfp-512.png",     tile(0.92),   512],
   ["docs/brand/pfp.png",         tile(0.92),   180],
-  ["docs/brand/mark.png",        tile(0.98),    96],
+  ["docs/brand/mark.png",        tile(1.00),    96],
   ["docs/apple-touch-icon.png",  tile(0.94),   180],
-  ["docs/favicon.png",           tile(1.06),    32],
+  ["docs/favicon.png",           tile(1.12),    32],
 ];
 
 for (const [out, svg, size, opt = {}] of jobs) {
