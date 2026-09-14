@@ -207,6 +207,26 @@
     line-height: 1.5; }
   .bp-note:hover { text-decoration: none; }
   .bp-note b { color: var(--text); } .bp-note u { color: var(--accent); text-decoration: none; }
+  /* leaderboards: two stacked boards, each ten rows tall until asked for more */
+  .bp-line { display: block; margin: 10px 14px 0; padding: 8px 11px; border-radius: 10px;
+    background: var(--accent-soft); font-size: 11.5px; color: var(--dim); }
+  .bp-line:hover { text-decoration: none; } .bp-line u { color: var(--accent); text-decoration: none; }
+  .bp-line[hidden] { display: none; }
+  .rail-h-second { border-top: 1px solid var(--border); margin-top: 4px; }
+  .rail-list-open { max-height: none; overflow: visible; }
+  .bprow .w a { color: inherit; text-decoration: none; }
+  .bprow .w a:hover { color: var(--accent); }
+  .bprow .pnl { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .bprow .pnl.up { color: var(--green); } .bprow .pnl.dn { color: var(--red); } .bprow .pnl.flat { color: var(--faint); }
+  .rail-more { display: block; width: calc(100% - 28px); margin: 8px 14px 10px; padding: 8px 10px;
+    border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--dim);
+    font: 500 12px var(--mono); letter-spacing: .4px; cursor: pointer; }
+  .rail-more:hover { color: var(--text); border-color: var(--border-2); }
+  .rail-more[hidden] { display: none; }
+  .rail-foot { padding: 8px 14px 14px; font-size: 11px; color: var(--faint); line-height: 1.5; border-top: 1px solid var(--border); }
+  /* two boards are taller than a laptop screen: the rail stays pinned and scrolls inside itself */
+  #leaders { max-height: calc(100vh - 90px); overflow-y: auto; scrollbar-width: thin; }
+  #leaders .bprow { padding: 7px 14px; }
 
   /* ---- bottom ticker ---- */
   .tickerbar { position: fixed; left: 16px; right: 16px; bottom: 14px; z-index: 150;
@@ -1373,14 +1393,19 @@
 
   </div><!-- /col-main -->
 
-  <!-- RIGHT RAIL: the campaign standings, read straight from the published snapshot -->
-  <aside class="rail rail-right">
-    <div class="rail-h"><h3>Boarding Pass</h3><span class="rail-count">top 33</span></div>
-    <div id="bpList" class="rail-list"></div>
-    <a class="bp-note" href="boarding/">
-      Boarding Pass rewards: <b>90,000 / 60,000 / 30,000 $NOAH</b> to three of the 33 most
-      active testnet wallets. Every launch and trade moves you up. <u>Full list →</u>
-    </a>
+  <!-- RIGHT RAIL: who trades the most and who is up the most. Activity comes from the
+       published Boarding Pass snapshot (every launch and trade, all deployments); earnings
+       are computed here from the same ledger that powers holder counts: USDC out of sells,
+       plus what is still held at today's curve price, minus USDC into buys. -->
+  <aside class="rail rail-right" id="leaders">
+    <a class="bp-line" id="bpLine" href="boarding/" title="Boarding Pass: 90,000 / 60,000 / 30,000 $NOAH to three of the 33 most active testnet wallets">🎟 Boarding Pass raffle · <u>see the list →</u></a>
+    <div class="rail-h"><h3>Most active</h3><span class="rail-count" id="activeCount">top 10</span></div>
+    <div id="activeList" class="rail-list rail-list-open"></div>
+    <button class="rail-more" id="activeMore" type="button" hidden>Show more</button>
+    <div class="rail-h rail-h-second"><h3>Top earners</h3><span class="rail-count" id="earnCount">top 10</span></div>
+    <div id="earnList" class="rail-list rail-list-open"></div>
+    <button class="rail-more" id="earnMore" type="button" hidden>Show more</button>
+    <div class="rail-foot">Earnings = sells + what is still held at today's curve price − buys. Wallet-to-wallet transfers are not seen. Team wallets are left out.</div>
   </aside>
   </div><!-- /shell -->
 
@@ -3617,7 +3642,7 @@ function paintGrid() {
 }
 function renderGrid() {
   renderCreatorPanel();
-  renderLiveRail();
+  renderLiveRail(); renderLeaders();
   const list = paintGrid();
   $("empty").style.display = shownAddrs.length && !list.length ? "block" : ($("empty").dataset.none === "1" ? "block" : "none");
   if (shownAddrs.length && !list.length) {
@@ -3684,7 +3709,7 @@ $("liveTabs")?.querySelectorAll("button").forEach((b) => {
   b.onclick = () => {
     liveSort = b.dataset.live;
     $("liveTabs").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
-    renderLiveRail();
+    renderLiveRail(); renderLeaders();
   };
 });
 
@@ -3866,24 +3891,94 @@ function renderLiveRail() {
 }
 
 // ---- right rail: campaign standings from the published snapshot
-async function renderBoardingRail() {
-  const box = $("bpList");
-  if (!box) return;
-  let snap;
-  try { snap = await (await fetch("boarding/snapshot.json", { cache: "no-store" })).json(); }
-  catch { box.innerHTML = `<div class="bprow" style="color:var(--faint)">Standings unavailable</div>`; return; }
-  const ranked = (snap.wallets || []).filter((w) => w.rank).slice(0, 8);
-  const me = (userAddr || "").toLowerCase();
-  box.innerHTML = ranked.map((w) => {
-    const short = w.address.slice(0, 6) + "…" + w.address.slice(-4);
-    const medal = w.rank <= 3 ? ` g${w.rank}` : "";
-    return `<div class="bprow${w.address.toLowerCase() === me ? " me" : ""}">
-      <span class="rk${medal}">${w.rank}</span>
-      <span class="w">${esc(short)}</span>
-      <span class="acts">${w.total}<small>acts</small></span>
-    </div>`;
-  }).join("");
+/* ---- the right rail: most active wallets and top earners ---------------------------
+   Activity is the Boarding Pass snapshot (launches + trades on every deployment, team
+   excluded, published by the scanner). Earnings come from statsIdx.net, the same per
+   (token, trader) ledger that gives holder counts: sells out + held × today's curve
+   price − buys in, summed over every coin. It refreshes with every ingested trade. */
+const TEAM_WALLETS = new Set([
+  "0xd4f1254c803662c46d9c21f80f4f3c15ff57e2c9", // deployer / platform owner
+  "0x61a4490d589e580ec3d8b29eb87064b1bc61b33f", // second owner
+]);
+const LEADERS_SHORT = 10, ACTIVE_MAX = 33, EARN_MAX = 50;
+let standingsSnap = null, activeOpen = false, earnOpen = false;
+
+async function loadStandings() {
+  try { standingsSnap = await (await fetch("boarding/snapshot.json", { cache: "no-store" })).json(); }
+  catch { standingsSnap = null; }
+  renderLeaders();
 }
+
+function computeEarners() {
+  const per = {};
+  for (const [tk, m] of Object.entries((statsIdx && statsIdx.net) || {})) {
+    const inf = tokenInfo[tk] || tokenInfo[tk.toLowerCase()];
+    let px = 0n;
+    try { if (inf && inf.tReserve > 0n) px = priceOf(inf); } catch {}
+    for (const [addr, e] of Object.entries(m)) {
+      const held = e.t > 0n ? (e.t * px) / WAD : 0n;
+      per[addr] = (per[addr] || 0n) + e.o - e.i + held;
+    }
+  }
+  return Object.entries(per)
+    .filter(([a]) => !TEAM_WALLETS.has(a.toLowerCase()))
+    .map(([address, pnl]) => ({ address, pnl }))
+    .sort((x, y) => (y.pnl > x.pnl ? 1 : y.pnl < x.pnl ? -1 : 0));
+}
+
+const fmtPnl = (wei) => {
+  const n = Number(wei) / 1e18, a = Math.abs(n);
+  const body = a >= 1e6 ? (a / 1e6).toFixed(2) + "M" : a >= 1e3 ? (a / 1e3).toFixed(1) + "K" : a.toFixed(a >= 100 ? 0 : 2);
+  return (n > 0 ? "+" : n < 0 ? "−" : "") + "$" + body;
+};
+const walletCell = (addr) => {
+  const short = addr.slice(0, 6) + "…" + addr.slice(-4);
+  const url = CFG.explorer ? `${CFG.explorer}/address/${addr}` : "";
+  return url ? `<a href="${esc(url)}" target="_blank" rel="noopener" title="${esc(addr)}">${esc(short)}</a>` : esc(short);
+};
+
+function renderLeaders() {
+  const aBox = $("activeList"), eBox = $("earnList");
+  if (!aBox || !eBox) return;
+  const me = (userAddr || "").toLowerCase();
+  const rowCls = (addr) => "bprow" + (addr.toLowerCase() === me ? " me" : "");
+  const medal = (r) => (r <= 3 ? ` g${r}` : "");
+
+  // most active
+  const ranked = standingsSnap ? (standingsSnap.wallets || []).filter((w) => w.rank).slice(0, ACTIVE_MAX) : [];
+  const aShow = activeOpen ? ranked : ranked.slice(0, LEADERS_SHORT);
+  aBox.innerHTML = aShow.length ? aShow.map((w) => `<div class="${rowCls(w.address)}">
+      <span class="rk${medal(w.rank)}">${w.rank}</span>
+      <span class="w">${walletCell(w.address)}</span>
+      <span class="acts">${w.total}<small>acts</small></span>
+    </div>`).join("")
+    : `<div class="bprow" style="color:var(--faint)">${standingsSnap ? "No activity yet" : "Standings unavailable"}</div>`;
+  $("activeCount").textContent = activeOpen ? `top ${aShow.length}` : `top ${Math.min(LEADERS_SHORT, ranked.length) || 10}`;
+  const aMore = $("activeMore");
+  aMore.hidden = ranked.length <= LEADERS_SHORT;
+  aMore.textContent = activeOpen ? "Show less" : `Show more (${ranked.length})`;
+
+  // top earners
+  const earners = computeEarners().slice(0, EARN_MAX);
+  const eShow = earnOpen ? earners : earners.slice(0, LEADERS_SHORT);
+  eBox.innerHTML = eShow.length ? eShow.map((w, i) => `<div class="${rowCls(w.address)}">
+      <span class="rk${medal(i + 1)}">${i + 1}</span>
+      <span class="w">${walletCell(w.address)}</span>
+      <span class="pnl ${w.pnl > 0n ? "up" : w.pnl < 0n ? "dn" : "flat"}">${fmtPnl(w.pnl)}</span>
+    </div>`).join("")
+    : `<div class="bprow" style="color:var(--faint)">${fullyIndexed ? "No trades yet" : "Indexing trades…"}</div>`;
+  $("earnCount").textContent = earnOpen ? `top ${eShow.length}` : `top ${Math.min(LEADERS_SHORT, earners.length) || 10}`;
+  const eMore = $("earnMore");
+  eMore.hidden = earners.length <= LEADERS_SHORT;
+  eMore.textContent = earnOpen ? "Show less" : `Show more (${earners.length})`;
+}
+(() => {
+  const a = $("activeMore"), e = $("earnMore");
+  if (a) a.onclick = () => { activeOpen = !activeOpen; renderLeaders(); };
+  if (e) e.onclick = () => { earnOpen = !earnOpen; renderLeaders(); };
+  const bp = $("bpLine");
+  if (bp && window.ANEWONE_CONFIG.mainnet.live) bp.hidden = true; // the raffle closes with the flood
+})();
 
 // deep link: #t=0x… opens that token directly so a launch can be shared
 function openFromHash() {
@@ -4530,9 +4625,10 @@ hydrateFromFloor()
   .then(() => loadTokens());
 setInterval(loadTokens, 60_000);
 
-// standings change once every few hours, so this is deliberately infrequent
-renderBoardingRail();
-setInterval(renderBoardingRail, 10 * 60_000);
+// standings change once every few hours, so this is deliberately infrequent;
+// the earners board re-renders with every trade the page ingests (see renderLiveRail)
+loadStandings();
+setInterval(loadStandings, 10 * 60_000);
 
 // ---- live tail: one cheap forward-only getLogs every 15s keeps the trade rail and
 // spotlight feeling real-time between the full 60s passes. Single call, well inside
@@ -4575,7 +4671,7 @@ async function liveTail() {
       renderFeed();
       renderSpotlight();
       paintGrid();   // prices moved; the cards say so without asking the chain
-      renderLiveRail(); // the left rail ranks by 24h volume, which a trade just changed
+      renderLiveRail(); renderLeaders(); // the left rail ranks by 24h volume, which a trade just changed
       // A trade against a token we have never seen is a launch that happened after
       // the prebuilt floor was published. Until it is discovered its trades are
       // filtered out of the ticker, so go and find it now rather than at the next
