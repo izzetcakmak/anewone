@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  // Theme before first paint, same rule as the floor.
+  (function () {
+    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "light"); }
+    catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+    // A coin's share link (/t/0x…/) whose card is not published yet is not a dead end:
+    // the floor itself opens the coin from #t=, so send the visitor straight there.
+    var m = location.pathname.match(/^\/t\/(0x[0-9a-fA-F]{40})\/?$/);
+    if (m) location.replace("/#t=" + m[1].toLowerCase());
+  })();
+</script>
+<title>Not on this deck | A NEW ONE</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#07080b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --accent-rgb: 0,184,119; --accent: rgb(var(--accent-rgb)); --mono: 'JetBrains Mono', ui-monospace, monospace; --r-md: 14px; --r-sm: 10px; }
+  :root, :root[data-theme="light"] { --bg: #f4f4f5; --surface: #ffffff; --surface-2: #ececee; --ink-rgb: 16,16,24; --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16); --text: #111116; --dim: #5f5f6d; --faint: #8b8b98; --accent-soft: #e8f9f1; }
+  :root[data-theme="dim"] { --bg: #17171c; --surface: #1d1d23; --surface-2: #232329; --ink-rgb: 255,255,255; --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16); --text: #eeeef2; --dim: #9a9aa8; --faint: #6d6d7b; --accent-rgb: 62,230,160; --accent-soft: rgba(62,230,160,.10); }
+  :root[data-theme="dark"] { --bg: #0d0d10; --surface: #151519; --surface-2: #1b1b20; --ink-rgb: 255,255,255; --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16); --text: #f2f2f5; --dim: #a0a0ae; --faint: #6e6e7c; --accent-rgb: 62,230,160; --accent-soft: rgba(62,230,160,.10); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.55 Inter, system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .topbar { border-bottom: 1px solid var(--border); }
+  .topbar-inner { max-width: 1160px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 10px; }
+  .tb-brand { display: flex; align-items: center; gap: 10px; }
+  .tb-brand:hover { text-decoration: none; }
+  .tb-brand img { width: 30px; height: 30px; border-radius: 8px; }
+  .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: .6px; color: var(--text); }
+  main { flex: 1; display: grid; place-items: center; padding: 40px 20px; }
+  .card { max-width: 560px; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px 28px; text-align: center; }
+  .code { font: 500 12px var(--mono); letter-spacing: 1.4px; color: var(--accent); text-transform: uppercase; }
+  h1 { font-family: 'Space Grotesk', sans-serif; font-size: 30px; letter-spacing: -.4px; margin: 8px 0 10px; line-height: 1.15; }
+  p { margin: 0 auto; color: var(--dim); max-width: 440px; }
+  .path { display: inline-block; margin-top: 12px; font: 12px var(--mono); color: var(--faint); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 22px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: 14px; text-decoration: none; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.primary:hover { text-decoration: none; filter: brightness(1.05); }
+  .btn.ghost { border: 1px solid var(--border-2); color: var(--text); background: var(--surface); font-family: var(--mono); font-size: 12.5px; letter-spacing: .5px; font-weight: 500; }
+  .btn.ghost:hover { text-decoration: none; border-color: rgba(var(--accent-rgb),.5); color: var(--accent); }
+  .boat { width: 88px; height: 70px; margin: 0 auto 6px; display: block; }
+  footer { text-align: center; padding: 18px; font-size: 12px; color: var(--faint); border-top: 1px solid var(--border); }
+  footer a { color: var(--dim); margin: 0 8px; }
+</style>
+</head>
+<body>
+<nav class="topbar"><div class="topbar-inner">
+  <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="/brand/mark.png" alt=""><span>A NEW ONE</span></a>
+</div></nav>
+<main>
+  <div class="card">
+    <svg class="boat" viewBox="0 0 60 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" style="color:var(--faint)">
+      <path d="M9 23 L30 8 L51 23 Z"/><path d="M18 23 H42 V32 H18 Z"/><path d="M5 32 H55 Q51 44 30 46 Q9 44 5 32 Z"/>
+      <path d="M2 40 q4 -3 8 0 t8 0 t8 0 t8 0 t8 0 t8 0 t8 0" stroke="var(--accent)"/>
+    </svg>
+    <div class="code">404 · not on this deck</div>
+    <h1>There is nothing at this address.</h1>
+    <p>The link may be old, mistyped, or for a coin whose page has not been written yet. The floor is one tap away.</p>
+    <span class="path" id="path"></span>
+    <div class="actions">
+      <a class="btn primary" href="/">Back to the floor →</a>
+      <a class="btn ghost" href="/bridge/">🌉 GangWay</a>
+      <a class="btn ghost" href="/ark/">the ark</a>
+      <a class="btn ghost" href="/docs.html">📄 Docs</a>
+    </div>
+  </div>
+</main>
+<footer>
+  <a href="https://x.com/anewone_xyz" target="_blank" rel="noopener noreferrer">X</a><a href="mailto:support@anewone.xyz">support@anewone.xyz</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a>
+</footer>
+<script>
+  document.getElementById("path").textContent = location.host + location.pathname + location.search;
+</script>
+</body>
+</html>
