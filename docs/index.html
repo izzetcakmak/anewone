@@ -396,6 +396,18 @@
     border: 1px solid var(--border-2); background: transparent; color: var(--text); }
   .tb-menu svg { width: 19px; height: 19px; }
   .nav-only { display: none; }   /* only ever shown inside the panel */
+  /* ---- the More menu: a dropdown on a wide screen ---- */
+  .tb-more { position: relative; }
+  .tb-caret { display: inline-block; width: 6px; height: 6px; margin-left: 2px; border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); }
+  .tb-more-btn[aria-expanded="true"] { color: var(--text); border-color: var(--border-2); }
+  .tb-more-menu { position: absolute; top: calc(100% + 8px); left: 0; min-width: 210px; z-index: 60;
+    display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--bg-2);
+    border: 1px solid var(--border-2); border-radius: 14px; box-shadow: var(--shadow-lg); }
+  .tb-more-menu[hidden] { display: none; }
+  .tb-more-menu a { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 9px;
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: .5px; color: var(--dim); text-decoration: none; white-space: nowrap; }
+  .tb-more-menu a:hover { background: rgba(var(--accent-rgb),.08); color: var(--accent); text-decoration: none; }
 
   /* ---- the address row in the wallet menu ---- */
   .wm-copy { display: block; width: 100%; text-align: left; border: none;
@@ -472,6 +484,12 @@
     .tb-nav .tb-ark > span:not(.ark-tip) { display: inline !important; }
     .tb-nav .ark-tip { display: none; }      /* no room for a bubble in a dropdown */
     .tb-nav .nav-only { display: flex !important; }
+    /* on a phone the More menu dissolves: its rows join the panel, the button goes */
+    .tb-nav .tb-more { display: contents; }
+    .tb-nav .tb-more-btn { display: none !important; }
+    .tb-nav .tb-more-menu, .tb-nav .tb-more-menu[hidden] { display: flex; position: static; min-width: 0;
+      padding: 0; gap: 8px; background: none; border: 0; box-shadow: none; }
+    .tb-nav .tb-more-menu a { min-height: 42px; border: 1px solid var(--border-2); border-radius: 999px; padding: 9px 14px; color: var(--dim); }
     .tb-nav .theme-sw { align-self: flex-start; margin: 0; }
     /* The wallet menu was pinned to the right edge of the Connect button. With the
        theme switch folded away that button sits further left, and the menu ran off
@@ -1205,9 +1223,17 @@
     <!-- The gangway is how you board: funds from any chain arrive on Arc as USDC and can
          buy a coin on the floor in the same trip. Same shape as the Boarding Pass link. -->
     <a class="tb-link" href="bridge/" title="GangWay - Swap/Bridge: bring ETH, USDC or almost anything aboard from any chain, then buy on the floor">🌉 GangWay - Swap/Bridge</a>
-    <a class="tb-link" href="boarding/" title="Boarding Pass: rewards for the 33 most active testnet wallets on mainnet day">🎟 Boarding Pass</a>
-    <!-- Docs is in the footer on a wide screen; inside the menu a phone gets it too -->
-    <a class="tb-link tb-link-quiet nav-only" href="docs.html">📄 Docs</a>
+    <!-- Everything that is not a door or the money: one quiet menu on a wide screen,
+         plain rows inside the phone panel. The footer no longer repeats any of it. -->
+    <div class="tb-more" id="moreWrap">
+      <button class="tb-link tb-link-quiet tb-more-btn" id="moreBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="moreMenu">More <span class="tb-caret" aria-hidden="true"></span></button>
+      <div class="tb-more-menu" id="moreMenu" hidden>
+        <a href="boarding/" title="Boarding Pass: rewards for the 33 most active testnet wallets on mainnet day">🎟 Boarding Pass</a>
+        <a href="docs.html">📄 Docs</a>
+        <a href="about.html">👋 About</a>
+        <a href="mailto:support@anewone.xyz">✉ Contact</a>
+      </div>
+    </div>
     <div class="theme-sw" id="themeSw" role="group" aria-label="Colour theme">
       <button type="button" data-theme-set="light" title="Light" aria-pressed="false" aria-label="Light theme">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
@@ -1383,22 +1409,11 @@
           <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M18.244 2H21.5l-7.5 8.57L23 22h-6.75l-5.28-6.9L4.9 22H1.64l8.02-9.17L1 2h6.92l4.77 6.31L18.244 2Zm-1.18 18h1.83L7.02 3.9H5.06l12 16.1Z"/></svg>
           <span>Follow on X</span>
         </a>
-        <a class="foot-btn" href="ark/" target="_blank" aria-label="The ark">
-          <svg viewBox="0 0 60 46" width="15" height="15" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 14 30 6 42 14"/><path d="M22 14h16v9"/><path d="M6 23h48q-4 17-24 19Q10 40 6 23Z"/></svg>
-          <span>The ark</span>
-        </a>
-        <a class="foot-btn" href="bridge/" aria-label="GangWay - Swap/Bridge: bring funds to Arc">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12q10-8 20 0"/><path d="M2 12v6M22 12v6M7 9.5V18M12 8v10M17 9.5V18M2 18h20"/></svg>
-          <span>GangWay - Swap/Bridge</span>
-        </a>
-        <a class="foot-btn" href="docs.html" aria-label="Docs">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4a2 2 0 0 1 2-2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
-          <span>Docs</span>
-        </a>
+        <!-- the footer is for reaching us, nothing else: the pages live in the More menu -->
         <div class="foot-contact">
-          <button class="foot-btn" id="contactBtn" aria-haspopup="true" aria-expanded="false" aria-label="Contact">
+          <button class="foot-btn" id="contactBtn" aria-haspopup="true" aria-expanded="false" aria-label="Contact by email">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
-            <span>Contact</span>
+            <span>support@anewone.xyz</span>
           </button>
           <!-- mailto: alone opens a blank tab for visitors with no OS mail app; give
                explicit choices instead (Gmail compose works for everyone in-browser) -->
@@ -4653,6 +4668,21 @@ setInterval(liveTail, 15_000);
   addEventListener("click", (e) => {
     if (!menu.contains(e.target) && e.target !== btn) shut();
   });
+  addEventListener("keydown", (e) => { if (e.key === "Escape") shut(); });
+})();
+
+/* ---- the More menu on a wide screen: open on click, close on a pick, outside click or Escape ---- */
+(() => {
+  const btn = $("moreBtn"), menu = $("moreMenu");
+  if (!btn || !menu) return;
+  const shut = () => { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); };
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.hidden = !menu.hidden;
+    btn.setAttribute("aria-expanded", menu.hidden ? "false" : "true");
+  });
+  menu.addEventListener("click", (e) => { if (e.target.closest("a")) shut(); });
+  addEventListener("click", (e) => { if (!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) shut(); });
   addEventListener("keydown", (e) => { if (e.key === "Escape") shut(); });
 })();
 
