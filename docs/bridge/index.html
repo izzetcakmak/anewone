@@ -519,23 +519,66 @@
   const fmtAmt = (v, d) => { const n = Number(ethers.formatUnits(v, d)); return n >= 1e6 ? n.toLocaleString("en-US", { maximumFractionDigits: 0 }) : n.toLocaleString("en-US", { maximumFractionDigits: n >= 1 ? 4 : 6 }); };
 
   function sendCoinsKnown() { if (sendAccount) sendLoadHeld(); }
-  /** The floor's coins this wallet holds, added to the selector with their balances. */
-  async function sendLoadHeld() {
-    const addrs = Object.keys(coinMeta);
-    if (!sendAccount || !addrs.length) return;
-    const me = sendAccount;
-    const bals = await mapLimit(addrs, 4, (a) => readAny((p) => new ethers.Contract(a, TOKEN_ABI, p).balanceOf(me)).catch(() => 0n));
-    if (me !== sendAccount) return; // the wallet switched while we were reading
-    for (const o of [...sendTok.options]) if (o.dataset.held) o.remove();
-    addrs.forEach((a, i) => {
-      seenBal[a] = bals[i];
-      if (bals[i] > 0n) {
-        known[a] = { symbol: coinMeta[a].symbol, decimals: 18 };
-        const o = new Option("$" + coinMeta[a].symbol + " · " + fmtAmt(bals[i], 18) + " held", a);
-        o.dataset.held = "1";
-        sendTok.add(o);
+
+  // The chain cannot list what a wallet holds: every token is its own contract and only
+  // answers for itself. The explorer indexes transfers and can, so its list comes first
+  // (any token on Arc, with the decimals it reads from the contract). The floor's coins
+  // are asked directly as well, which is the whole list on a day the explorer is down,
+  // and a pasted address is remembered in this browser so it is back next time.
+  const USDC_ERC20 = "0x3600000000000000000000000000000000000000"; // the same money as "native"
+  const PASTED_KEY = "anewone_send_tokens_" + net;
+  const pasted = () => { try { return JSON.parse(localStorage.getItem(PASTED_KEY) || "[]").filter((a) => ethers.isAddress(a)); } catch { return []; } };
+  function rememberPasted(a) { try { localStorage.setItem(PASTED_KEY, JSON.stringify([...new Set([...pasted(), a])].slice(-30))); } catch {} }
+  async function explorerTokens(me) {
+    if (!arcCfg.explorer) return null;
+    const base = arcCfg.explorer.replace(/\/$/, "") + "/api/v2/addresses/" + me + "/tokens?type=ERC-20";
+    const out = [];
+    let next = null;
+    for (let page = 0; page < 5; page++) {
+      const url = next ? base + "&" + new URLSearchParams(next).toString() : base;
+      const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (r.status === 404) return []; // an address the explorer has never seen holds nothing it knows of
+      if (!r.ok) throw new Error("explorer " + r.status);
+      const j = await r.json();
+      for (const it of j.items || []) {
+        const t = it.token || {};
+        const a = t.address_hash || t.address;
+        if (!a || !ethers.isAddress(a)) continue;
+        const bal = BigInt(it.value || "0");
+        if (bal > 0n) out.push({ address: ethers.getAddress(a), symbol: t.symbol || a.slice(0, 6), decimals: Number(t.decimals ?? 18), bal });
       }
-    });
+      next = j.next_page_params;
+      if (!next) break;
+    }
+    return out;
+  }
+  let sendListRun = 0;
+  /** Everything this wallet holds on Arc, in the selector with balances. */
+  async function sendLoadHeld() {
+    if (!sendAccount) return;
+    const me = sendAccount, run = ++sendListRun;
+    const rows = new Map();
+    // the explorer's list, when it answers: it supplies addresses, symbols and decimals
+    try { for (const t of (await explorerTokens(me)) || []) rows.set(t.address, t); } catch {}
+    rows.delete(USDC_ERC20);
+    for (const a of [...Object.keys(coinMeta), ...pasted()]) {
+      if (!rows.has(a)) rows.set(a, { address: a, symbol: (coinMeta[a] && coinMeta[a].symbol) || (known[a] && known[a].symbol) || a.slice(0, 6), decimals: (known[a] && known[a].decimals) || 18, bal: 0n });
+    }
+    // every balance straight from its contract: the explorer runs a few seconds behind the
+    // chain, and right after a send that is the difference between the old number and the new
+    const addrs = [...rows.keys()].slice(0, 60);
+    const bals = await mapLimit(addrs, 4, (a) => readAny((p) => new ethers.Contract(a, TOKEN_ABI, p).balanceOf(me)).catch(() => null));
+    if (me !== sendAccount || run !== sendListRun) return; // the wallet switched, or a newer pass is out
+    addrs.forEach((a, i) => { if (bals[i] === null) { if (!(rows.get(a).bal > 0n)) rows.delete(a); } else if (bals[i] > 0n) rows.get(a).bal = bals[i]; else rows.delete(a); });
+    const list = [...rows.values()].sort((x, y) => x.symbol.localeCompare(y.symbol));
+    for (const o of [...sendTok.options]) if (o.dataset.held) o.remove();
+    for (const t of list) {
+      seenBal[t.address] = t.bal;
+      known[t.address] = { symbol: t.symbol, decimals: t.decimals };
+      const o = new Option("$" + t.symbol + " · " + fmtAmt(t.bal, t.decimals) + " held", t.address);
+      o.dataset.held = "1";
+      sendTok.add(o);
+    }
     if (sendAsset.address !== "native" && [...sendTok.options].some((o) => o.value === sendAsset.address)) sendTok.value = sendAsset.address;
   }
   /** Any token on Arc by address: symbol and decimals from the contract itself. */
@@ -552,6 +595,7 @@
       const symbol = await readAny((p) => c(p).symbol());
       let decimals = 18; try { decimals = Number(await readAny((p) => c(p).decimals())); } catch {}
       known[a] = { symbol, decimals };
+      rememberPasted(a);
       if (![...sendTok.options].some((o) => o.value === a)) sendTok.add(new Option("$" + symbol + " · " + a.slice(0, 6) + "…" + a.slice(-4), a));
       sendTok.value = a;
       sendCaHint.textContent = "$" + symbol + " · " + decimals + " decimals. Selected."; sendCaHint.className = "hint good";
