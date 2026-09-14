@@ -562,8 +562,9 @@
   sendCa.addEventListener("input", () => { clearTimeout(sendCaTimer); sendCaTimer = setTimeout(() => sendResolve(sendCa.value), 400); });
 
   function sendPick() {
-    const v = sendTok.value;
-    sendAsset = v === "native" ? USDC_NATIVE : { address: v, ...(known[v] || { symbol: v.slice(0, 6), decimals: 18 }) };
+    let v = sendTok.value;
+    if (v !== "native" && !known[v]) { v = "native"; sendTok.value = v; } // nothing resolved under that value
+    sendAsset = v === "native" ? USDC_NATIVE : { address: v, ...known[v] };
     sendSym.textContent = "$" + sendAsset.symbol;
     sendAmt.value = "";
     sendRefresh();
@@ -631,9 +632,13 @@
   sendTo.addEventListener("input", sendValidate);
   sendAmt.addEventListener("input", sendValidate);
 
-  async function sendEnsureArc(bp) {
+  // The wallet's chain straight from the wallet: an ethers provider remembers the chain it was
+  // opened on and refuses to work once the wallet has moved, which is exactly what happens
+  // here after the bridge card put it on the source chain.
+  async function walletChain() { return BigInt(await wallet().request({ method: "eth_chainId" })); }
+  async function sendEnsureArc() {
     const want = BigInt(arcCfg.chainId);
-    if ((await bp.getNetwork()).chainId === want) return;
+    if ((await walletChain()) === want) return;
     try { await wallet().request({ method: "wallet_switchEthereumChain", params: [{ chainId: arcCfg.chainIdHex }] }); }
     catch (e) {
       if (e.code === 4001) throw new Error("Switch to Arc was refused in the wallet.");
@@ -643,7 +648,9 @@
         nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
         rpcUrls: [arcCfg.rpc], blockExplorerUrls: arcCfg.explorer ? [arcCfg.explorer] : [] }] });
     }
-    if ((await new ethers.BrowserProvider(wallet()).getNetwork()).chainId !== want) throw new Error("The wallet is not on Arc.");
+    // wallets answer the switch before the new chain is in place; a moment, then ask again
+    for (let i = 0; i < 20 && (await walletChain()) !== want; i++) await new Promise((r) => setTimeout(r, 250));
+    if ((await walletChain()) !== want) throw new Error("The wallet is not on Arc.");
   }
   sendGo.onclick = async () => {
     if (!sendAccount) return sendConnect();
@@ -651,8 +658,9 @@
     const to = ethers.getAddress(sendTo.value.trim()), v = sendAmount(), asset = sendAsset;
     sendBusy = true; sendValidate(); sendSay("Confirm in your wallet…");
     try {
-      const bp = new ethers.BrowserProvider(wallet());
-      await sendEnsureArc(bp);
+      await sendEnsureArc();
+      // opened only now, on Arc, so it never sees the chain change under it
+      const bp = new ethers.BrowserProvider(wallet(), Number(arcCfg.chainId));
       const signer = await bp.getSigner();
       if (ethers.getAddress(await signer.getAddress()) !== sendAccount) throw new Error("The wallet switched accounts; check and try again.");
       const tx = asset.address === "native"
@@ -670,9 +678,20 @@
       if (arcCfg.explorer) { const a = document.createElement("a"); a.href = arcCfg.explorer.replace(/\/$/, "") + "/tx/" + tx.hash; a.target = "_blank"; a.rel = "noopener"; a.textContent = "View on the explorer →"; sendHint.append(a); }
       return;
     } catch (e) {
-      sendSay(e.code === 4001 || e.code === "ACTION_REJECTED" ? "Cancelled in the wallet." : (e.shortMessage || e.message), "bad");
+      // the button is repainted first: repainting also clears the hint, and the reason
+      // the send did not go is the one thing the visitor needs to keep seeing
+      sendBusy = false; sendValidate();
+      // ethers wraps what the wallet said ("could not coalesce error"); the wallet's own
+      // code and words sit one or two levels down
+      const code = e && [e.code, e.error && e.error.code, e.info && e.info.error && e.info.error.code].find((c) => typeof c === "number" || typeof c === "string");
+      const text = e && [e.info && e.info.error && e.info.error.message, e.error && e.error.message, e.shortMessage, e.message]
+        .find((s) => s && !/coalesce/i.test(s));
+      const why = code === 4001 || code === "ACTION_REJECTED" ? "Cancelled in the wallet."
+        : code === -32002 || /already pending|already processing/i.test(text || "") ? "The wallet already has a request open; find it in the wallet and answer it first."
+        : String(text || e).slice(0, 200);
+      sendSay(why, "bad");
+      return;
     }
-    sendBusy = false; sendValidate();
   };
   sendPick();
   sendConnectSilently();
