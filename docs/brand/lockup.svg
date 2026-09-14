@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320">
+  <!-- Horizontal lockup: the coin-drop mark and the wordmark.
+       The wordmark is live text in Space Grotesk; embed the font or convert to
+       outlines before using this file where the font is not installed. -->
+  <defs>
+    <clipPath id="above"><rect x="0" y="0" width="512" height="354"/></clipPath>
+    <clipPath id="below"><rect x="0" y="354" width="512" height="158"/></clipPath>
+    <mask id="one" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <rect width="512" height="512" fill="#fff"/>
+      <path d="M234 150 H278 V336 H234 V190 L170 244 V204 Z" fill="#000"/>
+      <circle cx="256" cy="240" r="142" fill="none" stroke="#000" stroke-opacity=".38" stroke-width="7"/>
+    </mask>
+  </defs>
+  <g transform="translate(40 -10) scale(0.66)">
+    <g clip-path="url(#below)" opacity=".26"><circle cx="256" cy="240" r="170" fill="#00B877"/></g>
+    <g clip-path="url(#above)" mask="url(#one)"><circle cx="256" cy="240" r="170" fill="#00B877"/></g>
+    <rect x="40" y="336" width="432" height="36" rx="18" fill="#00B877"/>
+  </g>
+  <text x="400" y="178" font-family="'Space Grotesk', 'Inter', system-ui, sans-serif" font-weight="700"
+        font-size="132" letter-spacing="6" fill="#07080b">A NEW ONE</text>
+  <text x="404" y="236" font-family="'Inter', system-ui, sans-serif" font-weight="500"
+        font-size="34" letter-spacing="1" fill="#6b746f">Insert Coin. Launch a New One.</text>
+</svg>

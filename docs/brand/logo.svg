@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- A NEW ONE: the coin drop.
+       A coin carrying the ONE slips into a slot. Read it the other way and it is a
+       sun coming up over a horizon: insert coin, a new one begins. -->
+  <defs>
+    <clipPath id="above"><rect x="0" y="0" width="512" height="354"/></clipPath>
+    <clipPath id="below"><rect x="0" y="354" width="512" height="158"/></clipPath>
+    <mask id="one" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <rect width="512" height="512" fill="#fff"/>
+      <!-- the ONE, knocked out of the coin -->
+      <path d="M234 150 H278 V336 H234 V190 L170 244 V204 Z" fill="#000"/>
+      <!-- the coin's rim -->
+      <circle cx="256" cy="240" r="142" fill="none" stroke="#000" stroke-opacity=".38" stroke-width="7"/>
+    </mask>
+  </defs>
+  <!-- the sunk part of the coin, already inside the machine -->
+  <g clip-path="url(#below)" opacity=".26">
+    <circle cx="256" cy="240" r="170" fill="#00B877"/>
+  </g>
+  <!-- the coin -->
+  <g clip-path="url(#above)" mask="url(#one)">
+    <circle cx="256" cy="240" r="170" fill="#00B877"/>
+  </g>
+  <!-- the slot -->
+  <rect x="40" y="336" width="432" height="36" rx="18" fill="#00B877"/>
+</svg>
