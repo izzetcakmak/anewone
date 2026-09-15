@@ -1,5 +1,5 @@
 /*!
- * arc-bridge-kit v0.3.2
+ * arc-bridge-kit v0.3.3
  * Drop-in "pay with anything, land USDC on Arc, then buy" kit.
  *
  *  Legs (each optional except the bridge):
@@ -31,7 +31,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.3.2";
+  const VERSION = "0.3.3";
 
   // ------------------------------------------------------------------ constants
 
@@ -65,9 +65,9 @@
     mainnet: {
       key: "arc", name: "Arc", chainId: 5042, domain: ARC_DOMAIN,
       usdc: "0x3600000000000000000000000000000000000000",
-      // Arc mainnet public RPCs are filled in by the host (config.js) the moment they are
-      // published; the kit only needs them for balance polling and manual mint.
-      rpcs: [],
+      // Arc mainnet went live 16 Sep 2026; arc.drpc.org answers chain id 5042 (verified).
+      // The host may still override with its own pool via arcRpcs.
+      rpcs: ["https://arc.drpc.org"],
       explorer: "https://arcscan.app",
       native: { name: "USDC", symbol: "USDC", decimals: 18 },
     },
