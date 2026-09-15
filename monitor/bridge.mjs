@@ -316,6 +316,38 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
       if (m) env[m[1]] = m[2].trim();
     }
   } catch {}
+  // --mint: finish a bridge whose Forwarding Service leg FAILED (16 Sep 2026: the launch
+  // bridge was attested but Circle's forwarder never minted). Sends receiveMessage on Arc
+  // from the deployer, which needs a little native USDC there for gas. Refuses to send if
+  // Arc already reports the nonce as used, so a double run cannot revert and burn gas.
+  if (process.argv.includes("--mint")) {
+    const rpcArc = env.ARC_MAINNET_RPC || "https://arc.drpc.org";
+    let att;
+    try { att = JSON.parse(readFileSync(ATTESTATION_FILE, "utf8")); }
+    catch { console.error("no monitor/bridge-attestation.json — nothing to mint"); process.exit(1); }
+    const nonce = att.eventNonce || (att.decodedMessage && att.decodedMessage.nonce);
+    if (!att.message || !att.attestation || !nonce) { console.error("attestation file is incomplete"); process.exit(1); }
+    const chainId = await rpcCall(rpcArc, "eth_chainId");
+    if (!chainId || parseInt(chainId, 16) !== 5042) { console.error(`Arc RPC ${rpcArc} did not answer chain id 5042`); process.exit(1); }
+    const used = await ethCall(rpcArc, MESSAGE_TRANSMITTER_V2, "0xfeb61724" + nonce.slice(2)); // usedNonces(bytes32)
+    if (used && BigInt(used) === 1n) { console.log("already minted on Arc (nonce used) — nothing to do"); process.exit(0); }
+    const gas = asBig(await rpcCall(rpcArc, "eth_getBalance", [env.DEPLOYER_ADDRESS, "latest"]));
+    console.log(`Arc native USDC for gas: ${gas} wei (${(Number(gas) / 1e18).toFixed(4)} USDC)`);
+    if (gas === 0n) { console.error("no USDC on Arc to pay gas — bridge a little with the Forwarding Service first"); process.exit(1); }
+    if (!process.argv.includes("--yes")) {
+      console.log(`would send receiveMessage for nonce ${nonce} (amount ${att.decodedMessage?.decodedMessageBody?.amount} minor) to ${env.DEPLOYER_ADDRESS}; add --yes to send`);
+      process.exit(0);
+    }
+    const res = spawnSync(CAST, ["send", MESSAGE_TRANSMITTER_V2, "receiveMessage(bytes,bytes)", att.message, att.attestation,
+      "--rpc-url", rpcArc, "--private-key", env.PRIVATE_KEY, "--timeout", "120", "--json"], { encoding: "utf8", timeout: 180_000 });
+    const out = (res.stdout || "") + (res.stderr || "");
+    const m = (res.stdout || "").match(/\{[\s\S]*\}/);
+    if (!m) { console.error("cast did not return a receipt:\n" + out.slice(-800)); process.exit(1); }
+    const rc = JSON.parse(m[0]);
+    const ok = rc.status === "0x1" || rc.status === 1;
+    console.log(`receiveMessage ${ok ? "OK" : "REVERTED"}: ${rc.transactionHash}`);
+    process.exit(ok ? 0 : 1);
+  }
   const amount = parseUsdc6(env.BRIDGE_AMOUNT_USDC || "10");
   console.log("== ANEWONE CCTP bridge preflight (read-only) ==");
   const rpc = await pickBaseRpc();
