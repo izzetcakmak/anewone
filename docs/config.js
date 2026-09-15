@@ -3,13 +3,15 @@
 window.ANEWONE_CONFIG = {
   /* MAINNET_BLOCK_START — rewritten verbatim by monitor/scan.mjs; keep both markers */
   mainnet: {
-    live: false,
-    chainId: null,
-    chainIdHex: null,
-    rpc: null,
+    live: true,
+    chainId: 5042,
+    chainIdHex: "0x13b2",
+    rpc: "https://rpc.drpc.mainnet.arc.io",
+    rpcs: ["https://rpc.drpc.mainnet.arc.io"],
+    logRpcs: ["https://rpc.drpc.mainnet.arc.io"],
     explorer: null,
-    platform: null,
-    noah: null,
+    platform: "0x3DDA5AD5E74c658aff3d082AFe404a71615B1bc5",
+    noah: "0x26Cc2b608Df6be8fF63C64C9464b2756cC5dc128",
   },
   /* MAINNET_BLOCK_END */
   testnet: {
