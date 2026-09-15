@@ -380,11 +380,13 @@
     border-bottom: 1px solid var(--border); }
   .topbar-inner { max-width: 1560px; margin: 0 auto; padding: 10px 20px; display: flex;
     align-items: center; gap: 10px; position: relative; }
-  .tb-brand { display: flex; align-items: center; gap: 10px; }
+  /* The brand is the largest thing in the bar: a 44px mark and a 22px wordmark, which
+     is as big as the bar takes before it outgrows the 40px controls beside it. */
+  .tb-brand { display: flex; align-items: center; gap: 12px; }
   .tb-brand:hover { text-decoration: none; }
-  .tb-brand img { width: 30px; height: 30px; border-radius: 8px; }
-  .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px;
-    letter-spacing: .6px; color: var(--text); }
+  .tb-brand img { width: 44px; height: 44px; border-radius: 11px; }
+  .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px;
+    letter-spacing: .8px; color: var(--text); white-space: nowrap; }
   .topbar .badge { white-space: nowrap; }
 
   /* ---- theme switcher: three states, the active one lit in the accent */
@@ -1083,7 +1085,7 @@
     .topbar button { padding: 9px 10px; font-size: 12px; }
     #createBtn { padding: 9px 11px; font-size: 11.5px; }
     #connectBtn { padding: 9px 11px; font-size: 11.5px; }
-    .tb-brand img { width: 26px; height: 26px; }
+    .tb-brand img { width: 36px; height: 36px; border-radius: 9px; }
     #netBadge { display: none; }
     #balChip { display: none !important; }
     .topbar .badge { font-size: 10px; padding: 6px 9px; }
@@ -1273,7 +1275,8 @@
 <nav class="topbar">
   <div class="topbar-inner">
     <a class="tb-brand" href="index.html" aria-label="A NEW ONE, home">
-      <img src="brand/mark.png" alt="">
+      <!-- the vector crest: mark.png is 96px and goes soft at this size on a 2x screen -->
+      <img src="brand/logo.svg" alt="">
       <span>A NEW ONE</span>
     </a>
     <!-- One wrapper for everything that folds away on a phone. It is display:contents
