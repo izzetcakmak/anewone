@@ -4338,7 +4338,8 @@ function checkDuplicateHint() {
 }
 ["cName", "cSymbol"].forEach((id) => $(id).addEventListener("input", checkDuplicateHint));
 
-$("createBtn").onclick = () => { if (!signer) return toast("Connect first"); $("createModal").classList.add("open"); updateMetaSize(); };
+// without a wallet the button opens the picker itself, instead of a toast that leaves the visitor to find Connect
+$("createBtn").onclick = () => { if (!signer) { toast("Connect a wallet to launch a coin"); return openWalletPicker(); } $("createModal").classList.add("open"); updateMetaSize(); };
 $("cGo").onclick = async () => {
   try {
     const name = $("cName").value.trim(), sym = $("cSymbol").value.trim().toUpperCase();
@@ -4446,7 +4447,8 @@ async function refreshTrade() {
     : "★ GRADUATED · trading resumes on Uniswap v3 once it is live on Arc") + raisedTxt;
   else if (reopened) $("tBarLabel").textContent = "★ GRADUATED · back on the curve until it moves to Uniswap v3" + raisedTxt;
   else if (inf.graduated) $("tBarLabel").textContent = "★ GRADUATED · trading continues" + raisedTxt;
-  else $("tBarLabel").textContent = pct.toFixed(1) + "% to graduation" + raisedTxt;
+  // "raised", not market cap: the curve graduates on the USDC that actually went into it
+  else $("tBarLabel").textContent = pct.toFixed(1) + "% to graduation" + raisedTxt + (gradTarget !== null ? ` of ${fmt(gradTarget, 0)} · graduation is by USDC raised, not market cap` : "");
   // a closed curve's form gives way to where the coin trades now, or is about to
   const closed = moved || waiting;
   $("tUni").style.display = closed ? "flex" : "none";
