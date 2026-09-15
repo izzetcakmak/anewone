@@ -26,12 +26,22 @@ const OUT_FILE = path.join(OUT_DIR, "snapshot.json");
 // Every provider rate-limits independently, so calls are spread across all of
 // them: one endpoint alone throttled the historical scan down to ~25 calls/min,
 // which left the leaderboard stale for weeks. Rotating also gives free failover.
-const RPCS = [
+let RPCS = [
   "https://rpc.testnet.arc.network",
   "https://rpc.quicknode.testnet.arc.network",
   "https://rpc.blockdaemon.testnet.arc.network",
   "https://rpc.drpc.testnet.arc.network",
 ];
+/**
+ * Point the shared pool at another chain. The Boarding Pass campaign is testnet and keeps
+ * the default; the floor indexer (floor.mjs) swaps in the live network's log-capable pool
+ * from config.js the moment mainnet is live — until 16 Sep 2026 it queried these testnet
+ * hosts for a mainnet platform and would have indexed nothing.
+ */
+export function setRpcPool(urls) {
+  const clean = (urls || []).filter((u) => typeof u === "string" && /^https?:\/\//.test(u));
+  if (clean.length) { RPCS = clean; rrCursor = 0; }
+}
 // The campaign spans every platform deployment: activity on retired contracts keeps
 // counting, and each redeploy (v6 event-only images, 26 Jul) just adds an entry here.
 const PLATFORMS = [

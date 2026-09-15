@@ -17,7 +17,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { rpc, fetchLogs, atomicWrite } from "./snapshot.mjs";
+import { rpc, fetchLogs, atomicWrite, setRpcPool } from "./snapshot.mjs";
 
 const MON = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.dirname(MON);
@@ -212,7 +212,11 @@ function liveNetwork() {
   const mainnet = !!(c && c.mainnet && c.mainnet.live);
   const net = mainnet ? c.mainnet : c && c.testnet;
   if (!net || !net.platform) throw new Error("config.js: no live platform address");
-  return { platform: net.platform, mainnet };
+  // read pool for this network: the log-capable endpoints first (getLogs is what the floor
+  // mostly does), then the rest; keyed/domain-locked entries are objects and are skipped
+  const urls = [...(net.logRpcs || []), ...(net.rpcs || []), net.rpc]
+    .filter((u) => typeof u === "string").filter((u, i, a) => u && a.indexOf(u) === i);
+  return { platform: net.platform, mainnet, rpcs: urls };
 }
 export function livePlatform() { return liveNetwork().platform; }
 
@@ -362,6 +366,10 @@ function saveFloorCache(c) {
 // ---------------------------------------------------------------- entry point
 export async function runFloor({ platform, log = console.log } = {}) {
   if (!platform) throw new Error("runFloor: platform address required");
+  // index the chain the site is actually on: mainnet pool from config.js once live,
+  // the shared testnet pool otherwise
+  const net = liveNetwork();
+  if (net.mainnet && net.rpcs.length) { setRpcPool(net.rpcs); log(`floor: mainnet pool ${net.rpcs.join(", ")}`); }
   // FEE_BPS(): the fee this platform was built with. curveSide() has to match it exactly.
   try { FEE_BPS = BigInt(await ethCall(platform, "0xbf333f2c")); } catch {}
 
