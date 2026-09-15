@@ -2303,7 +2303,9 @@ function rebuildStats() {
   // reaches the oldest token's creation block, and a "24h" figure is only correct once the
   // window covers 24h. Until then the UI shows progress instead of a wrong number.
   fullyIndexed = statsIdx.lo !== null && statsIdx.lo <= indexFloor;
-  covers24h = statsIdx.lo !== null && bpd > 0 && statsIdx.lo <= cutoff;
+  // a window that reaches back to the first coin's birth is complete even when the chain is
+  // younger than 24h — launch day would otherwise show "…" for every 24h figure all day
+  covers24h = fullyIndexed || (statsIdx.lo !== null && bpd > 0 && statsIdx.lo <= cutoff);
   indexPct = (statsIdx.lo === null || latestBlock <= indexFloor) ? 0
     : Math.min(100, Math.round(((statsIdx.hi - statsIdx.lo + 1) / (latestBlock - indexFloor + 1)) * 100));
   statsIdx.recent = statsIdx.recent.filter((r) => r.b >= cutoff).slice(-5000);
