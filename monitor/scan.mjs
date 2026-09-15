@@ -50,6 +50,9 @@ const TESTNET_CHAIN_ID = 5042002; // 0x4cef52 — never treat as mainnet
 const KNOWN_FOREIGN_CHAINS = new Set([1243, 1244]); // legacy "ARC" chains unrelated to Circle
 
 const STATIC_CANDIDATES = [
+  // The host Circle's private mainnet actually answers on (IP-allowlisted until launch;
+  // seen in integrators' configs on 15 Sep 2026). First, so it is probed first.
+  "https://rpc.mainnet.arc.io",
   "https://rpc.arc.network",
   "https://rpc.mainnet.arc.network",
   "https://mainnet.arc.network",
