@@ -25,7 +25,7 @@ const OUT_FILE = path.join(ROOT, "docs", "data", "floor.json");
 
 // Must match STATS_SCHEMA in docs/index.html. A mismatch makes the front end
 // ignore the file and fall back to indexing itself, which is the safe direction.
-const SCHEMA = 5;
+const SCHEMA = 6; // 6: each price point carries the USDC that crossed the curve (chart volume)
 
 const SEL = {
   tokensCount: "0xa64ed8ba",
@@ -117,7 +117,7 @@ function buildIndex(logs, lo, hi, prior = null) {
         .map(([a, x]) => [a, { t: BigInt(x.t), i: BigInt(x.i), o: BigInt(x.o), f: x.f }]));
     }
     for (const [k, arr] of Object.entries(prior.series || {})) {
-      series[k] = arr.map((x) => ({ b: x.b, p: BigInt(x.p) }));
+      series[k] = arr.map((x) => ({ b: x.b, p: BigInt(x.p), u: BigInt(x.u || 0) }));
     }
     for (const [k, arr] of Object.entries(prior.comments || {})) comments[k] = arr.slice();
     recent = (prior.recent || []).map((r) => ({
@@ -160,7 +160,7 @@ function buildIndex(logs, lo, hi, prior = null) {
     if (blockNumber < e.f) e.f = blockNumber;
 
     const ser = series[token] || (series[token] = []);
-    ser.push({ b: blockNumber, p: priceWad });
+    ser.push({ b: blockNumber, p: priceWad, u: curveSide(usdc, isBuy) });
 
     if (blockNumber >= cutoff) recent.push({ b: blockNumber, tk: token, tr: trader, u: usdc, t: tokens, buy: isBuy });
   }
@@ -168,12 +168,16 @@ function buildIndex(logs, lo, hi, prior = null) {
   // same trimming the browser applies, so the shapes stay interchangeable
   for (const [tk, arr] of Object.entries(series)) {
     arr.sort((x, y) => x.b - y.b);
-    const dedup = arr.filter((p, i) => i === 0 || p.b !== arr[i - 1].b || p.p !== arr[i - 1].p);
+    const dedup = arr.filter((p, i) => i === 0 || p.b !== arr[i - 1].b || p.p !== arr[i - 1].p || p.u !== arr[i - 1].u);
     series[tk] = dedup.length > MAX_SERIES ? [dedup[0], ...dedup.slice(-(MAX_SERIES - 1))] : dedup;
   }
   // the window slides, so anything that fell out of 24h goes now
   recent = recent.filter((r) => r.b >= cutoff);
   recent.sort((x, y) => x.b - y.b);
+  // points from before the volume field carry none; the 24h list fills in what it knows
+  const volAt = {};
+  for (const r of recent) (volAt[r.tk] || (volAt[r.tk] = {}))[r.b] = ((volAt[r.tk] || {})[r.b] || 0n) + curveSide(r.u, r.buy);
+  for (const [tk, arr] of Object.entries(series)) for (const x of arr) if (!x.u && volAt[tk] && volAt[tk][x.b]) x.u = volAt[tk][x.b];
 
   return {
     lo, hi,
@@ -186,7 +190,7 @@ function buildIndex(logs, lo, hi, prior = null) {
       b: r.b, tk: r.tk, tr: r.tr, u: r.u.toString(), t: r.t.toString(), buy: r.buy,
     })),
     series: Object.fromEntries(Object.entries(series)
-      .map(([k, arr]) => [k, arr.map((x) => ({ b: x.b, p: x.p.toString() }))])),
+      .map(([k, arr]) => [k, arr.map((x) => ({ b: x.b, p: x.p.toString(), u: (x.u || 0n).toString() }))])),
     comments,
   };
 }
@@ -402,8 +406,10 @@ export async function runFloor({ platform, log = console.log } = {}) {
   const index = buildIndex(logs, lo, Number(tip), usable ? prior.index : null);
   // Publishing costs a deployment, so say plainly whether anything actually moved.
   // A launch with no trade yet emits no Trade log, hence the token-count check.
-  const changed = logs.length > 0 || !usable || tokens.length !== (prior?.tokenCount ?? -1);
-  saveFloorCache({ platform, lo, hi: Number(tip), tokenCount: tokens.length, index });
+  // A new schema is published once even on a quiet chain: the page refuses a file
+  // in the old shape and would fall back to scanning the chain for itself.
+  const changed = logs.length > 0 || !usable || tokens.length !== (prior?.tokenCount ?? -1) || prior.schema !== SCHEMA;
+  saveFloorCache({ schema: SCHEMA, platform, lo, hi: Number(tip), tokenCount: tokens.length, index });
 
   const payload = {
     schema: SCHEMA,

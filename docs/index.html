@@ -759,6 +759,46 @@
     font-size: 12px; color: var(--dim); margin-bottom: 10px; }
   .chart-head #tChartHint { color: var(--accent); }
   #tChart svg { display: block; width: 100%; height: auto; touch-action: none; }
+  /* candle toolbar: timeframe, price or market cap, log scale */
+  .chart-tools { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .ctf { display: flex; gap: 4px; flex-wrap: wrap; }
+  .ctf button { min-height: 0; padding: 4px 9px; font: 600 11px var(--mono); letter-spacing: .3px; border-radius: 8px;
+    background: transparent; border: 1px solid var(--border); color: var(--dim); }
+  .ctf button:hover { color: var(--text); border-color: var(--border-2); }
+  .ctf button.on { color: var(--accent); border-color: rgba(var(--accent-rgb),.5); background: rgba(var(--accent-rgb),.08); }
+  .chart-ohlc { font: 11.5px var(--mono); color: var(--dim); min-height: 16px; margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chart-ohlc b { color: var(--text); font-weight: 500; }
+  .chart-ohlc .up { color: var(--green); } .chart-ohlc .dn { color: var(--red); }
+  /* the coin's own page */
+  .modal-bg.tpage-bg.open { display: block; padding: 0; overflow-y: auto; background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .modal.tpage { max-width: 1160px; width: 100%; margin: 0 auto; border: 0; border-radius: 0; box-shadow: none;
+    max-height: none; overflow: visible; padding: 14px 20px 60px; background: transparent; animation: none; }
+  .tp-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .tp-back { font-family: var(--mono); font-size: 12.5px; letter-spacing: .4px; color: var(--dim); background: transparent;
+    border: 1px solid var(--border-2); border-radius: 999px; padding: 8px 14px; }
+  .tp-back:hover { color: var(--text); }
+  .tpage .modal-x { position: static; }
+  .tp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
+  .tp-main, .tp-side { min-width: 0; } /* a canvas sized to the last width must not hold the column open */
+  .tp-side { position: sticky; top: 8px; }
+  .tp-main .chartbox { margin-top: 16px; }
+  #tChart { height: 340px; }
+  .ttrades { margin-top: 16px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .ttrades .trow { display: flex; gap: 10px; align-items: center; font: 12.5px var(--mono); padding: 7px 0; border-top: 1px solid var(--border); }
+  .ttrades .trow:first-of-type { border-top: 0; }
+  .trow .side { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: .5px; width: 34px; }
+  .trow.buy .side { color: var(--green); } .trow.sell .side { color: var(--red); }
+  .trow .usd { color: var(--text); } .trow .qty { color: var(--dim); }
+  .trow .who { color: var(--dim); cursor: pointer; } .trow .who:hover { color: var(--text); }
+  .trow .when { margin-left: auto; color: var(--faint); font-size: 11.5px; }
+  @media (max-width: 900px) {
+    .tp-grid { grid-template-columns: 1fr; }
+    .tp-side { position: static; }
+    #tChart { height: 260px; }
+    .modal.tpage { padding: 10px 12px 50px; }
+    .trow .qty { display: none; }
+  }
   .tdesc { margin-top: 16px; color: var(--text); font-size: 14px; line-height: 1.5;
     background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px;
     padding: 12px 14px; overflow-wrap: anywhere; }
@@ -1506,14 +1546,22 @@
 </div>
 
 <!-- trade modal -->
-<div id="tradeModal" class="modal-bg">
-  <div class="modal">
-    <button class="modal-x" onclick="closeModals()" aria-label="Close">✕</button>
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:18px;padding-right:36px">
+<!-- A coin's own page. It takes the whole viewport rather than a narrow modal: the chart
+     needs the width, and the URL (#t=0x…) makes it a place the back button and a link
+     can return to. Two columns on a wide screen, one on a phone. -->
+<div id="tradeModal" class="modal-bg tpage-bg">
+  <div class="modal tpage">
+    <div class="tp-top">
+      <button type="button" class="tp-back" onclick="closeModals()">← the floor</button>
+      <button class="modal-x" onclick="closeModals()" aria-label="Close">✕</button>
+    </div>
+    <div class="tp-grid">
+    <div class="tp-main">
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:18px">
       <img id="tImg" class="cimg" style="display:none">
       <h2 id="tTitle" style="margin-bottom:0">Token</h2>
     </div>
-    <div class="row">
+    <div class="row" style="margin-top:0">
       <div class="stat">MARKET CAP <b id="tMcap">–</b></div>
       <div class="stat">HOLDERS <b id="tHolders">–</b></div>
       <div class="stat">24H VOL <b id="tVol">–</b></div>
@@ -1521,12 +1569,38 @@
     </div>
     <div class="chartbox" id="tChartBox" style="display:none">
       <div class="chart-head"><span id="tChartLabel">MARKET CAP</span><span id="tChartHint"></span></div>
+      <div class="chart-tools" id="tChartTools" style="display:none">
+        <div class="ctf" id="tTf">
+          <button type="button" data-tf="60">1m</button><button type="button" data-tf="300">5m</button><button type="button" data-tf="900">15m</button>
+          <button type="button" data-tf="3600">1h</button><button type="button" data-tf="14400">4h</button><button type="button" data-tf="86400">1d</button>
+        </div>
+        <div class="ctf">
+          <button type="button" id="tChartMode" title="Market cap or price per token">PRICE</button>
+          <button type="button" id="tChartLog" title="Logarithmic scale">LOG</button>
+        </div>
+      </div>
+      <div class="chart-ohlc" id="tOhlc"></div>
       <div id="tChart"></div>
     </div>
-    <div class="position" id="tPos" style="display:none"></div>
-    <div class="trust" id="tTrust" style="display:none"></div>
     <div class="tdesc" id="tDesc" style="display:none"></div>
     <div class="tsocials" id="tSocials" style="display:none"></div>
+    <div class="ttrades" id="tTradesBox" style="display:none">
+      <div class="feed-title">⚡ RECENT TRADES</div>
+      <div id="tTrades"></div>
+    </div>
+    <div class="comments">
+      <div class="feed-title" style="margin-top:22px">💬 COMMENTS</div>
+      <div id="tComments"></div>
+      <div class="cbox">
+        <input id="tCommentInput" placeholder="Add a comment…" maxlength="280">
+        <button id="tCommentGo" class="alt">Post</button>
+      </div>
+      <div class="hint" id="tCommentHint">Hold the token (or be its creator) to comment. Stored on-chain.</div>
+    </div>
+    </div><!-- /tp-main -->
+    <div class="tp-side">
+    <div class="position" id="tPos" style="display:none"></div>
+    <div class="trust" id="tTrust" style="display:none"></div>
     <div class="bar" style="margin-top:14px"><i id="tBar" style="width:0%"></i></div>
     <div class="bar-label" id="tBarLabel">0% to graduation</div>
     <div class="tuni" id="tUni" style="display:none">
@@ -1578,19 +1652,10 @@
     <div class="row">
       <button id="tGo" class="alt">BUY</button>
       <button id="tShare">🔗 Share</button>
-      <button onclick="closeModals()">Close</button>
     </div>
     <div class="hint" id="tLinks"></div>
-
-    <div class="comments">
-      <div class="feed-title" style="margin-top:22px">💬 COMMENTS</div>
-      <div id="tComments"></div>
-      <div class="cbox">
-        <input id="tCommentInput" placeholder="Add a comment…" maxlength="280">
-        <button id="tCommentGo" class="alt">Post</button>
-      </div>
-      <div class="hint" id="tCommentHint">Hold the token (or be its creator) to comment. Stored on-chain.</div>
-    </div>
+    </div><!-- /tp-side -->
+    </div><!-- /tp-grid -->
   </div>
 </div>
 
@@ -2019,7 +2084,7 @@ const MAX_CHUNKS_PER_PASS = 24; // bounded work per refresh; the rest resumes ne
 // v2 added per-trade trader/amount/side; v3 added the per-token price series.
 // v5: per (token,trader) entries became {t,i,o,f} — net tokens, USDC in/out, first block —
 // which powers PnL, sniper share and dev-dump detection
-const STATS_SCHEMA = 5;
+const STATS_SCHEMA = 6; // 6: each price point carries the USDC that crossed the curve (chart volume)
 const STATS_KEY = `anewone_stats_v${STATS_SCHEMA}_` + CFG.platform;
 let statsIdx = null; // { scanned, agg{token->{volAll,trades}}, net{token->{trader->bigint}}, recent[] }
 
@@ -2041,7 +2106,7 @@ function loadStatsCache() {
           b: r.b, tk: r.tk, tr: r.tr, u: BigInt(r.u), t: BigInt(r.t || 0), buy: !!r.buy
         })),
         series: Object.fromEntries(Object.entries(j.series || {})
-          .map(([k, arr]) => [k, arr.map((s) => ({ b: s.b, p: BigInt(s.p) }))])),
+          .map(([k, arr]) => [k, arr.map((s) => ({ b: s.b, p: BigInt(s.p), u: BigInt(s.u || 0) }))])),
         comments: j.comments || {},
       };
     }
@@ -2117,7 +2182,7 @@ async function hydrateFromFloor() {
       recent: (idx.recent || []).map((r) => ({
         b: r.b, tk: cs(r.tk), tr: cs(r.tr), u: BigInt(r.u), t: BigInt(r.t || 0), buy: !!r.buy,
       })).filter((r) => r.tk && r.tr),
-      series: rekey(idx.series, (arr) => arr.map((s) => ({ b: s.b, p: BigInt(s.p) }))),
+      series: rekey(idx.series, (arr) => arr.map((s) => ({ b: s.b, p: BigInt(s.p), u: BigInt(s.u || 0) }))),
       comments: rekey(idx.comments, (arr) => arr.map((c) => ({ ...c, a: cs(c.a) || c.a }))),
     };
     indexFloor = idx.lo;
@@ -2169,7 +2234,7 @@ function saveStatsCache(s) {
         b: r.b, tk: r.tk, tr: r.tr, u: r.u.toString(), t: r.t.toString(), buy: r.buy
       })),
       series: Object.fromEntries(Object.entries(s.series)
-        .map(([k, arr]) => [k, arr.map((x) => ({ b: x.b, p: x.p.toString() }))])),
+        .map(([k, arr]) => [k, arr.map((x) => ({ b: x.b, p: x.p.toString(), u: (x.u || 0n).toString() }))])),
       comments: s.comments,
     }));
   } catch (e) {
@@ -2216,7 +2281,7 @@ function ingestLogs(logs) {
     statsIdx.recent.push({ b: lg.blockNumber, tk: token, tr: trader, u: usdc, t: tokens, buy: isBuy });
     // price series for the chart — kept for the token's whole life, not just 24h
     const ser = statsIdx.series[token] || (statsIdx.series[token] = []);
-    ser.push({ b: lg.blockNumber, p: priceWad });
+    ser.push({ b: lg.blockNumber, p: priceWad, u: curveSide(usdc, isBuy) });
   }
 }
 function rebuildStats() {
@@ -2235,9 +2300,14 @@ function rebuildStats() {
   for (const [tk, arr] of Object.entries(statsIdx.series)) {
     arr.sort((a, b) => a.b - b.b);
     const seen = new Set();
-    const dedup = arr.filter((x) => (seen.has(x.b + ":" + x.p) ? false : seen.add(x.b + ":" + x.p)));
+    const dedup = arr.filter((x) => { const k = x.b + ":" + x.p + ":" + (x.u || 0n); return seen.has(k) ? false : seen.add(k); });
     statsIdx.series[tk] = dedup.length > 600 ? [dedup[0], ...dedup.slice(-599)] : dedup;
   }
+  // Price points from before the volume field existed carry none; the 24h trade list
+  // knows the USDC of every trade in its window, so it fills those in for the chart.
+  const volAt = {};
+  for (const r of statsIdx.recent) (volAt[r.tk] || (volAt[r.tk] = {}))[r.b] = ((volAt[r.tk] || {})[r.b] || 0n) + curveSide(r.u, r.buy);
+  for (const [tk, arr] of Object.entries(statsIdx.series)) for (const x of arr) if (!x.u && volAt[tk] && volAt[tk][x.b]) x.u = volAt[tk][x.b];
   const vol24 = {}, traders24 = {};
   for (const r of statsIdx.recent) {
     vol24[r.tk] = (vol24[r.tk] || 0n) + curveSide(r.u, r.buy);
@@ -3344,75 +3414,160 @@ function loadLwc() {
   }
   return lwcLoading;
 }
+let lwcVol = null, lwcKey = "", lwcCount = 0, lwcCandles = [];
 function destroyLwc() {
   try { if (lwcChart) lwcChart.remove(); } catch {}
-  lwcChart = lwcSeries = lwcAddr = null;
+  lwcChart = lwcSeries = lwcVol = lwcAddr = null; lwcKey = ""; lwcCount = 0; lwcCandles = [];
 }
-/** series -> ~5-minute OHLC candles in market-cap USD; times estimated from block age */
-function buildCandles(addr) {
+// What the chart shows: a timeframe (0 = pick one for the coin's age), market cap or the
+// price of one token, linear or log. Kept across coins, the way a trader leaves them.
+const TF_STEPS = [60, 300, 900, 3600, 14400, 86400];
+const TF_LABEL = { 60: "1m", 300: "5m", 900: "15m", 3600: "1h", 14400: "4h", 86400: "1d" };
+let chartTf = 0, chartMode = "mcap", chartLog = false;
+/** the smallest timeframe that draws the coin's whole life in at most ~150 candles */
+function autoTf(addr) {
   const raw = (statsIdx && statsIdx.series[addr]) || [];
-  if (raw.length < 2 || !blockTimeSec || !latestBlock) return null;
-  const bucketBlocks = Math.max(1, Math.round(300 / blockTimeSec));
+  if (!raw.length || !blockTimeSec || !latestBlock) return 300;
+  const span = Math.max(0, latestBlock - raw[0].b) * blockTimeSec;
+  return TF_STEPS.find((tf) => span / tf <= 150) || 86400;
+}
+const fmtUsdNum = (n) => n >= 1e9 ? "$" + (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? "$" + (n / 1e6).toFixed(2) + "M"
+  : n >= 1e3 ? "$" + (n / 1e3).toFixed(1) + "K" : "$" + n.toFixed(n >= 100 ? 0 : 2);
+const fmtPriceNum = (n) => n >= 1 ? "$" + n.toLocaleString("en-US", { maximumFractionDigits: 4 })
+  : "$" + n.toLocaleString("en-US", { maximumSignificantDigits: 4, maximumFractionDigits: 12 });
+// the axis keeps empty room under the lowest candle; a label there would read as a negative price
+const fmtChartNum = (n) => (n < 0 ? "" : chartMode === "price" ? fmtPriceNum(n) : fmtUsdNum(n));
+/**
+ * series -> OHLC candles of `tf` seconds plus the USDC that crossed the curve in each.
+ * Empty stretches are filled with flat candles so the time axis is real time, not
+ * "one candle per trade". Times come from block age, aligned to the timeframe.
+ */
+function buildCandles(addr, tf) {
+  const raw = (statsIdx && statsIdx.series[addr]) || [];
+  if (raw.length < 1 || !blockTimeSec || !latestBlock) return null;
+  const bucketBlocks = Math.max(1, Math.round(tf / blockTimeSec));
   const nowSec = Math.floor(Date.now() / 1000);
+  const value = (p) => Number(ethers.formatEther(chartMode === "price" ? p : p * TOTAL_SUPPLY_TOKENS));
   const buckets = new Map();
-  for (const s of raw) {
-    const v = Number(ethers.formatEther(s.p * TOTAL_SUPPLY_TOKENS));
-    if (!isFinite(v) || v <= 0) continue;
-    const key = Math.floor(s.b / bucketBlocks);
+  const put = (key, v, u) => {
+    if (!isFinite(v) || v <= 0) return;
     const c = buckets.get(key);
-    if (!c) buckets.set(key, { key, open: v, high: v, low: v, close: v });
-    else { c.high = Math.max(c.high, v); c.low = Math.min(c.low, v); c.close = v; }
-  }
+    if (!c) buckets.set(key, { key, open: v, high: v, low: v, close: v, vol: u });
+    else { c.high = Math.max(c.high, v); c.low = Math.min(c.low, v); c.close = v; c.vol += u; }
+  };
+  for (const s of raw) put(Math.floor(s.b / bucketBlocks), value(s.p), s.u ? Number(ethers.formatEther(s.u)) : 0);
   const inf = tokenInfo[addr];
-  if (inf) { // anchor the last candle at the live value
-    const v = Number(ethers.formatEther(marketCapWei(inf)));
-    const key = Math.floor(latestBlock / bucketBlocks);
+  if (inf) put(Math.floor(latestBlock / bucketBlocks), value(priceOf(inf)), 0); // the live curve anchors the last candle
+  const keys = [...buckets.keys()].sort((a, b) => a - b);
+  if (!keys.length) return null;
+  const first = keys[0], last = keys[keys.length - 1];
+  // the bucket that holds the tip ends now; every other bucket is tf earlier per step
+  const endOf = (key) => nowSec - Math.max(0, latestBlock - (key * bucketBlocks + bucketBlocks - 1)) * blockTimeSec;
+  const base = Math.floor(endOf(first) / tf) * tf;
+  const out = [];
+  const fill = last - first <= 3000; // a 1m view of an old coin stays sparse rather than 100k candles
+  let prev = null;
+  for (let key = first; key <= last; key++) {
     const c = buckets.get(key);
-    if (!c) buckets.set(key, { key, open: v, high: v, low: v, close: v });
-    else { c.high = Math.max(c.high, v); c.low = Math.min(c.low, v); c.close = v; }
+    if (!c) { if (fill && prev) out.push({ time: base + (key - first) * tf, open: prev, high: prev, low: prev, close: prev, vol: 0 }); continue; }
+    out.push({ time: base + (key - first) * tf, open: prev ?? c.open, high: Math.max(c.high, prev ?? c.high), low: Math.min(c.low, prev ?? c.low), close: c.close, vol: c.vol });
+    prev = c.close;
   }
-  const out = [...buckets.values()].sort((a, b) => a.key - b.key).map((c) => ({
-    time: nowSec - Math.max(0, latestBlock - (c.key * bucketBlocks + bucketBlocks - 1)) * blockTimeSec,
-    open: c.open, high: c.high, low: c.low, close: c.close,
-  }));
-  // strictly increasing times (block-age estimates can collide on sparse data)
-  for (let i = 1; i < out.length; i++) if (out[i].time <= out[i - 1].time) out[i].time = out[i - 1].time + 1;
-  return out.length >= 4 ? out : null;
+  return out.length >= 2 ? out : null;
+}
+function paintChartTools(tf) {
+  $("tChartTools").style.display = "flex";
+  $("tTf").querySelectorAll("button").forEach((b) => b.classList.toggle("on", Number(b.dataset.tf) === tf));
+  $("tChartMode").textContent = chartMode === "price" ? "MCAP" : "PRICE";
+  $("tChartMode").title = chartMode === "price" ? "Show market cap" : "Show the price of one token";
+  $("tChartLog").classList.toggle("on", chartLog);
+  $("tChartLabel").textContent = chartMode === "price" ? "PRICE" : "MARKET CAP";
+}
+function paintOhlc(c) {
+  if (!c) { $("tOhlc").textContent = ""; return; }
+  const up = c.close >= c.open;
+  const chg = c.open > 0 ? ((c.close - c.open) / c.open) * 100 : 0;
+  $("tOhlc").innerHTML = `O <b>${esc(fmtChartNum(c.open))}</b> H <b>${esc(fmtChartNum(c.high))}</b> L <b>${esc(fmtChartNum(c.low))}</b> C <b>${esc(fmtChartNum(c.close))}</b> ` +
+    `<span class="${up ? "up" : "dn"}">${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%</span>` +
+    (c.vol ? ` · vol <b>${esc(fmtUsdNum(c.vol))}</b>` : "");
 }
 function renderCandles(addr) {
   if (!lwcReady || !window.LightweightCharts) return false;
-  const candles = buildCandles(addr);
+  const tf = chartTf || autoTf(addr);
+  const candles = buildCandles(addr, tf);
   if (!candles) return false;
   const box = $("tChartBox"), host = $("tChart");
   box.style.display = "block";
-  if (lwcChart && lwcAddr === addr) { lwcSeries.setData(candles); return true; }
+  paintChartTools(tf);
+  const LWC = window.LightweightCharts;
+  const key = [addr, tf, chartMode, chartLog].join("|");
+  const vols = candles.map((c) => ({ time: c.time, value: c.vol, color: c.close >= c.open ? "rgba(62,230,160,.45)" : "rgba(255,84,112,.45)" }));
+  if (lwcChart && lwcKey === key) {
+    // a live update: new bars are appended, the view stays where the visitor left it
+    lwcSeries.setData(candles); lwcVol.setData(vols); lwcCandles = candles;
+    if (candles.length !== lwcCount) { lwcCount = candles.length; lwcChart.timeScale().scrollToRealTime(); }
+    paintOhlc(candles[candles.length - 1]);
+    return true;
+  }
   destroyLwc();
   host.innerHTML = "";
-  host.style.height = "216px";
-  const LWC = window.LightweightCharts;
   lwcChart = LWC.createChart(host, {
     autoSize: true,
-    layout: { background: { color: "transparent" }, textColor: "#8b8b93", fontSize: 11,
-      attributionLogo: false },
-    grid: { vertLines: { color: "rgba(var(--ink-rgb),.04)" }, horzLines: { color: "rgba(var(--ink-rgb),.04)" } },
-    rightPriceScale: { borderVisible: false },
-    timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
-    crosshair: { horzLine: { labelBackgroundColor: cssVar("--bg-2") }, vertLine: { labelBackgroundColor: cssVar("--bg-2") } },
+    layout: { background: { color: "transparent" }, textColor: "#8b8b93", fontSize: 11, attributionLogo: false },
+    grid: { vertLines: { color: "rgba(var(--ink-rgb),.05)" }, horzLines: { color: "rgba(var(--ink-rgb),.05)" } },
+    rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.26 },
+      mode: chartLog ? LWC.PriceScaleMode.Logarithmic : LWC.PriceScaleMode.Normal },
+    timeScale: { borderVisible: false, timeVisible: tf < 86400, secondsVisible: false, rightOffset: 2, minBarSpacing: 3 },
+    localization: { priceFormatter: fmtChartNum },
+    crosshair: { mode: LWC.CrosshairMode.Normal,
+      horzLine: { labelBackgroundColor: cssVar("--bg-2") }, vertLine: { labelBackgroundColor: cssVar("--bg-2") } },
   });
-  const opts = { upColor: "var(--accent)", downColor: "var(--red)", borderVisible: false,
-    wickUpColor: "var(--accent)", wickDownColor: "var(--red)" };
-  lwcSeries = lwcChart.addSeries ? lwcChart.addSeries(LWC.CandlestickSeries, opts)
-                                 : lwcChart.addCandlestickSeries(opts); // v5 / v4 API
-  lwcSeries.setData(candles);
+  lwcSeries = lwcChart.addSeries(LWC.CandlestickSeries, {
+    upColor: cssVar("--green"), downColor: cssVar("--red"), borderVisible: false,
+    wickUpColor: cssVar("--green"), wickDownColor: cssVar("--red"),
+    priceFormat: { type: "custom", formatter: fmtChartNum, minMove: chartMode === "price" ? 1e-12 : 0.01 },
+  });
+  // USDC through the curve per candle, on its own scale along the bottom
+  lwcVol = lwcChart.addSeries(LWC.HistogramSeries, { priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
+  lwcChart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 }, borderVisible: false });
+  lwcSeries.setData(candles); lwcVol.setData(vols);
+  lwcCandles = candles; lwcCount = candles.length; lwcKey = key; lwcAddr = addr;
   lwcChart.timeScale().fitContent();
-  lwcAddr = addr;
-  $("tChartHint").innerHTML = `5m candles · <a href="https://www.tradingview.com/" target="_blank" rel="noopener" style="color:var(--faint)">charts by TradingView</a>`;
+  paintOhlc(candles[candles.length - 1]);
+  lwcChart.subscribeCrosshairMove((p) => {
+    const c = p && p.time !== undefined ? lwcCandles.find((x) => x.time === p.time) : null;
+    paintOhlc(c || lwcCandles[lwcCandles.length - 1]);
+  });
+  $("tChartHint").innerHTML = `${esc(TF_LABEL[tf] || tf + "s")} candles${chartTf ? "" : " · auto"} · <a href="https://www.tradingview.com/" target="_blank" rel="noopener" style="color:var(--faint)">charts by TradingView</a>`;
   return true;
+}
+$("tTf").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-tf]"); if (!b) return;
+  chartTf = Number(b.dataset.tf); if (currentToken) renderChart(currentToken);
+});
+$("tChartMode").onclick = () => { chartMode = chartMode === "price" ? "mcap" : "price"; if (currentToken) renderChart(currentToken); };
+$("tChartLog").onclick = () => { chartLog = !chartLog; if (currentToken) renderChart(currentToken); };
+
+// The coin's trades, newest first, from the same 24h window the ticker reads.
+function renderTrades(addr) {
+  const box = $("tTradesBox");
+  const list = ((statsIdx && statsIdx.recent) || []).filter((r) => r && r.tk === addr && r.tr).sort((a, b) => b.b - a.b).slice(0, 40);
+  if (!list.length) { box.style.display = "none"; return; }
+  const sym = (tokenMeta[addr] || {}).symbol || "";
+  $("tTrades").innerHTML = list.map((r) => {
+    const who = r.tr.slice(0, 6) + "…" + r.tr.slice(-4);
+    const when = ageText(latestBlock ? latestBlock - r.b : null);
+    return `<div class="trow ${r.buy ? "buy" : "sell"}"><span class="side">${r.buy ? "BUY" : "SELL"}</span>` +
+      `<span class="usd">${esc(compactUsd(r.u))}</span><span class="qty">${esc(fmt(r.t, 0))} $${esc(sym)}</span>` +
+      `<span class="who" onclick="openCreator('${esc(r.tr)}')" title="${esc(r.tr)}">${esc(who)}</span><span class="when">${esc(when)}</span></div>`;
+  }).join("");
+  box.style.display = "block";
 }
 
 function renderChart(addr) {
   if (renderCandles(addr)) return;
-  if (lwcChart) { destroyLwc(); $("tChart").innerHTML = ""; $("tChart").style.height = ""; }
+  $("tChartTools").style.display = "none"; $("tOhlc").textContent = "";
+  if (lwcChart) { destroyLwc(); $("tChart").innerHTML = ""; }
   const box = $("tChartBox"), host = $("tChart");
   const raw = (statsIdx && statsIdx.series[addr]) || [];
   const inf = tokenInfo[addr];
@@ -4013,9 +4168,14 @@ function openFromHash() {
   if (!m) return;
   const want = m[1].toLowerCase();
   const hit = shownAddrs.find((a) => a.toLowerCase() === want);
-  if (hit) openTrade(hit);
+  if (hit && !(currentToken === hit && $("tradeModal").classList.contains("open"))) openTrade(hit);
 }
-window.addEventListener("hashchange", openFromHash);
+window.addEventListener("hashchange", () => {
+  // the back button took the #t= away: the coin's page goes with it
+  if (!/t=0x[0-9a-fA-F]{40}/.test(location.hash) && $("tradeModal").classList.contains("open")) { closeModals(); return; }
+  openFromHash();
+});
+addEventListener("keydown", (e) => { if (e.key === "Escape" && $("tradeModal").classList.contains("open")) closeModals(); });
 
 function tickerText(n) {
   const names = Object.values(tokenMeta).map(t => "$" + t.symbol).join("  ·  ");
@@ -4226,6 +4386,7 @@ async function openTrade(addr) {
   renderChart(addr);
   // candles appear as soon as the (lazy-loaded) chart library lands
   loadLwc().then(() => { if (currentToken === addr && $("tradeModal").classList.contains("open")) renderChart(addr); });
+  renderTrades(addr);
   renderPosition(addr);
   computeTrust(addr);
   renderComments(addr);
@@ -4246,6 +4407,10 @@ async function openTrade(addr) {
     ? `<a href="${esc(CFG.explorer)}/address/${esc(addr)}" target="_blank" rel="noopener" style="color:var(--accent)">token on explorer ↗</a> · `
     : "") + (dev ? `dev <span class="devlink" onclick="openCreator('${esc(dev)}')">${esc(devShort)} ↗</span>` : esc(addr));
   $("tradeModal").classList.add("open");
+  $("tradeModal").scrollTop = 0;
+  // the page has a URL: the back button and a copied link both come back here
+  const inHash = (location.hash.match(/t=(0x[0-9a-fA-F]{40})/) || [])[1];
+  if (!inHash || inHash.toLowerCase() !== addr.toLowerCase()) location.hash = "t=" + addr;
   refreshTrade();
 }
 async function refreshTrade() {
@@ -4522,7 +4687,7 @@ function renderComments(addr) {
   $("tCommentGo").disabled = !holds;
   $("tCommentHint").textContent = !userAddr ? "Connect a wallet to comment."
     : holds ? "Comment is stored on-chain (gas only)."
-    : "Hold the token (or be its creator) to comment.";
+    : `You hold 0 $${(tokenMeta[addr] || {}).symbol || ""}. Buy any amount of it to comment here.`;
 }
 $("tCommentGo").onclick = async () => {
   if (!signer) return toast("Connect first");
@@ -4585,8 +4750,13 @@ $("tShare").onclick = async () => {
   else toast(text);
 };
 
-function closeModals() { document.querySelectorAll(".modal-bg").forEach(m => m.classList.remove("open")); }
-document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) closeModals(); }));
+function closeModals() {
+  document.querySelectorAll(".modal-bg").forEach(m => m.classList.remove("open"));
+  // leaving the coin's page drops its #t=, without adding a history entry to step back through
+  if (/t=0x[0-9a-fA-F]{40}/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+}
+// a click on the dimmed backdrop closes a dialog; the coin's page has no backdrop to click
+document.querySelectorAll(".modal-bg:not(.tpage-bg)").forEach(m => m.addEventListener("click", e => { if (e.target === m) closeModals(); }));
 $("connectBtn").onclick = () => {
   if (userAddr) {
     const m = $("walletMenu");
@@ -4708,6 +4878,7 @@ async function liveTail() {
       renderFeed();
       renderSpotlight();
       paintGrid();   // prices moved; the cards say so without asking the chain
+      if (currentToken && $("tradeModal").classList.contains("open")) { renderChart(currentToken); renderTrades(currentToken); }
       renderLiveRail(); renderLeaders(); // the left rail ranks by 24h volume, which a trade just changed
       // A trade against a token we have never seen is a launch that happened after
       // the prebuilt floor was published. Until it is discovered its trades are
