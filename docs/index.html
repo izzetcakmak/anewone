@@ -4390,6 +4390,7 @@ async function openTrade(addr) {
   // candles appear as soon as the (lazy-loaded) chart library lands
   loadLwc().then(() => { if (currentToken === addr && $("tradeModal").classList.contains("open")) renderChart(addr); });
   renderTrades(addr);
+  userTokenBal = 0n; // the previous coin's balance must not open this coin's comment box
   renderPosition(addr);
   computeTrust(addr);
   renderComments(addr);
@@ -4464,6 +4465,9 @@ async function refreshTrade() {
     userNativeBal = await rpc(() => readProvider.getBalance(userAddr));
     updateBalHint();
     renderPosition(currentToken); // now that the real token balance is known
+    // the comment gate was painted before this read, from the last coin's balance or none:
+    // a holder saw "You hold 0" with the Post button off until they reloaded
+    renderComments(currentToken);
   }
 }
 function updateBalHint() {
