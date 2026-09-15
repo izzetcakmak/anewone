@@ -781,7 +781,10 @@
   .tpage .modal-x { position: static; }
   .tp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
   .tp-main, .tp-side { min-width: 0; } /* a canvas sized to the last width must not hold the column open */
+  /* the trade form leads the side column and stays in view; position and trust sit under the chart */
   .tp-side { position: sticky; top: 8px; }
+  .tp-side .tconnect { margin-top: 12px; }
+  .tp-side #tForm .tabs { margin-top: 12px; }
   .tp-main .chartbox { margin-top: 16px; }
   #tChart { height: 340px; }
   .ttrades { margin-top: 16px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
@@ -1582,6 +1585,8 @@
       <div class="chart-ohlc" id="tOhlc"></div>
       <div id="tChart"></div>
     </div>
+    <div class="position" id="tPos" style="display:none"></div>
+    <div class="trust" id="tTrust" style="display:none"></div>
     <div class="tdesc" id="tDesc" style="display:none"></div>
     <div class="tsocials" id="tSocials" style="display:none"></div>
     <div class="ttrades" id="tTradesBox" style="display:none">
@@ -1599,9 +1604,7 @@
     </div>
     </div><!-- /tp-main -->
     <div class="tp-side">
-    <div class="position" id="tPos" style="display:none"></div>
-    <div class="trust" id="tTrust" style="display:none"></div>
-    <div class="bar" style="margin-top:14px"><i id="tBar" style="width:0%"></i></div>
+    <div class="bar" style="margin-top:0"><i id="tBar" style="width:0%"></i></div>
     <div class="bar-label" id="tBarLabel">0% to graduation</div>
     <div class="tuni" id="tUni" style="display:none">
       <div class="tc-copy">
