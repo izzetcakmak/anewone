@@ -7,8 +7,14 @@ window.ANEWONE_CONFIG = {
     chainId: 5042,
     chainIdHex: "0x13b2",
     rpc: "https://rpc.drpc.mainnet.arc.io",
-    rpcs: ["https://rpc.drpc.mainnet.arc.io"],
-    logRpcs: ["https://rpc.drpc.mainnet.arc.io"],
+    // Measured 16 Sep 2026, minutes after launch. eth_call: all four answer. eth_getLogs:
+    // dRPC refuses every range on its free plan ("ranges over 10000 blocks"), quicknode and
+    // rpc.mainnet.arc.io take up to 10k blocks, blockdaemon takes any range — so it leads
+    // the log pool and dRPC is not in it at all.
+    rpcs: ["https://rpc.blockdaemon.mainnet.arc.io", "https://rpc.quicknode.mainnet.arc.io", "https://rpc.mainnet.arc.io", "https://rpc.drpc.mainnet.arc.io"],
+    logRpcs: ["https://rpc.blockdaemon.mainnet.arc.io", "https://rpc.mainnet.arc.io", "https://rpc.quicknode.mainnet.arc.io"],
+    // no public block explorer yet (arcscan.app / explorer.arc.network do not resolve,
+    // arcscan.xyz is a parked domain, explorer.arc.io is behind Circle's access login)
     explorer: null,
     platform: "0x3DDA5AD5E74c658aff3d082AFe404a71615B1bc5",
     noah: "0x26Cc2b608Df6be8fF63C64C9464b2756cC5dc128",
