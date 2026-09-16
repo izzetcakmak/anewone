@@ -731,6 +731,14 @@
   .cstats { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: 12.5px; color: var(--dim); }
   .cstats b { color: var(--text); font-family: var(--mono); font-weight: 500; }
   .rpcstatus { text-align: center; color: var(--gold); font-size: 13px; margin: 2px 0 8px; animation: pulse 1.6s infinite; }
+  .rpchint { display: flex; gap: 12px; align-items: flex-start; margin: 4px 0 12px; padding: 12px 14px;
+    border: 1px solid rgba(var(--gold-rgb),.45); background: rgba(var(--gold-rgb),.10); border-radius: 12px;
+    color: var(--text); font-size: 13.5px; line-height: 1.5; }
+  .rpchint code { font-family: var(--mono); font-size: 12.5px; padding: 1px 6px; border-radius: 6px;
+    background: rgba(var(--ink-rgb),.08); user-select: all; }
+  .rpchint-x { flex: none; border: 0; background: transparent; color: var(--dim); font-size: 18px;
+    line-height: 1; padding: 0 2px; cursor: pointer; min-height: 0; }
+  .rpchint-x:hover { color: var(--text); }
   .toolbar { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; align-items: center;
     justify-content: space-between; scroll-margin-top: 76px; }
   .sorts { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px;
@@ -1358,6 +1366,17 @@
 
 <div class="wrap">
   <div id="rpcStatus" class="rpcstatus" style="display:none"></div>
+  <!-- Shown when the connected wallet's own Arc RPC does not answer (MetaMask ships Arc on
+       its own RPC and ignores the one a site offers). The wallet, not the site, has to be
+       fixed, and this says how. -->
+  <div id="rpcHint" class="rpchint" style="display:none" role="alert">
+    <div>
+      <b>Your wallet's Arc RPC is not answering</b>, so balances and trades will fail even though the site works.
+      In MetaMask: <b>Settings → Networks → Arc → RPC URL</b>, replace it with
+      <code>https://arc.drpc.org</code>, save, then reload this page. Rabby and most other wallets are not affected.
+    </div>
+    <button type="button" class="rpchint-x" onclick="hideRpcHint(true)" aria-label="Dismiss">×</button>
+  </div>
 
   <div class="shell">
   <!-- LEFT RAIL: the live list, densest view of the same data as the floor -->
@@ -2746,9 +2765,19 @@ async function connectEmbedded(provider, rdns) {
 // error itself when it came straight from the wallet.
 function walletError(e) {
   const raw = e?.info?.error ?? e?.error ?? e?.data?.originalError ?? e ?? {};
+  // MetaMask wraps a revert as -32603 "Internal JSON-RPC error." with the reason one level
+  // down in data.message, which is the part worth showing
+  const nested = raw.data?.originalError ?? raw.data ?? null;
   const code = typeof raw.code === "number" ? raw.code : (typeof e?.code === "number" ? e.code : null);
-  const message = String(raw.message || e?.shortMessage || e?.message || "");
+  const message = String((nested && typeof nested.message === "string" && nested.message) || raw.message || e?.shortMessage || e?.message || "");
   return { code, message };
+}
+// A failed wallet action, said in the wallet's words. An RPC that answered nothing also
+// brings up the RPC hint, since that is what fixes it; a revert does not.
+function tradeFail(e, fallback) {
+  const { message } = walletError(e);
+  if (/failed to fetch|network ?error|timed? ?out|unreachable|econn|\b50[234]\b|\b429\b/i.test(message) && !/revert/i.test(message)) showRpcHint();
+  toast(walletErrorText(e, fallback));
 }
 function walletErrorText(e, fallback) {
   const { code, message } = walletError(e);
@@ -2819,6 +2848,26 @@ async function connect(forcePicker, silent) {
   syncTradeAuth();
   refreshFees();
   refreshNativeBalance();
+  checkWalletRpc(w);
+}
+
+// MetaMask ships Arc as one of its built-in networks, on its own (Infura) RPC, and uses that
+// RPC rather than the one a site offers when asked to switch. On launch night that RPC
+// answered nothing, so every MetaMask user saw wallet errors that named no cause, while
+// Rabby, on its own RPC, was fine. After connecting, the wallet is asked one plain question
+// that only its RPC can answer; silence or an error shows the fix, which is in the wallet.
+let rpcHintDismissed = false;
+function showRpcHint() { if (!rpcHintDismissed) $("rpcHint").style.display = "flex"; }
+function hideRpcHint(dismiss) { if (dismiss) rpcHintDismissed = true; $("rpcHint").style.display = "none"; }
+async function checkWalletRpc(w) {
+  const ask = w.request({ method: "eth_getBlockByNumber", params: ["latest", false] });
+  const wait = new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 6000));
+  try {
+    const b = await Promise.race([ask, wait]);
+    if (b && b.number) { hideRpcHint(); return true; }
+  } catch (e) { console.warn("wallet rpc check failed", walletError(e)); }
+  showRpcHint();
+  return false;
 }
 
 // ---- balance + funding. On Arc the native USDC balance pays gas AND trades, so a fresh
@@ -2947,7 +2996,7 @@ $("cfClaim").onclick = async () => {
     toast("Collecting…"); await tx.wait();
     toast("CREATOR FEES CLAIMED! +" + fmt(cfPot, 4) + " USDC");
     refreshFees(); refreshNativeBalance();   // the pot just landed in the wallet
-  } catch (e) { toast(e.shortMessage || e.message); }
+  } catch (e) { tradeFail(e, "Transaction failed"); }
 };
 $("pfClaim").onclick = async () => {
   if (!signer) return toast("Connect first");
@@ -2956,7 +3005,7 @@ $("pfClaim").onclick = async () => {
     toast("Collecting…"); await tx.wait();
     toast("PLATFORM FEES CLAIMED!");
     refreshFees(); refreshNativeBalance();
-  } catch (e) { toast(e.shortMessage || e.message); }
+  } catch (e) { tradeFail(e, "Transaction failed"); }
 };
 $("pfSweep").onclick = async () => {
   if (!signer) return toast("Connect first");
@@ -4402,7 +4451,7 @@ $("cGo").onclick = async () => {
     const created = rcpt && rcpt.logs.find((l) =>
       l.topics[0] === CREATED_TOPIC && String(l.address).toLowerCase() === String(CFG.platform).toLowerCase());
     discoverNow(created ? topicAddr(created.topics[1]) : null);
-  } catch (e) { toast(e.shortMessage || e.message); }
+  } catch (e) { tradeFail(e, "Transaction failed"); }
 };
 
 // ------- trade
@@ -4616,7 +4665,7 @@ $("tGo").onclick = async () => {
     refreshNativeBalance();
     refreshFees();
     refreshTrade(); loadTokens();
-  } catch (e) { toast(e.shortMessage || e.message); }
+  } catch (e) { tradeFail(e, "Transaction failed"); }
 };
 
 // ------- your position / PnL for the connected wallet.
@@ -4749,7 +4798,7 @@ $("tCommentGo").onclick = async () => {
     const tok = currentToken;
     await loadStats(indexFloor || Math.max(1, latestBlock - 9000));
     if (currentToken === tok) renderComments(tok);
-  } catch (e) { toast(e.shortMessage || e.message); }
+  } catch (e) { tradeFail(e, "Transaction failed"); }
 };
 $("tCommentInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("tCommentGo").click(); });
 
