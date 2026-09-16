@@ -736,6 +736,37 @@
   // opened on and refuses to work once the wallet has moved, which is exactly what happens
   // here after the bridge card put it on the source chain.
   async function walletChain() { return BigInt(await wallet().request({ method: "eth_chainId" })); }
+  // A receipt through the site's read pool, not the wallet's RPC: a wallet on a dead or slow
+  // Arc RPC (MetaMask's default was, on launch night) would leave a page waiting forever for
+  // a transaction the chain mined long ago. The hash is shown at once, the wait has an end.
+  // What the chain is mining at, right now: the wallet's own "normal" estimate sat under the
+  // going rate on launch day and a swap waited hours, past the route's deadline, then failed.
+  // The suggestion is the latest block's median (at least twice the base fee); wallets take a
+  // dapp's fee as their default and still let the user change it.
+  async function swFeeSuggestion() {
+    try {
+      const b = await readAny((p) => p.send("eth_getBlockByNumber", ["latest", true]));
+      const base = b && b.baseFeePerGas ? BigInt(b.baseFeePerGas) : 0n;
+      const prices = ((b && b.transactions) || []).map((t) => BigInt(t.gasPrice || t.maxFeePerGas || 0)).filter((x) => x > 0n).sort((x, y) => (x < y ? -1 : 1));
+      const median = prices.length ? prices[Math.floor(prices.length / 2)] : 0n;
+      const max = median > base * 2n ? median : base * 2n;
+      if (max <= 0n) return null;
+      const fee = max * 12n / 10n;
+      return { maxFeePerGas: fee, maxPriorityFeePerGas: fee > base ? fee - base : fee };
+    } catch { return null; }
+  }
+  async function swWaitMined(hash, sayFn, label) {
+    const short = hash.slice(0, 10) + "…";
+    sayFn((label || "Sent") + " · tx " + short + " · waiting for the block…");
+    const until = Date.now() + 180000;
+    while (Date.now() < until) {
+      let rc = null;
+      try { rc = await readAny((p) => p.getTransactionReceipt(hash)); } catch {}
+      if (rc) return rc;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+    throw new Error("Still not mined after 3 minutes (tx " + short + "). It may land later; check your wallet's activity, and speed it up there if it sits at a low gas price.");
+  }
   async function sendEnsureArc() {
     const want = BigInt(arcCfg.chainId);
     if ((await walletChain()) === want) return;
@@ -768,9 +799,8 @@
       const tx = asset.address === "native"
         ? await signer.sendTransaction({ to, value: v })
         : await new ethers.Contract(asset.address, TOKEN_ABI, signer).transfer(to, v);
-      sendSay("Sent, waiting for the block…");
-      const rc = await tx.wait();
-      if (!rc || rc.status !== 1) throw new Error("The transaction reverted.");
+      const rc = await swWaitMined(tx.hash, sendSay, "Sent");
+      if (!rc || Number(rc.status) !== 1) throw new Error("The transaction reverted on chain (tx " + tx.hash.slice(0, 10) + "…).");
       sendAmt.value = "";
       sendBusy = false;
       await sendRefresh(); // repaints the button and clears the hint, so the receipt goes in after it
@@ -1039,19 +1069,20 @@
       let tx;
       if (q.kind === "curve") {
         const c = new ethers.Contract(platformAddr, PLATFORM_ABI, signer);
-        tx = await c.buy(to.address, q.toAmountMin, { value: q.value });
+        tx = await c.buy(to.address, q.toAmountMin, { value: q.value, ...((await swFeeSuggestion()) || {}) });
       } else if (q.kind === "pool") {
         const erc = new ethers.Contract(USDC_ARC, ERC20_ABI, signer);
-        if ((await erc.allowance(me, uni.router)) < q.value) { swSayS("Approve USDC in your wallet…"); const a = await erc.approve(uni.router, q.value); await a.wait(); swSayS("Confirm the swap in your wallet…"); }
+        if ((await erc.allowance(me, uni.router)) < q.value) { swSayS("Approve USDC in your wallet…"); const a = await erc.approve(uni.router, q.value); await swWaitMined(a.hash, swSayS, "Approval sent"); swSayS("Confirm the swap in your wallet…"); }
         const router = new ethers.Contract(uni.router, ROUTER_ABI, signer);
         tx = await router.exactInputSingle({ tokenIn: USDC_ARC, tokenOut: to.address, fee: POOL_FEE, recipient: me, amountIn: q.value, amountOutMinimum: q.toAmountMin, sqrtPriceLimitX96: 0 });
       } else {
         // the quote was priced for whoever was connected; a wallet change since means a fresh one
         const fresh = await swQuoteLifi(from, to, v);
         const erc = new ethers.Contract(from.address, ERC20_ABI, signer);
-        if (fresh.approvalAddress && (await erc.allowance(me, fresh.approvalAddress)) < v) { swSayS("Approve " + from.symbol + " in your wallet…" + (from.address === USDC_ARC ? " If it warns that its simulation failed, that is the wallet, not the chain: USDC on Arc cannot be simulated off chain." : "")); const a = await erc.approve(fresh.approvalAddress, v); await a.wait(); swSayS("Confirm the swap in your wallet…"); }
+        if (fresh.approvalAddress && (await erc.allowance(me, fresh.approvalAddress)) < v) { swSayS("Approve " + from.symbol + " in your wallet…" + (from.address === USDC_ARC ? " If it warns that its simulation failed, that is the wallet, not the chain: USDC on Arc cannot be simulated off chain." : "")); const a = await erc.approve(fresh.approvalAddress, v, (await swFeeSuggestion()) || {}); await swWaitMined(a.hash, swSayS, "Approval sent"); swSayS("Confirm the swap in your wallet…"); }
         const req = { to: fresh.tx.to, data: fresh.tx.data, value: fresh.tx.value ? BigInt(fresh.tx.value) : 0n };
         if (fresh.tx.gasLimit) req.gasLimit = BigInt(fresh.tx.gasLimit);
+        const fee = await swFeeSuggestion(); if (fee) Object.assign(req, fee);
         // Run it as a call first: a fill the router will refuse never reaches the wallet, and
         // the reason is readable here where a wallet would only say "reverted".
         swSaySw("Checking the route…");
@@ -1065,9 +1096,8 @@
         tx = await signer.sendTransaction(req);
         swQuote = fresh;
       }
-      swSayS("Sent, waiting for the block…");
-      const rc = await tx.wait();
-      if (!rc || rc.status !== 1) throw new Error("The transaction reverted.");
+      const rc = await swWaitMined(tx.hash, swSayS, "Swap sent");
+      if (!rc || Number(rc.status) !== 1) throw new Error("The swap reverted on chain (tx " + tx.hash.slice(0, 10) + "…). Nothing left your wallet but the gas; try again, with more slippage if the pool is thin.");
       SW("swAmt").value = ""; SW("swOut").value = ""; SW("swDetails").hidden = true; swQuote = null; swBusy = false;
       await swRefreshBalances();
       SW("swHint").className = "hint good"; SW("swHint").textContent = "";
