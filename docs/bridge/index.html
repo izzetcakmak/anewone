@@ -548,6 +548,8 @@
       destination,
       title: destination ? "Board & buy" : "Board with USDC",
       defaultSource: net === "mainnet" ? "base" : "base-sepolia",
+      // USDC just landed from the bridge: the send and swap cards show it at once
+      onMinted: () => { try { sendRefresh(); swRefreshBalances(); swLoadHeld(); } catch {} },
       onDestination: (t) => {
         const tok = tokens.find((x) => x.address === buySel.value);
         if (tok) { coinLink.innerHTML = ""; const a = document.createElement("a"); a.href = "../#t=" + tok.address.toLowerCase(); a.textContent = "Open $" + tok.symbol + " on the floor →"; coinLink.append(a); coinLink.hidden = false; }
@@ -682,7 +684,7 @@
     } catch { sendBalance = null; sendBal.textContent = "balance …"; }
     sendValidate();
   }
-  setInterval(() => { if (!document.hidden && sendAccount && !sendBusy) sendRefresh(); }, 10_000);
+  setInterval(() => { if (!document.hidden && sendAccount && !sendBusy) sendRefresh(); }, 5000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) sendRefresh(); });
 
   const GAS_RESERVE = 10n ** 15n; // 0.001 USDC keeps a native send from draining what its own gas needs
@@ -988,6 +990,10 @@
     return { kind: "curve", tool: "A NEW ONE curve", toAmount: out, toAmountMin: out * BigInt(Math.round((100 - swSlip) * 100)) / 10000n, slippage: swSlip, value };
   }
   setInterval(() => { if (!document.hidden && swQuote && !swBusy && !swQuote.error) swFetchQuote(); }, 30000);
+  // Balances follow money that arrives from anywhere (the bridge above, a transfer, a trade
+  // in another tab): every 5s while the tab is visible, and the moment it is brought back.
+  setInterval(() => { if (!document.hidden && sendAccount && !swBusy) swRefreshBalances(); }, 5000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && sendAccount) swRefreshBalances(); });
 
   // ---- the button
   function swProblem() {
