@@ -664,7 +664,9 @@
       await wallet().request({ method: "wallet_addEthereumChain", params: [{
         chainId: arcCfg.chainIdHex, chainName: net === "mainnet" ? "Arc" : "Arc Testnet",
         nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
-        rpcUrls: [arcCfg.rpc], blockExplorerUrls: arcCfg.explorer ? [arcCfg.explorer] : [] }] });
+        rpcUrls: [arcCfg.rpc],
+        // left out when there is no explorer: some wallets reject an empty array
+        ...(arcCfg.explorer ? { blockExplorerUrls: [arcCfg.explorer] } : {}) }] });
     }
     // wallets answer the switch before the new chain is in place; a moment, then ask again
     for (let i = 0; i < 20 && (await walletChain()) !== want; i++) await new Promise((r) => setTimeout(r, 250));
