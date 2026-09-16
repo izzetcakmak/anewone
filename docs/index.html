@@ -2740,53 +2740,75 @@ async function connectEmbedded(provider, rdns) {
   await connect();
 }
 
+// The wallet's own error, not ethers' wrapper. ethers v6 hides anything it cannot classify
+// behind "could not coalesce error", and on launch night that is all a visitor on Edge saw:
+// the code and message that matter sit one level down (e.error / e.info.error), or on the
+// error itself when it came straight from the wallet.
+function walletError(e) {
+  const raw = e?.info?.error ?? e?.error ?? e?.data?.originalError ?? e ?? {};
+  const code = typeof raw.code === "number" ? raw.code : (typeof e?.code === "number" ? e.code : null);
+  const message = String(raw.message || e?.shortMessage || e?.message || "");
+  return { code, message };
+}
+function walletErrorText(e, fallback) {
+  const { code, message } = walletError(e);
+  if (code === 4001) return "Request rejected in the wallet";
+  if (code === -32002) return "Your wallet already has a request waiting: open the wallet window, finish it, then try again";
+  const m = message.replace(/could not coalesce error.*$/i, "").trim();
+  return m ? `${fallback}: ${m.slice(0, 140)}${code !== null ? ` (${code})` : ""}` : fallback;
+}
+
 async function connect(forcePicker, silent) {
   if (!activeEip1193) return openWalletPicker();
-  const bp = new ethers.BrowserProvider(activeEip1193);
+  // Every wallet call below goes to the wallet directly (EIP-1193 request), not through
+  // ethers.BrowserProvider.send: ethers rewraps wallet errors, and a 4902 it could not
+  // classify used to end the connect with "could not coalesce error" instead of adding
+  // the network. ethers is only used once the wallet is on the right chain.
+  const w = activeEip1193;
   try {
     if (forcePicker) {
       // forces the wallet's account-selection dialog even when already connected,
       // so the user can pick a different account
-      await activeEip1193.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] });
+      await w.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] });
     }
     // a restore already checked eth_accounts, so asking again would be the one call
     // that *can* raise a dialog — keep the silent path genuinely silent
-    if (!silent) await bp.send("eth_requestAccounts", []);
+    if (!silent) await w.request({ method: "eth_requestAccounts" });
   } catch (e) {
-    return toast(e.shortMessage || e.message || "Connection cancelled");
+    return toast(walletErrorText(e, "Could not connect"));
   }
-  const net = await bp.getNetwork();
-  if (Number(net.chainId) !== CFG.chainId) {
+  const onArc = async () => parseInt(await w.request({ method: "eth_chainId" }), 16) === CFG.chainId;
+  if (!(await onArc())) {
+    // Ask for the switch first. If it fails for any reason other than the user saying no,
+    // add the network: wallets that do not know Arc answer 4902, but not all of them do,
+    // and adding a chain the wallet already has is harmless.
+    let switched = false;
     try {
-      await bp.send("wallet_switchEthereumChain", [{ chainId: CFG.chainIdHex }]);
+      await w.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CFG.chainIdHex }] });
+      switched = true;
     } catch (e) {
-      // 4902 (or null from some wallets) = chain unknown — add it. 4001 = user said no.
-      const code = e?.error?.code ?? e?.code ?? e?.data?.originalError?.code ?? null;
+      const { code } = walletError(e);
       if (code === 4001) return toast("Network switch rejected");
-      if (code !== 4902 && code !== null && code !== -32603) {
-        return toast(e.shortMessage || e.message || "Network switch failed");
-      }
+      if (code === -32002) return toast(walletErrorText(e, "Could not switch network"));
+    }
+    if (!switched && !(await onArc())) {
       try {
         // blockExplorerUrls is left out when there is no explorer: EIP-3085 makes it
-        // optional, and MetaMask rejects an empty array ("Expected null or array with at
-        // least one valid string HTTPS url"), which on launch night refused every wallet
-        // that did not already have Arc mainnet added by hand.
-        await bp.send("wallet_addEthereumChain", [{
+        // optional, and some wallets reject an empty array.
+        await w.request({ method: "wallet_addEthereumChain", params: [{
           chainId: CFG.chainIdHex, chainName: NET_NAME,
           nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
           rpcUrls: [CFG.rpc],
           ...(CFG.explorer ? { blockExplorerUrls: [CFG.explorer] } : {}),
-        }]);
+        }] });
       } catch (e2) {
-        return toast(e2.shortMessage || e2.message || "Could not add the Arc network");
+        return toast(walletErrorText(e2, "Could not add the Arc network"));
       }
     }
     // some wallets resolve the switch but silently stay on the old chain — verify for real
-    const after = await activeEip1193.request({ method: "eth_chainId" });
-    if (parseInt(after, 16) !== CFG.chainId) {
-      return toast(`Please switch your wallet to ${NET_NAME} and reconnect`);
-    }
+    if (!(await onArc())) return toast(`Please switch your wallet to ${NET_NAME} and reconnect`);
   }
+  const bp = new ethers.BrowserProvider(w);
   signer = await bp.getSigner();
   userAddr = await signer.getAddress();
   $("connectBtn").textContent = userAddr.slice(0, 6) + "…" + userAddr.slice(-4);
