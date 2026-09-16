@@ -131,6 +131,11 @@
   .sw-flipwrap { display: flex; justify-content: center; height: 8px; position: relative; z-index: 1; }
   .sw-flip { position: absolute; top: -13px; width: 34px; height: 34px; border-radius: 10px; border: 3px solid var(--surface); background: var(--surface-2); color: var(--text); font-size: 16px; line-height: 1; cursor: pointer; }
   .sw-flip:hover { color: var(--accent); }
+  .sw-slip { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--dim); flex-wrap: wrap; }
+  .sw-slip .ctf { gap: 4px; }
+  .sw-slip .ctf button { min-height: 0; padding: 4px 9px; font: 600 11px var(--mono); border-radius: 8px; background: transparent; border: 1px solid var(--border); color: var(--dim); cursor: pointer; }
+  .sw-slip .ctf button.on { color: var(--accent); border-color: rgba(var(--accent-rgb),.5); background: rgba(var(--accent-rgb),.08); }
+  .sw-slip input { width: 64px; min-height: 0; padding: 4px 8px; font: 600 11px var(--mono); border-radius: 8px; background: transparent; border: 1px solid var(--border); color: var(--text); }
   .sw-details { margin-top: 10px; font-size: 12px; color: var(--dim); display: grid; gap: 4px; }
   .sw-details div { display: flex; justify-content: space-between; gap: 10px; }
   .sw-details b { color: var(--text); font-weight: 500; font-family: var(--mono); font-size: 12px; }
@@ -237,6 +242,9 @@
           <div class="sw-sub"><span id="swToUsd"></span><span id="swRoute"></span></div>
         </div>
         <div class="sw-details" id="swDetails" hidden></div>
+        <div class="sw-slip"><span>Max slippage</span>
+          <div class="ctf" id="swSlipBtns"><button type="button" data-s="1">1%</button><button type="button" data-s="3" class="on">3%</button><button type="button" data-s="5">5%</button><button type="button" data-s="10">10%</button>
+          <input id="swSlipCustom" inputmode="decimal" placeholder="custom"></div></div>
         <button type="button" class="btn" id="swGo" disabled>Connect wallet</button>
         <div class="hint" id="swHint"></div>
       </div>
@@ -795,6 +803,17 @@
   const swT = {};                       // address -> {address, symbol, name, decimals, logo, price, src}
   const swBal = {};                     // address -> balance (minor units) of the connected wallet
   let swFrom = null, swTo = null, swQuote = null, swBusy = false, swPickSide = null, swQuoteTimer = null, swQuoteRun = 0;
+  // Max slippage in percent. Thin pools on a young chain move more than a fixed 3% under a
+  // large order, and the router refuses a fill below the quote's floor, so the visitor sets it.
+  let swSlip = (() => { try { const v = Number(localStorage.getItem("anewone_swap_slip")); return v > 0 && v <= 50 ? v : 3; } catch { return 3; } })();
+  function swPaintSlip() {
+    const preset = [1, 3, 5, 10].includes(swSlip);
+    SW("swSlipBtns").querySelectorAll("button").forEach((b) => b.classList.toggle("on", preset && Number(b.dataset.s) === swSlip));
+    SW("swSlipCustom").value = preset ? "" : String(swSlip);
+  }
+  function swSetSlip(v) { swSlip = v; try { localStorage.setItem("anewone_swap_slip", String(v)); } catch {} swPaintSlip(); swRequote(); }
+  SW("swSlipBtns").addEventListener("click", (e) => { const b = e.target.closest("button[data-s]"); if (b) swSetSlip(Number(b.dataset.s)); });
+  SW("swSlipCustom").addEventListener("change", () => { const v = Number(SW("swSlipCustom").value); if (v > 0 && v <= 50) swSetSlip(v); else swPaintSlip(); });
   const swEsc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const swAddTok = (t) => { const a = ethers.getAddress(t.address); const cur = swT[a] || {}; swT[a] = { ...cur, ...t, address: a, decimals: Number(t.decimals ?? cur.decimals ?? 18) }; return swT[a]; };
   swAddTok({ address: USDC_ARC, symbol: "USDC", name: "USD Coin", decimals: 6, src: "arc" });
@@ -942,7 +961,7 @@
   }
   async function swQuoteLifi(from, to, v) {
     const p = new URLSearchParams({ fromChain: String(arcCfg.chainId), toChain: String(arcCfg.chainId), fromToken: from.address, toToken: to.address,
-      fromAmount: v.toString(), fromAddress: sendAccount || "0x000000000000000000000000000000000000dEaD", slippage: "0.03", integrator: "a-new-one" });
+      fromAmount: v.toString(), fromAddress: sendAccount || "0x000000000000000000000000000000000000dEaD", slippage: String(swSlip / 100), integrator: "a-new-one" });
     if (net === "mainnet") p.set("fee", "0.0025"); // the floor's share, as on the bridge
     const r = await fetch(lifiBase() + "/quote?" + p.toString(), { signal: AbortSignal.timeout(20000) });
     const j = await r.json();
@@ -951,7 +970,7 @@
     const gasUsd = (j.estimate.gasCosts || []).reduce((s, g) => s + Number(g.amountUSD || 0), 0);
     if (j.action && j.action.toToken && j.action.toToken.priceUSD && !to.price) to.price = j.action.toToken.priceUSD;
     if (j.action && j.action.fromToken && j.action.fromToken.priceUSD && !from.price) from.price = j.action.fromToken.priceUSD;
-    return { kind: "lifi", tool: (j.toolDetails && j.toolDetails.name) || j.tool, toAmount: BigInt(j.estimate.toAmount), toAmountMin: BigInt(j.estimate.toAmountMin), slippage: 3,
+    return { kind: "lifi", tool: (j.toolDetails && j.toolDetails.name) || j.tool, toAmount: BigInt(j.estimate.toAmount), toAmountMin: BigInt(j.estimate.toAmountMin), slippage: swSlip,
       approvalAddress: j.estimate.approvalAddress, tx: j.transactionRequest, feeUsd: feeUsd ? "$" + feeUsd.toFixed(3) : null, gasUsd: gasUsd ? "$" + gasUsd.toFixed(3) : null };
   }
   async function swQuoteFloorBuy(to, v6) {
@@ -963,10 +982,10 @@
       if (!uniOk || !uni.quoter) throw new Error("$" + d.symbol + " trades on Uniswap v3; its router on Arc is not verified yet.");
       const out = await readAny((p) => new ethers.Contract(uni.quoter, QUOTER_ABI, p).quoteExactInputSingle.staticCall({ tokenIn: USDC_ARC, tokenOut: to.address, amountIn: value, fee: POOL_FEE, sqrtPriceLimitX96: 0 }));
       const amt = out[0] ?? out.amountOut;
-      return { kind: "pool", tool: "Uniswap v3", toAmount: amt, toAmountMin: amt * 95n / 100n, slippage: 5, value };
+      return { kind: "pool", tool: "Uniswap v3", toAmount: amt, toAmountMin: amt * BigInt(Math.round((100 - swSlip) * 100)) / 10000n, slippage: swSlip, value };
     }
     const out = await platform.quoteBuy(to.address, value);
-    return { kind: "curve", tool: "A NEW ONE curve", toAmount: out, toAmountMin: out * 97n / 100n, slippage: 3, value };
+    return { kind: "curve", tool: "A NEW ONE curve", toAmount: out, toAmountMin: out * BigInt(Math.round((100 - swSlip) * 100)) / 10000n, slippage: swSlip, value };
   }
   setInterval(() => { if (!document.hidden && swQuote && !swBusy && !swQuote.error) swFetchQuote(); }, 30000);
 
@@ -990,6 +1009,7 @@
     go.textContent = swBusy ? "Swapping…" : p ? "Swap" : "Swap " + swFmt(swAmount(), swFrom.decimals) + " " + swFrom.symbol + " for " + swTo.symbol;
     if (!swBusy) swSayS(p && !/^(Pick|Enter)/.test(p) ? p : "", p && !/^(Pick|Enter)/.test(p) ? "bad" : "");
   }
+  const swSaySw = (t) => swSayS(t);
   function swSayS(t, cls) { SW("swHint").textContent = t; SW("swHint").className = "hint" + (cls ? " " + cls : ""); }
   const swWhy = (e) => {
     const code = e && [e.code, e.error && e.error.code, e.info && e.info.error && e.info.error.code].find((c) => typeof c === "number" || typeof c === "string");
@@ -1022,6 +1042,16 @@
         if (fresh.approvalAddress && (await erc.allowance(me, fresh.approvalAddress)) < v) { swSayS("Approve " + from.symbol + " in your wallet…"); const a = await erc.approve(fresh.approvalAddress, v); await a.wait(); swSayS("Confirm the swap in your wallet…"); }
         const req = { to: fresh.tx.to, data: fresh.tx.data, value: fresh.tx.value ? BigInt(fresh.tx.value) : 0n };
         if (fresh.tx.gasLimit) req.gasLimit = BigInt(fresh.tx.gasLimit);
+        // Run it as a call first: a fill the router will refuse never reaches the wallet, and
+        // the reason is readable here where a wallet would only say "reverted".
+        swSaySw("Checking the route…");
+        try { await readAny((p) => p.call({ from: me, to: req.to, data: req.data, value: req.value })); }
+        catch (e) {
+          const why = String((e && (e.reason || e.shortMessage || e.message)) || e);
+          if (/return amount|not enough|slippage|too little|insufficient output/i.test(why)) throw new Error("The pool would fill below your " + swSlip + "% slippage floor at this size. Raise max slippage or swap a smaller amount.");
+          throw new Error("The route would fail on chain: " + why.slice(0, 120));
+        }
+        swSaySw("Confirm the swap in your wallet…");
         tx = await signer.sendTransaction(req);
         swQuote = fresh;
       }
@@ -1039,7 +1069,7 @@
     } catch (e) { swBusy = false; swValidate(); swSayS(swWhy(e), "bad"); return; }
   };
   if (wallet() && wallet().on) wallet().on("accountsChanged", () => setTimeout(() => { swLoadHeld(); swValidate(); }, 100));
-  swPaintTokens();
+  swPaintTokens(); swPaintSlip();
   lifiReady.then(() => swLoadTokens());
   setTimeout(() => { if (sendAccount) swLoadHeld(); else swValidate(); }, 1500);
 
