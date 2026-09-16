@@ -344,6 +344,12 @@
   .cfoot .ca.done { color: var(--green); }
   .cfoot .ca.done svg { opacity: 1; }
   .cfoot .age { flex: none; }
+  /* the rail's copy button: the card's, without the address text */
+  .lrow .ca { flex: none; width: 26px; height: 26px; min-height: 0; padding: 0; margin-left: 4px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border); border-radius: 7px; background: transparent; color: var(--faint); }
+  .lrow .ca svg { width: 12px; height: 12px; }
+  .lrow .ca:hover { color: var(--text); border-color: var(--border-2); }
+  .lrow .ca.done { color: var(--green); border-color: rgba(var(--green-rgb),.5); }
 
   /* toolbar: one compact row, no duplicated chrome */
   .toolbar { gap: 8px; margin: 0 0 14px; }
@@ -2360,6 +2366,18 @@ function rebuildStats() {
     };
   }
   statsReady = true;
+  paintCoinStats();
+}
+// The coin page's headline numbers were written once, when it opened, from whatever the
+// index held then; the index kept moving underneath and the page kept the old figures
+// until it was reopened. Cheap enough to run on every rebuild.
+function paintCoinStats() {
+  const addr = currentToken;
+  if (!addr || !$("tradeModal").classList.contains("open") || !tokenInfo[addr]) return;
+  const st = tradeStats[addr] || {};
+  $("tMcap").textContent = compactUsd(marketCapWei(tokenInfo[addr]));
+  $("tHolders").textContent = fullyIndexed ? (st.holders || 0) : "…";
+  $("tVol").textContent = covers24h ? compactUsd(st.vol24 || 0n) : "…";
 }
 
 // Trending score. Volume alone is trivially gamed — one wallet can wash-trade a token to
@@ -4146,6 +4164,10 @@ function renderLiveRail() {
         <span class="mc">${esc(compactUsd(marketCapWei(inf)))}</span>
         ${tag}
       </span>
+      <button type="button" class="ca" onclick="copyCa('${esc(a)}', event)" title="Copy contract address&#10;${esc(a)}" aria-label="Copy contract address">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
     </div>`;
   }).join("") || `<div class="lrow" style="color:var(--faint);cursor:default;font-size:12px">${
     liveSort === "grad"

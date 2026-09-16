@@ -53,6 +53,12 @@ const STATIC_CANDIDATES = [
   // The host Circle's private mainnet actually answers on (IP-allowlisted until launch;
   // seen in integrators' configs on 15 Sep 2026). First, so it is probed first.
   "https://rpc.mainnet.arc.io",
+  // The provider hosts follow the testnet pattern rpc.<provider>.testnet.arc.io with
+  // "mainnet" in place of "testnet". Both answered as Arc mainnet on 16 Sep 2026, chain
+  // 5042, CCTP domain 26, minutes after the public launch.
+  "https://rpc.drpc.mainnet.arc.io",
+  "https://rpc.blockdaemon.mainnet.arc.io",
+  "https://rpc.quicknode.mainnet.arc.io",
   "https://rpc.arc.network",
   "https://rpc.mainnet.arc.network",
   "https://mainnet.arc.network",
@@ -594,6 +600,13 @@ async function main() {
         if (await snapshotAndPublish(state, env, { final: true, toBlock: state.snapshotBlock ?? null })) {
           state.snapshotFinalDone = true;
         }
+        saveState(state);
+      }
+      // The floor index, on the same cadence as before launch. This phase returned before
+      // the scanning branch that used to refresh it, so after launch the published index
+      // froze at the deploy and every cold visit rebuilt the day from the chain.
+      if (FLOOR_AUTOPUBLISH && Date.now() - (state.lastFloorAt ?? 0) > FLOOR_REFRESH_MS) {
+        await refreshFloor(state, env);
         saveState(state);
       }
       // Graduations into Uniswap v3, once an owner opens migrations. Loaded on demand and
