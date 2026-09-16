@@ -1924,7 +1924,9 @@ async function renderUniLinks(addr) {
 // getLogs gets its own pool: the endpoints that serve it well are not the same
 // ones that serve eth_call well, and this traffic is the steady drip every open
 // tab makes — so it must never land on the shared keyed endpoint.
-const _logUrls = (CFG.logRpcs && CFG.logRpcs.length) ? CFG.logRpcs : [CFG.rpc];
+const _logUrls = ((CFG.logRpcs && CFG.logRpcs.length) ? CFG.logRpcs : [CFG.rpc])
+  .filter((r) => typeof r === "string" || !r.hosts || r.hosts.includes(location.hostname))
+  .map((r) => (typeof r === "string" ? r : r.url));
 // Logs are read from one endpoint at a time, in order, moving on at any error.
 // FallbackProvider was the wrong tool for this: when dRPC's free plan began refusing
 // getLogs ranges with a 400, it returned that refusal as the answer instead of asking

@@ -297,10 +297,14 @@
   const readProviders = (arcRpcs.length ? arcRpcs : [arcCfg.rpc]).map((u) =>
     new ethers.JsonRpcProvider(u, undefined, { staticNetwork: true, polling: false }));
   let readProvider = readProviders[0];
+  // Starts from the endpoint that answered last. In Brave every *.arc.io endpoint is blocked and
+  // each attempt costs most of a second; walking past them on every read made the page crawl.
+  let readGood = 0;
   async function readAny(fn) {
     let last;
-    for (const p of readProviders) {
-      try { return await fn(p); }
+    for (let k = 0; k < readProviders.length; k++) {
+      const i = (readGood + k) % readProviders.length;
+      try { const out = await fn(readProviders[i]); readGood = i; return out; }
       catch (e) { last = e; if (!/429|500|502|503|limit|timeout|failed to fetch|network/i.test(String(e && (e.shortMessage || e.message)))) throw e; }
     }
     throw last;

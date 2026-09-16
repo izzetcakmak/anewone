@@ -11,8 +11,13 @@ window.ANEWONE_CONFIG = {
     // dRPC refuses every range on its free plan ("ranges over 10000 blocks"), quicknode and
     // rpc.mainnet.arc.io take up to 10k blocks, blockdaemon takes any range — so it leads
     // the log pool and dRPC is not in it at all.
-    rpcs: ["https://rpc.blockdaemon.mainnet.arc.io", "https://rpc.quicknode.mainnet.arc.io", "https://rpc.mainnet.arc.io", "https://rpc.drpc.mainnet.arc.io"],
-    logRpcs: ["https://rpc.blockdaemon.mainnet.arc.io", "https://rpc.mainnet.arc.io", "https://rpc.quicknode.mainnet.arc.io"],
+    // Brave Shields blocks every *.arc.io request by default, which is every public endpoint here.
+    // The site's own /api/rpc relay is not blocked; it comes last, so a browser that reaches the
+    // public endpoints never uses it. (The scanner reads only the plain strings of these pools.)
+    rpcs: ["https://rpc.blockdaemon.mainnet.arc.io", "https://rpc.quicknode.mainnet.arc.io", "https://rpc.mainnet.arc.io", "https://rpc.drpc.mainnet.arc.io",
+      { url: "https://anewone.xyz/api/rpc", hosts: ["anewone.xyz"] }],
+    logRpcs: ["https://rpc.blockdaemon.mainnet.arc.io", "https://rpc.mainnet.arc.io", "https://rpc.quicknode.mainnet.arc.io",
+      { url: "https://anewone.xyz/api/rpc", hosts: ["anewone.xyz"] }],
     // no public block explorer yet (arcscan.app / explorer.arc.network do not resolve,
     // arcscan.xyz is a parked domain, explorer.arc.io is behind Circle's access login)
     explorer: null,
