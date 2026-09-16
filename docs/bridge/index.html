@@ -1008,6 +1008,10 @@
     go.disabled = !!p || swBusy;
     go.textContent = swBusy ? "Swapping…" : p ? "Swap" : "Swap " + swFmt(swAmount(), swFrom.decimals) + " " + swFrom.symbol + " for " + swTo.symbol;
     if (!swBusy) swSayS(p && !/^(Pick|Enter)/.test(p) ? p : "", p && !/^(Pick|Enter)/.test(p) ? "bad" : "");
+    // USDC on Arc is a system contract; a wallet that simulates the approval on a fork of
+    // its own (Rabby does) reports a failure it cannot run. Said here, before the dialog.
+    if (!swBusy && !p && swFrom.address === USDC_ARC && swQuote && swQuote.kind === "lifi")
+      swSayS("Two signatures: an approval of USDC, then the swap. A wallet may flag the approval as a failed simulation; USDC on Arc is a system contract wallets cannot simulate, and the approval goes through on chain.");
   }
   const swSaySw = (t) => swSayS(t);
   function swSayS(t, cls) { SW("swHint").textContent = t; SW("swHint").className = "hint" + (cls ? " " + cls : ""); }
@@ -1039,7 +1043,7 @@
         // the quote was priced for whoever was connected; a wallet change since means a fresh one
         const fresh = await swQuoteLifi(from, to, v);
         const erc = new ethers.Contract(from.address, ERC20_ABI, signer);
-        if (fresh.approvalAddress && (await erc.allowance(me, fresh.approvalAddress)) < v) { swSayS("Approve " + from.symbol + " in your wallet…"); const a = await erc.approve(fresh.approvalAddress, v); await a.wait(); swSayS("Confirm the swap in your wallet…"); }
+        if (fresh.approvalAddress && (await erc.allowance(me, fresh.approvalAddress)) < v) { swSayS("Approve " + from.symbol + " in your wallet…" + (from.address === USDC_ARC ? " If it warns that its simulation failed, that is the wallet, not the chain: USDC on Arc cannot be simulated off chain." : "")); const a = await erc.approve(fresh.approvalAddress, v); await a.wait(); swSayS("Confirm the swap in your wallet…"); }
         const req = { to: fresh.tx.to, data: fresh.tx.data, value: fresh.tx.value ? BigInt(fresh.tx.value) : 0n };
         if (fresh.tx.gasLimit) req.gasLimit = BigInt(fresh.tx.gasLimit);
         // Run it as a call first: a fill the router will refuse never reaches the wallet, and
