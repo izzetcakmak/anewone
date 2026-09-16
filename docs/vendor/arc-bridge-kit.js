@@ -1,5 +1,5 @@
 /*!
- * arc-bridge-kit v0.3.3
+ * arc-bridge-kit v0.4.0
  * Drop-in "pay with anything, land USDC on Arc, then buy" kit.
  *
  *  Legs (each optional except the bridge):
@@ -333,6 +333,19 @@
     return "unknown";
   }
 
+  /**
+   * "auto" router: LI.FI's own route into Arc must beat the house path on both axes to be
+   * chosen — at least as much USDC landing (within 0.1%) and no slower than 1.5× CCTP's estimate.
+   * Pure so it can be unit-tested.
+   */
+  function chooseRoute(cctpPlan, lifiPlan) {
+    if (!cctpPlan || !cctpPlan.available) return lifiPlan && lifiPlan.available ? "lifi" : "cctp";
+    if (!lifiPlan || !lifiPlan.available) return "cctp";
+    const landsMore = lifiPlan.expectedReceive * 1000n >= cctpPlan.expectedReceive * 999n;
+    const notSlower = Number(lifiPlan.estSeconds || 0) <= Number(cctpPlan.estSeconds || 0) * 1.5;
+    return landsMore && notSlower ? "lifi" : "cctp";
+  }
+
   /** LI.FI transactionRequest -> ethers TransactionRequest (drop legacy gasPrice, keep gasLimit). */
   function toTxRequest(t) {
     if (!t || !t.to || !t.data) throw new Error("LI.FI quote has no transactionRequest");
@@ -618,33 +631,48 @@
       const token = payToken || src.usdc;
       const amt = BigInt(fromAmount);
 
-      // Route straight into Arc via LI.FI when it exists (or is forced)
-      if (this.router === "lifi" || (this.router === "auto" && await this.arcRouteAvailable(src, fromAddress))) {
+      // The house path: optional LI.FI swap into USDC on the source chain, then CCTP with the
+      // Forwarding Service. Priced first so a LI.FI route into Arc has something to beat.
+      let cctpPlan = null, cctpReason = null;
+      {
+        let swap = null, usdcIn = amt;
+        if (!sameAddr(token, src.usdc)) {
+          swap = await this.quoteSwap(src, token, amt, fromAddress);
+          if (!swap.available) cctpReason = explainLifi(swap.reason, src, this.network);
+          else usdcIn = swap.toAmountMin; // plan on the guaranteed minimum; the real amount is measured after the swap
+        }
+        if (!cctpReason) {
+          if (usdcIn < this.minAmount) cctpReason = "That is less than " + formatUsdc(this.minAmount) + " USDC after the swap.";
+          else {
+            const bridge = await this.quote(src, usdcIn, speed);
+            if (!bridge.available) cctpReason = bridge.reason;
+            else if (bridge.maxFee >= usdcIn) cctpReason = "amount too small to cover bridge fees (max " + formatUsdc(bridge.maxFee) + " USDC)";
+            else cctpPlan = { available: true, router: "cctp", source: src, payToken: token, fromAmount: amt, swap, bridge, usdcIn,
+              expectedReceive: bridge.expectedReceive, minReceive: bridge.minReceive,
+              protocolFee: bridge.protocolFee, forwardFee: bridge.forwardFee, expectedFee: bridge.expectedFee,
+              estSeconds: bridge.estSeconds + (swap ? 15 : 0) };
+          }
+        }
+      }
+      if (this.router === "cctp") return cctpPlan || { available: false, reason: cctpReason };
+
+      // A LI.FI route straight into Arc is taken only when it is forced, when CCTP cannot serve
+      // this payment at all, or when it actually beats CCTP on what lands AND on time. On Arc's
+      // launch night LI.FI's route (a third-party executor over standard-finality CCTP) took
+      // 20-30 minutes and landed 10% less — "auto" used to pick it just for existing.
+      let lifiPlan = null, lifiReason = null;
+      if (this.router === "lifi" || !cctpPlan || await this.arcRouteAvailable(src, fromAddress)) {
         const r = await this.lifiQuote({ fromChain: src.chainId, toChain: this.arc.chainId, fromToken: token,
           toToken: this.arc.usdc, fromAmount: amt, fromAddress, toAddress: recipient });
-        if (r.available) {
-          return { available: true, router: "lifi", source: src, payToken: token, fromAmount: amt, lifi: r,
-            usdcIn: r.toAmount, expectedReceive: r.toAmount, minReceive: r.toAmountMin, estSeconds: r.estSeconds || 60,
-            protocolFee: 0n, forwardFee: 0n, expectedFee: 0n };
-        }
-        if (this.router === "lifi") return { available: false, reason: r.reason };
+        if (r.available) lifiPlan = { available: true, router: "lifi", source: src, payToken: token, fromAmount: amt, lifi: r,
+          usdcIn: r.toAmount, expectedReceive: r.toAmount, minReceive: r.toAmountMin, estSeconds: r.estSeconds || 60,
+          protocolFee: 0n, forwardFee: 0n, expectedFee: 0n };
+        else lifiReason = r.reason;
       }
-
-      // Otherwise: optional LI.FI swap to USDC, then CCTP
-      let swap = null, usdcIn = amt;
-      if (!sameAddr(token, src.usdc)) {
-        swap = await this.quoteSwap(src, token, amt, fromAddress);
-        if (!swap.available) return { available: false, reason: explainLifi(swap.reason, src, this.network) };
-        usdcIn = swap.toAmountMin; // plan on the guaranteed minimum; the real amount is measured after the swap
-      }
-      if (usdcIn < this.minAmount) return { available: false, reason: "That is less than " + formatUsdc(this.minAmount) + " USDC after the swap." };
-      const bridge = await this.quote(src, usdcIn, speed);
-      if (!bridge.available) return bridge;
-      if (bridge.maxFee >= usdcIn) return { available: false, reason: "amount too small to cover bridge fees (max " + formatUsdc(bridge.maxFee) + " USDC)" };
-      return { available: true, router: "cctp", source: src, payToken: token, fromAmount: amt, swap, bridge, usdcIn,
-        expectedReceive: bridge.expectedReceive, minReceive: bridge.minReceive,
-        protocolFee: bridge.protocolFee, forwardFee: bridge.forwardFee, expectedFee: bridge.expectedFee,
-        estSeconds: bridge.estSeconds + (swap ? 15 : 0) };
+      if (this.router === "lifi") return lifiPlan || { available: false, reason: lifiReason || "no LI.FI route" };
+      if (!cctpPlan) return lifiPlan || { available: false, reason: cctpReason };
+      if (lifiPlan && chooseRoute(cctpPlan, lifiPlan) === "lifi") return { ...lifiPlan, alternative: cctpPlan };
+      return { ...cctpPlan, alternative: lifiPlan };
     }
 
     // ---- balances
@@ -915,19 +943,46 @@
       if (tr.router === "lifi") {
         if (["sending", "sent"].includes(tr.status)) { tr.status = "routing"; this._save(tr); }
         onStep({ step: "routing", transfer: tr });
+        let lastDefinitivePendingAt = 0;
         for (;;) {
           if (opts.signal && opts.signal.aborted) return tr;
           const s = await this.lifiStatus(tr);
-          const bal = await this.arcUsdcBalance(tr.recipient);
-          const landed = (bal != null && startBal != null && bal > startBal) || (s && s.status === "DONE");
           if (s && s.receiving && s.receiving.txHash && !tr.mintTx) { tr.mintTx = s.receiving.txHash; this._save(tr); }
+          // Most LI.FI routes into Arc are CCTP underneath, so Circle also knows this transfer:
+          // once attested, Arc's nonce is the ground truth and a late executor can be replaced
+          // by the user's own receiveMessage (manualMint), exactly like the house path.
+          const msg = await this.message(tr).catch(() => null);
+          let fwd = null, nonceUsed = null;
+          if (msg) {
+            const attested = msg.status === "complete" && msg.attestation && msg.attestation !== "PENDING";
+            if (attested && !tr.attestation) { tr.attestation = msg.attestation; tr.message = msg.message; tr.attestedAt = Date.now(); this._save(tr); onStep({ step: "attested", transfer: tr }); }
+            const nonce = msg.eventNonce || (msg.decodedMessage && msg.decodedMessage.nonce) || nonceFromMessage(msg.message);
+            if (nonce && !tr.nonce) { tr.nonce = String(nonce).toLowerCase(); this._save(tr); }
+            fwd = this._irisForward(msg);
+            if (fwd.txHash && !tr.mintTx) { tr.mintTx = fwd.txHash; this._save(tr); }
+            if (fwd.feeExecuted && !tr.feeExecuted) { tr.feeExecuted = String(fwd.feeExecuted); this._save(tr); }
+            if (tr.attestation && tr.nonce) nonceUsed = await this.nonceUsed(tr.nonce);
+          }
+          const bal = await this.arcUsdcBalance(tr.recipient);
+          const verdict = judgeMint({ nonceUsed, irisForward: fwd,
+            balance: { now: bal, start: startBal, baselineBeforeAttest: !tr.attestedAt || !tr.arcStartBalanceAt || tr.arcStartBalanceAt <= tr.attestedAt } });
+          const landed = verdict === "minted" || (s && s.status === "DONE");
           if (landed) {
             tr.status = "minted"; tr.mintedAt = Date.now();
-            if (bal != null && startBal != null) tr.received = (bal - startBal).toString();
+            if (bal != null && startBal != null && bal > startBal) tr.received = (bal - startBal).toString();
             else if (s && s.receiving && s.receiving.amount) tr.received = String(s.receiving.amount);
+            else if (tr.feeExecuted) tr.received = (BigInt(tr.amount) - BigInt(tr.feeExecuted)).toString();
             this._save(tr); onStep({ step: "minted", transfer: tr }); return tr;
           }
           if (s && s.status === "FAILED") { tr.status = "failed"; tr.error = s.substatus || "route failed"; this._save(tr); onStep({ step: "failed", transfer: tr }); return tr; }
+          if (nonceUsed === 0n) lastDefinitivePendingAt = Date.now();
+          // attested on Circle, executor silent, Arc confirms nothing landed: hand the user the mint
+          const lateByClock = tr.attestation && Date.now() - tr.attestedAt > stallAfter;
+          if (lateByClock && nonceUsed === 0n && Date.now() - lastDefinitivePendingAt < 60_000 && tr.status !== "stalled") {
+            tr.status = "stalled"; this._save(tr);
+            onStep({ step: "stalled", transfer: tr });
+            if (opts.returnOnStall !== false) return tr;
+          }
           await sleep(pollMs);
         }
       }
@@ -1368,7 +1423,7 @@
         }
         if (s.step === "failed") { state.error = "The route failed (" + (s.transfer.error || "unknown") + "). LI.FI refunds to the sender on failure."; setStep("attest", "err"); }
         if (s.step === "rpc_degraded") { state.error = "Arc's RPC is slow to answer; still checking whether the USDC has landed."; render(); }
-        if (s.step === "stalled") { state.error = "Circle attested the transfer and Arc confirms the mint has not landed yet. Your USDC is safe; you can mint it yourself below."; }
+        if (s.step === "stalled") { state.error = (s.transfer.router === "lifi" ? "Circle attested the transfer but LI.FI's executor has not minted it on Arc yet." : "Circle attested the transfer and Arc confirms the mint has not landed yet.") + " Your USDC is safe; you can mint it yourself below."; }
         renderPending();
       });
       state.pendingTracked.delete(tr.id);
@@ -1473,9 +1528,11 @@
       if (p && p.available) {
         const rows = [];
         if (p.router === "lifi") {
-          rows.push(el("div", { class: "via" }, "One LI.FI route straight into Arc (" + p.lifi.tool + ")"));
+          rows.push(el("div", { class: "via" }, "One LI.FI route straight into Arc (" + p.lifi.tool + ")" +
+            (p.alternative ? " — beats Circle CCTP (" + formatUsdc(p.alternative.expectedReceive) + " USDC, ~" + p.alternative.estSeconds + " s)" : "")));
           rows.push(el("div", {}, "Fees + gas"), el("div", { class: "v" }, "$" + (p.lifi.feeUsd + p.lifi.gasUsd).toFixed(3)));
         } else {
+          if (p.alternative) rows.push(el("div", { class: "via" }, "Circle CCTP chosen; LI.FI's route into Arc would land " + formatUsdc(p.alternative.expectedReceive) + " USDC in ~" + (p.alternative.estSeconds >= 60 ? Math.round(p.alternative.estSeconds / 60) + " min" : p.alternative.estSeconds + " s")));
           if (p.swap && !p.swap.identity) {
             rows.push(el("div", {}, "Swap " + tok.symbol + " → USDC (LI.FI · " + p.swap.tool + ")"), el("div", { class: "v" }, "≈ " + formatUsdc(p.swap.toAmount) + " USDC"));
             rows.push(el("div", {}, "Swap min after " + (c0.slippage * 100) + "% slippage"), el("div", { class: "v" }, formatUsdc(p.swap.toAmountMin)));
@@ -1574,6 +1631,6 @@
   return {
     VERSION, ARC_DOMAIN, FORWARD_HOOK, FINALITY, NATIVE, CCTP, LIFI, ARC, SOURCES, ABI, PAY_SYMBOLS,
     ArcBridge, mount,
-    utils: { parseUsdc, formatUsdc, parseUnits, formatUnits, toBytes32Address, computeFees, isAddress, jsonRpc, fetchJson, toTxRequest, payShortlist, explainLifi, nonceFromMessage, judgeMint },
+    utils: { parseUsdc, formatUsdc, parseUnits, formatUnits, toBytes32Address, computeFees, isAddress, jsonRpc, fetchJson, toTxRequest, payShortlist, explainLifi, nonceFromMessage, judgeMint, chooseRoute },
   };
 });
