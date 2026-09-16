@@ -31,7 +31,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.3.3";
+  const VERSION = "0.3.4";
 
   // ------------------------------------------------------------------ constants
 
@@ -757,9 +757,13 @@
 
     transfers() { return this.storage.get(this.storageKey) || []; }
     pending() {
+      // A landed transfer stays listed while its leg on Arc is undone, and for a day when it
+      // never had one: the widget may have been given a destination since (a coin picked after
+      // the USDC arrived) and offers the leg from the list.
       return this.transfers().filter((t) =>
         !["failed", "dismissed"].includes(t.status) &&
-        !(t.status === "minted" && (!t.dest || t.dest.status === "done")));
+        !(t.status === "minted" && ((t.dest && t.dest.status === "done") ||
+          (!t.dest && !(t.mintedAt && Date.now() - t.mintedAt < 86_400_000)))));
     }
     _save(tr) {
       const list = this.transfers();
@@ -1218,7 +1222,7 @@
     const amountIn = el("input", { inputmode: "decimal", placeholder: "0.00", value: opts.defaultAmount || "", oninput: () => onAmount() });
     const tokSel = el("select", { onchange: () => { state.payToken = state.tokens.find((t) => t.address === tokSel.value) || state.tokens[0]; state.balance = null; refreshBalance(); replan(); } });
     const tokWrap = el("div", { class: "abk-tok" }, tokSel);
-    const maxBtn = el("button", { class: "abk-mini", onclick: () => balLbl.onclick() }, "MAX");
+    const maxBtn = el("button", { class: "abk-mini", onclick: () => balLbl.click() }, "MAX");
     const fastBtn = el("button", { class: "on", onclick: () => setSpeed("fast") }, ["Fast", el("small", {}, "~20 s")]);
     const stdBtn = el("button", { onclick: () => setSpeed("standard") }, ["Standard", el("small", {}, "no protocol fee")]);
     const seg = el("div", { class: "abk-seg" }, [fastBtn, stdBtn]);
@@ -1355,7 +1359,9 @@
           setStep("attest", "done");
           setStep("mint", "done", s.transfer.mintTx ? cr.explorerTx(cr.arc, s.transfer.mintTx) : cr.explorerAddress(cr.arc, s.transfer.recipient));
           state.done = s.transfer; opts.onMinted && opts.onMinted(s.transfer);
-          if (opts.destination && s.transfer.dest && s.transfer.dest.status !== "done") {
+          // A transfer planned before the coin was picked (or resumed by a later mount)
+          // carries no dest record; the leg is still wanted if the widget has one now.
+          if (opts.destination && !(s.transfer.dest && s.transfer.dest.status === "done")) {
             if (opts.destination.auto !== false) runDest(s.transfer);
             else setStep("dest", "wait");
           }
@@ -1371,7 +1377,11 @@
 
     function resumePending() {
       for (const tr of c0.pending()) {
-        if (["planned", "burning", "swapping", "sending", "swapped"].includes(tr.status)) continue; // needs the user (listed with a button or left for inspection)
+        // needs the user (listed with a button or left for inspection). A LI.FI route that is
+        // already sent is only waiting on the network, so it is followed: a remount while it
+        // was in flight used to leave it listed with its last step and never ran the leg on Arc.
+        const waitsOnUser = tr.router === "lifi" ? ["planned", "sending"] : ["planned", "burning", "swapping", "sending", "swapped"];
+        if (waitsOnUser.includes(tr.status)) continue;
         follow(tr);
       }
       renderPending();
@@ -1423,20 +1433,21 @@
     }
 
     function renderPending() {
-      const list = c0.pending().filter((t) => t.id !== (state.done && state.done.id) && t.status !== "planned");
+      const list = c0.pending().filter((t) => t.id !== (state.done && state.done.id) && t.status !== "planned" &&
+        !(t.status === "minted" && !opts.destination)); // landed and nothing to run: done
       pendBox.style.display = list.length ? "" : "none";
       pendBox.replaceChildren(el("h4", {}, "In flight"), ...list.map((t) => {
         const src = c0.source(t.sourceKey) || { name: t.sourceKey, explorer: "" };
         const amountTxt = t.amount ? formatUsdc(t.amount) + " USDC" : "transfer";
         const hash = t.burnTx || t.swapTx;
-        const statusTxt = t.status === "minted" && t.dest ? "on Arc, " + t.dest.status : t.status;
+        const statusTxt = t.status === "minted" ? "on Arc, " + (t.dest ? t.dest.status : "landed") : t.status;
         return el("div", { class: "it" }, [
           el("div", {}, [amountTxt + " from " + src.name + " · ", el("span", {}, statusTxt)]),
           el("div", { style: "display:flex;gap:6px" }, [
             hash ? el("a", { href: c0.explorerTx(src, hash), target: "_blank", rel: "noopener", class: "abk-mini" }, "tx") : null,
             t.status === "swapped" ? el("button", { class: "abk-mini", onclick: () => continueSwapped(t) }, "Bridge now") : null,
             t.status === "stalled" ? el("button", { class: "abk-mini", onclick: () => manual(t) }, "Mint on Arc") : null,
-            t.status === "minted" && opts.destination && t.dest && t.dest.status !== "done"
+            t.status === "minted" && opts.destination && !(t.dest && t.dest.status === "done")
               ? el("button", { class: "abk-mini", onclick: () => runDest(t) }, opts.destination.buttonLabel || "Run on Arc") : null,
             el("button", { class: "abk-mini", title: "Hide", onclick: () => { c0.dismiss(t.id); renderPending(); } }, "×"),
           ]),
@@ -1521,7 +1532,7 @@
                       s.key === "attest" && st === "on" ? (state.activePlan && state.activePlan.router === "lifi" ? "LI.FI is moving the funds; nothing to sign." : "Waiting for source-chain finality + Circle signature.") :
                       s.key === "swap" && st === "on" ? "Confirm the swap in your wallet." :
                       s.key === "dest" && st === "on" ? "Confirm in your wallet on " + c0.arc.name + "." : null;
-          const waitBtn = s.key === "dest" && st === "wait" && state.done
+          const waitBtn = s.key === "dest" && (st === "wait" || st === "err" || !st) && state.done && !(state.done.dest && state.done.dest.status === "done")
             ? el("button", { class: "abk-mini", style: "margin-left:8px", onclick: () => runDest(state.done) }, opts.destination.buttonLabel || "Run on Arc") : null;
           return el("div", { class: "abk-step " + (st === "wait" ? "" : (st || "")) }, [
             el("div", { class: "d" }, st && st !== "wait" ? "" : String(i + 1)),
