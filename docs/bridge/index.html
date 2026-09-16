@@ -110,6 +110,48 @@
   .nowallet { background: var(--surface); border: 1px dashed var(--border-2); border-radius: var(--r-md); padding: 18px; color: var(--dim); font-size: 13px; }
   .nowallet b { color: var(--text); }
   .coin-link { margin-top: 10px; font-size: 13px; }
+  /* ---- swap card: two stacked boxes and a flip, the shape people know ---- */
+  .swap p { margin-bottom: 10px; }
+  .sw-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px 10px; }
+  .sw-box:focus-within { border-color: var(--border-2); }
+  .sw-lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); margin-bottom: 4px; }
+  .sw-lbl span:last-child { color: var(--faint); font-variant-numeric: tabular-nums; }
+  .sw-row { display: flex; align-items: center; gap: 10px; }
+  .sw-row input { flex: 1; min-width: 0; background: transparent; border: 0; padding: 4px 0; font: 500 28px/1.2 var(--mono); color: var(--text); outline: none; appearance: none; -webkit-appearance: none; }
+  .sw-row input::placeholder { color: var(--faint); }
+  .sw-row input[readonly] { color: var(--text); }
+  .sw-tok { flex: none; display: inline-flex; align-items: center; gap: 6px; max-width: 46%; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border-2); background: var(--surface);
+    color: var(--text); font: 600 14px 'Space Grotesk', sans-serif; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sw-tok::after { content: "▾"; color: var(--dim); font-size: 12px; }
+  .sw-tok:hover { border-color: var(--text); }
+  .sw-tok.empty { background: var(--accent); color: #04241a; border-color: transparent; }
+  .sw-tok.empty::after { color: #04241a; }
+  .sw-sub { display: flex; justify-content: space-between; align-items: center; min-height: 18px; font-size: 12px; color: var(--faint); margin-top: 2px; }
+  .sw-max { font: 600 11px var(--mono); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border-2); background: transparent; color: var(--accent); cursor: pointer; }
+  .sw-flipwrap { display: flex; justify-content: center; height: 8px; position: relative; z-index: 1; }
+  .sw-flip { position: absolute; top: -13px; width: 34px; height: 34px; border-radius: 10px; border: 3px solid var(--surface); background: var(--surface-2); color: var(--text); font-size: 16px; line-height: 1; cursor: pointer; }
+  .sw-flip:hover { color: var(--accent); }
+  .sw-details { margin-top: 10px; font-size: 12px; color: var(--dim); display: grid; gap: 4px; }
+  .sw-details div { display: flex; justify-content: space-between; gap: 10px; }
+  .sw-details b { color: var(--text); font-weight: 500; font-family: var(--mono); font-size: 12px; }
+  .swap .btn { width: 100%; margin-top: 12px; padding: 13px; border: 0; border-radius: 12px; background: var(--grad); color: var(--bg); font: 600 15px Inter, system-ui, sans-serif; cursor: pointer; }
+  .swap .btn:disabled { opacity: .55; cursor: default; }
+  /* the display rules below would win over the hidden attribute's UA style */
+  .sw-modal[hidden], .sw-details[hidden] { display: none; }
+  .sw-modal { position: fixed; inset: 0; z-index: 300; background: rgba(var(--bg-rgb),.72); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .sw-sheet { width: 100%; max-width: 420px; max-height: 80vh; display: flex; flex-direction: column; gap: 10px; background: var(--surface); border: 1px solid var(--border-2); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-lg); }
+  .sw-ph { display: flex; justify-content: space-between; align-items: center; }
+  .sw-ph .modal-x { width: 32px; height: 32px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--faint); font-size: 14px; cursor: pointer; }
+  .sw-list { overflow-y: auto; display: grid; gap: 2px; min-height: 120px; }
+  .sw-it { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; cursor: pointer; border: 0; background: transparent; color: var(--text); text-align: left; width: 100%; }
+  .sw-it:hover { background: var(--surface-2); }
+  .sw-it .av { width: 30px; height: 30px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); display: grid; place-items: center; font: 700 12px 'Space Grotesk', sans-serif; color: var(--dim); flex: none; overflow: hidden; }
+  .sw-it .av img { width: 100%; height: 100%; object-fit: cover; }
+  .sw-it .nm { display: flex; flex-direction: column; min-width: 0; }
+  .sw-it .nm b { font: 600 14px 'Space Grotesk', sans-serif; }
+  .sw-it .nm span { font-size: 11.5px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sw-it .bal { margin-left: auto; font: 12px var(--mono); color: var(--dim); white-space: nowrap; }
+  .sw-it .tag { font: 600 9.5px var(--mono); letter-spacing: .5px; padding: 2px 6px; border-radius: 999px; border: 1px solid var(--border); color: var(--faint); }
   /* ---- send card: the same money, the other way round the deck ---- */
   .send { margin-top: 14px; max-width: 440px; }
   .send-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
@@ -179,6 +221,32 @@
         <div class="or"><span>or paste a coin's contract address</span></div>
         <input class="field mono" id="ca" placeholder="0x… any A NEW ONE coin, wherever you found it" spellcheck="false" autocomplete="off">
         <div class="hint" id="caHint"></div>
+      </div>
+      <div class="card swap" id="swapCard">
+        <div class="send-head"><h3>Swap on Arc</h3><span class="pill" id="swNet">…</span></div>
+        <p>Any token on Arc for any other. Routes by LI.FI; A NEW ONE coins trade on their own curve.</p>
+        <div class="sw-box">
+          <div class="sw-lbl"><span>Sell</span><span id="swFromBal"></span></div>
+          <div class="sw-row"><input id="swAmt" inputmode="decimal" placeholder="0" autocomplete="off"><button type="button" class="sw-tok" id="swFromBtn">USDC</button></div>
+          <div class="sw-sub"><span id="swFromUsd"></span><button type="button" class="sw-max" id="swMax">MAX</button></div>
+        </div>
+        <div class="sw-flipwrap"><button type="button" class="sw-flip" id="swFlip" title="Switch direction" aria-label="Switch direction">↓</button></div>
+        <div class="sw-box">
+          <div class="sw-lbl"><span>Buy</span><span id="swToBal"></span></div>
+          <div class="sw-row"><input id="swOut" readonly placeholder="0"><button type="button" class="sw-tok empty" id="swToBtn">Select token</button></div>
+          <div class="sw-sub"><span id="swToUsd"></span><span id="swRoute"></span></div>
+        </div>
+        <div class="sw-details" id="swDetails" hidden></div>
+        <button type="button" class="btn" id="swGo" disabled>Connect wallet</button>
+        <div class="hint" id="swHint"></div>
+      </div>
+      <div class="sw-modal" id="swPicker" hidden>
+        <div class="sw-sheet">
+          <div class="sw-ph"><b>Select a token</b><button type="button" class="modal-x" id="swPickX" aria-label="Close">✕</button></div>
+          <input class="field mono" id="swSearch" placeholder="Search a name, or paste any Arc token address" spellcheck="false" autocomplete="off">
+          <div class="hint" id="swSearchHint"></div>
+          <div class="sw-list" id="swList"></div>
+        </div>
       </div>
       <div class="card">
         <h3>How the trip goes</h3>
@@ -520,7 +588,11 @@
   function sendSay(text, cls) { sendHint.textContent = text; sendHint.className = "hint" + (cls ? " " + cls : ""); }
   const fmtAmt = (v, d) => { const n = Number(ethers.formatUnits(v, d)); return n >= 1e6 ? n.toLocaleString("en-US", { maximumFractionDigits: 0 }) : n.toLocaleString("en-US", { maximumFractionDigits: n >= 1 ? 4 : 6 }); };
 
-  function sendCoinsKnown() { if (sendAccount) sendLoadHeld(); }
+  function sendCoinsKnown() {
+    if (sendAccount) sendLoadHeld();
+    // the swap picker lists the floor's coins too, once the floor has been read
+    if (typeof swAddTok === "function") { for (const [a, m] of Object.entries(coinMeta)) swAddTok({ address: a, symbol: m.symbol, name: m.name, decimals: 18, src: "floor" }); swRenderList(); }
+  }
 
   // The chain cannot list what a wallet holds: every token is its own contract and only
   // answers for itself. The explorer indexes transfers and can, so its list comes first
@@ -713,6 +785,264 @@
       return;
     }
   };
+
+  // ---- swap on Arc: any token for any other. The route comes from LI.FI (one quote, one
+  // approve if the token needs it, one transaction); A NEW ONE coins are not on LI.FI, so a
+  // buy of one goes to its curve or pool the way the bridge's last leg does. Balances and
+  // the wallet are the send card's.
+  const SW = (id) => document.getElementById(id);
+  const USDC_ARC = "0x3600000000000000000000000000000000000000";
+  const swT = {};                       // address -> {address, symbol, name, decimals, logo, price, src}
+  const swBal = {};                     // address -> balance (minor units) of the connected wallet
+  let swFrom = null, swTo = null, swQuote = null, swBusy = false, swPickSide = null, swQuoteTimer = null, swQuoteRun = 0;
+  const swEsc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const swAddTok = (t) => { const a = ethers.getAddress(t.address); const cur = swT[a] || {}; swT[a] = { ...cur, ...t, address: a, decimals: Number(t.decimals ?? cur.decimals ?? 18) }; return swT[a]; };
+  swAddTok({ address: USDC_ARC, symbol: "USDC", name: "USD Coin", decimals: 6, src: "arc" });
+  swFrom = swT[USDC_ARC];
+  const lifiBase = () => (lifiApi || "https://li.quest/v1");
+  const swIsFloor = (a) => !!(a && coinMeta[a]);
+  const swFmt = (v, d) => fmtAmt(v, d);
+  const swUsd = (t, v) => (t && t.price && v ? "$" + (Number(ethers.formatUnits(v, t.decimals)) * Number(t.price)).toLocaleString("en-US", { maximumFractionDigits: 2 }) : "");
+  SW("swNet").textContent = net === "mainnet" ? "ARC MAINNET" : "ARC TESTNET";
+  SW("swNet").classList.toggle("test", net !== "mainnet");
+
+  /** LI.FI's list of Arc tokens, plus the floor's coins and whatever the wallet holds. */
+  async function swLoadTokens() {
+    try {
+      const r = await fetch(lifiBase() + "/tokens?chains=" + arcCfg.chainId, { signal: AbortSignal.timeout(10000) });
+      const j = await r.json();
+      for (const t of (j.tokens && j.tokens[String(arcCfg.chainId)]) || []) {
+        if (!ethers.isAddress(t.address)) continue;
+        swAddTok({ address: t.address, symbol: t.symbol, name: t.name, decimals: t.decimals, logo: t.logoURI, price: t.priceUSD, src: "lifi" });
+      }
+    } catch {}
+    for (const [a, m] of Object.entries(coinMeta)) swAddTok({ address: a, symbol: m.symbol, name: m.name, decimals: 18, src: "floor" });
+    swRenderList();
+  }
+  async function swLoadHeld() {
+    if (!sendAccount) return;
+    const me = sendAccount;
+    try { for (const t of (await explorerTokens(me)) || []) { const a = ethers.getAddress(t.address); swAddTok({ address: a, symbol: t.symbol, decimals: t.decimals, src: (swT[a] && swT[a].src) || "wallet" }); swBal[a] = t.bal; } } catch {}
+    await swRefreshBalances();
+    swRenderList();
+  }
+  async function swRefreshBalances() {
+    if (!sendAccount) { SW("swFromBal").textContent = ""; SW("swToBal").textContent = ""; return; }
+    const me = sendAccount;
+    for (const t of [swFrom, swTo].filter(Boolean)) {
+      try { swBal[t.address] = await readAny((p) => new ethers.Contract(t.address, TOKEN_ABI, p).balanceOf(me)); } catch {}
+    }
+    if (me !== sendAccount) return;
+    SW("swFromBal").textContent = swFrom && swBal[swFrom.address] != null ? "balance " + swFmt(swBal[swFrom.address], swFrom.decimals) : "";
+    SW("swToBal").textContent = swTo && swBal[swTo.address] != null ? "balance " + swFmt(swBal[swTo.address], swTo.decimals) : "";
+    swValidate();
+  }
+  /** any address on Arc: symbol, name and decimals from the contract itself */
+  async function swResolve(addr) {
+    const a = ethers.getAddress(addr);
+    if (swT[a] && swT[a].src !== "paste") return swT[a];
+    const code = await readAny((p) => p.getCode(a));
+    if (!code || code === "0x") throw new Error("no contract at that address on Arc");
+    const c = (p) => new ethers.Contract(a, [...TOKEN_ABI, "function name() view returns (string)"], p);
+    const symbol = await readAny((p) => c(p).symbol());
+    let name = symbol, decimals = 18;
+    try { name = await readAny((p) => c(p).name()); } catch {}
+    try { decimals = Number(await readAny((p) => c(p).decimals())); } catch {}
+    return swAddTok({ address: a, symbol, name, decimals, src: "paste" });
+  }
+
+  // ---- token picker
+  function swRenderList() {
+    const q = SW("swSearch").value.trim().toLowerCase();
+    const other = swPickSide === "from" ? swTo : swFrom;
+    const rows = Object.values(swT)
+      .filter((t) => !other || t.address !== other.address)
+      .filter((t) => !q || t.symbol.toLowerCase().includes(q) || (t.name || "").toLowerCase().includes(q) || t.address.toLowerCase() === q)
+      .sort((x, y) => {
+        const bx = swBal[x.address] > 0n ? 1 : 0, by = swBal[y.address] > 0n ? 1 : 0;
+        if (bx !== by) return by - bx;
+        if ((x.src === "floor") !== (y.src === "floor")) return x.src === "floor" ? -1 : 1;
+        return x.symbol.localeCompare(y.symbol);
+      });
+    SW("swList").innerHTML = rows.slice(0, 80).map((t) => `
+      <button type="button" class="sw-it" data-a="${t.address}">
+        <span class="av">${t.logo ? `<img src="${swEsc(t.logo)}" alt="" onerror="this.remove()">` : swEsc((t.symbol || "?")[0])}</span>
+        <span class="nm"><b>${swEsc(t.symbol)}</b><span>${swEsc(t.name || t.address.slice(0, 6) + "…" + t.address.slice(-4))}</span></span>
+        ${t.src === "floor" ? `<span class="tag">A NEW ONE</span>` : ""}
+        <span class="bal">${swBal[t.address] > 0n ? swEsc(swFmt(swBal[t.address], t.decimals)) : ""}</span>
+      </button>`).join("") || `<div class="hint">Nothing matches. Paste the token's contract address.</div>`;
+  }
+  function swOpenPicker(side) {
+    swPickSide = side; SW("swSearch").value = ""; SW("swSearchHint").textContent = ""; swRenderList();
+    SW("swPicker").hidden = false; setTimeout(() => SW("swSearch").focus(), 50);
+  }
+  function swClosePicker() { SW("swPicker").hidden = true; swPickSide = null; }
+  function swChoose(a) {
+    const t = swT[a]; if (!t) return;
+    if (swPickSide === "from") swFrom = t; else swTo = t;
+    swClosePicker(); swPaintTokens(); swRefreshBalances(); swRequote();
+  }
+  SW("swFromBtn").onclick = () => swOpenPicker("from");
+  SW("swToBtn").onclick = () => swOpenPicker("to");
+  SW("swPickX").onclick = swClosePicker;
+  SW("swPicker").addEventListener("click", (e) => { if (e.target === SW("swPicker")) swClosePicker(); });
+  addEventListener("keydown", (e) => { if (e.key === "Escape" && !SW("swPicker").hidden) swClosePicker(); });
+  SW("swList").addEventListener("click", (e) => { const b = e.target.closest("button[data-a]"); if (b) swChoose(b.dataset.a); });
+  let swSearchTimer = null;
+  SW("swSearch").addEventListener("input", () => {
+    swRenderList();
+    clearTimeout(swSearchTimer);
+    const v = SW("swSearch").value.trim();
+    if (!/^0x[0-9a-fA-F]{40}$/.test(v)) { SW("swSearchHint").textContent = ""; return; }
+    SW("swSearchHint").textContent = "Reading the token…";
+    swSearchTimer = setTimeout(async () => {
+      try {
+        const t = await swResolve(v); SW("swSearchHint").textContent = ""; swRenderList();
+        if (sendAccount) { try { swBal[t.address] = await readAny((p) => new ethers.Contract(t.address, TOKEN_ABI, p).balanceOf(sendAccount)); swRenderList(); } catch {} }
+      } catch (e) { SW("swSearchHint").textContent = "Could not read a token there: " + (e.shortMessage || e.message); }
+    }, 300);
+  });
+  function swPaintTokens() {
+    SW("swFromBtn").textContent = swFrom ? swFrom.symbol : "Select token"; SW("swFromBtn").classList.toggle("empty", !swFrom);
+    SW("swToBtn").textContent = swTo ? swTo.symbol : "Select token"; SW("swToBtn").classList.toggle("empty", !swTo);
+  }
+  SW("swFlip").onclick = () => { [swFrom, swTo] = [swTo, swFrom]; SW("swAmt").value = SW("swOut").value && swFrom ? SW("swOut").value : ""; SW("swOut").value = ""; swPaintTokens(); swRefreshBalances(); swRequote(); };
+  SW("swMax").onclick = () => { if (!swFrom || swBal[swFrom.address] == null) return; let v = swBal[swFrom.address]; if (swFrom.address === USDC_ARC) v = v > 50000n ? v - 50000n : 0n; SW("swAmt").value = ethers.formatUnits(v, swFrom.decimals); swRequote(); };
+  SW("swAmt").addEventListener("input", swRequote);
+
+  // ---- quoting
+  function swAmount() { const t = SW("swAmt").value.trim(); if (!swFrom || !t || !/^\d*\.?\d*$/.test(t)) return null; try { return ethers.parseUnits(t, swFrom.decimals); } catch { return null; } }
+  function swRequote() { clearTimeout(swQuoteTimer); swQuote = null; SW("swOut").value = ""; SW("swDetails").hidden = true; SW("swRoute").textContent = ""; swValidate(); swQuoteTimer = setTimeout(swFetchQuote, 600); }
+  async function swFetchQuote() {
+    const v = swAmount(), from = swFrom, to = swTo, run = ++swQuoteRun;
+    if (!v || v <= 0n || !from || !to) return;
+    SW("swRoute").textContent = "Finding a route…";
+    let q = null;
+    try {
+      if (swIsFloor(to.address) && from.address === USDC_ARC) q = await swQuoteFloorBuy(to, v);
+      else if (swIsFloor(from.address) || swIsFloor(to.address)) q = { error: swIsFloor(from.address) ? "A NEW ONE coins are sold on the floor; open $" + from.symbol + " there." : "$" + to.symbol + " is bought with USDC. Sell into USDC first." };
+      else q = await swQuoteLifi(from, to, v);
+    } catch (e) { q = { error: (e && (e.shortMessage || e.message)) || String(e) }; }
+    if (run !== swQuoteRun) return;
+    swQuote = q;
+    if (q.error) { SW("swRoute").textContent = ""; SW("swOut").value = ""; SW("swDetails").hidden = true; swValidate(q.error); return; }
+    SW("swOut").value = ethers.formatUnits(q.toAmount, to.decimals);
+    SW("swFromUsd").textContent = swUsd(from, v); SW("swToUsd").textContent = swUsd(to, q.toAmount);
+    SW("swRoute").textContent = "via " + q.tool;
+    const rate = Number(ethers.formatUnits(q.toAmount, to.decimals)) / Number(ethers.formatUnits(v, from.decimals));
+    SW("swDetails").innerHTML = [
+      ["Rate", `1 ${swEsc(from.symbol)} = <b>${swEsc(rate.toLocaleString("en-US", { maximumSignificantDigits: 6 }))} ${swEsc(to.symbol)}</b>`],
+      ["Minimum received", `<b>${swEsc(swFmt(q.toAmountMin, to.decimals))} ${swEsc(to.symbol)}</b>`],
+      ["Max slippage", `<b>${q.slippage}%</b>`],
+      q.feeUsd != null ? ["Route fee", `<b>${swEsc(q.feeUsd)}</b>`] : null,
+      q.gasUsd != null ? ["Network fee", `<b>${swEsc(q.gasUsd)}</b>`] : null,
+    ].filter(Boolean).map(([k, val]) => `<div><span>${k}</span>${val}</div>`).join("");
+    SW("swDetails").hidden = false;
+    swValidate();
+  }
+  async function swQuoteLifi(from, to, v) {
+    const p = new URLSearchParams({ fromChain: String(arcCfg.chainId), toChain: String(arcCfg.chainId), fromToken: from.address, toToken: to.address,
+      fromAmount: v.toString(), fromAddress: sendAccount || "0x000000000000000000000000000000000000dEaD", slippage: "0.03", integrator: "a-new-one" });
+    if (net === "mainnet") p.set("fee", "0.0025"); // the floor's share, as on the bridge
+    const r = await fetch(lifiBase() + "/quote?" + p.toString(), { signal: AbortSignal.timeout(20000) });
+    const j = await r.json();
+    if (!r.ok || !j.estimate) throw new Error(j.message || "no route for that pair on Arc right now");
+    const feeUsd = (j.estimate.feeCosts || []).reduce((s, f) => s + Number(f.amountUSD || 0), 0);
+    const gasUsd = (j.estimate.gasCosts || []).reduce((s, g) => s + Number(g.amountUSD || 0), 0);
+    if (j.action && j.action.toToken && j.action.toToken.priceUSD && !to.price) to.price = j.action.toToken.priceUSD;
+    if (j.action && j.action.fromToken && j.action.fromToken.priceUSD && !from.price) from.price = j.action.fromToken.priceUSD;
+    return { kind: "lifi", tool: (j.toolDetails && j.toolDetails.name) || j.tool, toAmount: BigInt(j.estimate.toAmount), toAmountMin: BigInt(j.estimate.toAmountMin), slippage: 3,
+      approvalAddress: j.estimate.approvalAddress, tx: j.transactionRequest, feeUsd: feeUsd ? "$" + feeUsd.toFixed(3) : null, gasUsd: gasUsd ? "$" + gasUsd.toFixed(3) : null };
+  }
+  async function swQuoteFloorBuy(to, v6) {
+    const d = await describe(to.address);
+    if (!d) throw new Error("not a coin on this floor");
+    const value = v6 * 10n ** 12n; // USDC is native on Arc: 6 decimals in, 18 on the curve
+    if (d.venue === "closed") throw new Error("$" + d.symbol + " graduated and is waiting for its move into Uniswap; nothing trades it right now.");
+    if (d.venue === "pool") {
+      if (!uniOk || !uni.quoter) throw new Error("$" + d.symbol + " trades on Uniswap v3; its router on Arc is not verified yet.");
+      const out = await readAny((p) => new ethers.Contract(uni.quoter, QUOTER_ABI, p).quoteExactInputSingle.staticCall({ tokenIn: USDC_ARC, tokenOut: to.address, amountIn: value, fee: POOL_FEE, sqrtPriceLimitX96: 0 }));
+      const amt = out[0] ?? out.amountOut;
+      return { kind: "pool", tool: "Uniswap v3", toAmount: amt, toAmountMin: amt * 95n / 100n, slippage: 5, value };
+    }
+    const out = await platform.quoteBuy(to.address, value);
+    return { kind: "curve", tool: "A NEW ONE curve", toAmount: out, toAmountMin: out * 97n / 100n, slippage: 3, value };
+  }
+  setInterval(() => { if (!document.hidden && swQuote && !swBusy && !swQuote.error) swFetchQuote(); }, 30000);
+
+  // ---- the button
+  function swProblem() {
+    if (!sendAccount) return "connect";
+    if (!swFrom || !swTo) return "Pick both tokens.";
+    const v = swAmount();
+    if (v === null || v <= 0n) return "Enter an amount.";
+    if (swBal[swFrom.address] != null && v > swBal[swFrom.address]) return "More than you hold (" + swFmt(swBal[swFrom.address], swFrom.decimals) + " " + swFrom.symbol + ").";
+    if (!swQuote) return "quoting";
+    if (swQuote.error) return swQuote.error;
+    return "";
+  }
+  function swValidate(err) {
+    const p = err || swProblem();
+    const go = SW("swGo");
+    if (p === "connect") { go.disabled = false; go.textContent = "Connect wallet"; swSayS(""); return; }
+    if (p === "quoting") { go.disabled = true; go.textContent = swAmount() ? "Getting a quote…" : "Swap"; if (!swBusy) swSayS(""); return; }
+    go.disabled = !!p || swBusy;
+    go.textContent = swBusy ? "Swapping…" : p ? "Swap" : "Swap " + swFmt(swAmount(), swFrom.decimals) + " " + swFrom.symbol + " for " + swTo.symbol;
+    if (!swBusy) swSayS(p && !/^(Pick|Enter)/.test(p) ? p : "", p && !/^(Pick|Enter)/.test(p) ? "bad" : "");
+  }
+  function swSayS(t, cls) { SW("swHint").textContent = t; SW("swHint").className = "hint" + (cls ? " " + cls : ""); }
+  const swWhy = (e) => {
+    const code = e && [e.code, e.error && e.error.code, e.info && e.info.error && e.info.error.code].find((c) => typeof c === "number" || typeof c === "string");
+    const text = e && [e.info && e.info.error && e.info.error.message, e.error && e.error.message, e.shortMessage, e.message].find((s) => s && !/coalesce/i.test(s));
+    return code === 4001 || code === "ACTION_REJECTED" ? "Cancelled in the wallet." : code === -32002 ? "The wallet already has a request open; answer it there first." : String(text || e).slice(0, 200);
+  };
+  SW("swGo").onclick = async () => {
+    if (!sendAccount) return sendConnect().then(() => { swLoadHeld(); swValidate(); });
+    if (swProblem() || swBusy) return;
+    const q = swQuote, from = swFrom, to = swTo, v = swAmount();
+    swBusy = true; swValidate(); swSayS("Confirm in your wallet…");
+    try {
+      await sendEnsureArc();
+      const bp = new ethers.BrowserProvider(wallet(), Number(arcCfg.chainId));
+      const signer = await bp.getSigner();
+      const me = ethers.getAddress(await signer.getAddress());
+      let tx;
+      if (q.kind === "curve") {
+        const c = new ethers.Contract(platformAddr, PLATFORM_ABI, signer);
+        tx = await c.buy(to.address, q.toAmountMin, { value: q.value });
+      } else if (q.kind === "pool") {
+        const erc = new ethers.Contract(USDC_ARC, ERC20_ABI, signer);
+        if ((await erc.allowance(me, uni.router)) < q.value) { swSayS("Approve USDC in your wallet…"); const a = await erc.approve(uni.router, q.value); await a.wait(); swSayS("Confirm the swap in your wallet…"); }
+        const router = new ethers.Contract(uni.router, ROUTER_ABI, signer);
+        tx = await router.exactInputSingle({ tokenIn: USDC_ARC, tokenOut: to.address, fee: POOL_FEE, recipient: me, amountIn: q.value, amountOutMinimum: q.toAmountMin, sqrtPriceLimitX96: 0 });
+      } else {
+        // the quote was priced for whoever was connected; a wallet change since means a fresh one
+        const fresh = await swQuoteLifi(from, to, v);
+        const erc = new ethers.Contract(from.address, ERC20_ABI, signer);
+        if (fresh.approvalAddress && (await erc.allowance(me, fresh.approvalAddress)) < v) { swSayS("Approve " + from.symbol + " in your wallet…"); const a = await erc.approve(fresh.approvalAddress, v); await a.wait(); swSayS("Confirm the swap in your wallet…"); }
+        const req = { to: fresh.tx.to, data: fresh.tx.data, value: fresh.tx.value ? BigInt(fresh.tx.value) : 0n };
+        if (fresh.tx.gasLimit) req.gasLimit = BigInt(fresh.tx.gasLimit);
+        tx = await signer.sendTransaction(req);
+        swQuote = fresh;
+      }
+      swSayS("Sent, waiting for the block…");
+      const rc = await tx.wait();
+      if (!rc || rc.status !== 1) throw new Error("The transaction reverted.");
+      SW("swAmt").value = ""; SW("swOut").value = ""; SW("swDetails").hidden = true; swQuote = null; swBusy = false;
+      await swRefreshBalances();
+      SW("swHint").className = "hint good"; SW("swHint").textContent = "";
+      SW("swHint").append("Swapped " + swFmt(v, from.decimals) + " " + from.symbol + " for " + to.symbol + ". ");
+      if (arcCfg.explorer) { const a = document.createElement("a"); a.href = arcCfg.explorer.replace(/\/$/, "") + "/tx/" + tx.hash; a.target = "_blank"; a.rel = "noopener"; a.textContent = "View on the explorer →"; SW("swHint").append(a); }
+      else SW("swHint").append("tx " + tx.hash.slice(0, 10) + "…");
+      if (swIsFloor(to.address)) { const a = document.createElement("a"); a.href = "../#t=" + to.address.toLowerCase(); a.textContent = " Open $" + to.symbol + " on the floor →"; SW("swHint").append(a); }
+      return;
+    } catch (e) { swBusy = false; swValidate(); swSayS(swWhy(e), "bad"); return; }
+  };
+  if (wallet() && wallet().on) wallet().on("accountsChanged", () => setTimeout(() => { swLoadHeld(); swValidate(); }, 100));
+  swPaintTokens();
+  lifiReady.then(() => swLoadTokens());
+  setTimeout(() => { if (sendAccount) swLoadHeld(); else swValidate(); }, 1500);
+
   sendPick();
   sendConnectSilently();
 })();
