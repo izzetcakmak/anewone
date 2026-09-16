@@ -454,6 +454,11 @@
       ethers: window.ethers,
       network: net,
       lifiApi,
+      // Bridge over Circle CCTP with the Forwarding Service (1-2 min, ~0.02-0.07 USDC). LI.FI's
+      // own route into Arc (live since 16 Sep 2026) rides a third-party executor that took
+      // 20-30 min per transfer on launch night and priced 20 USDC at 17.96 on arrival, so it is
+      // not used for the bridge leg; LI.FI still does the same-chain swaps.
+      router: "cctp",
       // 0.25% of every non-USDC payment goes to the floor's fee wallet (LI.FI integrator fee;
       // the portal.li.fi integration is named "A New One", string "a-new-one", 25 bps).
       // Mainnet only; on testnet nothing is charged.
