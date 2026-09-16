@@ -4673,7 +4673,10 @@ $("tGo").onclick = async () => {
     } else {
       const t = new ethers.Contract(currentToken, ERC20, signer);
       const allowance = await t.allowance(userAddr, CFG.platform);
-      if (allowance < wei) { toast("Approving…"); await (await t.approve(CFG.platform, ethers.MaxUint256)).wait(); }
+      // Exactly what this sale needs, never unlimited: wallet scanners (Zerion's, Rabby's)
+      // mark an unlimited approval to a young contract as a malicious request, and a holder
+      // is right to be wary of one. It costs one approval per sale; the sale is still safe.
+      if (allowance < wei) { toast("Approving " + fmt(wei, 2) + " $" + ((tokenMeta[currentToken] || {}).symbol || "") + "…"); await (await t.approve(CFG.platform, wei)).wait(); }
       const q = localQuoteSell(inf, wei);
       const tx = await c.sell(currentToken, wei, applySlip(q));
       toast("Selling…"); await tx.wait(); toast("SOLD! +" + fmt(q, 4) + " USDC");
