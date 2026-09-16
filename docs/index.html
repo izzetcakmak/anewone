@@ -2767,10 +2767,15 @@ async function connect(forcePicker, silent) {
         return toast(e.shortMessage || e.message || "Network switch failed");
       }
       try {
+        // blockExplorerUrls is left out when there is no explorer: EIP-3085 makes it
+        // optional, and MetaMask rejects an empty array ("Expected null or array with at
+        // least one valid string HTTPS url"), which on launch night refused every wallet
+        // that did not already have Arc mainnet added by hand.
         await bp.send("wallet_addEthereumChain", [{
           chainId: CFG.chainIdHex, chainName: NET_NAME,
           nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
-          rpcUrls: [CFG.rpc], blockExplorerUrls: CFG.explorer ? [CFG.explorer] : []
+          rpcUrls: [CFG.rpc],
+          ...(CFG.explorer ? { blockExplorerUrls: [CFG.explorer] } : {}),
         }]);
       } catch (e2) {
         return toast(e2.shortMessage || e2.message || "Could not add the Arc network");
