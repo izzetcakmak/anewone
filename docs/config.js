@@ -18,9 +18,9 @@ window.ANEWONE_CONFIG = {
       { url: "https://anewone.xyz/api/rpc", hosts: ["anewone.xyz"] }],
     logRpcs: ["https://rpc.blockdaemon.mainnet.arc.io", "https://rpc.mainnet.arc.io", "https://rpc.quicknode.mainnet.arc.io",
       { url: "https://anewone.xyz/api/rpc", hosts: ["anewone.xyz"] }],
-    // no public block explorer yet (arcscan.app / explorer.arc.network do not resolve,
-    // arcscan.xyz is a parked domain, explorer.arc.io is behind Circle's access login)
-    explorer: null,
+    // Arc's official explorer, hosted by Blockscout. It was behind Circle's access login on
+    // launch night, which is why the scanner wrote null; it opened to the public on 17 Sep 2026.
+    explorer: "https://explorer.arc.io",
     platform: "0x3DDA5AD5E74c658aff3d082AFe404a71615B1bc5",
     noah: "0x26Cc2b608Df6be8fF63C64C9464b2756cC5dc128",
   },
