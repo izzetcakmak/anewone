@@ -2724,6 +2724,15 @@ async function selectWallet(d) {
 const W3A_ENV = (window.ANEWONE_CONFIG.web3auth || {})[window.ANEWONE_CONFIG.mainnet.live ? "mainnet" : "testnet"] || {};
 const WEB3AUTH_CLIENT_ID = W3A_ENV.clientId || "";
 let web3authInstance = null;
+// Safari, and every browser on iOS (all WebKit), blocks Web3Auth's Google popup: the SDK
+// fetches its login config between the click and window.open, and WebKit only lets a popup
+// through in the same tick as the tap. There the login runs as a full-page redirect instead;
+// initModal() picks the result up on return and restoreWallet() finishes the connect.
+const W3A_REDIRECT = (() => {
+  const ua = navigator.userAgent || "";
+  const ios = /iP(hone|ad|od)/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  return ios || /^((?!chrome|chromium|android|crios|fxios|edg|opr).)*safari/i.test(ua);
+})();
 
 async function loadWeb3Auth() {
   if (web3authInstance) return web3authInstance;
@@ -2747,7 +2756,7 @@ async function loadWeb3Auth() {
     clientId: WEB3AUTH_CLIENT_ID,
     web3AuthNetwork: WEB3AUTH_NETWORK[netKey] || WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
     privateKeyProvider,
-    uiConfig: { appName: "A NEW ONE", mode: "dark", loginMethodsOrder: ["google"] },
+    uiConfig: { appName: "A NEW ONE", mode: "dark", loginMethodsOrder: ["google"], ...(W3A_REDIRECT ? { uxMode: "redirect" } : {}) },
   });
   await wa.initModal();
   web3authInstance = wa;
@@ -2760,10 +2769,14 @@ async function loginWithGoogle() {
   $("gmailBtn").querySelector(".gicon").nextSibling.textContent = " Opening Google…";
   try {
     const wa = await loadWeb3Auth();
+    // a redirect login leaves this page, so the choice is remembered first: on the way back
+    // restoreWallet() sees "google", and initModal() has already resumed the session
+    if (W3A_REDIRECT) { try { localStorage.setItem(LAST_WALLET_KEY, "google"); } catch {} }
     const provider = await wa.connect(); // opens Google; resolves to an EIP-1193 provider
     if (!provider) throw new Error("cancelled");
     await connectEmbedded(provider, "google");
   } catch (e) {
+    if (W3A_REDIRECT && !userAddr) { try { localStorage.removeItem(LAST_WALLET_KEY); } catch {} }
     toast(e.shortMessage || e.message || "Google sign-in failed");
   } finally {
     $("gmailBtn").disabled = false;
