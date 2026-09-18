@@ -11,7 +11,12 @@
         }
       ],
       "destination": "https://anewone.xyz/$1",
-      "permanent": false
+      "permanent": true
+    },
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "permanent": true
     }
   ],
   "headers": [
