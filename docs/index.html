@@ -345,12 +345,15 @@
   .cfoot .ca.done { color: var(--green); }
   .cfoot .ca.done svg { opacity: 1; }
   .cfoot .age { flex: none; }
-  /* the rail's copy button: the card's, without the address text */
-  .lrow .ca { flex: none; width: 26px; height: 26px; min-height: 0; padding: 0; margin-left: 4px; display: inline-flex; align-items: center; justify-content: center;
-    border: 1px solid var(--border); border-radius: 7px; background: transparent; color: var(--faint); }
-  .lrow .ca svg { width: 12px; height: 12px; }
-  .lrow .ca:hover { color: var(--text); border-color: var(--border-2); }
-  .lrow .ca.done { color: var(--green); border-color: rgba(var(--green-rgb),.5); }
+  /* the rail and the list show the address the way the card does: short, in mono, one tap to copy */
+  .lrow .ca, .tnm .ca { display: inline-flex; align-items: center; gap: 5px; min-height: 0; max-width: 100%;
+    background: none; border: 0; padding: 1px 0; margin: 0; cursor: pointer;
+    font-family: var(--mono); font-size: 10.5px; line-height: 1.3; color: var(--faint); }
+  .lrow .ca em, .tnm .ca em { font-style: normal; opacity: .65; letter-spacing: .04em; }
+  .lrow .ca svg, .tnm .ca svg { width: 11px; height: 11px; flex: none; opacity: .7; }
+  .lrow .ca:hover, .tnm .ca:hover { color: var(--text); }
+  .lrow .ca.done, .tnm .ca.done { color: var(--green); }
+  .tnm .ca { display: flex; }
 
   /* toolbar: one compact row, no duplicated chrome */
   .toolbar { gap: 8px; margin: 0 0 14px; }
@@ -3364,7 +3367,10 @@ function rowHtml(addr) {
         title="Watchlist">${isWatched(addr) ? "★" : "☆"}</span>
       <div class="tph" id="ph-${a}" aria-hidden="true">${esc(String(symbol || "?").slice(0, 1))}</div>
       <img class="timg" id="img-${a}" alt="" style="display:none">
-      <div class="tnm"><b>${esc(name)}</b><span>$${esc(symbol)}</span></div>
+      <div class="tnm"><b>${esc(name)}</b><span>$${esc(symbol)}</span>
+        <button type="button" class="ca" onclick="copyCa('${a}', event)" title="Copy contract address&#10;${a}">
+          <em>CA</em> ${esc(addr.slice(0, 6) + "…" + addr.slice(-4))} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button></div>
     </div></td>
     <td>${compactUsd(marketCapWei(inf))}</td>
     <td>${chip24Html(addr) || "—"}</td>
@@ -4175,15 +4181,14 @@ function renderLiveRail() {
       <span class="l">
         <span class="nm">$${esc(m.symbol || "")}</span>
         <span class="sub">${esc(age)} · ${covers24h ? esc(compactUsd(st.vol24 || 0n)) : "…"} vol</span>
+        <button type="button" class="ca" onclick="copyCa('${esc(a)}', event)" title="Copy contract address&#10;${esc(a)}">
+          <em>CA</em> ${esc(a.slice(0, 6) + "…" + a.slice(-4))} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
       </span>
       <span class="r">
         <span class="mc">${esc(compactUsd(marketCapWei(inf)))}</span>
         ${tag}
       </span>
-      <button type="button" class="ca" onclick="copyCa('${esc(a)}', event)" title="Copy contract address&#10;${esc(a)}" aria-label="Copy contract address">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-      </button>
     </div>`;
   }).join("") || `<div class="lrow" style="color:var(--faint);cursor:default;font-size:12px">${
     liveSort === "grad"
