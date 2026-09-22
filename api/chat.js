@@ -13,7 +13,7 @@
 // never taken from the request body (see MemWal's multi-tenant cookbook).
 //
 // The model is deliberately not Claude and not GPT: an OpenAI-compatible endpoint, Groq
-// with Llama 3.3 70B by default, swappable through LLM_BASE_URL / LLM_MODEL.
+// with Qwen3.8 27B by default, swappable through LLM_BASE_URL / LLM_MODEL.
 import { MemWal } from "@mysten-incubation/memwal";
 import { verifyMessage, getAddress } from "ethers";
 
@@ -21,7 +21,7 @@ const ORIGINS = new Set(["https://anewone.xyz", "https://www.anewone.xyz"]);
 const FLOOR_URL = "https://anewone.xyz/data/floor.json";
 const RELAYER = process.env.MEMWAL_SERVER_URL || "https://relayer.memory.walrus.xyz";
 const LLM_BASE = (process.env.LLM_BASE_URL || "https://api.groq.com/openai/v1").replace(/\/$/, "");
-const LLM_MODEL = process.env.LLM_MODEL || "llama-3.3-70b-versatile";
+const LLM_MODEL = process.env.LLM_MODEL || "qwen/qwen3.8-27b";
 const SIGN_TTL_MS = 7 * 24 * 3600 * 1000;   // a sign-in signature is good for a week
 const MAX_TURNS = 12;                        // history the model sees (the rest is memory's job)
 const MAX_CHARS = 1500;                      // per message
@@ -111,7 +111,8 @@ async function complete(messages) {
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error("model " + r.status + ": " + (j.error?.message || JSON.stringify(j).slice(0, 200)));
-  return (j.choices?.[0]?.message?.content || "").trim();
+  // Qwen-style models may prepend their reasoning in <think> tags; the user never sees those.
+  return (j.choices?.[0]?.message?.content || "").replace(/<think>[\s\S]*?<\/think>/g, "").trim();
 }
 
 // ---- rate limit: per IP, per warm lambda. A cost guard, not a security boundary.
