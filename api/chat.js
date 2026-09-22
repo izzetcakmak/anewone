@@ -188,11 +188,20 @@ export default async function handler(req, res) {
   //    prices and progress that are stale within the hour, and memory is for the person,
   //    not for the market (the floor index is re-read live on every turn anyway).
   //    analyze() returns once the jobs are accepted, so it finishes inside the request.
+  //    The relayer's extractor throws an occasional 500 (seen 23 Sep 2026, transient: the
+  //    same text passed on retry). One retry, then a plain remember() of the user's own
+  //    sentence so the fact is never lost, just less tidy.
   if (mw) {
-    try {
-      const a = await mw.analyze(`The user (wallet ${user}) said to the launchpad assistant: ${last}`, ns);
-      memoryNote.saved = (a.facts || []).map((f) => f.text);
-    } catch (e) { memoryNote.error = (memoryNote.error ? memoryNote.error + "; " : "") + "remember: " + (e.message || e); }
+    const text = `The user (wallet ${user}) said to the launchpad assistant: ${last}`;
+    let lastErr = null;
+    for (let attempt = 0; attempt < 2 && !memoryNote.saved.length; attempt++) {
+      try { const a = await mw.analyze(text, ns); memoryNote.saved = (a.facts || []).map((f) => f.text); lastErr = null; }
+      catch (e) { lastErr = e; }
+    }
+    if (lastErr) {
+      try { await mw.remember(`User said: ${last}`, ns); memoryNote.saved = [`User said: ${last}`]; memoryNote.note = "fact extraction was down, saved your words verbatim"; }
+      catch (e) { memoryNote.error = (memoryNote.error ? memoryNote.error + "; " : "") + "remember: " + (e.message || e); }
+    }
   }
 
   return res.status(200).json({ reply, memory: memoryNote, model: LLM_MODEL, floorBlock: floor.tip, floorCoins: floor.count });
