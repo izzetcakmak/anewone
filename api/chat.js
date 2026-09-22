@@ -183,12 +183,14 @@ export default async function handler(req, res) {
   catch (e) { return res.status(502).json({ error: String(e.message || e) }); }
   if (!reply) reply = "…the deck hand lost the thread. Ask again?";
 
-  // 3. Remember: the relayer's extractor turns the exchange into standalone facts and stores
-  //    each one encrypted on Walrus. analyze() returns once the jobs are accepted, so it
-  //    finishes inside the request rather than being killed with the lambda.
+  // 3. Remember: the relayer's extractor turns what the USER said into standalone facts and
+  //    stores each one encrypted on Walrus. Only the user's words go in: the answer carries
+  //    prices and progress that are stale within the hour, and memory is for the person,
+  //    not for the market (the floor index is re-read live on every turn anyway).
+  //    analyze() returns once the jobs are accepted, so it finishes inside the request.
   if (mw) {
     try {
-      const a = await mw.analyze(`User (wallet ${user}) said: ${last}\nDeck Hand answered: ${reply.slice(0, 600)}`, ns);
+      const a = await mw.analyze(`The user (wallet ${user}) said to the launchpad assistant: ${last}`, ns);
       memoryNote.saved = (a.facts || []).map((f) => f.text);
     } catch (e) { memoryNote.error = (memoryNote.error ? memoryNote.error + "; " : "") + "remember: " + (e.message || e); }
   }
