@@ -333,6 +333,7 @@
         const mm = j.memory || {};
         meta.innerHTML = `<span class="pill">${j.model || ""}</span><span class="pill">Arc block ${j.floorBlock || "?"}</span>` +
           (mm.on ? `<span class="pill on">recalled ${mm.recalled.length} · saved ${mm.saved.length}</span>` : `<span class="pill off">memory off</span>`) +
+          (mm.note ? `<span class="pill off">${mm.note}</span>` : "") +
           (mm.error ? `<span class="pill" style="color:var(--red)">memory: ${mm.error}</span>` : "");
         b.appendChild(meta);
         renderMem($("recalled"), mm.recalled, "");
@@ -352,8 +353,9 @@
       const r = await fetch(API, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "memories", auth }) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || r.status);
-      hint.textContent = j.memories.length ? j.memories.length + " memories in namespace " + j.namespace : "Nothing stored yet in " + j.namespace + ". Tell the deck hand something.";
-      renderMem($("recalled"), j.memories, ""); $("recallCard").querySelector("h3").textContent = "Everything remembered about you";
+      hint.textContent = j.memories.length ? j.memories.length + " memories in namespace " + j.namespace : "Nothing stored yet in " + j.namespace + ". Tell the deck hand something, then give Walrus a minute.";
+      renderMem($("recalled"), j.memories, "");
+      if (!j.memories.length) $("recalled").innerHTML = '<div class="empty">Nothing on Walrus yet for this wallet.</div>'; $("recallCard").querySelector("h3").textContent = "Everything remembered about you";
     } catch (e) { hint.className = "hint bad"; hint.textContent = String(e.message || e); }
   });
 
