@@ -1463,7 +1463,7 @@
 
   <div id="fundBanner" class="fundbox" style="display:none">
     <div class="fundhead">⛽ Fund your wallet to start trading</div>
-    <div class="fundbody">
+    <div class="fundbody" id="fundBody">
       On Arc, <b>USDC is both the gas and the money</b>. One balance covers fees and trades.
       Grab free test USDC from Circle's faucet (20 USDC every 2h):
     </div>
@@ -1472,7 +1472,7 @@
       <button id="fundCopy">Copy address</button>
       <a id="fundLink" class="fundcta" href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer">Get test USDC ↗</a>
     </div>
-    <div class="fundnote">Paste your address on the faucet and pick <b>Arc Testnet</b>. This
+    <div class="fundnote" id="fundNote">Paste your address on the faucet and pick <b>Arc Testnet</b>. This
       panel disappears automatically once the balance lands (checked every ~15s).</div>
   </div>
 
@@ -2908,10 +2908,22 @@ async function checkWalletRpc(w) {
 }
 
 // ---- balance + funding. On Arc the native USDC balance pays gas AND trades, so a fresh
-// wallet is stuck at zero — surface the balance and walk the user to Circle's faucet
-// (testnet). Polls while the fund panel is open and closes itself once funds land.
+// wallet is stuck at zero — surface the balance and walk the user to funding it. On
+// testnet that is Circle's faucet; on mainnet there is no faucet, so it points at GangWay
+// (the bridge) instead. Polls while the fund panel is open and closes itself once funds land.
 const LOW_BAL = ethers.parseEther("0.5");
 let fundPoll = null, wasLow = false;
+if (window.ANEWONE_CONFIG.mainnet.live) {
+  $("fundBody").innerHTML = 'On Arc, <b>USDC is both the gas and the money</b>. ' +
+    'One balance covers fees and trades. Bring USDC in from any chain through GangWay:';
+  $("fundLink").href = "bridge/";
+  $("fundLink").target = "";
+  $("fundLink").rel = "";
+  $("fundLink").textContent = "Open GangWay →";
+  $("fundNote").innerHTML = 'GangWay bridges USDC, ETH or almost anything from another chain ' +
+    'straight to this address. This panel disappears automatically once the balance lands ' +
+    '(checked every ~15s).';
+}
 async function refreshNativeBalance() {
   if (!userAddr) return;
   try {
