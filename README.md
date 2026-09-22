@@ -19,6 +19,7 @@ floor is... a new one.
 | Graduation | At 5,000 USDC raised the curve moves into a Uniswap v3 pool at the price it ended on |
 | Liquidity | The pool position stays in the platform contract forever; there is no function that can withdraw it |
 | Sign-in | Any browser wallet (MetaMask, OKX, Rabby) or Continue with Google for a non-custodial wallet |
+| Deck Hand | `/chat/`: an assistant over the live floor that remembers you across sessions and devices, memory Seal-encrypted on Walrus mainnet via [MemWal](https://github.com/MystenLabs/MemWal); model Qwen3.8 27B on Groq |
 
 ## How it works
 
@@ -62,7 +63,7 @@ The full runbook is in [MIGRATION.md](MIGRATION.md).
 | Network | Platform | $NOAH |
 |---|---|---|
 | Arc Testnet (5042002) | `0x99Bd23c2DD814055a4A2438912C6b4eD2Ae9Ebcf` | `0x0D1ac2a7FCdd8bF74EEC839DF4ED909071296a49` |
-| Arc Mainnet (5042) | Deploys itself the minute mainnet is detected | Launched in the same deployment |
+| Arc Mainnet (5042), live since 16 Sep 2026 | `0x3DDA5AD5E74c658aff3d082AFe404a71615B1bc5` | `0x26Cc2b608Df6be8fF63C64C9464b2756cC5dc128` |
 
 On Arc mainnet the platform points at Uniswap's official v3 deployment: factory
 `0xf0db7b58379503491d857dB50AC9ece64c653918`, position manager `0x39654A85A4C05127f5Fd6ED22CAeC077A0fB1377`.
@@ -76,7 +77,10 @@ On Arc mainnet the platform points at Uniswap's official v3 deployment: factory
 - `script/DeployUniswapV3.s.sol`: stands up Uniswap v3 from its npm bytecode for testnet and anvil rehearsals.
 - `test/`: the forge test suite and the Uniswap v3 fixtures (provenance in `test/fixtures/uniswap-v3/PROVENANCE.md`).
 - `docs/`: the static site, deployed by Vercel on every push: the app, docs, the ark, the Boarding Pass,
-  privacy and terms.
+  GangWay (`bridge/`), Deck Hand (`chat/`), privacy and terms.
+- `api/`: Vercel functions. `chat.js` is Deck Hand: verifies the wallet signature, recalls from and remembers to
+  Walrus Memory under a per-wallet namespace, reads the floor index for live Arc data and answers with an
+  OpenAI-compatible model. `rpc.js` relays reads for browsers that block `*.arc.io`; `lifi/` proxies GangWay quotes.
 - `monitor/`: the jobs behind the launch, run every minute by Windows Task Scheduler (`AnewoneMainnetScan`):
   - `scan.mjs` finds Arc mainnet, bridges USDC, deploys, confirms the launch on chain and flips `docs/config.js`
   - `bridge.mjs` moves 10 USDC from Base to Arc with CCTP V2 and Circle's Forwarding Service
@@ -84,6 +88,7 @@ On Arc mainnet the platform points at Uniswap's official v3 deployment: factory
   - `private-rpc.mjs` lets an optional `ARC_MAINNET_RPC` carry the launch transactions; `--check` tests it
   - `snapshot.mjs` builds the Boarding Pass leaderboard, `floor.mjs` the prebuilt front-page index,
     `ark-card.mjs` the ark's share image
+  - `chat-smoke.mjs` exercises `api/chat.js` locally, `--signed` for a full remember-then-recall round trip
 - `MIGRATION.md`: the mainnet runbook for Uniswap v3 migrations.
 
 ## Dev
@@ -94,6 +99,7 @@ forge script script/Deploy.s.sol --rpc-url arc_testnet --broadcast   # needs PRI
 node monitor/scan.mjs                                                # one scan pass
 node monitor/migrate.mjs --rpc <url> --platform <address>            # read-only migration status
 node monitor/private-rpc.mjs --check                                 # is ARC_MAINNET_RPC usable?
+npm install && node monitor/chat-smoke.mjs --signed                  # Deck Hand end to end (needs MEMWAL_* and LLM_API_KEY in .env)
 ```
 
 ## License
