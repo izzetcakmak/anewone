@@ -3,9 +3,13 @@
   "private": true,
   "type": "module",
   "description": "A NEW ONE — static floor (docs/) plus the Vercel functions under api/. The chat function keeps memory on Walrus through MemWal.",
-  "engines": { "node": "22.x" },
+  "engines": {
+    "node": "22.x"
+  },
   "dependencies": {
     "@mysten-incubation/memwal": "^0.1.8",
+    "@mysten/seal": "^1.4.13",
+    "@mysten/sui": "^2.31.3",
     "ethers": "^6.13.0"
   }
 }
