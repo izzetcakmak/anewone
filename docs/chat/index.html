@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  // Same rule as the floor: applied before first paint, no stored choice means light.
+  (function () {
+    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "light"); }
+    catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+  })();
+</script>
+<title>Deck Hand · The chat that remembers you | A NEW ONE</title>
+<link rel="canonical" href="https://anewone.xyz/chat/">
+<meta name="description" content="Ask the deck hand anything about the coins on A NEW ONE. Connect a wallet and it remembers you across sessions and devices: your memory lives encrypted on Walrus, the coins live on Arc.">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#07080b">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="A NEW ONE">
+<meta property="og:title" content="Deck Hand · The chat that remembers you">
+<meta property="og:description" content="A launchpad assistant with memory on Walrus. Sign in with your wallet once; it remembers what you asked, hold and plan, on any device.">
+<meta property="og:url" content="https://anewone.xyz/chat/">
+<meta property="og:image" content="https://anewone.xyz/apple-touch-icon.png">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* The floor's theme system, verbatim: one accent, neutral everything else. */
+  :root {
+    --accent-rgb: 0,184,119; --green-rgb: 0,165,104; --red-rgb: 224,51,79; --gold-rgb: 200,138,0;
+    --accent: rgb(var(--accent-rgb)); --green: rgb(var(--green-rgb)); --red: rgb(var(--red-rgb)); --gold: rgb(var(--gold-rgb));
+    --grad: rgb(var(--accent-rgb)); --r: 20px; --r-md: 14px; --r-sm: 10px; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  :root, :root[data-theme="light"] {
+    --bg: #f4f4f5; --bg-2: #ffffff; --card: #ececee; --bg-rgb: 244,244,245; --ink-rgb: 16,16,24;
+    --surface: #ffffff; --surface-2: #ececee; --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16);
+    --text: #111116; --dim: #5f5f6d; --faint: #8b8b98; --accent-soft: #e8f9f1; --strip: #17171c;
+    --shadow: 0 1px 2px rgba(16,16,24,.06); --shadow-lg: 0 8px 30px rgba(16,16,24,.09); --glow: 0;
+  }
+  :root[data-theme="dim"] {
+    --bg: #17171c; --bg-2: #1d1d23; --card: #232329; --bg-rgb: 23,23,28; --ink-rgb: 255,255,255;
+    --surface: #1d1d23; --surface-2: #232329; --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16);
+    --text: #eeeef2; --dim: #9a9aa8; --faint: #6d6d7b; --accent-rgb: 62,230,160; --green-rgb: 62,230,160; --red-rgb: 255,84,112; --gold-rgb: 255,194,77;
+    --accent-soft: rgba(62,230,160,.10); --strip: #101014; --shadow: 0 1px 2px rgba(0,0,0,.3); --shadow-lg: 0 8px 30px rgba(0,0,0,.35);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d0d10; --bg-2: #151519; --card: #1b1b20; --bg-rgb: 13,13,16; --ink-rgb: 255,255,255;
+    --surface: #151519; --surface-2: #1b1b20; --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16);
+    --text: #f2f2f5; --dim: #a0a0ae; --faint: #6e6e7c; --accent-rgb: 62,230,160; --green-rgb: 62,230,160; --red-rgb: 255,84,112; --gold-rgb: 255,194,77;
+    --accent-soft: rgba(62,230,160,.10); --strip: #08080a; --shadow: 0 1px 2px rgba(0,0,0,.4); --shadow-lg: 0 8px 30px rgba(0,0,0,.45);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 Inter, system-ui, -apple-system, sans-serif; min-height: 100vh; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ---- topbar, same recipe as the floor ---- */
+  .topbar { position: sticky; top: 0; z-index: 200; background: rgba(var(--bg-rgb),.78);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid var(--border); }
+  .topbar-inner { max-width: 1160px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 10px; }
+  .tb-brand { display: flex; align-items: center; gap: 10px; }
+  .tb-brand:hover { text-decoration: none; }
+  .tb-brand img { width: 30px; height: 30px; border-radius: 8px; }
+  .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: .6px; color: var(--text); }
+  .tb-link { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-family: var(--mono); font-size: 12.5px; letter-spacing: .6px;
+    color: var(--text); padding: 9px 14px; border-radius: 999px; border: 1px solid rgba(var(--accent-rgb),.28); background: rgba(var(--accent-rgb),.07); transition: background .2s, border-color .2s, color .2s; }
+  .tb-link:hover { text-decoration: none; background: rgba(var(--accent-rgb),.14); border-color: rgba(var(--accent-rgb),.5); color: var(--accent); }
+  .tb-link-quiet { border-color: var(--border-2); background: transparent; color: var(--dim); }
+  .tb-link-quiet:hover { color: var(--text); border-color: var(--border-2); }
+  .tb-spacer { flex: 1; }
+  .theme-sw { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; border: 1px solid var(--border-2); background: var(--surface); }
+  .theme-sw button { all: unset; cursor: pointer; display: grid; place-items: center; width: 30px; height: 26px; border-radius: 999px; color: var(--faint); transition: color .18s, background .18s; }
+  .theme-sw button:hover { color: var(--text); }
+  .theme-sw button[aria-pressed="true"] { color: var(--bg); background: var(--grad); }
+  .theme-sw svg { width: 15px; height: 15px; display: block; }
+  @media (max-width: 640px) { .tb-link span.lbl { display: none; } .topbar-inner { padding: 8px 12px; gap: 8px; } }
+
+  /* ---- page ---- */
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 24px 20px 60px; }
+  .hero { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+  .kicker { font-family: var(--mono); font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--accent); }
+  h1 { font-family: 'Space Grotesk', sans-serif; font-size: 32px; letter-spacing: -.5px; margin: 0; line-height: 1.1; }
+  h1 small { font-size: 15px; color: var(--dim); font-weight: 500; letter-spacing: 0; display: block; margin-top: 6px; font-family: Inter, sans-serif; max-width: 720px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 16px; box-shadow: var(--shadow); }
+  .card h3 { margin: 0 0 8px; font-size: 13.5px; font-family: 'Space Grotesk', sans-serif; letter-spacing: .2px; display: flex; align-items: center; gap: 8px; }
+  .card p { margin: 0; color: var(--dim); font-size: 13px; }
+  .side { display: grid; gap: 14px; position: sticky; top: 74px; }
+  @media (max-width: 900px) { .side { position: static; } }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--mono); padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--dim); }
+  .pill.on { color: var(--green); border-color: rgba(var(--green-rgb),.35); }
+  .pill.off { color: var(--gold); border-color: rgba(var(--gold-rgb),.35); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border: 0; border-radius: 999px; padding: 10px 16px; font: 600 13px Inter, sans-serif;
+    background: var(--grad); color: #fff; transition: filter .15s, transform .1s; white-space: nowrap; }
+  .btn:hover { filter: brightness(1.06); }
+  .btn:active { transform: translateY(1px); }
+  .btn[disabled] { opacity: .5; cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--dim); border: 1px solid var(--border-2); }
+  .btn.ghost:hover { color: var(--text); }
+  .btn.sm { padding: 7px 12px; font-size: 12px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .mono { font-family: var(--mono); font-size: 12px; }
+  .hint { font-size: 12px; color: var(--faint); margin-top: 8px; }
+  .hint.bad { color: var(--red); }
+
+  /* ---- chat ---- */
+  .chat { display: flex; flex-direction: column; min-height: 560px; height: calc(100vh - 230px); max-height: 760px; padding: 0; overflow: hidden; }
+  .log { flex: 1; overflow-y: auto; padding: 18px 18px 8px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+  .msg { max-width: 82%; padding: 10px 14px; border-radius: 16px; line-height: 1.5; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--grad); color: #fff; border-bottom-right-radius: 5px; }
+  .msg.bot { align-self: flex-start; background: var(--surface-2); border: 1px solid var(--border); border-bottom-left-radius: 5px; }
+  .msg.sys { align-self: center; background: transparent; color: var(--faint); font-size: 12px; text-align: center; max-width: 100%; }
+  .msg .meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .msg .meta .pill { font-size: 10.5px; }
+  .typing { align-self: flex-start; color: var(--faint); font-size: 12px; padding: 4px 14px; }
+  .typing i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--faint); margin-right: 3px; animation: b 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes b { 0%,80%,100% { opacity: .25; } 40% { opacity: 1; } }
+  .composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); background: var(--surface); }
+  .composer textarea { flex: 1; resize: none; min-height: 44px; max-height: 140px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 11px 12px; color: var(--text); font: inherit; outline: none; }
+  .composer textarea:focus { border-color: rgba(var(--accent-rgb),.5); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 12px 10px; }
+  .chip { cursor: pointer; font-size: 12px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border-2); background: transparent; color: var(--dim); font-family: Inter, sans-serif; }
+  .chip:hover { color: var(--text); border-color: var(--accent); }
+
+  /* ---- memory panel ---- */
+  .mem { display: grid; gap: 6px; margin-top: 8px; }
+  .mem-item { font-size: 12.5px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--border); color: var(--text); }
+  .mem-item small { display: block; color: var(--faint); font-family: var(--mono); font-size: 10.5px; margin-top: 3px; }
+  .mem-item.new { border-color: rgba(var(--accent-rgb),.45); background: var(--accent-soft); }
+  .empty { font-size: 12.5px; color: var(--faint); font-style: italic; }
+  .addr { font-family: var(--mono); font-size: 12px; color: var(--text); }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .kv b { color: var(--text); font-weight: 500; }
+  .kv .mono { overflow-wrap: anywhere; }
+  footer { max-width: 1160px; margin: 0 auto; padding: 20px; color: var(--faint); font-size: 12px; border-top: 1px solid var(--border); }
+  footer a { color: var(--dim); margin-right: 14px; }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="topbar-inner">
+    <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../brand/mark.png" alt=""><span>A NEW ONE</span></a>
+    <a class="tb-link tb-link-quiet" href="/">← <span class="lbl">the floor</span></a>
+    <a class="tb-link tb-link-quiet" href="../bridge/">🌉 <span class="lbl">GangWay</span></a>
+    <div class="tb-spacer"></div>
+    <span class="pill" id="netPill">…</span>
+    <div class="theme-sw" id="themeSw" role="group" aria-label="Colour theme">
+      <button type="button" data-theme-set="light" title="Light" aria-label="Light theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg></button>
+      <button type="button" data-theme-set="dim" title="Dim" aria-label="Dim theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 3.8a8.2 8.2 0 0 0 0 16.4z" fill="currentColor" stroke="none"/></svg></button>
+      <button type="button" data-theme-set="dark" title="Dark" aria-label="Dark theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></button>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+  <div class="hero">
+    <div class="kicker">🧠 Deck Hand · memory on Walrus</div>
+    <h1>The chat that remembers you.<small>Ask about any coin on the floor. Sign in with your wallet once and the deck hand keeps what you tell it, encrypted on Walrus, so the next visit, on any device, starts where you left off. The coins stay on Arc; only the memory lives on Walrus.</small></h1>
+  </div>
+
+  <div class="grid">
+    <section class="card chat" aria-label="Chat">
+      <div class="log" id="log"></div>
+      <div class="chips" id="chips">
+        <button class="chip" type="button">Which coin is closest to graduation?</button>
+        <button class="chip" type="button">What is NOAH's price right now?</button>
+        <button class="chip" type="button">Remember that I'm watching NOAH and ARCCAT.</button>
+        <button class="chip" type="button">What do you remember about me?</button>
+      </div>
+      <form class="composer" id="form">
+        <textarea id="input" rows="1" placeholder="Ask the deck hand…" maxlength="1500" autocomplete="off"></textarea>
+        <button class="btn" id="send" type="submit">Send</button>
+      </form>
+    </section>
+
+    <aside class="side">
+      <div class="card">
+        <h3>Memory <span class="pill off" id="memPill">off</span></h3>
+        <div id="signedOut">
+          <p>Right now nothing is remembered. Connect a wallet and sign one free message: no transaction, no gas, no Sui wallet needed.</p>
+          <div class="row" style="margin-top:10px">
+            <button class="btn" id="connect" type="button">Connect wallet &amp; turn memory on</button>
+          </div>
+          <div class="hint" id="connectHint"></div>
+        </div>
+        <div id="signedIn" hidden>
+          <p>Memory on for <span class="addr" id="who"></span>. Everything you tell the deck hand is distilled into facts and written to Walrus under your own namespace.</p>
+          <div class="row" style="margin-top:10px">
+            <button class="btn sm" id="showMem" type="button">What do you remember?</button>
+            <button class="btn sm ghost" id="signOut" type="button">Sign out</button>
+          </div>
+          <div class="hint" id="memHint"></div>
+        </div>
+      </div>
+
+      <div class="card" id="recallCard">
+        <h3>Recalled for the last answer</h3>
+        <div class="mem" id="recalled"><div class="empty">Nothing yet.</div></div>
+      </div>
+
+      <div class="card" id="savedCard">
+        <h3>Saved this turn</h3>
+        <div class="mem" id="saved"><div class="empty">Nothing yet.</div></div>
+      </div>
+
+      <div class="card">
+        <h3>Under the hood</h3>
+        <div class="kv" id="info">
+          <span>Memory</span><b>Walrus Memory (MemWal), mainnet</b>
+          <span>Account</span><b class="mono" id="acct">…</b>
+          <span>Relayer</span><b class="mono" id="relayer">…</b>
+          <span>Model</span><b class="mono" id="model">…</b>
+          <span>Coins</span><b>Arc mainnet, live floor index</b>
+        </div>
+        <div class="hint">The memory account is a public Sui object; its contents are Seal-encrypted. Only this app's delegate key and you, through it, can read them.</div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<footer>
+  <a href="/">A NEW ONE</a><a href="../docs.html">Docs</a><a href="../ark/" target="_blank">The ark</a><a href="../boarding/">Boarding Pass</a><a href="../privacy.html">Privacy</a><a href="../terms.html">Terms</a>
+</footer>
+
+<script src="../vendor/ethers.umd.min.js"></script>
+<script src="../config.js"></script>
+<script>
+(function () {
+  "use strict";
+  const cfg = window.ANEWONE_CONFIG;
+  const net = cfg.mainnet && cfg.mainnet.live ? "mainnet" : "testnet";
+  const API = "/api/chat";
+  const AUTH_KEY = "anewone_deckhand_auth";
+  const HIST_KEY = "anewone_deckhand_history";
+  const $ = (id) => document.getElementById(id);
+
+  // ---- theme switcher (same key as the floor)
+  const KEY = "anewone_theme";
+  const sw = $("themeSw");
+  function paintTheme() {
+    const t = document.documentElement.getAttribute("data-theme") || "light";
+    sw.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themeSet === t)));
+  }
+  sw.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-theme-set]"); if (!b) return;
+    document.documentElement.setAttribute("data-theme", b.dataset.themeSet);
+    try { localStorage.setItem(KEY, b.dataset.themeSet); } catch {}
+    paintTheme();
+  });
+  paintTheme();
+  const pill = $("netPill");
+  pill.textContent = net === "mainnet" ? "ARC MAINNET" : "ARC TESTNET";
+
+  // ---- sign-in: one personal_sign, cached a week. The text must match api/chat.js exactly.
+  const signInText = (address, issued) =>
+    `A NEW ONE — Deck Hand sign-in\n\nWallet: ${address}\nIssued: ${issued}\n\nThis signature only proves you own this wallet so the deck hand can keep your memory. It costs nothing and moves nothing.`;
+  let auth = null;
+  try { const a = JSON.parse(localStorage.getItem(AUTH_KEY) || "null"); if (a && a.address && Date.now() - Date.parse(a.issued) < 6.5 * 864e5) auth = a; } catch {}
+  const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
+  function paintAuth() {
+    $("signedOut").hidden = !!auth; $("signedIn").hidden = !auth;
+    $("memPill").textContent = auth ? "on" : "off"; $("memPill").className = "pill " + (auth ? "on" : "off");
+    if (auth) $("who").textContent = short(auth.address);
+  }
+  $("connect").addEventListener("click", async () => {
+    const hint = $("connectHint"); hint.className = "hint"; hint.textContent = "";
+    const eth = window.ethereum;
+    if (!eth) { hint.className = "hint bad"; hint.textContent = "No wallet in this browser. Open this page inside MetaMask, Rabby or your wallet app's browser."; return; }
+    try {
+      const accts = await eth.request({ method: "eth_requestAccounts" });
+      const address = ethers.getAddress(accts[0]);
+      const issued = new Date().toISOString();
+      const signature = await eth.request({ method: "personal_sign", params: [signInText(address, issued), address] });
+      auth = { address, issued, signature };
+      try { localStorage.setItem(AUTH_KEY, JSON.stringify(auth)); } catch {}
+      paintAuth();
+      say("sys", "Memory is on for " + short(address) + ". From here on the deck hand remembers.");
+    } catch (e) { hint.className = "hint bad"; hint.textContent = e && e.code === 4001 ? "Signature refused in the wallet." : (e.shortMessage || e.message || String(e)); }
+  });
+  $("signOut").addEventListener("click", () => {
+    auth = null; try { localStorage.removeItem(AUTH_KEY); } catch {}
+    paintAuth(); say("sys", "Signed out. Memory is off; nothing new will be kept.");
+  });
+  paintAuth();
+
+  // ---- chat log (kept per browser so a reload keeps the thread; the real memory is on Walrus)
+  const log = $("log");
+  let history = [];
+  try { history = JSON.parse(sessionStorage.getItem(HIST_KEY) || "[]"); } catch {}
+  function bubble(role, text) {
+    const d = document.createElement("div"); d.className = "msg " + role; d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight; return d;
+  }
+  function say(role, text) { return bubble(role, text); }
+  if (history.length) history.forEach((m) => bubble(m.role === "user" ? "user" : "bot", m.content));
+  else say("bot", "Ahoy. I'm the deck hand: ask me about any coin on the floor, prices, graduation progress, how GangWay or launching works. Sign in on the right and I'll remember you next time, on any device.");
+
+  function renderMem(el, items, cls) {
+    el.innerHTML = "";
+    if (!items || !items.length) { el.innerHTML = '<div class="empty">Nothing this turn.</div>'; return; }
+    for (const m of items) {
+      const d = document.createElement("div"); d.className = "mem-item" + (cls ? " " + cls : "");
+      d.textContent = typeof m === "string" ? m : m.text;
+      if (m && typeof m === "object" && (m.created_at || m.distance !== undefined)) {
+        const s = document.createElement("small");
+        s.textContent = (m.created_at ? "saved " + m.created_at.slice(0, 10) : "") + (m.distance !== undefined ? "  · similarity " + (1 - m.distance).toFixed(2) : "") + (m.blob_id ? "  · blob " + m.blob_id.slice(0, 8) + "…" : "");
+        d.appendChild(s);
+      }
+      el.appendChild(d);
+    }
+  }
+
+  let busy = false;
+  async function send(text) {
+    text = (text || "").trim(); if (!text || busy) return;
+    busy = true; $("send").disabled = true;
+    bubble("user", text); history.push({ role: "user", content: text });
+    const t = document.createElement("div"); t.className = "typing"; t.innerHTML = "<i></i><i></i><i></i> reading the floor" + (auth ? " and Walrus" : ""); log.appendChild(t); log.scrollTop = log.scrollHeight;
+    try {
+      const r = await fetch(API, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "chat", messages: history.slice(-12), auth }) });
+      const j = await r.json().catch(() => ({}));
+      t.remove();
+      if (!r.ok) { say("sys", "⚠ " + (j.error || r.status)); if (r.status === 401) { auth = null; paintAuth(); } }
+      else {
+        const b = bubble("bot", j.reply); history.push({ role: "assistant", content: j.reply });
+        const meta = document.createElement("div"); meta.className = "meta";
+        const mm = j.memory || {};
+        meta.innerHTML = `<span class="pill">${j.model || ""}</span><span class="pill">Arc block ${j.floorBlock || "?"}</span>` +
+          (mm.on ? `<span class="pill on">recalled ${mm.recalled.length} · saved ${mm.saved.length}</span>` : `<span class="pill off">memory off</span>`) +
+          (mm.error ? `<span class="pill" style="color:var(--red)">memory: ${mm.error}</span>` : "");
+        b.appendChild(meta);
+        renderMem($("recalled"), mm.recalled, "");
+        renderMem($("saved"), mm.saved, "new");
+      }
+    } catch (e) { t.remove(); say("sys", "⚠ " + (e.message || e)); }
+    try { sessionStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-30))); } catch {}
+    busy = false; $("send").disabled = false; $("input").focus();
+  }
+  $("form").addEventListener("submit", (e) => { e.preventDefault(); const v = $("input").value; $("input").value = ""; send(v); });
+  $("input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("form").requestSubmit(); } });
+  $("chips").addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (c) send(c.textContent); });
+
+  $("showMem").addEventListener("click", async () => {
+    const hint = $("memHint"); hint.className = "hint"; hint.textContent = "Reading Walrus…";
+    try {
+      const r = await fetch(API, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "memories", auth }) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || r.status);
+      hint.textContent = j.memories.length ? j.memories.length + " memories in namespace " + j.namespace : "Nothing stored yet in " + j.namespace + ". Tell the deck hand something.";
+      renderMem($("recalled"), j.memories, ""); $("recallCard").querySelector("h3").textContent = "Everything remembered about you";
+    } catch (e) { hint.className = "hint bad"; hint.textContent = String(e.message || e); }
+  });
+
+  // ---- public facts for the "under the hood" card
+  fetch(API).then((r) => r.json()).then((j) => {
+    $("acct").innerHTML = j.accountId ? `<a href="https://suiscan.xyz/mainnet/object/${j.accountId}" target="_blank" rel="noopener">${j.accountId.slice(0, 10)}…${j.accountId.slice(-6)}</a>` : "not configured";
+    $("relayer").textContent = (j.relayer || "").replace("https://", "") + (j.relayerHealth && j.relayerHealth.status ? " · " + j.relayerHealth.status : "");
+    $("model").textContent = j.model || "?";
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>
