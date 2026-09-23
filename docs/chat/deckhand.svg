@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Deck Hand, the walrus in a sailor cap">
+  <!-- Deck Hand's crest: a walrus in the floor's palette (mint on near-black), drawn in the
+       same thick-outline style as Morsu on izzetc.com, wearing a deck hand's sailor cap.
+       Kept to a few big shapes so it still reads at 16px in a browser tab. -->
+  <rect width="256" height="256" rx="56" fill="#0c0c0b"/>
+  <!-- head -->
+  <ellipse cx="128" cy="150" rx="92" ry="78" fill="#00e57a" stroke="#08040F" stroke-width="9"/>
+  <!-- eyes -->
+  <circle cx="98" cy="128" r="19" fill="#fff" stroke="#08040F" stroke-width="7"/>
+  <circle cx="158" cy="128" r="19" fill="#fff" stroke="#08040F" stroke-width="7"/>
+  <circle cx="101" cy="131" r="9" fill="#08040F"/>
+  <circle cx="161" cy="131" r="9" fill="#08040F"/>
+  <circle cx="105" cy="126" r="3" fill="#fff"/>
+  <circle cx="165" cy="126" r="3" fill="#fff"/>
+  <!-- snout -->
+  <ellipse cx="108" cy="176" rx="30" ry="24" fill="#FFF6E9" stroke="#08040F" stroke-width="7"/>
+  <ellipse cx="148" cy="176" rx="30" ry="24" fill="#FFF6E9" stroke="#08040F" stroke-width="7"/>
+  <ellipse cx="128" cy="162" rx="12" ry="8.5" fill="#08040F"/>
+  <!-- whiskers -->
+  <g stroke="#08040F" stroke-width="4" stroke-linecap="round" fill="none">
+    <path d="M80 170 q-22 -6 -36 -2"/><path d="M82 182 q-22 2 -36 10"/>
+    <path d="M176 170 q22 -6 36 -2"/><path d="M174 182 q22 2 36 10"/>
+  </g>
+  <!-- tusks -->
+  <path d="M96 196 q-8 30 -2 44 q11 5 17 -7 q3 -20 -1 -37 z" fill="#FFF6E9" stroke="#08040F" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M160 196 q8 30 2 44 q-11 5 -17 -7 q-3 -20 1 -37 z" fill="#FFF6E9" stroke="#08040F" stroke-width="6" stroke-linejoin="round"/>
+  <!-- sailor cap: white crown, near-black band with a mint anchor dot -->
+  <path d="M58 90 q70 -72 140 0 z" fill="#fff" stroke="#08040F" stroke-width="8" stroke-linejoin="round"/>
+  <rect x="46" y="82" width="164" height="24" rx="12" fill="#00e57a" stroke="#08040F" stroke-width="7"/>
+  <circle cx="128" cy="94" r="6" fill="#08040F"/>
+  <!-- cap ribbon tail, the little flourish a sailor cap has -->
+  <path d="M210 98 q18 4 12 20" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+</svg>
