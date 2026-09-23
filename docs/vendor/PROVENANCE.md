@@ -83,17 +83,19 @@ cd build-web3auth && npm ci
 | | |
 |---|---|
 | Package | `arc-bridge-kit` (in-house, izzetcakmak) |
-| Version | 0.3.4 |
+| Version | 0.5.0 |
 | File | `arc-bridge-kit.js` |
-| Size | 96,643 bytes (LF line endings, as committed and served) |
-| SHA-256 | `98f5b60da93a222d73081bfeee82b64b0e38fbf20d2da0e6f39923375a68ab9e` |
+| Size | 116,365 bytes (LF line endings, as committed and served) |
+| SHA-256 | `aa5e250914f0d4be279697543f55ddaa316dad2bffa32eca6082080a3c0a077e` |
 
 Built here, not fetched: the source repository lives at `C:\Users\Monster\arc-bridge-kit`
 (demo at https://arc-bridge-kit.vercel.app) and is copied verbatim. It is plain JavaScript on
 top of the vendored ethers v6: Circle CCTP V2 + Forwarding Service for the bridge, LI.FI's
 public API for same-chain swaps (through this site's `/api/lifi` proxy, which holds the key),
-and the platform's own `buy` for the last leg. It builds no swap calldata of its own; LI.FI
-transactions are sent exactly as quoted, CCTP calls go to Circle's uniform contract addresses.
+and the platform's own `buy` for the last leg. From Solana (v0.5.0, 23 Sep 2026) the whole
+trip is one LI.FI route signed by the user's Wallet Standard wallet; the kit bundles no Solana
+library and reads Solana balances over public JSON-RPC. It builds no swap calldata of its own;
+LI.FI transactions are sent exactly as quoted, CCTP calls go to Circle's uniform contract addresses.
 
 To re-verify after an update: `curl -s https://anewone.xyz/vendor/arc-bridge-kit.js | sha256sum` (or
 `git show HEAD:docs/vendor/arc-bridge-kit.js | sha256sum`); a Windows checkout may carry CRLF and hash differently.

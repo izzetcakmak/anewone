@@ -1,5 +1,5 @@
 /*!
- * arc-bridge-kit v0.4.0
+ * arc-bridge-kit v0.5.0
  * Drop-in "pay with anything, land USDC on Arc, then buy" kit.
  *
  *  Legs (each optional except the bridge):
@@ -12,6 +12,10 @@
  *  - Fast Transfer (finality threshold 1000, ~20 s) or Standard (2000, no protocol fee).
  *  - Resumable: transfers are persisted in localStorage; a refresh picks them up, a swapped
  *    but not yet bridged amount can be continued, a late forwarder can be minted manually.
+ *  - Solana: one source chain that is not an EVM. Any Solana token goes to Arc as USDC in a
+ *    single LI.FI route (Relay underneath, verified live 23 Sep 2026), signed by a Wallet
+ *    Standard wallet (Phantom, Solflare, Backpack…) straight from the bytes LI.FI returns, so
+ *    no Solana library is bundled. The USDC lands at the EVM recipient on Arc.
  *
  *  Usage (browser, classic script):
  *    <script src="ethers.umd.min.js"></script>
@@ -31,7 +35,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.3.4";
+  const VERSION = "0.5.0";
 
   // ------------------------------------------------------------------ constants
 
@@ -86,8 +90,19 @@
 
   const ETH = { name: "Ether", symbol: "ETH", decimals: 18 };
 
+  // Solana. LI.FI addresses the chain by this id and SOL itself by the System Program id;
+  // Wallet Standard names the chain "solana:mainnet". CCTP's Solana domain is 5 (Iris lookups
+  // only: the kit never calls Solana's CCTP program, LI.FI carries the whole trip).
+  const SOL_LIFI_CHAIN_ID = 1151111081099710;
+  const SOL_NATIVE = "11111111111111111111111111111111";
+  const SOL_CHAIN = "solana:mainnet";
+  // a syntactically valid pubkey LI.FI will quote for before a Solana wallet is connected;
+  // never signed, never sent: the real transfer is always quoted again for the connected account
+  const SOL_QUOTE_ADDR = "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy";
+
   // Source chains. `fast` = Circle offers Fast Transfer on this chain (others finalize
   // quickly anyway, so standard is already fast there). Order = what users see.
+  // `vm: "svm"` marks Solana: no CCTP leg, no chain switching, balances over Solana's RPC.
   const SOURCES = {
     mainnet: [
       { key: "base", name: "Base", chainId: 8453, domain: 6, fast: true,
@@ -146,6 +161,12 @@
         usdc: "0x2D270e6886d130D724215A266106e6832161EAEd",
         rpcs: ["https://rpc-gel.inkonchain.com"],
         explorer: "https://explorer.inkonchain.com", native: ETH },
+      { key: "solana", name: "Solana", vm: "svm", chainId: SOL_LIFI_CHAIN_ID, domain: 5, fast: false,
+        usdc: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        // publicnode first: Solana's own public RPC answers a browser's request with 403
+        // "Access forbidden" (verified 23 Sep 2026), so it only serves Node-side checks
+        rpcs: ["https://solana-rpc.publicnode.com", "https://api.mainnet-beta.solana.com"],
+        explorer: "https://solscan.io", native: { name: "Solana", symbol: "SOL", decimals: 9 } },
     ],
     testnet: [
       { key: "base-sepolia", name: "Base Sepolia", chainId: 84532, domain: 6, fast: true,
@@ -203,6 +224,17 @@
   // if LI.FI lists them on that chain (in this order).
   const PAY_SYMBOLS = ["WETH", "USDT", "DAI", "cbBTC", "WBTC", "EURC", "cbETH", "wstETH", "weETH",
     "USDbC", "AERO", "VIRTUAL", "DEGEN", "BRETT", "ARB", "OP", "LINK", "UNI", "AAVE", "PEPE", "WPOL", "WAVAX", "WS", "WMON"];
+  // Solana has its own list: the same symbols exist on EVM chains as unrelated (often junk)
+  // tokens, and the first LI.FI match by symbol would be shown as if it were the real one.
+  const PAY_SYMBOLS_SVM = ["USDT", "JUP", "BONK", "WIF", "POPCAT", "PENGU", "TRUMP", "Fartcoin", "MOODENG", "GOAT",
+    "ai16z", "WEN", "RAY", "PYTH", "JTO", "MEW", "BOME", "PUMP", "ORCA", "mSOL", "jitoSOL", "cbBTC", "EURC"];
+  // LI.FI's Solana token list leaves out a few coins it will happily route (BONK and WIF quoted
+  // live on 23 Sep 2026, yet neither is in /tokens). These are appended when the list lacks
+  // them; the mints are the canonical ones.
+  const SVM_KNOWN = [
+    { address: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", symbol: "BONK", name: "Bonk", decimals: 5 },
+    { address: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm", symbol: "WIF", name: "dogwifhat", decimals: 6 },
+  ];
 
   const ABI = {
     erc20: [
@@ -225,6 +257,37 @@
   const isAddress = (a) => ADDR_RE.test(String(a || ""));
   const sameAddr = (a, b) => String(a || "").toLowerCase() === String(b || "").toLowerCase();
   const isNative = (a) => sameAddr(a, NATIVE);
+  const isSvm = (cfg) => !!(cfg && cfg.vm === "svm");
+  // a Solana address: base58, 32 bytes, so 32-44 characters of the base58 alphabet
+  const B58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  const isSolAddress = (a) => B58_RE.test(String(a || ""));
+  /** the source chain's own "native coin" address, as LI.FI spells it */
+  const nativeOf = (cfg) => (isSvm(cfg) ? SOL_NATIVE : NATIVE);
+  /** token equality on a chain: EVM addresses are case-insensitive, base58 is not */
+  const sameTok = (cfg, a, b) => (isSvm(cfg) ? String(a || "") === String(b || "") : sameAddr(a, b));
+
+  const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  /** bytes -> base58 (a Solana signature or pubkey). Leading zero bytes become leading '1's. */
+  function base58Encode(bytes) {
+    const b = bytes instanceof Uint8Array ? bytes : Uint8Array.from(bytes);
+    let n = 0n;
+    for (const x of b) n = n * 256n + BigInt(x);
+    let out = "";
+    while (n > 0n) { out = B58[Number(n % 58n)] + out; n /= 58n; }
+    for (const x of b) { if (x !== 0) break; out = "1" + out; }
+    return out || (b.length ? "1".repeat(b.length) : "");
+  }
+  function b64ToBytes(s) {
+    const bin = atob(String(s || "").replace(/-/g, "+").replace(/_/g, "/"));
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function bytesToB64(bytes) {
+    let bin = "";
+    for (const x of bytes) bin += String.fromCharCode(x);
+    return btoa(bin);
+  }
 
   /** EVM address -> bytes32 mintRecipient. Strict: a malformed recipient is not a failed
    *  transaction, it is USDC minted to an address nobody controls. */
@@ -296,6 +359,12 @@
   function explainLifi(reason, src, network) {
     const r = String(reason || "");
     if (/rate limit/i.test(r)) return "LI.FI's public rate limit was hit. Wait a moment, or give the kit a LI.FI API key (lifiApiKey).";
+    // Solana has no CCTP fallback in this kit, so "pay with USDC to bridge over CCTP" is not advice there
+    if (isSvm(src)) {
+      if (/no available quotes/i.test(r)) return "LI.FI found no route from " + src.name + " to Arc for that amount within a 10% price impact. Try a smaller amount, or pay with USDC or SOL.";
+      if (/could not find token/i.test(r)) return "LI.FI does not list that token on " + src.name + ". Pay with USDC or SOL.";
+      return "No LI.FI route from " + src.name + " to Arc: " + r;
+    }
     if (/no available quotes/i.test(r)) {
       return network === "testnet"
         ? "LI.FI has no swap for that amount on " + src.name + ". Testnet pools are shallow: try a smaller amount (0.001–0.002 " + src.native.symbol + "), or pay with USDC."
@@ -359,14 +428,23 @@
   /** LI.FI token list for a chain -> the "pay with" shortlist (native first, USDC second). */
   function payShortlist(tokens, chain) {
     const list = Array.isArray(tokens) ? tokens : [];
-    const native = list.find((t) => isNative(t.address)) || { address: NATIVE, symbol: chain.native.symbol, name: chain.native.name, decimals: chain.native.decimals };
+    const nat = nativeOf(chain);
+    const native = list.find((t) => sameTok(chain, t.address, nat)) || { address: nat, symbol: chain.native.symbol, name: chain.native.name, decimals: chain.native.decimals };
     const usdc = { address: chain.usdc, symbol: "USDC", name: "USD Coin", decimals: USDC_DECIMALS };
     const out = [native, usdc];
-    for (const sym of PAY_SYMBOLS) {
-      const t = list.find((x) => x.symbol === sym && !isNative(x.address) && !sameAddr(x.address, chain.usdc));
+    for (const sym of (isSvm(chain) ? PAY_SYMBOLS_SVM : PAY_SYMBOLS)) {
+      const t = list.find((x) => x.symbol === sym && !sameTok(chain, x.address, nat) && !sameTok(chain, x.address, chain.usdc));
       if (t) out.push({ address: t.address, symbol: t.symbol, name: t.name, decimals: Number(t.decimals) });
     }
+    // the known mints go in by address: LI.FI may list one under another symbol, or not at all
+    if (isSvm(chain)) for (const k of SVM_KNOWN) if (!out.some((x) => x.address === k.address)) out.push({ ...k });
     return out;
+  }
+
+  /** LI.FI transactionRequest for Solana: only `data`, a base64 serialized transaction. */
+  function toSvmTx(t) {
+    if (!t || !t.data) throw new Error("LI.FI quote has no Solana transaction");
+    return { data: String(t.data) };
   }
 
   // ------------------------------------------------------------------ JSON-RPC (read-only)
@@ -460,6 +538,13 @@
    *                 the engine then retries without the fee, keeps it off for the session and
    *                 calls onLifiFeeRefused(message) so the host can fix the portal side.
    *   slippage      swap slippage as a fraction (default 0.005 = 0.5%)
+   *   solanaWallet  a Wallet Standard wallet to use for Solana, or () => wallet. Optional: by
+   *                 default the wallets installed in the browser are discovered (Phantom,
+   *                 Solflare, Backpack… all announce themselves through Wallet Standard).
+   *
+   * Solana is one of the sources. It has no CCTP leg here: every payment from it, USDC
+   * included, goes as one LI.FI route (whatever `router` says), signed by the Solana wallet
+   * from the bytes LI.FI returns, and the USDC lands at the EVM recipient on Arc.
    *
    * LI.FI without a key allows ~200 requests per 2 hours per IP, so the engine is thrifty:
    * quotes are cached 45 s, the Arc-route probe 30 min, and a 429 pauses LI.FI calls for 10 min.
@@ -497,6 +582,9 @@
       this.storageKey = "arcbridgekit:" + this.network + ":transfers";
       this._tokenCache = {};
       this._arcRouteCache = {};
+      this.solanaWalletOpt = opts.solanaWallet || null;
+      this._sol = null;            // { wallet, account } once a Solana wallet is connected
+      this._solWallets = null;     // discovered Wallet Standard wallets (cached per session)
 
       const all = SOURCES[this.network];
       if (Array.isArray(opts.sources) && opts.sources.length) {
@@ -541,7 +629,9 @@
      */
     async lifiQuote({ fromChain, toChain, fromToken, toToken, fromAmount, fromAddress, toAddress, order }) {
       if (Date.now() < this._lifiBlockedUntil) return { available: false, reason: "Rate limit exceeded (paused)" };
-      const from = isAddress(fromAddress) ? fromAddress.toLowerCase() : "0x000000000000000000000000000000000000dead";
+      const svm = Number(fromChain) === SOL_LIFI_CHAIN_ID;
+      const from = svm ? (isSolAddress(fromAddress) ? fromAddress : SOL_QUOTE_ADDR)
+        : (isAddress(fromAddress) ? fromAddress.toLowerCase() : "0x000000000000000000000000000000000000dead");
       const key = [fromChain, toChain, fromToken, toToken, String(fromAmount), from, toAddress || "", order || "", this.lifiIntegrator, this.lifiFee].join("|").toLowerCase();
       const hit = this._quoteCache.get(key);
       if (hit && Date.now() - hit.at < 45_000) return hit.value;
@@ -552,6 +642,9 @@
       });
       if (this.lifiFee > 0 && !this._lifiFeeRefused) q.set("fee", String(this.lifiFee));
       if (toAddress && isAddress(toAddress)) q.set("toAddress", toAddress.toLowerCase());
+      // a route across VMs has no sender-shaped default for the receiving side: quote for a
+      // burn address when the host has not named a recipient yet, and never send that quote
+      else if (svm && Number(toChain) !== SOL_LIFI_CHAIN_ID) q.set("toAddress", "0x000000000000000000000000000000000000dead");
       if (order) q.set("order", order);
       let j = await fetchJson(`${this.lifiApi}/quote?${q}`, 15000, this._lifiHeaders());
       // An integrator that is not set up for fees at portal.li.fi makes LI.FI refuse the whole
@@ -574,7 +667,7 @@
         value = {
           available: true, quote: j, tool: j.tool, type: j.type,
           toAmount: BigInt(e.toAmount), toAmountMin: BigInt(e.toAmountMin || e.toAmount),
-          approvalAddress: e.approvalAddress || null, tx: toTxRequest(j.transactionRequest),
+          approvalAddress: e.approvalAddress || null, tx: svm ? toSvmTx(j.transactionRequest) : toTxRequest(j.transactionRequest),
           estSeconds: Number(e.executionDuration || 0),
           gasUsd: (e.gasCosts || []).reduce((s, g) => s + Number(g.amountUSD || 0), 0),
           feeUsd: (e.feeCosts || []).reduce((s, f) => s + Number(f.amountUSD || 0), 0),
@@ -631,6 +724,19 @@
       const token = payToken || src.usdc;
       const amt = BigInt(fromAmount);
 
+      // Solana: one LI.FI route into Arc, whatever `router` says — this kit has no CCTP leg on
+      // Solana (that is an Anchor program, not the EVM contracts above) and LI.FI's route there
+      // (Relay) lands in seconds.
+      if (isSvm(src)) {
+        const r = await this.lifiQuote({ fromChain: src.chainId, toChain: this.arc.chainId, fromToken: token,
+          toToken: this.arc.usdc, fromAmount: amt, fromAddress, toAddress: recipient });
+        if (!r.available) return { available: false, reason: explainLifi(r.reason, src, this.network) };
+        if (r.toAmountMin < this.minAmount) return { available: false, reason: "That lands less than " + formatUsdc(this.minAmount) + " USDC on Arc." };
+        return { available: true, router: "lifi", source: src, payToken: token, fromAmount: amt, lifi: r,
+          usdcIn: r.toAmount, expectedReceive: r.toAmount, minReceive: r.toAmountMin, estSeconds: r.estSeconds || 30,
+          protocolFee: 0n, forwardFee: 0n, expectedFee: 0n };
+      }
+
       // The house path: optional LI.FI swap into USDC on the source chain, then CCTP with the
       // Forwarding Service. Priced first so a LI.FI route into Arc has something to beat.
       let cctpPlan = null, cctpReason = null;
@@ -679,12 +785,29 @@
 
     async usdcBalance(source, owner) {
       const src = typeof source === "object" ? source : this.source(source);
+      if (isSvm(src)) return this._svmBalance(src, src.usdc, owner);
       return erc20Balance(src.rpcs, src.usdc, owner);
     }
     async tokenBalance(source, token, owner) {
       const src = typeof source === "object" ? source : this.source(source);
+      if (isSvm(src)) return this._svmBalance(src, token, owner);
       if (isNative(token)) return this.nativeBalance(src, owner);
       return erc20Balance(src.rpcs, token, owner);
+    }
+    /** Solana: lamports for SOL, or the sum over the owner's token accounts for a mint. */
+    async _svmBalance(src, token, owner) {
+      if (!isSolAddress(owner)) return null;
+      if (token === SOL_NATIVE) {
+        const r = await rpcAny(src.rpcs, "getBalance", [owner]);
+        return r && r.value != null ? BigInt(r.value) : null;
+      }
+      const r = await rpcAny(src.rpcs, "getTokenAccountsByOwner", [owner, { mint: token }, { encoding: "jsonParsed" }]);
+      if (!r || !Array.isArray(r.value)) return null;
+      let sum = 0n;
+      for (const a of r.value) {
+        try { sum += BigInt(a.account.data.parsed.info.tokenAmount.amount); } catch {}
+      }
+      return sum;
     }
     async arcUsdcBalance(owner) {
       if (!this.arc.rpcs.length) return null;
@@ -706,8 +829,96 @@
       };
     }
     async nativeBalance(source, owner) {
+      if (isSvm(source)) return this._svmBalance(source, SOL_NATIVE, owner);
       const r = await rpcAny(source.rpcs, "eth_getBalance", [owner, "latest"]);
       return r ? BigInt(r) : null;
+    }
+
+    // ---- Solana wallet (Wallet Standard)
+
+    /**
+     * The Solana wallets in this browser. Wallet Standard: every wallet registers itself with
+     * any app that announces it is ready, and with apps that arrive later. Discovered once per
+     * session; a wallet that installs afterwards shows up on the next call.
+     */
+    async solanaWallets() {
+      if (this.solanaWalletOpt) {
+        const w = typeof this.solanaWalletOpt === "function" ? await this.solanaWalletOpt() : this.solanaWalletOpt;
+        return w ? [w] : [];
+      }
+      if (this._solWallets) return this._solWallets;
+      if (typeof window === "undefined") return [];
+      const found = new Map();
+      const take = (w) => {
+        try {
+          if (w && w.features && w.features["standard:connect"] && Array.isArray(w.chains) && w.chains.some((c) => String(c).startsWith("solana:")))
+            found.set(w.name, w);
+        } catch {}
+      };
+      const api = { register: (...ws) => { ws.forEach(take); return () => {}; } };
+      window.addEventListener("wallet-standard:register-wallet", (e) => { try { e.detail(api); } catch {} });
+      try { window.dispatchEvent(new CustomEvent("wallet-standard:app-ready", { detail: api })); } catch {}
+      await sleep(150); // registrations are synchronous, the wait is for wallets still injecting
+      this._solWallets = [...found.values()];
+      return this._solWallets;
+    }
+
+    /** Connect a Solana wallet (the first discovered when none is named). silent: no prompt. */
+    async connectSolana(wallet, { silent = false } = {}) {
+      const w = wallet || (await this.solanaWallets())[0];
+      if (!w) throw new Error("No Solana wallet in this browser. Install Phantom, Solflare or Backpack.");
+      const res = await w.features["standard:connect"].connect(silent ? { silent: true } : undefined);
+      const accounts = (res && res.accounts) || w.accounts || [];
+      const account = accounts.find((a) => (a.chains || []).includes(SOL_CHAIN)) || accounts.find((a) => (a.chains || []).some((c) => String(c).startsWith("solana:")));
+      if (!account) { if (silent) return null; throw new Error("The wallet connected without a Solana mainnet account."); }
+      this._sol = { wallet: w, account };
+      return account.address;
+    }
+    solanaAccount() { return this._sol ? this._sol.account.address : null; }
+    solanaWalletName() { return this._sol ? this._sol.wallet.name : null; }
+    disconnectSolana() {
+      const s = this._sol; this._sol = null;
+      try { s && s.wallet.features["standard:disconnect"] && s.wallet.features["standard:disconnect"].disconnect(); } catch {}
+    }
+
+    /** Sign the serialized transaction LI.FI returned and get it on chain; resolves to the signature. */
+    async _solSignAndSend(dataB64, src) {
+      if (!this._sol) throw new Error("Connect a Solana wallet first.");
+      const { wallet, account } = this._sol;
+      const bytes = b64ToBytes(dataB64);
+      const chain = (account.chains || []).includes(SOL_CHAIN) ? SOL_CHAIN : (account.chains || [])[0] || SOL_CHAIN;
+      const both = wallet.features["solana:signAndSendTransaction"];
+      if (both) {
+        const out = await both.signAndSendTransaction({ transaction: bytes, account, chain });
+        const sig = out && out[0] && out[0].signature;
+        if (!sig) throw new Error("the wallet returned no signature");
+        return typeof sig === "string" ? sig : base58Encode(sig);
+      }
+      const signOnly = wallet.features["solana:signTransaction"];
+      if (signOnly) {
+        const out = await signOnly.signTransaction({ transaction: bytes, account, chain });
+        const signed = out && out[0] && out[0].signedTransaction;
+        if (!signed) throw new Error("the wallet returned no signed transaction");
+        const sig = await rpcAny(src.rpcs, "sendTransaction", [bytesToB64(signed), { encoding: "base64", maxRetries: 3 }]);
+        if (!sig) throw new Error("Solana's RPC did not accept the transaction (it may have expired; try again).");
+        return sig;
+      }
+      throw new Error(wallet.name + " offers no Wallet Standard signing for Solana.");
+    }
+
+    /** "ok" | "failed" | "timeout" for a Solana signature, polling getSignatureStatuses. */
+    async _solConfirm(src, sig, timeoutMs = 90_000) {
+      const until = Date.now() + timeoutMs;
+      while (Date.now() < until) {
+        const r = await rpcAny(src.rpcs, "getSignatureStatuses", [[sig], { searchTransactionHistory: true }]);
+        const s = r && Array.isArray(r.value) ? r.value[0] : null;
+        if (s) {
+          if (s.err) return "failed";
+          if (s.confirmationStatus === "confirmed" || s.confirmationStatus === "finalized") return "ok";
+        }
+        await sleep(2000);
+      }
+      return "timeout";
     }
 
     // ---- wallet plumbing
@@ -819,6 +1030,7 @@
       const token = payToken || src.usdc;
       const amt = BigInt(amount);
       const mintRecipient = toBytes32Address(recipient);
+      if (isSvm(src)) return this._svmBridge(src, token, amt, recipient, dest, onStep);
 
       onStep({ step: "switching", chain: src });
       await this.ensureChain(src);
@@ -876,6 +1088,45 @@
 
       // ---- leg 2: CCTP burn with forwarding
       return this._cctpLeg(tr, src, signer, owner, usdcAmount, mintRecipient, speed, onStep);
+    }
+
+    /**
+     * Solana: one LI.FI route, signed by the Solana wallet. The transfer record looks like any
+     * LI.FI-routed one (router "lifi", sendTx = the signature), so track() follows it unchanged.
+     * onStep: planning, lifi_sending, lifi_sent, burned (the signature is confirmed on Solana).
+     */
+    async _svmBridge(src, token, amt, recipient, dest, onStep) {
+      const owner = this.solanaAccount();
+      if (!owner) throw new Error("Connect a Solana wallet first.");
+
+      onStep({ step: "planning" });
+      this._quoteCache.clear(); // a quote about to be signed must be fresh: Solana blockhashes expire in ~1 min
+      const plan = await this.plan({ source: src, payToken: token, fromAmount: amt, fromAddress: owner, recipient });
+      if (!plan.available) throw new Error(plan.reason);
+
+      const bal = await this.tokenBalance(src, token, owner);
+      if (bal != null && bal < amt) throw new Error("balance on " + src.name + " is too low for that amount");
+
+      const tr = this._save({
+        id: "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), network: this.network,
+        router: "lifi", sourceKey: src.key, sourceChainId: src.chainId, sourceDomain: src.domain,
+        payToken: token, payAmount: amt.toString(), recipient: this.ethers.getAddress(recipient), sender: owner,
+        speed: "standard", dest: dest ? { status: "pending" } : undefined, status: "planned", startedAt: Date.now(),
+      });
+
+      onStep({ step: "lifi_sending", tool: plan.lifi.tool });
+      const sig = await this._solSignAndSend(plan.lifi.tx.data, src);
+      tr.status = "sending"; tr.sendTx = sig; tr.burnTx = sig; tr.amount = plan.usdcIn.toString();
+      tr.expectedFee = "0"; tr.tool = plan.lifi.tool; this._save(tr);
+      onStep({ step: "lifi_sent", hash: sig, url: this.explorerTx(src, sig), transfer: tr });
+
+      const conf = await this._solConfirm(src, sig);
+      if (conf === "failed") { tr.status = "failed"; tr.error = "transaction failed on Solana"; this._save(tr); throw new Error("The Solana transaction failed; nothing left your wallet but the network fee."); }
+      // "timeout": the signature was accepted and just not seen confirmed yet; LI.FI's status
+      // follows it from here exactly as for a confirmed one
+      tr.status = "sent"; tr.sentAt = Date.now(); this._save(tr);
+      onStep({ step: "burned", hash: sig, transfer: tr });
+      return tr;
     }
 
     async _cctpLeg(tr, src, signer, owner, usdcAmount, mintRecipient, speed, onStep) {
@@ -1197,7 +1448,7 @@
 
   function stepsFor(plan, destination) {
     const s = [];
-    if (plan && plan.router === "lifi") s.push({ key: "burn", label: "Send via LI.FI" }, { key: "attest", label: "Route to Arc" });
+    if (plan && plan.router === "lifi") s.push({ key: "burn", label: "Send via LI.FI" + (plan.source && isSvm(plan.source) ? " from " + plan.source.name : "") }, { key: "attest", label: "Route to Arc" });
     else {
       if (plan && plan.swap && !plan.swap.identity) s.push({ key: "swap", label: "Swap to USDC on " + plan.source.name });
       s.push({ key: "approve", label: "Approve USDC" }, { key: "burn", label: "Burn on source chain" },
@@ -1254,6 +1505,8 @@
       core: null, account: null, source: null, speed: "fast", plan: null, planning: null,
       busy: false, error: "", steps: {}, links: {}, done: null, balance: null, pendingTracked: new Set(),
       customRecipient: false, tokens: [], payToken: null, activePlan: null,
+      sol: null,          // connected Solana account (base58), for the Solana source
+      solWallets: null,   // discovered Solana wallets, once the Solana source is picked
     };
     const emit = (e) => { try { opts.onEvent && opts.onEvent(e); } catch {} };
 
@@ -1271,8 +1524,12 @@
     const badge = el("span", { class: "abk-badge" + (c0.network === "testnet" ? " test" : "") }, c0.network === "testnet" ? "TESTNET" : "MAINNET");
     const title = el("div", { class: "abk-title" }, opts.title || "Bridge to " + c0.arc.name);
     const balLbl = el("b", { title: "Use full balance", onclick: () => { if (state.balance != null && state.payToken) { amountIn.value = formatUnits(state.balance, state.payToken.decimals, 6); onAmount(); } } }, "");
-    const chainSel = el("select", { class: "abk-field", onchange: () => { state.source = c0.source(chainSel.value); state.balance = null; loadTokens().then(() => { refreshBalance(); replan(); }); } },
+    const chainSel = el("select", { class: "abk-field", onchange: () => { state.source = c0.source(chainSel.value); state.balance = null; onSourceChanged(); loadTokens().then(() => { refreshBalance(); replan(); }); } },
       c0.sources().map((s) => el("option", { value: s.key }, s.name)));
+    // Solana: which wallet signs. One row, shown only for that source and only when more than
+    // one wallet announced itself; with a single wallet there is nothing to choose.
+    const solSel = el("select", { class: "abk-field", onchange: () => { state.sol = null; state.balance = null; render(); } });
+    const solWrap = el("div", { style: "display:none;margin-top:10px" }, [el("div", { class: "abk-label" }, "Solana wallet"), el("div", { class: "abk-sel" }, solSel)]);
     chainSel.value = state.source.key;
     const amountIn = el("input", { inputmode: "decimal", placeholder: "0.00", value: opts.defaultAmount || "", oninput: () => onAmount() });
     const tokSel = el("select", { onchange: () => { state.payToken = state.tokens.find((t) => t.address === tokSel.value) || state.tokens[0]; state.balance = null; refreshBalance(); replan(); } });
@@ -1281,6 +1538,7 @@
     const fastBtn = el("button", { class: "on", onclick: () => setSpeed("fast") }, ["Fast", el("small", {}, "~20 s")]);
     const stdBtn = el("button", { onclick: () => setSpeed("standard") }, ["Standard", el("small", {}, "no protocol fee")]);
     const seg = el("div", { class: "abk-seg" }, [fastBtn, stdBtn]);
+    const segWrap = el("div", { style: "margin-top:10px" }, [el("div", { class: "abk-label" }, "Bridge speed"), seg]);
     const feesBox = el("div", { class: "abk-fees" });
     const recipIn = el("input", { class: "abk-field", placeholder: "0x… recipient on Arc", style: "font-family:var(--abk-mono);font-size:12.5px", oninput: () => render() });
     const recipWrap = el("div", { style: "display:none;margin-top:10px" }, [el("div", { class: "abk-label" }, "Recipient on Arc"), recipIn]);
@@ -1291,17 +1549,49 @@
     const stepsBox = el("div", { class: "abk-steps", style: "display:none" });
     const pendBox = el("div", { class: "abk-pend", style: "display:none" });
     const note = el("div", { class: "abk-note" }, "Pay with what you have; USDC lands on Arc with no gas needed there. Swaps by LI.FI, bridging by Circle CCTP.");
+    const NOTE_EVM = note.textContent;
+    const NOTE_SVM = "Pay with SOL or any Solana token; one signature in your Solana wallet and USDC lands at your Arc address. The whole trip is routed by LI.FI.";
 
     container.classList.add("abk");
     container.replaceChildren(
       el("div", { class: "abk-head" }, [title, badge]),
       el("div", {}, [el("div", { class: "abk-label" }, ["From", balLbl]), el("div", { class: "abk-sel" }, chainSel)]),
+      solWrap,
       el("div", { style: "margin-top:10px" }, [el("div", { class: "abk-label" }, ["Pay", recipToggle]),
         el("div", { class: "abk-amount" }, [amountIn, tokWrap, maxBtn])]),
       recipWrap,
-      el("div", { style: "margin-top:10px" }, [el("div", { class: "abk-label" }, "Bridge speed"), seg]),
+      segWrap,
       feesBox, btn, note, errBox, okBox, stepsBox, pendBox
     );
+
+    const svm = () => isSvm(state.source);
+    /** the address that pays: the Solana account for Solana, the EVM account elsewhere */
+    const payer = () => (svm() ? state.sol : state.account);
+
+    // Picking Solana looks for wallets and reconnects one that already trusts this site, with
+    // no prompt; anything else waits for the button. Leaving Solana forgets nothing: the
+    // account stays for when the user comes back.
+    async function onSourceChanged() {
+      if (!svm()) { solWrap.style.display = "none"; render(); return; }
+      if (!state.solWallets) {
+        state.solWallets = await c0.solanaWallets().catch(() => []);
+        solSel.replaceChildren(...state.solWallets.map((w, i) => el("option", { value: String(i) }, w.name)));
+      }
+      solWrap.style.display = state.solWallets.length > 1 ? "" : "none";
+      if (!state.sol && state.solWallets.length) {
+        try { state.sol = await c0.connectSolana(state.solWallets[Number(solSel.value) || 0], { silent: true }); } catch {}
+        if (state.sol) { emit({ type: "solana_connected", account: state.sol, silent: true }); refreshBalance(); replan(); }
+      }
+      render();
+    }
+    async function connectSolana() {
+      if (!state.solWallets) state.solWallets = await c0.solanaWallets().catch(() => []);
+      solSel.replaceChildren(...state.solWallets.map((w, i) => el("option", { value: String(i) }, w.name)));
+      solWrap.style.display = state.solWallets.length > 1 ? "" : "none";
+      state.sol = await c0.connectSolana(state.solWallets[Number(solSel.value) || 0]);
+      emit({ type: "solana_connected", account: state.sol, wallet: c0.solanaWalletName() });
+      refreshBalance(); resumePending(); replan(); render();
+    }
 
     // ---- logic
     async function loadTokens() {
@@ -1333,22 +1623,23 @@
     async function replan(force) {
       const amt = amountMinor();
       if (!amt || amt === 0n || !state.payToken) { state.plan = null; lastPlanKey = ""; render(); return; }
-      const key = [state.source.key, state.payToken.address, amt.toString(), state.speed, state.account || "", recipient()].join("|");
+      const key = [state.source.key, state.payToken.address, amt.toString(), state.speed, payer() || "", recipient()].join("|");
       if (!force && key === lastPlanKey && state.plan) { render(); return; } // nothing changed, no new LI.FI call
       lastPlanKey = key; state.plan = null;
       const my = state.planning = Symbol();
       render();
       const p = await c0.plan({ source: state.source, payToken: state.payToken.address, fromAmount: amt, speed: state.speed,
-        fromAddress: state.account, recipient: recipient() }).catch((e) => ({ available: false, reason: msgOf(e) }));
+        fromAddress: payer(), recipient: recipient() }).catch((e) => ({ available: false, reason: msgOf(e) }));
       if (state.planning !== my) return;
       state.plan = p; render();
     }
 
     async function refreshBalance() {
-      if (!state.account || !state.payToken) { render(); return; }
-      const tok = state.payToken;
-      const b = await c0.tokenBalance(state.source, tok.address, state.account);
-      if (state.payToken === tok) { state.balance = b; render(); }
+      const who = payer();
+      if (!who || !state.payToken) { render(); return; }
+      const tok = state.payToken, src = state.source;
+      const b = await c0.tokenBalance(src, tok.address, who);
+      if (state.payToken === tok && state.source === src) { state.balance = b; render(); }
     }
 
     async function connect() {
@@ -1366,11 +1657,19 @@
 
     async function onMain() {
       state.error = ""; state.done = null;
-      if (!state.account) { try { await connect(); } catch (e) { state.error = msgOf(e); } render(); return; }
+      if (svm()) {
+        if (!state.sol) { try { await connectSolana(); } catch (e) { state.error = msgOf(e); } render(); return; }
+      } else if (!state.account) { try { await connect(); } catch (e) { state.error = msgOf(e); } render(); return; }
       const amt = amountMinor();
       const to = recipient();
       if (!amt) { state.error = "Enter an amount."; render(); return; }
-      if (!isAddress(to)) { state.error = "Recipient must be a valid 0x address."; render(); return; }
+      if (!isAddress(to)) {
+        // from Solana the USDC lands on Arc, which needs an EVM address: with no EVM wallet on
+        // the page the only way to give one is the recipient box, so open it
+        if (svm() && !state.customRecipient) { state.customRecipient = true; recipWrap.style.display = ""; }
+        state.error = svm() ? "Enter the Arc address (0x…) the USDC should land at, or connect an EVM wallet." : "Recipient must be a valid 0x address.";
+        render(); return;
+      }
       state.busy = true; state.steps = {}; state.links = {}; state.activePlan = state.plan; render();
       const cr = core();
       try {
@@ -1519,7 +1818,11 @@
     function render() {
       const amt = amountMinor();
       const tok = state.payToken;
-      balLbl.textContent = state.account && tok ? (state.balance == null ? "balance …" : "balance " + formatUnits(state.balance, tok.decimals, 6) + " " + tok.symbol) : "";
+      const who = payer();
+      balLbl.textContent = who && tok ? (state.balance == null ? "balance …" : "balance " + formatUnits(state.balance, tok.decimals, 6) + " " + tok.symbol) : "";
+      // Solana has no speed to pick (LI.FI routes it in one go) and its own note
+      segWrap.style.display = svm() ? "none" : "";
+      note.textContent = svm() ? NOTE_SVM : NOTE_EVM;
       fastBtn.disabled = !state.source.fast;
       fastBtn.title = state.source.fast ? "" : state.source.name + " finalizes quickly; standard is already fast here";
       if (!state.source.fast && state.speed === "fast") { state.speed = "standard"; fastBtn.classList.remove("on"); stdBtn.classList.add("on"); }
@@ -1552,15 +1855,16 @@
         feesBox.replaceChildren(el("div", { class: "via" }, "Getting quotes…")); feesBox.style.display = "";
       } else feesBox.style.display = "none";
       // button
-      let label = "Connect wallet", disabled = false;
-      if (state.account) {
+      let label = svm() ? "Connect Solana wallet" : "Connect wallet", disabled = false;
+      if (who) {
         if (state.busy) { label = "Working…"; disabled = true; }
         else if (!amt || amt === 0n) { label = "Enter amount"; disabled = true; }
         else if (state.balance != null && state.balance < amt) { label = "Insufficient " + (tok ? tok.symbol : "balance") + " on " + state.source.name; disabled = true; }
         else if (!p) { label = "Getting quotes…"; disabled = true; }
         else if (!p.available) { label = "Route unavailable"; disabled = true; }
         else if (state.customRecipient && !isAddress(recipIn.value.trim())) { label = "Enter recipient"; disabled = true; }
-        else label = (p.swap && !p.swap.identity ? "Swap & bridge → " : "Bridge → ") + c0.arc.name + (opts.destination ? " & " + (opts.destination.buttonLabel || "swap") : "");
+        else if (svm() && !isAddress(recipient())) { label = "Enter recipient on Arc"; }
+        else label = (svm() ? "Send → " : (p.swap && !p.swap.identity ? "Swap & bridge → " : "Bridge → ")) + c0.arc.name + (opts.destination ? " & " + (opts.destination.buttonLabel || "swap") : "");
       }
       btn.textContent = label; btn.disabled = disabled;
       // error / ok
@@ -1585,8 +1889,9 @@
         stepsBox.replaceChildren(...stepsFor(state.activePlan, opts.destination).map((s, i) => {
           const st = state.steps[s.key];
           const link = state.links[s.key];
-          const sub = s.key === "mint" && st === "on" ? "Circle's forwarder submits the mint — nothing to sign." :
+          const sub = s.key === "mint" && st === "on" ? (state.activePlan && state.activePlan.router === "lifi" ? "LI.FI's executor delivers the USDC — nothing to sign." : "Circle's forwarder submits the mint — nothing to sign.") :
                       s.key === "attest" && st === "on" ? (state.activePlan && state.activePlan.router === "lifi" ? "LI.FI is moving the funds; nothing to sign." : "Waiting for source-chain finality + Circle signature.") :
+                      s.key === "burn" && st === "on" && state.activePlan && isSvm(state.activePlan.source) ? "Confirm in your Solana wallet." :
                       s.key === "swap" && st === "on" ? "Confirm the swap in your wallet." :
                       s.key === "dest" && st === "on" ? "Confirm in your wallet on " + c0.arc.name + "." : null;
           const waitBtn = s.key === "dest" && (st === "wait" || st === "err" || !st) && state.done && !(state.done.dest && state.done.dest.status === "done")
@@ -1603,6 +1908,7 @@
     (async () => {
       try { state.account = await c0.account(); } catch {}
       await loadTokens();
+      if (svm()) await onSourceChanged();
       if (state.account) { refreshBalance(); resumePending(); }
       if (amountIn.value) replan();
       render();
@@ -1619,8 +1925,9 @@
     return {
       core: c0,
       get account() { return state.account; },
+      get solanaAccount() { return state.sol; },
       setAccount(a) { state.account = a; state.balance = null; refreshBalance(); resumePending(); replan(); render(); },
-      setSource(key) { const s = c0.source(key); if (s) { state.source = s; chainSel.value = s.key; loadTokens().then(() => { refreshBalance(); replan(); }); } },
+      setSource(key) { const s = c0.source(key); if (s) { state.source = s; chainSel.value = s.key; onSourceChanged(); loadTokens().then(() => { refreshBalance(); replan(); }); } },
       setPayToken(addr) { tokSel.value = addr; tokSel.dispatchEvent(new Event("change")); },
       setAmount(v) { amountIn.value = v; onAmount(); },
       refresh() { refreshBalance(); replan(true); renderPending(); },
@@ -1629,8 +1936,8 @@
   }
 
   return {
-    VERSION, ARC_DOMAIN, FORWARD_HOOK, FINALITY, NATIVE, CCTP, LIFI, ARC, SOURCES, ABI, PAY_SYMBOLS,
+    VERSION, ARC_DOMAIN, FORWARD_HOOK, FINALITY, NATIVE, SOL_NATIVE, SOL_LIFI_CHAIN_ID, SOL_CHAIN, CCTP, LIFI, ARC, SOURCES, ABI, PAY_SYMBOLS, PAY_SYMBOLS_SVM,
     ArcBridge, mount,
-    utils: { parseUsdc, formatUsdc, parseUnits, formatUnits, toBytes32Address, computeFees, isAddress, jsonRpc, fetchJson, toTxRequest, payShortlist, explainLifi, nonceFromMessage, judgeMint, chooseRoute },
+    utils: { parseUsdc, formatUsdc, parseUnits, formatUnits, toBytes32Address, computeFees, isAddress, isSolAddress, isSvm, jsonRpc, fetchJson, toTxRequest, toSvmTx, payShortlist, explainLifi, nonceFromMessage, judgeMint, chooseRoute, base58Encode, b64ToBytes, bytesToB64 },
   };
 });
