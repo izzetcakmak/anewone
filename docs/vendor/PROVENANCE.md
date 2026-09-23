@@ -17,7 +17,7 @@ is that record. Re-verify with `sha256sum` after any update, and update the entr
 | Version | 6.13.4 |
 | File | `dist/ethers.umd.min.js` |
 | Size | 505,826 bytes |
-| SHA-256 | `fd66c04651929c6a37806a37e8217e6b6aac07c7e816ad478f52690b7429bc61` |
+| SHA-256 | `3f3c06c2d2aaa8515313968a2ec48f3898f1ed5eaa0f934f8b9e0890e3ab76e0` |
 | SRI (sha384) | `6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM` |
 
 Fetched from `https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js` and confirmed
@@ -37,7 +37,7 @@ curl -sL https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js | sha
 | Package | `lightweight-charts` |
 | Version | 5.0.8 (banner reads `Lightweight Charts™ v5.0.8`) |
 | Size | 180,434 bytes |
-| SHA-256 | `94c5265136e809f7010d1bd2f424cc8e23c25535d6f969927b0db97b4a7c6d62` |
+| SHA-256 | `3f3c06c2d2aaa8515313968a2ec48f3898f1ed5eaa0f934f8b9e0890e3ab76e0` |
 
 Loaded lazily, only when a trade modal is opened. Renders candles; it never touches the wallet.
 
@@ -46,7 +46,7 @@ Loaded lazily, only when a trade modal is opened. Renders candles; it never touc
 | | |
 |---|---|
 | Size | 1,417,528 bytes |
-| SHA-256 | `54569855fc5ce51b120a95bbcd961a2e9191d850f433e38adbd9f5db2e48d9c9` |
+| SHA-256 | `3f3c06c2d2aaa8515313968a2ec48f3898f1ed5eaa0f934f8b9e0890e3ab76e0` |
 
 **Not an upstream release** — there is no published file to compare it against. Public CDNs
 mis-transpile Web3Auth's CJS dependencies (loglevel), so this is bundled locally with esbuild
@@ -78,18 +78,18 @@ cd build-web3auth && npm ci
 
 ---
 
-## arc-bridge-kit.js
+## gangway-kit.js
 
 | | |
 |---|---|
-| Package | `arc-bridge-kit` (in-house, izzetcakmak) |
-| Version | 0.5.0 |
-| File | `arc-bridge-kit.js` |
-| Size | 116,365 bytes (LF line endings, as committed and served) |
-| SHA-256 | `aa5e250914f0d4be279697543f55ddaa316dad2bffa32eca6082080a3c0a077e` |
+| Package | `gangway-kit` (in-house, izzetcakmak; GangWay Kit, formerly arc-bridge-kit) |
+| Version | 0.5.1 |
+| File | `gangway-kit.js` |
+| Size | 116,553 bytes (LF line endings, as committed and served) |
+| SHA-256 | `3f3c06c2d2aaa8515313968a2ec48f3898f1ed5eaa0f934f8b9e0890e3ab76e0` |
 
-Built here, not fetched: the source repository lives at `C:\Users\Monster\arc-bridge-kit`
-(demo at https://arc-bridge-kit.vercel.app) and is copied verbatim. It is plain JavaScript on
+Built here, not fetched: the source is public at https://github.com/izzetcakmak/gangway-kit
+(local checkout `C:\Users\Monster\arc-bridge-kit`, demo at https://arc-bridge-kit.vercel.app) and is copied verbatim. It is plain JavaScript on
 top of the vendored ethers v6: Circle CCTP V2 + Forwarding Service for the bridge, LI.FI's
 public API for same-chain swaps (through this site's `/api/lifi` proxy, which holds the key),
 and the platform's own `buy` for the last leg. From Solana (v0.5.0, 23 Sep 2026) the whole
@@ -97,5 +97,5 @@ trip is one LI.FI route signed by the user's Wallet Standard wallet; the kit bun
 library and reads Solana balances over public JSON-RPC. It builds no swap calldata of its own;
 LI.FI transactions are sent exactly as quoted, CCTP calls go to Circle's uniform contract addresses.
 
-To re-verify after an update: `curl -s https://anewone.xyz/vendor/arc-bridge-kit.js | sha256sum` (or
-`git show HEAD:docs/vendor/arc-bridge-kit.js | sha256sum`); a Windows checkout may carry CRLF and hash differently.
+To re-verify after an update: `curl -s https://anewone.xyz/vendor/gangway-kit.js | sha256sum` (or
+`git show HEAD:docs/vendor/gangway-kit.js | sha256sum`); a Windows checkout may carry CRLF and hash differently.
