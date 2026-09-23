@@ -1,5 +1,5 @@
 /*!
- * gangway-kit v0.5.1 (GangWay Kit, formerly arc-bridge-kit)
+ * gangway-kit v0.5.2 (GangWay Kit, formerly arc-bridge-kit)
  * Drop-in "pay with anything, land USDC on Arc, then buy" kit.
  *
  *  Legs (each optional except the bridge):
@@ -35,7 +35,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.5.1";
+  const VERSION = "0.5.2";
 
   // ------------------------------------------------------------------ constants
 
@@ -1528,7 +1528,9 @@
       c0.sources().map((s) => el("option", { value: s.key }, s.name)));
     // Solana: which wallet signs. One row, shown only for that source and only when more than
     // one wallet announced itself; with a single wallet there is nothing to choose.
-    const solSel = el("select", { class: "abk-field", onchange: () => { state.sol = null; state.balance = null; render(); } });
+    // Changing it drops whatever wallet was connected: the next "Connect" must go to the one chosen.
+    let solRun = 0; // bumped whenever the user touches the select: a silent reconnect still running must not override the choice
+    const solSel = el("select", { class: "abk-field", onchange: () => { solRun++; c0.disconnectSolana(); state.sol = null; state.balance = null; render(); } });
     const solWrap = el("div", { style: "display:none;margin-top:10px" }, [el("div", { class: "abk-label" }, "Solana wallet"), el("div", { class: "abk-sel" }, solSel)]);
     chainSel.value = state.source.key;
     const amountIn = el("input", { inputmode: "decimal", placeholder: "0.00", value: opts.defaultAmount || "", oninput: () => onAmount() });
@@ -1571,24 +1573,38 @@
     // Picking Solana looks for wallets and reconnects one that already trusts this site, with
     // no prompt; anything else waits for the button. Leaving Solana forgets nothing: the
     // account stays for when the user comes back.
+    // The wallet list is discovered once and the options built once. Rebuilding them on every
+    // connect reset the select to its first entry, so a user who had picked Phantom got
+    // Backpack the moment they pressed Connect.
+    async function loadSolWallets() {
+      if (state.solWallets) return;
+      state.solWallets = await c0.solanaWallets().catch(() => []);
+      solSel.replaceChildren(...state.solWallets.map((w, i) => el("option", { value: String(i) }, w.name)));
+      solWrap.style.display = state.solWallets.length > 1 ? "" : "none";
+    }
+    const chosenSolWallet = () => state.solWallets[Number(solSel.value) || 0];
     async function onSourceChanged() {
       if (!svm()) { solWrap.style.display = "none"; render(); return; }
-      if (!state.solWallets) {
-        state.solWallets = await c0.solanaWallets().catch(() => []);
-        solSel.replaceChildren(...state.solWallets.map((w, i) => el("option", { value: String(i) }, w.name)));
-      }
+      await loadSolWallets();
       solWrap.style.display = state.solWallets.length > 1 ? "" : "none";
       if (!state.sol && state.solWallets.length) {
-        try { state.sol = await c0.connectSolana(state.solWallets[Number(solSel.value) || 0], { silent: true }); } catch {}
-        if (state.sol) { emit({ type: "solana_connected", account: state.sol, silent: true }); refreshBalance(); replan(); }
+        // no prompt here: the first wallet that already trusts this site is taken, and the
+        // select is moved to it so what is shown is what is connected. A user who picks a
+        // wallet while this is still running wins: the loop stops and leaves their choice.
+        const my = ++solRun;
+        for (let i = 0; i < state.solWallets.length && !state.sol; i++) {
+          let acct = null;
+          try { acct = await c0.connectSolana(state.solWallets[i], { silent: true }); } catch {}
+          if (solRun !== my || !svm()) { if (acct) c0.disconnectSolana(); return; }
+          if (acct) { state.sol = acct; solSel.value = String(i); }
+        }
+        if (state.sol) { emit({ type: "solana_connected", account: state.sol, silent: true, wallet: c0.solanaWalletName() }); refreshBalance(); replan(); }
       }
       render();
     }
     async function connectSolana() {
-      if (!state.solWallets) state.solWallets = await c0.solanaWallets().catch(() => []);
-      solSel.replaceChildren(...state.solWallets.map((w, i) => el("option", { value: String(i) }, w.name)));
-      solWrap.style.display = state.solWallets.length > 1 ? "" : "none";
-      state.sol = await c0.connectSolana(state.solWallets[Number(solSel.value) || 0]);
+      await loadSolWallets();
+      state.sol = await c0.connectSolana(chosenSolWallet());
       emit({ type: "solana_connected", account: state.sol, wallet: c0.solanaWalletName() });
       refreshBalance(); resumePending(); replan(); render();
     }

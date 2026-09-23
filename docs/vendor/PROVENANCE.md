@@ -17,7 +17,7 @@ is that record. Re-verify with `sha256sum` after any update, and update the entr
 | Version | 6.13.4 |
 | File | `dist/ethers.umd.min.js` |
 | Size | 505,826 bytes |
-| SHA-256 | `3f3c06c2d2aaa8515313968a2ec48f3898f1ed5eaa0f934f8b9e0890e3ab76e0` |
+| SHA-256 | `c8fa22ce2d2d8ec7beed85e218081d3f784605f9d3845427f2c1d9abb0ec0849` |
 | SRI (sha384) | `6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM` |
 
 Fetched from `https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js` and confirmed
@@ -37,7 +37,7 @@ curl -sL https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js | sha
 | Package | `lightweight-charts` |
 | Version | 5.0.8 (banner reads `Lightweight Charts™ v5.0.8`) |
 | Size | 180,434 bytes |
-| SHA-256 | `3f3c06c2d2aaa8515313968a2ec48f3898f1ed5eaa0f934f8b9e0890e3ab76e0` |
+| SHA-256 | `c8fa22ce2d2d8ec7beed85e218081d3f784605f9d3845427f2c1d9abb0ec0849` |
 
 Loaded lazily, only when a trade modal is opened. Renders candles; it never touches the wallet.
 
@@ -46,7 +46,7 @@ Loaded lazily, only when a trade modal is opened. Renders candles; it never touc
 | | |
 |---|---|
 | Size | 1,417,528 bytes |
-| SHA-256 | `3f3c06c2d2aaa8515313968a2ec48f3898f1ed5eaa0f934f8b9e0890e3ab76e0` |
+| SHA-256 | `c8fa22ce2d2d8ec7beed85e218081d3f784605f9d3845427f2c1d9abb0ec0849` |
 
 **Not an upstream release** — there is no published file to compare it against. Public CDNs
 mis-transpile Web3Auth's CJS dependencies (loglevel), so this is bundled locally with esbuild
@@ -83,10 +83,10 @@ cd build-web3auth && npm ci
 | | |
 |---|---|
 | Package | `gangway-kit` (in-house, izzetcakmak; GangWay Kit, formerly arc-bridge-kit) |
-| Version | 0.5.1 |
+| Version | 0.5.2 |
 | File | `gangway-kit.js` |
-| Size | 116,553 bytes (LF line endings, as committed and served) |
-| SHA-256 | `3f3c06c2d2aaa8515313968a2ec48f3898f1ed5eaa0f934f8b9e0890e3ab76e0` |
+| Size | 117,573 bytes (LF line endings, as committed and served) |
+| SHA-256 | `c8fa22ce2d2d8ec7beed85e218081d3f784605f9d3845427f2c1d9abb0ec0849` |
 
 Built here, not fetched: the source is public at https://github.com/izzetcakmak/gangway-kit
 (local checkout `C:\Users\Monster\arc-bridge-kit`, demo at https://arc-bridge-kit.vercel.app) and is copied verbatim. It is plain JavaScript on
