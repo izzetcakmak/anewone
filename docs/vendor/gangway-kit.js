@@ -1,5 +1,5 @@
 /*!
- * arc-bridge-kit v0.5.0
+ * gangway-kit v0.5.1 (GangWay Kit, formerly arc-bridge-kit)
  * Drop-in "pay with anything, land USDC on Arc, then buy" kit.
  *
  *  Legs (each optional except the bridge):
@@ -19,7 +19,7 @@
  *
  *  Usage (browser, classic script):
  *    <script src="ethers.umd.min.js"></script>
- *    <script src="arc-bridge-kit.js"></script>
+ *    <script src="gangway-kit.js"></script>
  *    ArcBridgeKit.mount(document.getElementById("bridge"), {
  *      ethers: window.ethers, network: "testnet", getProvider: () => window.ethereum,
  *    });
@@ -31,11 +31,11 @@
  */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
-  else root.ArcBridgeKit = factory();
+  else root.ArcBridgeKit = root.GangWayKit = factory(); // both names, the first for pages written before the rename
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.5.0";
+  const VERSION = "0.5.1";
 
   // ------------------------------------------------------------------ constants
 
@@ -62,7 +62,7 @@
   };
 
   // LI.FI: one API for mainnets and the testnets it lists (Sepolia, Base/OP/Arbitrum Sepolia).
-  const LIFI = { api: "https://li.quest/v1", integrator: "arc-bridge-kit" };
+  const LIFI = { api: "https://li.quest/v1", integrator: "arc-bridge-kit" }; // the integrator string registered at portal.li.fi under the kit's first name
 
   // USDC on Arc is the native gas token; 0x3600...0000 is its ERC-20 face (6 decimals).
   const ARC = {
@@ -530,7 +530,7 @@
    *   lifiApiKey    optional LI.FI partner key (higher rate limits)
    *   lifiApi       base URL for LI.FI calls (default https://li.quest/v1). Point it at your own
    *                 proxy that adds the key server-side, so the key never ships to browsers.
-   *   lifiIntegrator integrator string registered at portal.li.fi (default "arc-bridge-kit")
+   *   lifiIntegrator integrator string registered at portal.li.fi (default "gangway-kit")
    *   lifiFee       integrator fee on LI.FI legs as a fraction, e.g. 0.0025 = 0.25% (default 0).
    *                 LI.FI deducts it from the swapped amount and forwards it to the integrator's
    *                 fee wallet at execution; the quote's feeCosts already include it. If the
