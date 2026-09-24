@@ -4,8 +4,24 @@
     {
       "name": "anewone-frontend",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "4173", "--directory", "C:\\Users\\Monster\\anewone\\frontend"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4173",
+        "--directory",
+        "C:\\Users\\Monster\\anewone\\frontend"
+      ],
       "port": 4173
+    },
+    {
+      "name": "anewone-docs",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".claude/serve-docs.mjs",
+        "docs",
+        "4174"
+      ],
+      "port": 4174
     }
   ]
 }

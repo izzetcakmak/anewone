@@ -15,39 +15,22 @@
 // The model is deliberately not Claude and not GPT: an OpenAI-compatible endpoint, Groq
 // with Qwen3.8 27B by default, swappable through LLM_BASE_URL / LLM_MODEL.
 import { MemWal } from "@mysten-incubation/memwal";
-import { verifyMessage, getAddress } from "ethers";
+import { signInText, verifyAuth } from "./_auth.js";
+export { signInText };
 
 const ORIGINS = new Set(["https://anewone.xyz", "https://www.anewone.xyz"]);
 const FLOOR_URL = "https://anewone.xyz/data/floor.json";
 const RELAYER = process.env.MEMWAL_SERVER_URL || "https://relayer.memory.walrus.xyz";
 const LLM_BASE = (process.env.LLM_BASE_URL || "https://api.groq.com/openai/v1").replace(/\/$/, "");
 const LLM_MODEL = process.env.LLM_MODEL || "qwen/qwen3.8-27b";
-const SIGN_TTL_MS = 7 * 24 * 3600 * 1000;   // a sign-in signature is good for a week
 const MAX_TURNS = 12;                        // history the model sees (the rest is memory's job)
 const MAX_CHARS = 1500;                      // per message
 const WAD = 10n ** 18n;
 
-// ---- sign-in message. The page builds exactly this text; the server re-derives it from
-// the address + issued time and checks the signature recovers to the same address.
-export const signInText = (address, issued) =>
-  `A NEW ONE — Deck Hand sign-in\n\nWallet: ${address}\nIssued: ${issued}\n\nThis signature only proves you own this wallet so the deck hand can keep your memory. It costs nothing and moves nothing.`;
-
+// ---- sign-in: the message text and the signature check live in api/_auth.js, shared with
+// the card onramp (api/onramp-session.js) so one signature covers both.
 const nsFor = (address) => `anewone-${address.toLowerCase()}`;
 const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
-
-function verifyAuth(auth) {
-  if (!auth || typeof auth !== "object") return null;
-  const { address, issued, signature } = auth;
-  if (typeof address !== "string" || typeof issued !== "string" || typeof signature !== "string") return null;
-  const t = Date.parse(issued);
-  if (!Number.isFinite(t) || Date.now() - t > SIGN_TTL_MS || t - Date.now() > 5 * 60 * 1000) return null;
-  let addr;
-  try { addr = getAddress(address); } catch { return null; }
-  try {
-    const rec = verifyMessage(signInText(addr, issued), signature);
-    return rec.toLowerCase() === addr.toLowerCase() ? addr : null;
-  } catch { return null; }
-}
 
 // ---- Arc side: the floor index, cached for a minute per warm lambda.
 let floorCache = { at: 0, text: "", count: 0, tip: 0 };

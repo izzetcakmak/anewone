@@ -888,6 +888,17 @@
     color: #08130d; background: var(--gold); border-radius: 10px; text-decoration: none; }
   .fundcta:hover { filter: brightness(1.1); }
   .fundnote { font-size: 11px; color: var(--faint); margin-top: 10px; line-height: 1.5; }
+  #fundCard { padding: 9px 16px; font-size: 13px; font-weight: 700; min-height: 0; border-radius: 10px; }
+  /* Circle's onramp renders in a cross-origin iframe that cannot size itself, so the host
+     gives it a fixed height (the kit's own guidance). */
+  .onramp-wrap { display: none; margin-top: 14px; height: 720px; max-height: 85vh; border-radius: 12px;
+    overflow: hidden; border: 1px solid var(--border-2); background: var(--surface); }
+  .onramp-wrap.open { display: block; }
+  .onramp-wrap iframe { display: block; width: 100%; height: 100%; border: 0; }
+  .onramp-bar { display: none; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px;
+    font-size: 11px; color: var(--faint); }
+  .onramp-bar.open { display: flex; }
+  .onramp-bar button { padding: 6px 10px; font-size: 11px; min-height: 0; }
   .wrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px;
     margin-bottom: 8px; background: var(--surface); border: 1px solid var(--border-2);
     border-radius: 12px; cursor: pointer; text-align: left; font-size: 15px; color: var(--text);
@@ -1472,7 +1483,10 @@
       <code id="fundAddr" class="fundaddr"></code>
       <button id="fundCopy">Copy address</button>
       <a id="fundLink" class="fundcta" href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer">Get test USDC ↗</a>
+      <button id="fundCard" type="button" hidden>💳 Buy USDC with card</button>
     </div>
+    <div class="onramp-bar" id="onrampBar"><span id="onrampMsg">Card, Apple Pay or Google Pay. USDC lands in this wallet on Arc.</span><button id="onrampClose" type="button">Close</button></div>
+    <div class="onramp-wrap" id="onrampWrap"></div>
     <div class="fundnote" id="fundNote">Paste your address on the faucet and pick <b>Arc Testnet</b>. This
       panel disappears automatically once the balance lands (checked every ~15s).</div>
   </div>
@@ -2984,6 +2998,80 @@ $("fundCopy").onclick = async () => {
   catch { toast(userAddr || ""); }
 };
 
+// ---- Buy USDC with card (Circle Onramp Kit). The button only exists when the deployment
+// holds an Onramp key (api/onramp-config.js). Pressing it: one wallet signature proving the
+// address (the same Deck Hand sign-in the chat uses, cached a week in localStorage, so a
+// Google sign-in wallet works too), then /api/onramp-session mints a session pinned to Arc
+// USDC for exactly that address, and the vendored client kit frames Circle's widget below the
+// panel. The purchase happens inside Circle's iframe; this page never sees card details.
+const ONRAMP_AUTH_KEY = "anewone_deckhand_auth";
+const onrampSignInText = (address, issued) =>
+  `A NEW ONE — Deck Hand sign-in\n\nWallet: ${address}\nIssued: ${issued}\n\nThis signature only proves you own this wallet so the deck hand can keep your memory. It costs nothing and moves nothing.`;
+let onrampCfg = null, onrampKit = null, onrampWidget = null, onrampBusy = false;
+fetch("api/onramp-config").then((r) => r.json()).then((c) => {
+  onrampCfg = c && c.enabled ? c : null;
+  $("fundCard").hidden = !onrampCfg;
+}).catch(() => {});
+async function onrampAuth() {
+  // reuse the chat's signature when it is for this wallet and still fresh
+  try {
+    const a = JSON.parse(localStorage.getItem(ONRAMP_AUTH_KEY) || "null");
+    if (a && a.address && a.signature && a.address.toLowerCase() === userAddr.toLowerCase() &&
+        Date.now() - Date.parse(a.issued) < 6.5 * 864e5) return a;
+  } catch {}
+  const issued = new Date().toISOString();
+  const signature = await signer.signMessage(onrampSignInText(userAddr, issued));
+  const a = { address: userAddr, issued, signature };
+  try { localStorage.setItem(ONRAMP_AUTH_KEY, JSON.stringify(a)); } catch {}
+  return a;
+}
+function onrampClose(msg) {
+  if (onrampWidget) { try { onrampWidget.close(); } catch {} onrampWidget = null; }
+  $("onrampWrap").innerHTML = "";
+  $("onrampWrap").classList.remove("open");
+  $("onrampBar").classList.remove("open");
+  $("fundCard").disabled = false;
+  if (msg) toast(msg);
+}
+$("onrampClose").onclick = () => onrampClose();
+$("fundCard").onclick = async () => {
+  if (!onrampCfg || onrampBusy) return;
+  if (!signer || !userAddr) { toast("Connect a wallet first"); return; }
+  onrampBusy = true; $("fundCard").disabled = true;
+  try {
+    const auth = await onrampAuth();
+    const r = await fetch(onrampCfg.endpoint.replace(/^\//, ""), {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ auth }),
+    });
+    const session = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(session.error || ("onramp session " + r.status));
+    if (!onrampKit) {
+      const { createOnrampKit } = await import("./vendor/onramp-kit.js");
+      onrampKit = createOnrampKit();
+    }
+    onrampClose();
+    const wrap = $("onrampWrap");
+    wrap.classList.add("open"); $("onrampBar").classList.add("open");
+    $("onrampMsg").textContent = "Card, Apple Pay or Google Pay. USDC lands in " + userAddr.slice(0, 6) + "…" + userAddr.slice(-4) + " on Arc.";
+    $("fundCard").disabled = true;
+    onrampWidget = onrampKit.mountIframe({
+      session, container: wrap, title: "Buy USDC with card",
+      onInitializationError: ({ code }) => onrampClose("The card checkout could not load (" + code + ")"),
+      onSessionExpired: () => onrampClose("The card checkout timed out; press the button to start again"),
+      onDepositNotCompleted: ({ code }) => { if (code === "CANCELED_BY_CUSTOMER") onrampClose(); },
+      onDepositSettled: ({ payload }) => {
+        onrampClose("USDC bought" + (payload && payload.amount ? ": " + payload.amount + " " + (payload.tokenSymbol || "USDC") : "") + " 🎉");
+        $("fundBanner").style.display = "none";
+        refreshNativeBalance();
+      },
+    });
+    wrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (e) {
+    onrampClose();
+    toast(e && e.code === 4001 ? "Signature refused in the wallet" : (e.shortMessage || e.message || String(e)));
+  } finally { onrampBusy = false; if (!onrampWidget) $("fundCard").disabled = false; }
+};
+
 // clears all local wallet state; the wallet extension keeps its own permission,
 // but the site forgets the account and resets owner/creator UI
 function disconnect() {
@@ -3004,6 +3092,7 @@ function disconnect() {
   $("fundBanner").style.display = "none";
   if (fundPoll) { clearInterval(fundPoll); fundPoll = null; }
   wasLow = false;
+  onrampClose();
   $("feeBar").style.display = "none";
   $("footPlatformLine").style.display = "none";
   $("pfStat").style.display = "none";

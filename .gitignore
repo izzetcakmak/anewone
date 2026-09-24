@@ -23,3 +23,9 @@ monitor/state-cache.json
 .vercel
 monitor/floor-cache.json
 monitor/state.json.bak
+# Same for the Circle onramp bundle (docs/vendor/onramp-kit.js): recipe in, node_modules out.
+build-onramp/*
+!build-onramp/package.json
+!build-onramp/package-lock.json
+!build-onramp/entry.mjs
+!build-onramp/build.mjs

@@ -110,6 +110,14 @@
   .chains { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .nowallet { background: var(--surface); border: 1px dashed var(--border-2); border-radius: var(--r-md); padding: 18px; color: var(--dim); font-size: 13px; }
   .nowallet b { color: var(--text); }
+  .onramp .btn { width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: var(--r-sm); background: var(--grad); color: var(--bg); font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; }
+  .onramp .btn:disabled { opacity: .55; cursor: default; }
+  /* Circle's onramp renders in a cross-origin iframe that cannot size itself, so the host
+     gives it a fixed height (the kit's own guidance). */
+  .onramp-wrap { display: none; margin-top: 12px; height: 720px; max-height: 85vh; border-radius: var(--r-sm);
+    overflow: hidden; border: 1px solid var(--border); background: var(--bg); }
+  .onramp-wrap.open { display: block; }
+  .onramp-wrap iframe { display: block; width: 100%; height: 100%; border: 0; }
   .coin-link { margin-top: 10px; font-size: 13px; }
   /* ---- swap card: two stacked boxes and a flip, the shape people know ---- */
   .swap p { margin-bottom: 10px; }
@@ -217,6 +225,14 @@
         <div class="amt"><input class="field" id="sendAmt" inputmode="decimal" placeholder="0.00" autocomplete="off"><button type="button" id="sendMax">MAX</button></div>
         <button type="button" class="btn" id="sendGo" disabled>Connect wallet</button>
         <div class="hint" id="sendHint"></div>
+      </div>
+
+      <div class="card onramp" id="onrampCard" hidden>
+        <div class="send-head"><h3>Buy USDC with card</h3><span class="pill" id="onrampNet">…</span></div>
+        <p>Card, Apple Pay or Google Pay, through Circle. The USDC lands in your connected wallet on Arc; no other chain involved.</p>
+        <button type="button" class="btn" id="onrampGo">💳 Buy USDC with card</button>
+        <div class="hint" id="onrampHint"></div>
+        <div class="onramp-wrap" id="onrampWrap"></div>
       </div>
     </div>
 
@@ -1118,6 +1134,76 @@
   swPaintTokens(); swPaintSlip();
   lifiReady.then(() => swLoadTokens());
   setTimeout(() => { if (sendAccount) swLoadHeld(); else swValidate(); }, 1500);
+
+  // ---- Buy USDC with card (Circle Onramp Kit). Same flow as the floor: one personal_sign
+  // proving the address (the Deck Hand sign-in, cached a week), /api/onramp-session mints a
+  // session pinned to Arc USDC for that address, the vendored kit frames Circle's widget in
+  // the card. The button exists only when the deployment holds an Onramp key.
+  const ONRAMP_AUTH_KEY = "anewone_deckhand_auth";
+  const onrampSignInText = (address, issued) =>
+    `A NEW ONE — Deck Hand sign-in\n\nWallet: ${address}\nIssued: ${issued}\n\nThis signature only proves you own this wallet so the deck hand can keep your memory. It costs nothing and moves nothing.`;
+  const onrampCard = S("onrampCard"), onrampGo = S("onrampGo"), onrampWrap = S("onrampWrap"), onrampHint = S("onrampHint");
+  const onrampSay = (t, cls) => { onrampHint.textContent = t; onrampHint.className = "hint" + (cls ? " " + cls : ""); };
+  let onrampCfg = null, onrampKit = null, onrampWidget = null, onrampBusy = false;
+  S("onrampNet").textContent = net === "mainnet" ? "ARC MAINNET" : "ARC TESTNET";
+  S("onrampNet").classList.toggle("test", net !== "mainnet");
+  fetch("../api/onramp-config").then((r) => r.json()).then((c) => {
+    onrampCfg = c && c.enabled ? c : null;
+    onrampCard.hidden = !onrampCfg || !wallet();
+  }).catch(() => {});
+  async function onrampAuth(address) {
+    try {
+      const a = JSON.parse(localStorage.getItem(ONRAMP_AUTH_KEY) || "null");
+      if (a && a.address && a.signature && a.address.toLowerCase() === address.toLowerCase() &&
+          Date.now() - Date.parse(a.issued) < 6.5 * 864e5) return a;
+    } catch {}
+    const issued = new Date().toISOString();
+    const signature = await wallet().request({ method: "personal_sign", params: [onrampSignInText(address, issued), address] });
+    const a = { address, issued, signature };
+    try { localStorage.setItem(ONRAMP_AUTH_KEY, JSON.stringify(a)); } catch {}
+    return a;
+  }
+  function onrampClose(msg, cls) {
+    if (onrampWidget) { try { onrampWidget.close(); } catch {} onrampWidget = null; }
+    onrampWrap.innerHTML = ""; onrampWrap.classList.remove("open");
+    onrampGo.disabled = false; onrampGo.textContent = "💳 Buy USDC with card";
+    if (msg !== undefined) onrampSay(msg, cls);
+  }
+  onrampGo.onclick = async () => {
+    if (onrampWidget) { onrampClose(""); return; }
+    if (!onrampCfg || onrampBusy) return;
+    onrampBusy = true; onrampGo.disabled = true; onrampSay("");
+    try {
+      if (!sendAccount) await sendConnect();
+      if (!sendAccount) throw new Error("Connect a wallet first.");
+      const address = sendAccount;
+      const auth = await onrampAuth(address);
+      const r = await fetch(".." + onrampCfg.endpoint, {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ auth }),
+      });
+      const session = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(session.error || ("onramp session " + r.status));
+      if (!onrampKit) {
+        const { createOnrampKit } = await import("../vendor/onramp-kit.js");
+        onrampKit = createOnrampKit();
+      }
+      onrampWrap.classList.add("open");
+      onrampSay("USDC lands in " + address.slice(0, 6) + "…" + address.slice(-4) + " on Arc.");
+      onrampWidget = onrampKit.mountIframe({
+        session, container: onrampWrap, title: "Buy USDC with card",
+        onInitializationError: ({ code }) => onrampClose("The card checkout could not load (" + code + ").", "bad"),
+        onSessionExpired: () => onrampClose("The card checkout timed out; press the button to start again.", "bad"),
+        onDepositNotCompleted: ({ code }) => { if (code === "CANCELED_BY_CUSTOMER") onrampClose(""); },
+        onDepositSettled: ({ payload }) => {
+          onrampClose("USDC bought" + (payload && payload.amount ? ": " + payload.amount + " " + (payload.tokenSymbol || "USDC") : "") + ". It is in your wallet on Arc.", "good");
+          try { sendRefresh(); swRefreshBalances(); swLoadHeld(); } catch {}
+        },
+      });
+      onrampGo.disabled = false; onrampGo.textContent = "Close checkout";
+    } catch (e) {
+      onrampClose(e && e.code === 4001 ? "Signature refused in the wallet." : (e.shortMessage || e.message || String(e)), "bad");
+    } finally { onrampBusy = false; }
+  };
 
   sendPick();
   sendConnectSilently();

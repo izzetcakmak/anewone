@@ -99,3 +99,37 @@ LI.FI transactions are sent exactly as quoted, CCTP calls go to Circle's uniform
 
 To re-verify after an update: `curl -s https://anewone.xyz/vendor/gangway-kit.js | sha256sum` (or
 `git show HEAD:docs/vendor/gangway-kit.js | sha256sum`); a Windows checkout may carry CRLF and hash differently.
+
+## onramp-kit.js
+
+| | |
+|---|---|
+| Package | `@circle-fin/onramp-kit` (Circle, Apache-2.0), browser surface only |
+| Version | 1.0.2 |
+| File | `onramp-kit.js` (ESM, minified) |
+| Size | 97,690 bytes |
+| SHA-256 | `247b0f1b0ac00728839b754ee4c9809801473b58becf01d8712e52c981836f3f` |
+| SRI (sha384) | `rJDKoBjGtvQy7XYj/eP4cOuTVHZG2JCKdvx6oGqhTjkhz0Av70BuYadafGdI9prF` |
+
+**Not an upstream release file**: Circle ships the kit as npm modules that import `zod` and
+`pino`, so it is bundled locally with esbuild from the official npm package. The recipe is
+committed in `build-onramp/`:
+
+- `package.json` / `package-lock.json`: `@circle-fin/onramp-kit@1.0.2` pinned, every package
+  resolved from `registry.npmjs.org` with an integrity hash
+- `entry.mjs`: re-exports exactly four symbols, `createOnrampKit`, `KitError`,
+  `ONRAMP_EVENT_TYPES`, `ONRAMP_EVENT_CODES`
+- `build.mjs`: the esbuild call; prints the hashes above
+
+The server half of the kit (`@circle-fin/onramp-kit/server`, which holds the API key) is **not**
+in this bundle; it runs in `api/onramp-session.js` on Vercel. The only remote host the bundle
+references is `https://onramp.arc.io`, Circle's hosted widget origin, which it frames in an
+iframe and origin-pins `postMessage` events to. It never touches the wallet: it receives a
+short-lived session token from our own `/api/onramp-session` and mounts the widget; the
+purchase itself happens inside Circle's frame.
+
+Loaded lazily, only when a visitor presses "Buy USDC with card".
+
+To re-verify:
+
+    cd build-onramp && npm ci && node build.mjs

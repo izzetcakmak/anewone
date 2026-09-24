@@ -7,6 +7,7 @@
     "node": "22.x"
   },
   "dependencies": {
+    "@circle-fin/onramp-kit": "1.0.2",
     "@mysten-incubation/memwal": "^0.1.8",
     "@mysten/seal": "^1.4.13",
     "@mysten/sui": "^2.31.3",
