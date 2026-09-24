@@ -1940,8 +1940,20 @@ const _logUrls = ((CFG.logRpcs && CFG.logRpcs.length) ? CFG.logRpcs : [CFG.rpc])
 // the rail froze for every visitor while two healthy endpoints sat unused behind it.
 // Starting from whichever endpoint answered last means a bad one costs one try once,
 // not one try on every call.
+// ethers retries a 429 by itself, a dozen times with growing pauses, before it lets the
+// error out. For the log pool that is the opposite of failover: in Brave the first public
+// endpoint that is not blocked outright answered 429, and one tick of the live tail sat in
+// those retries for minutes while the relay behind it would have answered in half a second
+// (25 Sep 2026: a visitor's own buy was missing from the rail a minute later). Here a 429,
+// or any 8 s of silence, is a failure like any other, and the next endpoint gets the call.
+const mkLogRpc = (u) => {
+  const req = new ethers.FetchRequest(u);
+  req.retryFunc = async () => false;
+  req.timeout = 8000;
+  return new ethers.JsonRpcProvider(req, ARC_NET, { batchMaxCount: 1, staticNetwork: ARC_NET });
+};
 function makeLogProvider(urls) {
-  const pool = urls.map((u) => ({ url: u, p: mkProvider(u) }));
+  const pool = urls.map((u) => ({ url: u, p: mkLogRpc(u) }));
   let good = 0;
   const tryEach = async (fn) => {
     let lastErr;
@@ -4737,6 +4749,10 @@ $("tGo").onclick = async () => {
     refreshNativeBalance();
     refreshFees();
     refreshTrade(); loadTokens();
+    // The trade is mined, so its log is there to read: pull the tail now instead of
+    // leaving the rail, ticker and 24h volume at the pre-trade numbers for up to 15 s
+    // (liveTail's own mutex makes this safe next to the interval).
+    liveTail();
   } catch (e) { tradeFail(e, "Transaction failed"); }
 };
 
