@@ -1144,7 +1144,13 @@
     `A NEW ONE — Deck Hand sign-in\n\nWallet: ${address}\nIssued: ${issued}\n\nThis signature only proves you own this wallet so the deck hand can keep your memory. It costs nothing and moves nothing.`;
   const onrampCard = S("onrampCard"), onrampGo = S("onrampGo"), onrampWrap = S("onrampWrap"), onrampHint = S("onrampHint");
   const onrampSay = (t, cls) => { onrampHint.textContent = t; onrampHint.className = "hint" + (cls ? " " + cls : ""); };
-  let onrampCfg = null, onrampKit = null, onrampWidget = null, onrampBusy = false;
+
+  // Brave Shields blocks every *.arc.io host, Circle's checkout origin included; the iframe then
+  // never loads. Named so the visitor knows which switch to flip.
+  let isBraveBrowser = false;
+  try { Promise.resolve(navigator.brave && navigator.brave.isBrave()).then((b) => { isBraveBrowser = !!b; }); } catch {}
+  const ONRAMP_BRAVE_HINT = "Brave Shields blocks Circle's checkout. Click the lion icon in the address bar, turn Shields off for this site, then try again.";
+let onrampCfg = null, onrampKit = null, onrampWidget = null, onrampBusy = false;
   S("onrampNet").textContent = net === "mainnet" ? "ARC MAINNET" : "ARC TESTNET";
   S("onrampNet").classList.toggle("test", net !== "mainnet");
   fetch("../api/onramp-config").then((r) => r.json()).then((c) => {
@@ -1188,10 +1194,10 @@
         onrampKit = createOnrampKit();
       }
       onrampWrap.classList.add("open");
-      onrampSay("USDC lands in " + address.slice(0, 6) + "…" + address.slice(-4) + " on Arc.");
+      onrampSay("USDC lands in " + address.slice(0, 6) + "…" + address.slice(-4) + " on Arc." + (isBraveBrowser ? " In Brave, Shields must be off for this site or the checkout stays blank." : ""));
       onrampWidget = onrampKit.mountIframe({
         session, container: onrampWrap, title: "Buy USDC with card",
-        onInitializationError: ({ code }) => onrampClose("The card checkout could not load (" + code + ").", "bad"),
+        onInitializationError: ({ code }) => onrampClose(isBraveBrowser && code === "PAGE_NOT_LOADED" ? ONRAMP_BRAVE_HINT : "The card checkout could not load (" + code + ").", "bad"),
         onSessionExpired: () => onrampClose("The card checkout timed out; press the button to start again.", "bad"),
         onDepositNotCompleted: ({ code }) => { if (code === "CANCELED_BY_CUSTOMER") onrampClose(""); },
         onDepositSettled: ({ payload }) => {
