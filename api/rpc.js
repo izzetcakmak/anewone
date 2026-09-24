@@ -7,7 +7,11 @@
 // entry of their RPC pools; other browsers reach the public endpoints directly and never get
 // this far.
 //
-// Reads only: nothing that signs or sends goes through here (wallets use their own RPC).
+// Reads, plus the broadcast of an already-signed transaction: the Google sign-in wallet
+// (Web3Auth) signs in the page and sends over the RPC it is given, and in Brave that has to be
+// this relay too, or every trade from it dies at the blocked *.arc.io host. Relaying a raw
+// transaction gives nobody anything they could not do against any public RPC; nothing here
+// signs. (25 Sep 2026)
 const UPSTREAMS = [
   "https://rpc.blockdaemon.mainnet.arc.io",
   "https://rpc.mainnet.arc.io",
@@ -17,7 +21,7 @@ const ALLOWED = new Set([
   "eth_chainId", "net_version", "eth_blockNumber", "eth_call", "eth_getLogs", "eth_getBalance",
   "eth_getCode", "eth_getStorageAt", "eth_getTransactionCount", "eth_getTransactionReceipt",
   "eth_getTransactionByHash", "eth_getBlockByNumber", "eth_getBlockByHash", "eth_gasPrice",
-  "eth_maxPriorityFeePerGas", "eth_feeHistory", "eth_estimateGas",
+  "eth_maxPriorityFeePerGas", "eth_feeHistory", "eth_estimateGas", "eth_sendRawTransaction",
 ]);
 const ORIGINS = new Set(["https://anewone.xyz", "https://www.anewone.xyz"]);
 const MAX_BATCH = 20;

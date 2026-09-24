@@ -2744,10 +2744,21 @@ async function loadWeb3Auth() {
   // the 449KB-gzip payload only loads when someone actually chooses Google.
   const { Web3Auth, CHAIN_NAMESPACES, WEB3AUTH_NETWORK, EthereumPrivateKeyProvider } =
     await import("./vendor/web3auth.esm.js");
+  // The embedded wallet reads and broadcasts over rpcTarget itself. Brave blocks every
+  // *.arc.io host, so there its calls came back empty ("Response has no error or result
+  // for request") and the Google login died on the way back from Google (25 Sep 2026). In
+  // Brave the wallet gets the site's own relay, the one Arc endpoint Brave lets through;
+  // every other browser keeps the public RPC.
+  let rpcTarget = CFG.rpc;
+  try {
+    const brave = !!(navigator.brave && await navigator.brave.isBrave());
+    const relay = (CFG.rpcs || []).find((r) => r && typeof r === "object" && r.hosts && r.hosts.includes(location.hostname));
+    if (brave && relay) rpcTarget = relay.url;
+  } catch {}
   const chainConfig = {
     chainNamespace: CHAIN_NAMESPACES.EIP155,
     chainId: CFG.chainIdHex,
-    rpcTarget: CFG.rpc,
+    rpcTarget,
     displayName: NET_NAME,
     ticker: "USDC",
     tickerName: "USD Coin",
