@@ -2760,7 +2760,10 @@ async function loadWeb3Auth() {
     clientId: WEB3AUTH_CLIENT_ID,
     web3AuthNetwork: WEB3AUTH_NETWORK[netKey] || WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
     privateKeyProvider,
-    uiConfig: { appName: "A NEW ONE", mode: "dark", loginMethodsOrder: ["google"], ...(W3A_REDIRECT ? { uxMode: "redirect" } : {}) },
+    // No whitelabel keys (appName, mode, loginMethodsOrder): Web3Auth's base plan refuses the
+    // login with "requesting features (whitelabel) are not available on base plan" (code 1003)
+    // the moment any is set — seen on mainnet, 25 Sep 2026. uxMode is a flow setting, not branding.
+    ...(W3A_REDIRECT ? { uiConfig: { uxMode: "redirect" } } : {}),
   });
   await wa.initModal();
   web3authInstance = wa;
