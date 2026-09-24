@@ -2728,15 +2728,14 @@ async function selectWallet(d) {
 const W3A_ENV = (window.ANEWONE_CONFIG.web3auth || {})[window.ANEWONE_CONFIG.mainnet.live ? "mainnet" : "testnet"] || {};
 const WEB3AUTH_CLIENT_ID = W3A_ENV.clientId || "";
 let web3authInstance = null;
-// Safari, and every browser on iOS (all WebKit), blocks Web3Auth's Google popup: the SDK
-// fetches its login config between the click and window.open, and WebKit only lets a popup
-// through in the same tick as the tap. There the login runs as a full-page redirect instead;
-// initModal() picks the result up on return and restoreWallet() finishes the connect.
-const W3A_REDIRECT = (() => {
-  const ua = navigator.userAgent || "";
-  const ios = /iP(hone|ad|od)/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  return ios || /^((?!chrome|chromium|android|crios|fxios|edg|opr).)*safari/i.test(ua);
-})();
+// The Google login runs as a full-page redirect everywhere, never a popup. The popup first
+// broke on Safari and iOS (WebKit only lets a popup through in the same tick as the tap, and
+// the SDK fetches its login config in between), then on Brave with Shields up, which cut the
+// popup's way of handing the result back and left "Response has no error or result for
+// request" (25 Sep 2026). A redirect depends on none of that: the page goes to Web3Auth, comes
+// back with the session, initModal() picks it up and restoreWallet() finishes the connect. The
+// coin panel's hash (#t=…) rides along in the return URL.
+const W3A_REDIRECT = true;
 
 async function loadWeb3Auth() {
   if (web3authInstance) return web3authInstance;
