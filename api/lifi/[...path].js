@@ -6,18 +6,10 @@
 // The key's quota is the thing to guard: like the RPC relay and the chat, this only answers
 // pages on this site, and each IP gets a bounded number of quotes a minute. Neither is a
 // security boundary (every answer here is public), both are cost ones.
+import { tooMany } from "../_ratelimit.js";
+
 const ALLOWED = new Set(["quote", "tokens", "status", "chains", "tools", "connections"]);
 const ORIGINS = new Set(["https://anewone.xyz", "https://www.anewone.xyz"]);
-
-// ---- rate limit: per IP, per warm lambda. GangWay polls /status every few seconds while a
-// bridge is in flight and re-quotes on every amount change, so the ceiling is generous.
-const hits = new Map();
-function limited(ip) {
-  const now = Date.now(), w = hits.get(ip) || [];
-  const recent = w.filter((t) => now - t < 60_000);
-  recent.push(now); hits.set(ip, recent);
-  return recent.length > 60;
-}
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -28,8 +20,9 @@ export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ message: "GET only" });
   const key = process.env.LIFI_API_KEY;
   if (!key) return res.status(503).json({ message: "LIFI_API_KEY not configured" });
-  const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "?";
-  if (limited(ip)) return res.status(429).json({ message: "slow down a little" });
+  // GangWay polls /status every few seconds while a bridge is in flight and re-quotes on
+  // every amount change, so the ceiling is generous
+  if (await tooMany(req, res, "lifi", 60)) return;
   // Vercel hands the catch-all segment over as query key "...path" (older runtimes: "path")
   const raw = req.query["...path"] ?? req.query.path ?? [];
   const parts = [].concat(raw).flatMap((x) => String(x).split("/")).filter(Boolean);

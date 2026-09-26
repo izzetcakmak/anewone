@@ -258,9 +258,11 @@ async function tokenArtwork(t) {
       // X renders JPG, PNG, WEBP and GIF on a card — never SVG, which would
       // silently come back blank, so vector art falls through to the site icon
       // unless a raster card has already been placed next to the page.
+      // Only artwork this site hosts: a card that pointed og:image at somebody else's
+      // server would hand that server every crawler and reader of the card.
       if (j.image && !/\.svg(\?|$)/i.test(j.image)) {
-        if (/^https?:\/\//.test(j.image)) return { url: j.image };
-        return { url: `${SITE}/${String(j.image).replace(/^\//, "")}` };
+        if (String(j.image).startsWith(SITE + "/")) return { url: j.image };
+        if (!/^https?:\/\//.test(j.image)) return { url: `${SITE}/${String(j.image).replace(/^\//, "")}` };
       }
     }
   } catch {}

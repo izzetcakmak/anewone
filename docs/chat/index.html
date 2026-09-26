@@ -259,11 +259,19 @@
   const pill = $("netPill");
   pill.textContent = net === "mainnet" ? "ARC MAINNET" : "ARC TESTNET";
 
-  // ---- sign-in: one personal_sign, cached a week. The text must match api/chat.js exactly.
-  const signInText = (address, issued) =>
-    `A NEW ONE — Deck Hand sign-in\n\nWallet: ${address}\nIssued: ${issued}\n\nThis signature only proves you own this wallet so the deck hand can keep your memory. It costs nothing and moves nothing.`;
+  // ---- sign-in: one Sign-In with Ethereum message (EIP-4361), traded at /api/auth for a
+  // session token good for a day; the signature itself is the credential only when the
+  // server has nowhere to keep sessions. The text must match api/_auth.js exactly.
+  const SIGN_TTL_MS = 24 * 3600 * 1000;
+  const signInText = (address, nonce, issued) => {
+    const expires = new Date(Date.parse(issued) + SIGN_TTL_MS).toISOString();
+    return `anewone.xyz wants you to sign in with your Ethereum account:\n${address}\n\n` +
+      `Sign in to A NEW ONE. This signature proves you own this wallet for two things only: keeping your Deck Hand memory, and opening card purchases that land in this wallet. It costs nothing, moves nothing, and cannot spend from the wallet.\n\n` +
+      `URI: https://anewone.xyz\nVersion: 1\nChain ID: 5042\nNonce: ${nonce}\nIssued At: ${issued}\nExpiration Time: ${expires}`;
+  };
+  const nonceHex = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
   let auth = null;
-  try { const a = JSON.parse(localStorage.getItem(AUTH_KEY) || "null"); if (a && a.address && Date.now() - Date.parse(a.issued) < 6.5 * 864e5) auth = a; } catch {}
+  try { const a = JSON.parse(localStorage.getItem(AUTH_KEY) || "null"); if (a && a.address && (a.session || a.signature) && Date.now() - Date.parse(a.issued) < SIGN_TTL_MS - 30 * 60 * 1000) auth = a; } catch {}
   const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
   function paintAuth() {
     $("signedOut").hidden = !!auth; $("signedIn").hidden = !auth;
@@ -277,15 +285,23 @@
     try {
       const accts = await eth.request({ method: "eth_requestAccounts" });
       const address = ethers.getAddress(accts[0]);
-      const issued = new Date().toISOString();
-      const signature = await eth.request({ method: "personal_sign", params: [signInText(address, issued), address] });
-      auth = { address, issued, signature };
+      const issued = new Date().toISOString(), nonce = nonceHex();
+      const signature = await eth.request({ method: "personal_sign", params: [signInText(address, nonce, issued), address] });
+      const signed = { address, nonce, issued, signature };
+      auth = signed;
+      // a session token replaces the signature in storage whenever the server can issue one
+      try {
+        const r = await fetch("/api/auth", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ auth: signed }) });
+        const j = await r.json().catch(() => ({}));
+        if (r.ok && j.session) auth = { address, issued, session: j.session };
+      } catch {}
       try { localStorage.setItem(AUTH_KEY, JSON.stringify(auth)); } catch {}
       paintAuth();
       say("sys", "Memory is on for " + short(address) + ". From here on the deck hand remembers.");
     } catch (e) { hint.className = "hint bad"; hint.textContent = e && e.code === 4001 ? "Signature refused in the wallet." : (e.shortMessage || e.message || String(e)); }
   });
   $("signOut").addEventListener("click", () => {
+    if (auth && auth.session) fetch("/api/auth", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ auth }) }).catch(() => {});
     auth = null; try { localStorage.removeItem(AUTH_KEY); } catch {}
     paintAuth(); say("sys", "Signed out. Memory is off; nothing new will be kept.");
   });

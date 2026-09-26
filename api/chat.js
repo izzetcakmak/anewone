@@ -16,6 +16,7 @@
 // with Qwen3.8 27B by default, swappable through LLM_BASE_URL / LLM_MODEL.
 import { MemWal } from "@mysten-incubation/memwal";
 import { signInText, verifyAuth } from "./_auth.js";
+import { tooMany } from "./_ratelimit.js";
 export { signInText };
 
 const ORIGINS = new Set(["https://anewone.xyz", "https://www.anewone.xyz"]);
@@ -104,15 +105,6 @@ async function complete(messages) {
   return (j.choices?.[0]?.message?.content || "").replace(/<think>[\s\S]*?<\/think>/g, "").trim();
 }
 
-// ---- rate limit: per IP, per warm lambda. A cost guard, not a security boundary.
-const hits = new Map();
-function limited(ip) {
-  const now = Date.now(), w = hits.get(ip) || [];
-  const recent = w.filter((t) => now - t < 60_000);
-  recent.push(now); hits.set(ip, recent);
-  return recent.length > 20;
-}
-
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   const origin = req.headers.origin || "", referer = req.headers.referer || "";
@@ -130,13 +122,14 @@ export default async function handler(req, res) {
     });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
-  const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "?";
-  if (limited(ip)) return res.status(429).json({ error: "slow down a little" });
+  // 20 turns a minute per IP is a person; the model and the relayer are what it protects
+  if (await tooMany(req, res, "chat", 20)) return;
 
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch { return res.status(400).json({ error: "bad json" }); } }
   const action = body?.action || "chat";
-  const user = verifyAuth(body?.auth);
+  const user = await verifyAuth(body?.auth);
+  if (body?.auth && !user) return res.status(401).json({ error: "sign in again" }); // an expired or unknown credential, not an anonymous visitor
   const ns = user ? nsFor(user) : null;
   const mw = ns ? memwal() : null;
 

@@ -164,8 +164,9 @@
       contract, which has no function that can withdraw it. There is no liquidity a dev, or we, could drain.</p></div>
     <div class="card"><span class="tag good">USDC-native</span><h3>One asset</h3><p>On Arc, USDC pays gas
       <em>and</em> buys tokens. No volatile gas coin, no priority-fee auctions.</p></div>
-    <div class="card"><span class="tag good">fair launch</span><h3>Anti-snipe</h3><p>A per-wallet cap in the
-      first blocks blunts bots and bundlers sniping a launch.</p></div>
+    <div class="card"><span class="tag good">fair launch</span><h3>Anti-snipe</h3><p>A per-wallet cap of 2% in the
+      first 20 blocks blunts bots sniping a launch. Per wallet, not per person: it slows a snipe, it does not
+      make one impossible.</p></div>
     <div class="card"><span class="tag good">verifiable</span><h3>100% open source</h3><p>Contracts, frontend and
       the indexer are all public. Read them, run them, or check any claim on this page against the source:
       <a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">github.com/izzetcakmak/anewone</a>.</p></div>
@@ -220,7 +221,9 @@
       move once into a Uniswap v3 position the contract keeps for good. The Uniswap addresses are fixed in the
       contract at deploy, so nobody can point a migration anywhere else. Fees are held in separate accounting from
       reserves.</li>
-    <li><strong>Anti-snipe:</strong> for the first 20 blocks after launch, each wallet can buy at most 2% of supply.</li>
+    <li><strong>Anti-snipe:</strong> for the first 20 blocks after launch, each wallet can buy at most 2% of supply. It is a
+      per-wallet cap: someone with several wallets can take 2% with each, so it slows and spreads a snipe rather
+      than making one impossible. The creator's own dev buy is under the same cap.</li>
     <li><strong>Verified &amp; open:</strong> the contract is public and the launchpad is a static page you can inspect; the few server functions behind Deck Hand, card purchases and bridging are listed on the <a href="privacy.html">privacy page</a>. Token names, images and comments are escaped, so a hostile token can't attack you.</li>
   </ul>
 
@@ -282,7 +285,12 @@
 
   <h2 id="faq">FAQ</h2>
   <h3>Is it really rug-proof?</h3>
-  <p>There is no liquidity pool and reserves can't be withdrawn from the contract, only traded against. So the classic "pull the LP" rug is impossible by construction. A dev can still sell their own tokens on the curve, which the trust panel surfaces (Dev holds % / Dev exits).</p>
+  <p>"Rug-proof" means one specific thing here: <strong>the liquidity cannot be pulled.</strong> Curve reserves
+    can only be traded against, and after graduation the Uniswap position sits in the platform contract, which has
+    no function that withdraws it, so the classic "pull the LP" rug is impossible by construction. It does
+    <strong>not</strong> mean the price cannot fall: a creator or a large holder can still sell everything they hold,
+    on the curve or in the pool, and the price moves with it like on any market. The trust panel on each coin
+    surfaces exactly that (Dev holds % / Dev exits / top holders), so read it before you buy.</p>
   <h3>What does it cost to launch?</h3>
   <p>Nothing but gas. There's no listing fee.</p>
   <h3>Why USDC for gas?</h3>

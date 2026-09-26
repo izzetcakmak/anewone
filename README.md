@@ -17,7 +17,7 @@ boards. Everyone's boarding the Arc. Two by two. 🦒🦒
 | Launching | Free, gas only. 1B fixed supply, no mint function. Optional dev buy in the same transaction. |
 | Pricing | USDC, Arc's native gas token, so prices mean something |
 | Trade fee | 1.5%: 0.5% to the token's creator, 1% to the platform, split evenly between its owners |
-| Sniping | Anti-snipe: at most 2% of supply per wallet for the first 20 blocks, creator included |
+| Sniping | Anti-snipe: at most 2% of supply per wallet for the first 20 blocks, creator included. Per wallet, so it slows a multi-wallet snipe rather than preventing it |
 | Graduation | At 5,000 USDC raised the curve moves into a Uniswap v3 pool at the price it ended on |
 | Liquidity | The pool position stays in the platform contract forever; there is no function that can withdraw it |
 | Sign-in | Any browser wallet (MetaMask, OKX, Rabby) or Continue with Google for a non-custodial wallet |

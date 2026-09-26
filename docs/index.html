@@ -2073,7 +2073,10 @@ const esc = (s) => String(s ?? "").replace(/[&<>"'`]/g, (c) => ({
 const safeImgSrc = (u) => {
   const s = String(u || "").trim();
   if (/^data:image\/(png|jpeg|jpg|gif|webp);/i.test(s)) return s;
-  if (/^https:\/\//i.test(s)) return s;
+  // No remote artwork: an image on somebody else's server would tell that server who is
+  // looking at the floor and when, and could weigh whatever it likes. Every coin launched
+  // on this platform carries its picture on chain (TokenImage), so nothing is lost.
+  if (/^https?:\/\//i.test(s)) return "";
   // same-origin relative asset (e.g. meta/noah.svg) — must not start with "/" or "//",
   // which would escape to another host
   if (/^[\w][\w./-]*$/.test(s) && !s.includes("//")) return s;
@@ -2610,6 +2613,12 @@ function paintCaps(inf, addr) {
   // sits in the pool, which the page reads through a separate call when it can
   const moved = migratedSet.has(addr);
   $("tLiqStat").firstChild.textContent = moved ? "POOL USDC " : "LIQUIDITY ";
+  // once in a pool the float is what holders held at graduation: the pool's own inventory
+  // and the burned rest are outside it, and the label says so
+  $("tMcapStat").firstChild.textContent = moved ? "HOLDER CAP " : "MARKET CAP ";
+  $("tMcapStat").title = moved
+    ? "Price × the tokens holders took off the curve before graduation; tokens sitting in the Uniswap pool and the burned rest are not counted"
+    : "Price × the tokens people actually hold; the rest still sits on the curve";
   $("tLiq").textContent = moved ? (poolUsdc[addr] !== undefined ? compactUsd(poolUsdc[addr]) : "…") : compactUsd(inf.raised);
 }
 // USDC (native units) sitting in a migrated coin's Uniswap pool, read on demand.
@@ -3092,13 +3101,20 @@ $("fundCopy").onclick = async () => {
 
 // ---- Buy USDC with card (Circle Onramp Kit). The button only exists when the deployment
 // holds an Onramp key (api/onramp-config.js). Pressing it: one wallet signature proving the
-// address (the same Deck Hand sign-in the chat uses, cached a week in localStorage, so a
-// Google sign-in wallet works too), then /api/onramp-session mints a session pinned to Arc
-// USDC for exactly that address, and the vendored client kit frames Circle's widget below the
-// panel. The purchase happens inside Circle's iframe; this page never sees card details.
+// address (the same Sign-In with Ethereum message the chat uses, traded at /api/auth for a
+// day's session token kept in localStorage, so a Google sign-in wallet works too), then
+// /api/onramp-session mints a session pinned to Arc USDC for exactly that address, and the
+// vendored client kit frames Circle's widget below the panel. The purchase happens inside
+// Circle's iframe; this page never sees card details. The text must match api/_auth.js.
 const ONRAMP_AUTH_KEY = "anewone_deckhand_auth";
-const onrampSignInText = (address, issued) =>
-  `A NEW ONE — Deck Hand sign-in\n\nWallet: ${address}\nIssued: ${issued}\n\nThis signature only proves you own this wallet so the deck hand can keep your memory. It costs nothing and moves nothing.`;
+const SIGN_TTL_MS = 24 * 3600 * 1000;
+const onrampSignInText = (address, nonce, issued) => {
+  const expires = new Date(Date.parse(issued) + SIGN_TTL_MS).toISOString();
+  return `anewone.xyz wants you to sign in with your Ethereum account:\n${address}\n\n` +
+    `Sign in to A NEW ONE. This signature proves you own this wallet for two things only: keeping your Deck Hand memory, and opening card purchases that land in this wallet. It costs nothing, moves nothing, and cannot spend from the wallet.\n\n` +
+    `URI: https://anewone.xyz\nVersion: 1\nChain ID: 5042\nNonce: ${nonce}\nIssued At: ${issued}\nExpiration Time: ${expires}`;
+};
+const nonceHex = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
 
 // Brave Shields blocks every *.arc.io host, Circle's checkout origin included; the iframe then
 // never loads. Named so the visitor knows which switch to flip.
@@ -3111,15 +3127,21 @@ fetch("api/onramp-config").then((r) => r.json()).then((c) => {
   $("fundCard").hidden = !onrampCfg;
 }).catch(() => {});
 async function onrampAuth() {
-  // reuse the chat's signature when it is for this wallet and still fresh
+  // reuse the chat's session when it is for this wallet and still fresh
   try {
     const a = JSON.parse(localStorage.getItem(ONRAMP_AUTH_KEY) || "null");
-    if (a && a.address && a.signature && a.address.toLowerCase() === userAddr.toLowerCase() &&
-        Date.now() - Date.parse(a.issued) < 6.5 * 864e5) return a;
+    if (a && a.address && (a.session || a.signature) && a.address.toLowerCase() === userAddr.toLowerCase() &&
+        Date.now() - Date.parse(a.issued) < SIGN_TTL_MS - 30 * 60 * 1000) return a;
   } catch {}
-  const issued = new Date().toISOString();
-  const signature = await signer.signMessage(onrampSignInText(userAddr, issued));
-  const a = { address: userAddr, issued, signature };
+  const issued = new Date().toISOString(), nonce = nonceHex();
+  const signature = await signer.signMessage(onrampSignInText(userAddr, nonce, issued));
+  const signed = { address: userAddr, nonce, issued, signature };
+  let a = signed;
+  try {
+    const r = await fetch("api/auth", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ auth: signed }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.session) a = { address: userAddr, issued, session: j.session };
+  } catch {}
   try { localStorage.setItem(ONRAMP_AUTH_KEY, JSON.stringify(a)); } catch {}
   return a;
 }
@@ -3255,8 +3277,16 @@ $("cfClaim").onclick = async () => {
   if (!signer) return toast("Connect first");
   try {
     const tx = await platform.connect(signer).claimCreatorFees();
-    toast("Collecting…"); await tx.wait();
-    toast("CREATOR FEES CLAIMED! +" + fmt(cfPot, 4) + " USDC");
+    toast("Collecting…"); const rcpt = await tx.wait();
+    // The contract decides at mining time: a claim sent in the last minute of the window
+    // can land after it, and then the pot goes to the platform (CreatorFeesExpired) rather
+    // than to the wallet (FeesClaimed). The receipt says which, so the page does too.
+    const mine = (rcpt.logs || []).filter((lg) => String(lg.address).toLowerCase() === String(CFG.platform).toLowerCase());
+    const expired = mine.find((lg) => lg.topics[0] === ethers.id("CreatorFeesExpired(address,uint256)"));
+    const claimed = mine.find((lg) => lg.topics[0] === ethers.id("FeesClaimed(address,uint256)"));
+    const amount = (lg) => { try { return fmt(ethers.AbiCoder.defaultAbiCoder().decode(["uint256"], lg.data)[0], 4); } catch { return fmt(cfPot, 4); } };
+    if (expired && !claimed) toast("Too late: the window closed while the claim was mining, " + amount(expired) + " USDC went to the platform");
+    else toast("CREATOR FEES CLAIMED! +" + (claimed ? amount(claimed) : fmt(cfPot, 4)) + " USDC");
     refreshFees(); refreshNativeBalance();   // the pot just landed in the wallet
   } catch (e) { tradeFail(e, "Transaction failed"); }
 };
@@ -3723,11 +3753,9 @@ async function resolveImgOnce(addr) {
   const m = metaOf(addr);
   let out = null;
   const img = String(m.i || "");
-  if (img.startsWith("data:image") || /\.(png|jpe?g|svg|gif|webp)(\?.*)?$/i.test(img)) out = img;
-  else if (img.startsWith("https://")) {
-    // an https metadata document that points at an image
-    try { const j = await (await fetch(img)).json(); if (j.image) out = j.image; } catch {}
-  }
+  // on-chain data URIs and this site's own files only; a remote URL in metadata is ignored
+  // (safeImgSrc would drop it anyway), so the fetch that used to follow it is gone too
+  if (img.startsWith("data:image") || (!/^https?:\/\//i.test(img) && /\.(png|jpe?g|svg|gif|webp)(\?.*)?$/i.test(img))) out = img;
   // v6+ tokens carry their image in the TokenImage launch event, not in metadata
   if (!out) out = await imageFromEvent(addr);
   // $NOAH's testnet metadata predates anewone.xyz — serve its art locally
@@ -5275,6 +5303,8 @@ async function liveTail() {
     if (tradeLogs.length) {
       ingestLogs(tradeLogs);
       rebuildStats();
+      // somebody traded a coin the connected wallet created: its pot just grew
+      if (userAddr && tradeLogs.some((l) => (tokenInfo[topicAddr(l.topics[1])] || {}).creator?.toLowerCase() === userAddr.toLowerCase())) refreshFees();
       saveStatsCache(statsIdx);
       renderFeed();
       renderSpotlight();

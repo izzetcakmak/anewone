@@ -128,7 +128,7 @@
   <h2>What stays in your browser</h2>
   <p>To remember your settings and load faster, the site keeps a few items in your browser's local storage:
     your colour theme, the wallet you last connected, your watchlist, cached copies of public chain data and
-    token images, the Deck Hand chat thread, and the wallet signature described below (for a week). These never
+    token images, the Deck Hand chat thread, and the sign-in session described below (for a day). These never
     leave your device except where this page says so. You can remove them at any time by clearing this site's
     data in your browser settings.</p>
 
@@ -146,6 +146,8 @@
     <li><strong>RPC relay</strong> (<code>/api/rpc</code>): forwards read requests, and already-signed
       transactions, to Arc's public RPC endpoints for browsers that block those hosts (Brave does). It signs
       nothing, stores nothing, and only answers pages on this site.</li>
+    <li><strong>Sign-in</strong> (<code>/api/auth</code>): checks the wallet signature described below and issues
+      the day's session token.</li>
     <li><strong>Deck Hand</strong> (<code>/api/chat</code>): sends your chat messages, the last few turns of the
       thread and a summary of the public floor index to a language model at Groq (Qwen) to write the reply. If
       you turn memory on, what <em>you</em> tell the deck hand is distilled into facts and stored, encrypted, on
@@ -161,13 +163,17 @@
       under its own privacy policy.</li>
   </ul>
   <p>Vercel keeps standard request logs for these functions (IP address, time, path) for a short period, as it
-    does for every page. Chat, onramp and quote requests are rate limited per IP address, which needs nothing
-    stored beyond a counter in memory.</p>
+    does for every page. Every function is rate limited per IP address: a counter keyed by your IP address lives
+    for one minute in a small Redis store (Upstash, Frankfurt) and is then gone. Nothing else about the request
+    is kept there.</p>
 
   <h2>Wallet sign-in</h2>
-  <p>Deck Hand memory and card purchases need to know that you control a wallet. You sign a plain message in
-    your wallet (it costs nothing and moves nothing). The signature proves the address to our functions and is
-    kept in your browser for a week; it is not a login and there is no account behind it.</p>
+  <p>Deck Hand memory and card purchases need to know that you control a wallet. You sign a Sign-In with
+    Ethereum message in your wallet (it costs nothing and moves nothing); the message names this site, the
+    chain, a random nonce, and says what it is for. Our function checks the signature and hands your browser a
+    random session token that is valid for one day; the token, paired with your address, is kept in the same
+    Redis store for that day and in your browser's local storage. Signing out deletes it. It is not a login and
+    there is no account behind it.</p>
 
   <h2>Services your browser talks to</h2>
   <p>Using the site means your browser connects to a few outside services, each under its own privacy policy:</p>

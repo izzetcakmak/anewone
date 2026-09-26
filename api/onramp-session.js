@@ -12,6 +12,7 @@
 // our own env (ONRAMP_REFERRER_DOMAIN = anewone.xyz) and never from the client.
 import { createOnrampServerKit, KitError } from "@circle-fin/onramp-kit/server";
 import { verifyAuth } from "./_auth.js";
+import { tooMany } from "./_ratelimit.js";
 
 const ORIGINS = new Set(["https://anewone.xyz", "https://www.anewone.xyz"]);
 const CHAIN = process.env.ONRAMP_CHAIN || "arc"; // 'arc-testnet' on a testnet deployment
@@ -29,15 +30,6 @@ function server() {
   return kit;
 }
 
-// ---- rate limit: per IP, per warm lambda. A cost guard, not a security boundary.
-const hits = new Map();
-function limited(ip) {
-  const now = Date.now(), w = hits.get(ip) || [];
-  const recent = w.filter((t) => now - t < 60_000);
-  recent.push(now); hits.set(ip, recent);
-  return recent.length > 10;
-}
-
 const statusFor = (type) =>
   type === "INPUT" ? 400 : type === "RATE_LIMIT" ? 429 : type === "NETWORK" ? 504 :
   type === "SERVICE" || type === "RPC" ? 502 : 500;
@@ -52,12 +44,11 @@ export default async function handler(req, res) {
   const s = server();
   if (!s) return res.status(503).json({ error: "card purchases are not enabled on this deployment" });
 
-  const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "?";
-  if (limited(ip)) return res.status(429).json({ error: "slow down a little" });
+  if (await tooMany(req, res, "onramp", 10)) return;
 
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch { return res.status(400).json({ error: "bad json" }); } }
-  const address = verifyAuth(body?.auth);
+  const address = await verifyAuth(body?.auth);
   if (!address) return res.status(401).json({ error: "sign in with the wallet first" });
 
   try {

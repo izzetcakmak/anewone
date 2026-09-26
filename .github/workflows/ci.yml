@@ -1,0 +1,35 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  contracts:
+    name: forge build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+      - run: forge --version
+      - run: forge build --sizes
+      # The mainnet-fork rehearsal (test/ANewOneMainnetFork.t.sol) skips itself without a
+      # fork; run it by hand against an Arc RPC, see MIGRATION.md.
+      - run: forge test -vv
+
+  functions:
+    name: vercel functions parse and install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: for f in api/*.js api/lifi/*.js monitor/*.mjs; do node --check "$f"; done
