@@ -2193,10 +2193,11 @@ function loadStatsCache() {
         series: Object.fromEntries(Object.entries(j.series || {})
           .map(([k, arr]) => [k, arr.map((s) => ({ b: s.b, p: BigInt(s.p), u: BigInt(s.u || 0) }))])),
         comments: j.comments || {},
+        ahead: j.ahead || {},
       };
     }
   } catch {}
-  return { lo: null, hi: null, agg: {}, net: {}, recent: [], series: {}, comments: {} };
+  return { lo: null, hi: null, agg: {}, net: {}, recent: [], series: {}, comments: {}, ahead: {} };
 }
 // ---- prebuilt floor: the same index this page used to build for itself, computed
 // once by monitor/floor.mjs and served as one static file. A cold visit was ~80
@@ -2269,6 +2270,7 @@ async function hydrateFromFloor() {
       })).filter((r) => r.tk && r.tr),
       series: rekey(idx.series, (arr) => arr.map((s) => ({ b: s.b, p: BigInt(s.p), u: BigInt(s.u || 0) }))),
       comments: rekey(idx.comments, (arr) => arr.map((c) => ({ ...c, a: cs(c.a) || c.a }))),
+      ahead: {},
     };
     indexFloor = idx.lo;
     latestBlock = Math.max(latestBlock || 0, d.tip || 0);
@@ -2321,16 +2323,29 @@ function saveStatsCache(s) {
       series: Object.fromEntries(Object.entries(s.series)
         .map(([k, arr]) => [k, arr.map((x) => ({ b: x.b, p: x.p.toString(), u: (x.u || 0n).toString() }))])),
       comments: s.comments,
+      ahead: s.ahead || {},
     }));
   } catch (e) {
     // localStorage is ~5MB; if the index outgrows it, drop the replayable part and keep totals
     try { s.recent = s.recent.slice(-500); localStorage.setItem(STATS_KEY, JSON.stringify({ lo: s.lo, hi: s.hi, agg: {}, net: {}, recent: [] })); } catch {}
   }
 }
-function ingestLogs(logs) {
+// A Trade log reaches the index one of two ways: through the block scans, which cover
+// [lo, hi] exactly once, or straight out of the visitor's own receipt, which lands before
+// the scan reaches its block. Every receipt-fed log is remembered under its transaction
+// hash and log index in statsIdx.ahead, and the scan skips it when it gets there, so a
+// trade is never counted twice; rebuildStats forgets the entry once hi has passed its block.
+const logKey = (lg) => lg.transactionHash + ":" + (lg.logIndex ?? lg.index ?? 0);
+function ingestLogs(logs, fromReceipt = false) {
   const coder = ethers.AbiCoder.defaultAbiCoder();
+  const ahead = statsIdx.ahead || (statsIdx.ahead = {});
   for (const lg of logs) {
     const token = topicAddr(lg.topics[1]);
+    if (lg.topics[0] === TRADE_TOPIC) {
+      const key = logKey(lg);
+      if (ahead[key] !== undefined) continue; // the scan reached a trade the receipt already fed in
+      if (fromReceipt) ahead[key] = lg.blockNumber;
+    }
     if (lg.topics[0] === COMMENT_TOPIC) {
       let text;
       try { [text] = coder.decode(["string"], lg.data); }
@@ -2370,6 +2385,10 @@ function ingestLogs(logs) {
   }
 }
 function rebuildStats() {
+  // receipt-fed trades the scans have since covered need no guarding any more
+  if (statsIdx.ahead && statsIdx.hi !== null) {
+    for (const [k, b] of Object.entries(statsIdx.ahead)) if (b <= statsIdx.hi) delete statsIdx.ahead[k];
+  }
   const bpd = blockTimeSec ? Math.round(86400 / blockTimeSec) : 0;
   const cutoff = bpd ? latestBlock - bpd : 0;
   // Coverage honesty: holder counts and all-time volume are only correct once the index
@@ -4863,10 +4882,11 @@ $("tGo").onclick = async () => {
   try {
     const inf = tokenInfo[currentToken];
     const c = platform.connect(signer);
+    let rcpt;
     if (isBuy) {
       const q = localQuoteBuy(inf, wei);
       const tx = await c.buy(currentToken, applySlip(q), { value: wei });
-      toast("Buying…"); await tx.wait(); toast("GET! +" + fmt(q, 2));
+      toast("Buying…"); rcpt = await tx.wait(); toast("GET! +" + fmt(q, 2));
     } else {
       const t = new ethers.Contract(currentToken, ERC20, signer);
       const allowance = await t.allowance(userAddr, CFG.platform);
@@ -4876,8 +4896,12 @@ $("tGo").onclick = async () => {
       if (allowance < wei) { toast("Approving " + fmt(wei, 2) + " $" + ((tokenMeta[currentToken] || {}).symbol || "") + "…"); await (await t.approve(CFG.platform, wei)).wait(); }
       const q = localQuoteSell(inf, wei);
       const tx = await c.sell(currentToken, wei, applySlip(q));
-      toast("Selling…"); await tx.wait(); toast("SOLD! +" + fmt(q, 4) + " USDC");
+      toast("Selling…"); rcpt = await tx.wait(); toast("SOLD! +" + fmt(q, 4) + " USDC");
     }
+    // The receipt carries the Trade log itself, so the chart, the card, the rail and the
+    // ticker move the moment the transaction is mined, from data no endpoint can be
+    // behind on. Everything that has to be re-read from the chain follows after a beat.
+    ingestReceipt(rcpt);
     await sleep(800);
     // The wallet just spent or received USDC, and nothing else refreshes the
     // number in the header: it sat at the pre-trade figure until the visitor
@@ -4887,12 +4911,29 @@ $("tGo").onclick = async () => {
     refreshNativeBalance();
     refreshFees();
     refreshTrade(); loadTokens();
-    // The trade is mined, so its log is there to read: pull the tail now instead of
-    // leaving the rail, ticker and 24h volume at the pre-trade numbers for up to 15 s
-    // (liveTail's own mutex makes this safe next to the interval).
+    // and the tail reconciles with whatever else landed in the same blocks
     liveTail();
   } catch (e) { tradeFail(e, "Transaction failed"); }
 };
+
+// The visitor's own trade, straight from its receipt: fed into the index, guarded against
+// the scan that will read the same log later, and painted everywhere at once.
+function ingestReceipt(rcpt) {
+  if (!rcpt || !statsIdx || statsIdx.hi === null) return;
+  const mine = (rcpt.logs || []).filter((lg) =>
+    String(lg.address).toLowerCase() === String(CFG.platform).toLowerCase() && lg.topics[0] === TRADE_TOPIC);
+  if (!mine.length) return;
+  latestBlock = Math.max(latestBlock || 0, rcpt.blockNumber || 0);
+  ingestLogs(mine, true);
+  rebuildStats();
+  saveStatsCache(statsIdx);
+  renderFeed();
+  renderSpotlight();
+  paintGrid();
+  paintCoinStats();
+  if (currentToken && $("tradeModal").classList.contains("open")) { renderChart(currentToken); renderTrades(currentToken); }
+  renderLiveRail(); renderLeaders();
+}
 
 // ------- your position / PnL for the connected wallet.
 // Cost basis comes from indexed Trade events (USDC spent vs received). Current value uses
@@ -5165,11 +5206,17 @@ setInterval(loadStandings, 10 * 60_000);
 // Consecutive failed ticks. A tail that fails keeps its watermark and retries, which is
 // right for a blip and silent for an outage, so a streak is said out loud once.
 let tailFails = 0;
+let tailRetry = null;
 async function liveTail() {
-  // shares the `indexing` mutex with indexUntilDone/loadStats: ingestLogs has no
-  // trade dedup, so two overlapping forward scans would double-count volume and
-  // per-trader flows — and persist the corruption via saveStatsCache
-  if (indexing || document.hidden || !statsIdx || statsIdx.hi === null || !readProvider) return;
+  // shares the `indexing` mutex with indexUntilDone/loadStats: two overlapping forward
+  // scans would double-count volume and per-trader flows — and persist the corruption
+  // via saveStatsCache. A tick that finds the history scan running is not dropped but
+  // tried again shortly, so a trade made during the scan is not left to the next interval.
+  if (indexing) {
+    if (!tailRetry) tailRetry = setTimeout(() => { tailRetry = null; liveTail(); }, 1500);
+    return;
+  }
+  if (document.hidden || !statsIdx || statsIdx.hi === null || !readProvider) return;
   indexing = true;
   try {
     // the public endpoint answers this too, and it is the one the getLogs below hits
