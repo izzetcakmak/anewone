@@ -237,9 +237,14 @@
 
   /* ---- live ticker: a strip under the header, sticky just below it ---- */
   .tickerbar { position: sticky; top: var(--tb-h, 60px); z-index: 190;
-    height: 36px; display: flex; align-items: center; gap: 16px; padding: 0 20px;
+    height: 36px; display: flex; align-items: center;
     background: rgba(var(--bg-rgb),.86); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border); overflow: hidden; }
+  /* the strip's background is full-bleed, but the text runs between the same edges as the
+     page's content (the 1560px column the header and the floor use), not the screen's:
+     on a wide monitor it used to start and vanish outside the content, which reads as noise */
+  .tickerbar-inner { max-width: 1560px; margin: 0 auto; padding: 0 20px; width: 100%; height: 100%;
+    display: flex; align-items: center; gap: 16px; min-width: 0; }
   .tk-lead { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700;
     letter-spacing: 1px; color: var(--accent); flex: none; }
   .tk-lead i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
@@ -292,7 +297,7 @@
     .strip { font-size: 11.5px; gap: 6px; }
     .strip .s-hi, .strip .s-sep, .strip .s-txt { display: none; }
     .strip .s-short { display: inline; }
-    .tickerbar { padding: 0 12px; }
+    .tickerbar-inner { padding: 0 12px; }
   }
 
 
@@ -388,7 +393,7 @@
   .topbar { position: sticky; top: 0; z-index: 200; background: rgba(var(--bg-rgb),.78);
     -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
     border-bottom: 1px solid var(--border); }
-  .topbar-inner { max-width: 1560px; margin: 0 auto; padding: 10px 20px; display: flex;
+  .topbar-inner { max-width: 1560px; margin: 0 auto; padding: 20px 20px; display: flex;
     align-items: center; gap: 10px; position: relative; }
   /* The brand is the largest thing in the bar: a 44px mark and a 22px wordmark, which
      is as big as the bar takes before it outgrows the 40px controls beside it. */
@@ -1410,8 +1415,10 @@
      A real marquee: two identical runs slide left at a constant speed, the copy takes over
      as the first leaves, so it never stops and never jumps. -->
 <div class="tickerbar" id="tickerBar" style="display:none">
-  <span class="tk-lead"><i></i>LIVE</span>
-  <div class="tk-track" id="feed"></div>
+  <div class="tickerbar-inner">
+    <span class="tk-lead"><i></i>LIVE</span>
+    <div class="tk-track" id="feed"></div>
+  </div>
 </div>
 
 <div class="wrap">
