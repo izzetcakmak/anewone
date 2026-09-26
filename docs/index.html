@@ -1774,8 +1774,10 @@
       <div class="hint" style="margin-bottom:10px">Smoothest on a phone: open this page inside the wallet app's own browser, where every approval shows up at once.</div>
       <a class="wrow" id="wmMetaMask" href="#" rel="noopener noreferrer"><span style="font-size:22px">🦊</span><span class="wname">Open in MetaMask</span></a>
       <a class="wrow" id="wmOkx" href="#" rel="noopener noreferrer"><span style="font-size:22px">⬛</span><span class="wname">Open in OKX Wallet</span></a>
-      <button class="wrow" id="wmCopy" type="button"><span style="font-size:22px">🔗</span><span class="wname">Copy link for Rabby, Trust, Coinbase…</span></button>
-      <div class="hint" style="margin-top:8px">In Rabby or any other wallet app: open its browser tab (Discover / DApps), paste the link, and connect from there.
+      <!-- Rabby mobile has no link that opens a page in it (its WalletConnect registry entry
+           carries no native or universal link), so the address is copied for its Dapps tab -->
+      <button class="wrow" id="wmCopy" type="button"><span style="font-size:22px">🐰</span><span class="wname">Rabby, Trust, Coinbase… <small style="color:var(--dim);font-weight:500">· copy the link</small></span></button>
+      <div class="hint" style="margin-top:8px">Rabby has no link that opens a page in it: copy the address, open Rabby's <b>Dapps</b> tab, paste it there and connect. The same works in any wallet app with a browser.
         WalletConnect above works too, with any wallet app; each transaction then hops to the app and back.</div>
     </div>
     <div class="row"><button onclick="closeModals()">Cancel</button></div>
