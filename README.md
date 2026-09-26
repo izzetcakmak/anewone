@@ -51,12 +51,15 @@ The full runbook is in [MIGRATION.md](MIGRATION.md).
 
 - The site never asks for a seed phrase, private key or password. Every transaction is shown and approved in
   the user's own wallet.
-- The site is static: no backend, no accounts, no trackers. See the [privacy page](https://anewone.xyz/privacy.html)
-  and the [terms](https://anewone.xyz/terms.html).
+- The launchpad is static: no accounts, no trackers. The server functions in `api/` (RPC relay, Deck Hand, card
+  onramp, LI.FI proxy) each do one thing and are described on the [privacy page](https://anewone.xyz/privacy.html);
+  see also the [terms](https://anewone.xyz/terms.html).
 - Creator links must be https; X and Telegram links are restricted to their own domains. Names, descriptions
   and comments are escaped, and images are raster only (no SVG).
 - Security contact: [security.txt](https://anewone.xyz/.well-known/security.txt).
-- 83 forge tests, including migrations against Uniswap's published v3 bytecode and invariant campaigns.
+- 87 forge tests, including migrations against Uniswap's published v3 bytecode, invariant campaigns, and a
+  rehearsal on a fork of Arc mainnet against the live platform and Uniswap's own deployment
+  (`test/ANewOneMainnetFork.t.sol`, see [MIGRATION.md](MIGRATION.md)). No external audit yet.
 
 ## Deployments
 

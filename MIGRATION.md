@@ -16,6 +16,19 @@ with Uniswap v3 deployed from its npm bytecode (`script/DeployUniswapV3.s.sol`):
 orderings migrated at the curve's last price (relative error 4e-11), every wei and every token
 accounted for, and the pool's fees split and burned as designed.
 
+It was rehearsed again on 26 Sep 2026 on a fork of Arc mainnet itself (`test/ANewOneMainnetFork.t.sol`):
+the live platform, the live $NOAH bought past its target, and Uniswap's own Arc deployment at the
+addresses above. The pool opened at the curve's last price, the position sat full range in the platform
+approved to nobody, raised USDC and reserve tokens were accounted for to the wei, and a buy and a sell
+in the pool paid fees that `collectPoolFees` split a third to the creator and burned on the token side.
+One thing a fork cannot carry is the USDC precompile's transfer path (forge's EVM has no Arc precompiles),
+so the unit tests' one-balance double is etched over the ERC-20 face; the precompile itself is what the
+testnet rehearsal covered.
+
+```bash
+forge test --match-contract MainnetFork --fork-url https://rpc.blockdaemon.mainnet.arc.io -vv
+```
+
 ```bash
 RPC=<Arc mainnet RPC>
 PLATFORM=<platform address>

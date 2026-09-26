@@ -240,7 +240,7 @@
       <div class="card">
         <h3>Then buy a coin with it</h3>
         <div class="sel"><select class="field" id="buy"><option value="">just bring USDC aboard</option></select></div>
-        <div class="hint" id="buyHint">Ranking the floor by market cap…</div>
+        <div class="hint" id="buyHint">Ranking the floor by FDV…</div>
         <div class="or"><span>or paste a coin's contract address</span></div>
         <input class="field mono" id="ca" placeholder="0x… any A NEW ONE coin, wherever you found it" spellcheck="false" autocomplete="off">
         <div class="hint" id="caHint"></div>
@@ -441,7 +441,7 @@
   const venueTag = (t) => t.venue === "pool" ? "Uniswap" : "curve";
   function addOption(t) {
     if ([...buySel.options].some((o) => o.value === t.address)) return;
-    buySel.add(new Option("$" + t.symbol + " · " + t.name + " · " + fmtUsd(t.mcap) + " mcap · " + venueTag(t), t.address));
+    buySel.add(new Option("$" + t.symbol + " · " + t.name + " · " + fmtUsd(t.mcap) + " FDV · " + venueTag(t), t.address));
   }
 
   async function loadTokens() {
@@ -460,7 +460,7 @@
       tokens = rows.slice(0, 10);
       for (const t of tokens) addOption(t);
       const pools = rows.filter((r) => r.venue === "pool").length;
-      buyHint.textContent = "Top 10 by market cap on A NEW ONE, out of " + rows.length + " buyable coins" + (pools ? " (" + pools + " on Uniswap)" : "") +
+      buyHint.textContent = "Top 10 by FDV (price × 1B) on A NEW ONE, out of " + rows.length + " buyable coins" + (pools ? " (" + pools + " on Uniswap)" : "") +
         ". The whole bridged amount (minus gas) is spent; 3% slippage guard on curves, 5% in pools.";
       if (wanted) await pickByAddress(wanted, true);
     } catch (e) { buyHint.textContent = "Could not load the floor: " + (e.shortMessage || e.message); }
@@ -484,7 +484,7 @@
     addOption(d);
     if (!tokens.some((t) => t.address === d.address)) tokens.push(d);
     buySel.value = d.address;
-    say(caHint, "$" + d.symbol + " · " + d.name + " · " + fmtUsd(d.mcap) + " market cap · " + (d.venue === "pool" ? "on Uniswap v3" : "on its curve") + ". Selected.", "good");
+    say(caHint, "$" + d.symbol + " · " + d.name + " · " + fmtUsd(d.mcap) + " FDV · " + (d.venue === "pool" ? "on Uniswap v3" : "on its curve") + ". Selected.", "good");
     if (!quiet) boot();
   }
   let caTimer = null;

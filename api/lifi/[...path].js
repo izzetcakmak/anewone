@@ -2,14 +2,34 @@
 // key never ships to browsers, and forwards GET requests to https://li.quest/v1/<path>.
 // Only the read-only endpoints the kit uses are allowed. With no key configured the proxy
 // answers 503 and the demo falls back to calling li.quest directly (keyless limits apply).
+//
+// The key's quota is the thing to guard: like the RPC relay and the chat, this only answers
+// pages on this site, and each IP gets a bounded number of quotes a minute. Neither is a
+// security boundary (every answer here is public), both are cost ones.
 const ALLOWED = new Set(["quote", "tokens", "status", "chains", "tools", "connections"]);
+const ORIGINS = new Set(["https://anewone.xyz", "https://www.anewone.xyz"]);
+
+// ---- rate limit: per IP, per warm lambda. GangWay polls /status every few seconds while a
+// bridge is in flight and re-quotes on every amount change, so the ceiling is generous.
+const hits = new Map();
+function limited(ip) {
+  const now = Date.now(), w = hits.get(ip) || [];
+  const recent = w.filter((t) => now - t < 60_000);
+  recent.push(now); hits.set(ip, recent);
+  return recent.length > 60;
+}
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-store");
+  const origin = req.headers.origin || "", referer = req.headers.referer || "";
+  const fromSite = ORIGINS.has(origin) || [...ORIGINS].some((o) => referer.startsWith(o + "/")) || process.env.CHAT_ALLOW_ANY_ORIGIN === "1";
+  if (!fromSite) return res.status(403).json({ message: "this proxy serves anewone.xyz" });
+  if (ORIGINS.has(origin)) { res.setHeader("Access-Control-Allow-Origin", origin); res.setHeader("Vary", "Origin"); }
   if (req.method !== "GET") return res.status(405).json({ message: "GET only" });
   const key = process.env.LIFI_API_KEY;
   if (!key) return res.status(503).json({ message: "LIFI_API_KEY not configured" });
+  const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "?";
+  if (limited(ip)) return res.status(429).json({ message: "slow down a little" });
   // Vercel hands the catch-all segment over as query key "...path" (older runtimes: "path")
   const raw = req.query["...path"] ?? req.query.path ?? [];
   const parts = [].concat(raw).flatMap((x) => String(x).split("/")).filter(Boolean);
@@ -17,7 +37,7 @@ export default async function handler(req, res) {
   const url = new URL("https://li.quest/v1/" + parts[0]);
   for (const [k, v] of Object.entries(req.query)) if (k !== "path" && k !== "...path") url.searchParams.set(k, String(v));
   try {
-    const r = await fetch(url, { headers: { "x-lifi-api-key": key, accept: "application/json" } });
+    const r = await fetch(url, { headers: { "x-lifi-api-key": key, accept: "application/json" }, signal: AbortSignal.timeout(20_000) });
     const body = await r.text();
     res.status(r.status).setHeader("content-type", "application/json").send(body);
   } catch (e) {

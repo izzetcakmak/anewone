@@ -15,7 +15,7 @@
 </script>
 <title>Privacy | A NEW ONE</title>
 <link rel="canonical" href="https://anewone.xyz/privacy.html">
-<meta name="description" content="How A NEW ONE handles your data: no accounts, no trackers, no backend, and we never ask for your keys.">
+<meta name="description" content="How A NEW ONE handles your data: no accounts, no trackers, a few small server functions that are listed here, and we never ask for your keys.">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <meta name="theme-color" content="#07080b">
@@ -90,6 +90,8 @@
   a:hover { text-decoration: underline; }
   ul { color: var(--dim); margin: 10px 0 10px 22px; }
   li { margin: 7px 0; }
+  code { font-family: var(--mono); font-size: .88em; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 1px 6px; color: var(--text); }
   .note { border-left: 3px solid var(--accent); background: rgba(var(--accent-rgb),.05); padding: 12px 16px;
     border-radius: 0 10px 10px 0; margin: 16px 0; }
   .footer { margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--faint); font-size: 13px; }
@@ -111,32 +113,66 @@
   </div>
 
   <h1>Privacy</h1>
-  <p class="lede">A NEW ONE is a static website with no backend of its own. There are no accounts, we do not
-    collect your personal data, and we will never ask for your seed phrase or private key.</p>
-  <p class="updated">Last updated: 11 September 2026</p>
+  <p class="lede">A NEW ONE is a static website with a handful of small server functions, each listed below.
+    There are no accounts, no trackers, and we will never ask for your seed phrase or private key.</p>
+  <p class="updated">Last updated: 26 September 2026</p>
 
   <h2>What we do not collect</h2>
   <ul>
-    <li>No sign-up, no user accounts, no profiles.</li>
+    <li>No sign-up, no user accounts, no profiles, no email addresses.</li>
     <li>No analytics, advertising or tracking scripts, and no tracking cookies.</li>
-    <li>No server of ours stores what you do on the site. The site is a set of static files.</li>
+    <li>The launchpad itself (the floor, coin pages, launching and trading) runs entirely in your browser against
+      the Arc network. No server of ours records what you look at or trade.</li>
   </ul>
 
   <h2>What stays in your browser</h2>
   <p>To remember your settings and load faster, the site keeps a few items in your browser's local storage:
-    your colour theme, the wallet you last connected, your watchlist, and cached copies of public chain data
-    and token images. These never leave your device and are never sent to us. You can remove them at any time
-    by clearing this site's data in your browser settings.</p>
+    your colour theme, the wallet you last connected, your watchlist, cached copies of public chain data and
+    token images, the Deck Hand chat thread, and the wallet signature described below (for a week). These never
+    leave your device except where this page says so. You can remove them at any time by clearing this site's
+    data in your browser settings.</p>
 
   <h2>Public blockchain data</h2>
   <p>Launching a token, trading and posting a comment are transactions on the Arc network. Like all blockchain
     transactions they are public and permanent, and they are linked to your wallet address. Nobody, including
-    us, can edit or delete them.</p>
+    us, can edit or delete them. We publish a read-only index of that public data (the floor index and the
+    Boarding Pass standings) so the site loads fast; it contains nothing that is not already on chain.</p>
+
+  <h2>Our server functions</h2>
+  <p>A few features need a server, because they use an API key that must not ship to browsers or because a
+    browser cannot reach a service directly. They run as serverless functions on Vercel, on this site's own
+    domain, and each does one thing:</p>
+  <ul>
+    <li><strong>RPC relay</strong> (<code>/api/rpc</code>): forwards read requests, and already-signed
+      transactions, to Arc's public RPC endpoints for browsers that block those hosts (Brave does). It signs
+      nothing, stores nothing, and only answers pages on this site.</li>
+    <li><strong>Deck Hand</strong> (<code>/api/chat</code>): sends your chat messages, the last few turns of the
+      thread and a summary of the public floor index to a language model at Groq (Qwen) to write the reply. If
+      you turn memory on, what <em>you</em> tell the deck hand is distilled into facts and stored, encrypted, on
+      Walrus mainnet through Walrus Memory (MemWal) under a namespace derived from your wallet address, so it can
+      be recalled on your next visit and device. The bot's replies are not stored. Memory is off until you sign
+      in, and signing out stops anything new being kept. To have a wallet's memory deleted, write to us at the
+      address below with the wallet.</li>
+    <li><strong>Card purchases</strong> (<code>/api/onramp-session</code>): opens a Circle Onramp session for
+      your signed-in wallet so USDC bought with a card lands there. The purchase itself, including any identity
+      checks, happens in Circle's widget under Circle's privacy policy; we never see your card details.</li>
+    <li><strong>GangWay quotes</strong> (<code>/api/lifi</code>): forwards bridge and swap quote requests to LI.FI
+      with our partner key. A quote request carries the amount and the wallet addresses involved, which LI.FI sees
+      under its own privacy policy.</li>
+  </ul>
+  <p>Vercel keeps standard request logs for these functions (IP address, time, path) for a short period, as it
+    does for every page. Chat, onramp and quote requests are rate limited per IP address, which needs nothing
+    stored beyond a counter in memory.</p>
+
+  <h2>Wallet sign-in</h2>
+  <p>Deck Hand memory and card purchases need to know that you control a wallet. You sign a plain message in
+    your wallet (it costs nothing and moves nothing). The signature proves the address to our functions and is
+    kept in your browser for a week; it is not a login and there is no account behind it.</p>
 
   <h2>Services your browser talks to</h2>
   <p>Using the site means your browser connects to a few outside services, each under its own privacy policy:</p>
   <ul>
-    <li><strong>Hosting:</strong> the site is served by Vercel, which keeps standard request logs.</li>
+    <li><strong>Hosting:</strong> the site and its functions are served by Vercel, which keeps standard request logs.</li>
     <li><strong>Arc network providers:</strong> your browser reads chain data from Arc RPC endpoints (such as
       Arc's public RPC, QuickNode, Blockdaemon and dRPC), which see those requests.</li>
     <li><strong>Fonts:</strong> typefaces load from Google Fonts.</li>
@@ -144,6 +180,9 @@
       transactions under its own policy.</li>
     <li><strong>Continue with Google:</strong> if you choose it, sign-in is handled by Web3Auth under its own
       privacy policy. It creates a non-custodial wallet; we never see your Google password.</li>
+    <li><strong>Bridging (GangWay):</strong> moving funds in from other chains uses Circle CCTP and LI.FI, and
+      the source chain's own RPC endpoints. Deck Hand uses Groq and Walrus as described above; card purchases
+      use Circle.</li>
   </ul>
 
   <h2>Your keys stay yours</h2>

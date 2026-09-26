@@ -1438,7 +1438,7 @@
     <div class="sorts" id="sortTabs">
       <button data-sort="trending" class="on">Trending</button>
       <button data-sort="new">Newest</button>
-      <button data-sort="mcap">Top MC</button>
+      <button data-sort="mcap" title="Fully diluted value: price × 1B">Top FDV</button>
       <button data-sort="grad">Graduating</button>
     </div>
     <div class="searchwrap">
@@ -1459,8 +1459,8 @@
   <div id="filterPanel" class="filters" style="display:none">
     <label>Min holders<input id="fHolders" type="number" min="0" placeholder="any"></label>
     <label>Min 24h vol ($)<input id="fVol" type="number" min="0" placeholder="any"></label>
-    <label>Min mcap ($)<input id="fMcapMin" type="number" min="0" placeholder="any"></label>
-    <label>Max mcap ($)<input id="fMcapMax" type="number" min="0" placeholder="any"></label>
+    <label>Min FDV ($)<input id="fMcapMin" type="number" min="0" placeholder="any"></label>
+    <label>Max FDV ($)<input id="fMcapMax" type="number" min="0" placeholder="any"></label>
     <label>Max age (h)<input id="fAge" type="number" min="0" placeholder="any"></label>
     <label>Status<select id="fGrad">
       <option value="">any</option>
@@ -1615,23 +1615,25 @@
     <div class="tp-main">
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:18px">
       <img id="tImg" class="cimg" style="display:none">
-      <h2 id="tTitle" style="margin-bottom:0">Token</h2>
+      <h2 id="tTitle" style="margin-bottom:0;overflow-wrap:anywhere">Token</h2>
     </div>
     <div class="row" style="margin-top:0">
-      <div class="stat">MARKET CAP <b id="tMcap">–</b></div>
+      <div class="stat" title="Fully diluted value: price × the 1B supply">FDV <b id="tFdv">–</b></div>
+      <div class="stat" title="Price × the tokens people actually hold; the rest still sits on the curve" id="tMcapStat">MARKET CAP <b id="tMcap">–</b></div>
+      <div class="stat" title="Real USDC backing the coin: locked in its curve, or in its Uniswap pool" id="tLiqStat">LIQUIDITY <b id="tLiq">–</b></div>
       <div class="stat">HOLDERS <b id="tHolders">–</b></div>
       <div class="stat">24H VOL <b id="tVol">–</b></div>
       <div class="stat">YOU HOLD <b id="tHold">–</b></div>
     </div>
     <div class="chartbox" id="tChartBox" style="display:none">
-      <div class="chart-head"><span id="tChartLabel">MARKET CAP</span><span id="tChartHint"></span></div>
+      <div class="chart-head"><span id="tChartLabel">FDV</span><span id="tChartHint"></span></div>
       <div class="chart-tools" id="tChartTools" style="display:none">
         <div class="ctf" id="tTf">
           <button type="button" data-tf="60">1m</button><button type="button" data-tf="300">5m</button><button type="button" data-tf="900">15m</button>
           <button type="button" data-tf="3600">1h</button><button type="button" data-tf="14400">4h</button><button type="button" data-tf="86400">1d</button>
         </div>
         <div class="ctf">
-          <button type="button" id="tChartMode" title="Market cap or price per token">PRICE</button>
+          <button type="button" id="tChartMode" title="FDV or price per token">PRICE</button>
           <button type="button" id="tChartLog" title="Logarithmic scale">LOG</button>
         </div>
       </div>
@@ -2117,6 +2119,14 @@ function setStatus(msg) {
 
 // ---- trader-facing display helpers
 const TOTAL_SUPPLY_TOKENS = 1_000_000_000n; // fixed 1B per launch in the contract
+// The launch form caps a name at 48 characters and a symbol at 12, but createToken is
+// permissionless and caps neither, so a coin launched by hand can carry a name the length
+// of a page. Every name and symbol is cut to the form's limits here, at the one place
+// they enter the page, and flattened to a single line; the cards, the title, the ticker
+// and the tab title all read from this.
+const NAME_MAX = 48, SYMBOL_MAX = 12;
+const oneLine = (s, max) => String(s ?? "").replace(/[\p{Cc}\p{Cf}\s]+/gu, " ").trim().slice(0, max);
+const nameMeta = (name, symbol) => ({ name: oneLine(name, NAME_MAX) || "?", symbol: oneLine(symbol, SYMBOL_MAX) || "?" });
 const TOTAL_SUPPLY_WEI = TOTAL_SUPPLY_TOKENS * (10n ** 18n);
 function compactUsd(wei) {
   const n = Number(ethers.formatEther(wei));
@@ -2210,7 +2220,7 @@ async function hydrateFromFloor() {
   for (const t of d.tokens || []) {
     const a = cs(t.addr);
     if (!a) continue;
-    tokenMeta[a] = { name: t.name, symbol: t.symbol };
+    tokenMeta[a] = nameMeta(t.name, t.symbol);
     tokenInfo[a] = normInfo({ ...t, creator: cs(t.creator) || t.creator });
     addrs.push(a);
   }
@@ -2408,7 +2418,7 @@ function paintCoinStats() {
   const addr = currentToken;
   if (!addr || !$("tradeModal").classList.contains("open") || !tokenInfo[addr]) return;
   const st = tradeStats[addr] || {};
-  $("tMcap").textContent = compactUsd(marketCapWei(tokenInfo[addr]));
+  paintCaps(tokenInfo[addr], addr);
   $("tHolders").textContent = fullyIndexed ? (st.holders || 0) : "…";
   $("tVol").textContent = covers24h ? compactUsd(st.vol24 || 0n) : "…";
 }
@@ -2530,8 +2540,35 @@ function localQuoteSell(inf, amount) {
 // open tab for nothing, instead of each tab re-reading info() — which, with a
 // crowd watching, is the one cost that grows with the size of the crowd.
 const priceOf = (inf) => (inf.pxWad !== undefined ? inf.pxWad : (inf.vUsdc * WAD) / inf.tReserve);
-// priceOf is USDC-wei per whole token, so × total supply gives the cap in USDC-wei
+// priceOf is USDC-wei per whole token, so × total supply gives the fully diluted value in
+// USDC-wei. Launchpads call this number "market cap"; it is really FDV, since most of the
+// supply still sits on the curve. The cards and the sort use it, labelled FDV.
 const marketCapWei = (inf) => priceOf(inf) * TOTAL_SUPPLY_TOKENS;
+// The cap people mean by "market cap": price × the tokens that have left the curve. After
+// a migration tReserve is frozen at graduation, so this is the pre-graduation float; the
+// pool's own tokens are not counted as circulating and the burned rest is gone for good.
+const circCapWei = (inf) => (priceOf(inf) * (TOTAL_SUPPLY_TOKENS * WAD - inf.tReserve)) / WAD;
+function paintCaps(inf, addr) {
+  $("tFdv").textContent = compactUsd(marketCapWei(inf));
+  $("tMcap").textContent = compactUsd(circCapWei(inf));
+  // raised is the real USDC locked in the curve; migrate() zeroes it and the USDC then
+  // sits in the pool, which the page reads through a separate call when it can
+  const moved = migratedSet.has(addr);
+  $("tLiqStat").firstChild.textContent = moved ? "POOL USDC " : "LIQUIDITY ";
+  $("tLiq").textContent = moved ? (poolUsdc[addr] !== undefined ? compactUsd(poolUsdc[addr]) : "…") : compactUsd(inf.raised);
+}
+// USDC (native units) sitting in a migrated coin's Uniswap pool, read on demand.
+const poolUsdc = {};
+async function readPoolUsdc(addr) {
+  try {
+    const pool = await poolOf(addr);
+    if (!pool || pool === ethers.ZeroAddress) return;
+    // the pool holds USDC through its 6-decimal ERC-20 face; the page counts in native 18
+    const face = new ethers.Contract(dex.usdc, ["function balanceOf(address) view returns (uint256)"], readProvider);
+    poolUsdc[addr] = BigInt(await rpc(() => face.balanceOf(pool))) * 10n ** 12n;
+    if (currentToken === addr && tokenInfo[addr]) paintCaps(tokenInfo[addr], addr);
+  } catch (e) { console.warn("pool usdc read failed", e); }
+}
 const progBps = (inf) => inf.graduated ? 10_000n : (inf.raised * BPS) / gradTarget;
 // A token belongs under "Graduating" once it is at or past the graduation line: the
 // ones that already crossed it, then those within reach of the 5,000 USDC target.
@@ -3279,7 +3316,7 @@ async function loadTokens() {
         const t = new ethers.Contract(addr, ERC20, readProvider);
         const name = await rpc(() => t.name());
         const symbol = await rpc(() => t.symbol());
-        tokenMeta[addr] = { name, symbol };
+        tokenMeta[addr] = nameMeta(name, symbol);
       }
       // an already-known curve is re-read only when it traded; the rest are
       // exactly as the last read left them
@@ -3453,7 +3490,7 @@ function cardHtml(addr) {
         <div class="cname">${esc(name)}</div>
       </div>
       <div class="cstat two">
-        <div class="cmcap"><span>Market cap</span><b>${compactUsd(marketCapWei(inf))}</b></div>
+        <div class="cmcap"><span title="Fully diluted value: price × 1B">FDV</span><b>${compactUsd(marketCapWei(inf))}</b></div>
         <div><span>Price</span><b class="cpx${flash}" title="${Number(ethers.formatEther(px))} USDC" aria-label="Price ${Number(ethers.formatEther(px))} USDC">${priceUsdHtml(px)}</b></div>
       </div>
       <div class="cstat three">
@@ -3741,10 +3778,10 @@ function buildCandles(addr, tf) {
 function paintChartTools(tf) {
   $("tChartTools").style.display = "flex";
   $("tTf").querySelectorAll("button").forEach((b) => b.classList.toggle("on", Number(b.dataset.tf) === tf));
-  $("tChartMode").textContent = chartMode === "price" ? "MCAP" : "PRICE";
-  $("tChartMode").title = chartMode === "price" ? "Show market cap" : "Show the price of one token";
+  $("tChartMode").textContent = chartMode === "price" ? "FDV" : "PRICE";
+  $("tChartMode").title = chartMode === "price" ? "Show the fully diluted value (price × 1B)" : "Show the price of one token";
   $("tChartLog").classList.toggle("on", chartLog);
-  $("tChartLabel").textContent = chartMode === "price" ? "PRICE" : "MARKET CAP";
+  $("tChartLabel").textContent = chartMode === "price" ? "PRICE" : "FDV";
 }
 function paintOhlc(c) {
   if (!c) { $("tOhlc").textContent = ""; return; }
@@ -3866,7 +3903,7 @@ function renderChart(addr) {
   }).join("");
 
   host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
-      aria-label="market cap history">
+      aria-label="fully diluted value history">
     <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="${up ? cssVar("--accent") : cssVar("--red")}" stop-opacity=".35"/>
       <stop offset="1" stop-color="${up ? cssVar("--accent") : cssVar("--red")}" stop-opacity="0"/>
@@ -3891,12 +3928,12 @@ function renderChart(addr) {
     cur.setAttribute("x1", x(best.b)); cur.setAttribute("x2", x(best.b)); cur.setAttribute("opacity", ".8");
     dot.setAttribute("cx", x(best.b)); dot.setAttribute("cy", y(best.v)); dot.setAttribute("opacity", "1");
     const when = ageText(latestBlock ? latestBlock - best.b : null);
-    $("tChartLabel").textContent = `MC ${compactUsd(ethers.parseEther(best.v.toFixed(18).slice(0, 20)))} · ${when}`;
+    $("tChartLabel").textContent = `FDV ${compactUsd(ethers.parseEther(best.v.toFixed(18).slice(0, 20)))} · ${when}`;
     if (ev.cancelable) ev.preventDefault();
   };
   const leave = () => {
     cur.setAttribute("opacity", "0"); dot.setAttribute("opacity", "0");
-    $("tChartLabel").textContent = "MARKET CAP";
+    $("tChartLabel").textContent = "FDV";
   };
   svg.addEventListener("mousemove", move);
   svg.addEventListener("mouseleave", leave);
@@ -4064,7 +4101,7 @@ function paintGrid() {
     box.className = "tblwrap";
     box.innerHTML = list.length
       ? `<table class="tbl"><thead><tr>
-          ${th("Token")}${th("Market cap", "mcap")}${th("24h")}${th("24h vol")}
+          ${th("Token")}${th("FDV", "mcap")}${th("24h")}${th("24h vol")}
           ${th("Traders")}${th("Holders")}${th("Curve", "grad")}${th("Age", "new")}${th("Chart")}
         </tr></thead><tbody>${list.map(rowHtml).join("")}</tbody></table>`
       : "";
@@ -4121,7 +4158,7 @@ function renderSpotlight() {
       </div>
     </div>
     <div class="spot-stats">
-      <div class="ss"><b>${compactUsd(marketCapWei(inf))}</b><span>MARKET CAP</span></div>
+      <div class="ss"><b>${compactUsd(marketCapWei(inf))}</b><span title="Fully diluted value: price × 1B">FDV</span></div>
       <div class="ss"><b class="spot-px" title="${Number(ethers.formatEther(priceOf(inf)))} USDC" aria-label="Price ${Number(ethers.formatEther(priceOf(inf)))} USDC">${priceUsdHtml(priceOf(inf))}</b><span>PRICE</span></div>
       ${ch !== null ? `<div class="ss ${ch >= 0 ? "up" : "down"}"><b>${ch >= 0 ? "+" : ""}${ch.toFixed(1)}%</b><span>24H</span></div>` : ""}
       <div class="ss"><b>${covers24h ? compactUsd(st.vol24 || 0n) : "…"}</b><span>24H VOL</span></div>
@@ -4686,13 +4723,14 @@ async function refreshTrade() {
   tokenInfo[currentToken] = normInfo(await rpc(() => platform.info(currentToken)));
   const inf = tokenInfo[currentToken];
   const st = tradeStats[currentToken] || {};
-  $("tMcap").textContent = compactUsd(marketCapWei(inf));
+  paintCaps(inf, currentToken);
   $("tHolders").textContent = fullyIndexed ? (st.holders || 0) : "…";
   $("tVol").textContent = covers24h ? compactUsd(st.vol24 || 0n) : "…";
   const pct = Number(progBps(inf)) / 100;
   $("tBar").style.width = Math.min(Math.max(pct, 1.5), 100) + "%";
   await checkMigrated([currentToken]);
   const moved = migratedSet.has(currentToken);
+  if (moved) { paintCaps(inf, currentToken); readPoolUsdc(currentToken); }
   // on a platform built with Uniswap v3 a graduated curve is closed, waiting for its move
   const reopened = !moved && reopenedSet.has(currentToken);
   const waiting = !moved && inf.graduated && migrationOn && !reopened;
@@ -5010,7 +5048,7 @@ function shareText(addr) {
     // say "Testnet" out loud there, so nobody reads the post as real money
     `Chain: ${CFG === window.ANEWONE_CONFIG.mainnet ? "Arc Network" : "Arc Testnet"}`,
   ];
-  if (inf) lines.push(`MC: ${compactUsd(marketCapWei(inf))}`);
+  if (inf) lines.push(`FDV: ${compactUsd(marketCapWei(inf))}`);
   lines.push("", url);
   return lines.join("\n");
 }

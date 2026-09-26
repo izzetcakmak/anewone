@@ -178,7 +178,10 @@
     constant-product formula against a virtual USDC reserve, so every buy pushes the price up and
     every sell pushes it down, smoothly and predictably.</p>
   <ul>
-    <li><strong>Market cap</strong> = current price × 1B supply. The app shows this (not a raw price) so numbers mean something.</li>
+    <li><strong>FDV</strong> = current price × the 1B supply. The floor ranks and labels coins by it, as every launchpad
+      does, but it is a fully diluted value: most of the supply still sits on the curve. The coin page also shows the
+      <strong>market cap</strong> proper (price × the tokens people actually hold) and the <strong>liquidity</strong>
+      (the real USDC locked in the curve, or in the Uniswap pool after graduation).</li>
     <li><strong>Graduation</strong> comes at 5,000 USDC raised. Trading on the curve stops there, and the curve moves into a
       Uniswap v3 pool (1% fee tier, full range) at the price it ended on, so nobody who bought on the curve is marked
       down. Only as many tokens as the raised USDC pairs with at that price go into the pool; the rest of the unsold
@@ -197,11 +200,16 @@
   <p>Every trade pays a flat <strong>1.5% fee</strong>:</p>
   <table>
     <tr><th>Slice</th><th>Goes to</th><th>Notes</th></tr>
-    <tr><td>0.5%</td><td>Token creator</td><td>Claimable within a <strong>7-day window</strong> after it starts accruing</td></tr>
-    <tr><td>1%</td><td>Platform</td><td>Split evenly between the platform owners as it accrues; each owner withdraws only their own share. Also receives creator fees left unclaimed past the window</td></tr>
+    <tr><td>0.5%</td><td>Token creator</td><td>Collects in a pot; claimable within a <strong>7-day window</strong> from the moment the pot starts accruing</td></tr>
+    <tr><td>1%</td><td>Platform</td><td>Split evenly between the platform owners as it accrues; each owner withdraws only their own share. Also receives creator pots left unclaimed past the window</td></tr>
   </table>
-  <p>If a creator doesn't claim within 7 days, the pot rolls into platform fees (anyone can trigger the
-    sweep), so claim your earnings. The Arc testnet platform predates this schedule and charges 1%, half to the creator.</p>
+  <p>How the window works: the 7 days start when your pot goes from empty to non-empty, and every fee you earn
+    while the pot is open joins it under the same deadline. Claiming empties the pot, and the next fee starts a
+    new pot with a fresh 7 days. If a pot is not claimed in time, <strong>only that pot</strong> goes to the
+    platform (anyone can trigger the sweep); the very next fee you earn starts a fresh pot and a fresh 7 days, so
+    nothing you earn afterwards is affected. A creator who claims once a week never loses anything; the window
+    only catches pots nobody comes back for. Your creator panel shows the pot and the time left on it. The Arc
+    testnet platform predates this schedule and charges 1%, half to the creator.</p>
   <p>After graduation the Uniswap pool charges its own 1% fee tier. Its USDC side is split between creator and
     platform in the same proportion as a curve fee, a third to the creator; its token side is burned.</p>
 
@@ -212,7 +220,7 @@
       contract at deploy, so nobody can point a migration anywhere else. Fees are held in separate accounting from
       reserves.</li>
     <li><strong>Anti-snipe:</strong> for the first 20 blocks after launch, each wallet can buy at most 2% of supply.</li>
-    <li><strong>Verified &amp; open:</strong> the contract is public and the frontend is a static, no-backend page you can inspect. Token names, images and comments are escaped, so a hostile token can't attack you.</li>
+    <li><strong>Verified &amp; open:</strong> the contract is public and the launchpad is a static page you can inspect; the few server functions behind Deck Hand, card purchases and bridging are listed on the <a href="privacy.html">privacy page</a>. Token names, images and comments are escaped, so a hostile token can't attack you.</li>
   </ul>
 
   <h2 id="launch">Launch a token</h2>
