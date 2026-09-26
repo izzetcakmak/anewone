@@ -1154,7 +1154,7 @@
     align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 11px;
     letter-spacing: 2px; color: #04120b; background: var(--grad);
     padding: 4px 12px; border-radius: 999px; font-weight: 700; z-index: 2; }
-  .spot-head { display: flex; align-items: center; gap: 16px; min-width: 230px; margin-top: 18px; }
+  .spot-head { display: flex; align-items: center; gap: 16px; min-width: 230px; margin-top: 24px; }
   .spot-img, .spot-ph { width: 74px; height: 74px; border-radius: 16px; object-fit: cover;
     border: 2px solid var(--gold); background: var(--bg-2); }
   .spot-ph { display: flex; align-items: center; justify-content: center; font-size: 30px;
@@ -1288,8 +1288,14 @@
     /* an 11px icon is not a thumb target; pad the button, pull the row back up */
     .cab .cfoot .ca { padding: 7px 8px 7px 0; }
     .cab .cfoot .ca svg { width: 13px; height: 13px; }
-    .spot { padding: 16px; gap: 14px; }
-    .spot-stats { gap: 16px; }
+    .spot { padding: 16px; gap: 14px; align-items: flex-start; }
+    /* on a phone the badge floats at the top as on desktop, and the head starts under it
+       rather than behind it; the rows below sit at the flex gap, not on extra margins */
+    .spot-badge { top: 16px; left: 16px; }
+    .spot-head { margin-top: 30px; }
+    .spot-stats { gap: 14px 18px; margin-top: 0; }
+    .spot-chart { margin-top: 0; }
+    .spot-cta { margin-top: 0; }
   }
 </style>
 </head>
