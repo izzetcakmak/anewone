@@ -546,7 +546,8 @@
   .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
     background: linear-gradient(180deg, rgba(var(--bg-rgb),0) 64%, var(--bg) 99%); }
   .hero-inner { position: relative; z-index: 2; max-width: none; margin: 0;
-    padding: 30px 30px 26px; text-align: left; }
+    padding: 30px 30px 26px; text-align: left;
+    transform: translateZ(0); /* one composited layer above the animated canvas, see .hstat b */ }
   .hero h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700;
     font-size: clamp(26px, 2.8vw, 38px); line-height: 1.08; letter-spacing: -1.4px;
     margin: 0; color: var(--text); }
@@ -557,7 +558,12 @@
   .hero-sub a:hover { color: var(--accent); text-decoration: none; border-color: rgba(var(--accent-rgb),.5); }
   .hero-stats { display: flex; gap: 28px; flex-wrap: wrap; margin: 0; }
   .hstat b { display: block; font-family: var(--mono); font-weight: 700; font-size: 31px;
-    color: var(--text); letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+    color: var(--text); letter-spacing: -.5px; font-variant-numeric: tabular-nums;
+    /* iOS Safari: the text sits over a canvas that repaints every frame, and when a
+       number changes ("–" to "11") or the mono font swaps in, the text tile was only
+       partly repainted, so digits showed with their top or bottom cut off. Its own
+       layer, repainted whole on every change, is what stops that. */
+    will-change: contents; transform: translateZ(0); }
   .hstat span { font-size: 11px; letter-spacing: 2.2px; color: var(--dim);
     text-transform: uppercase; font-weight: 600; }
   .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; margin: 0; }
