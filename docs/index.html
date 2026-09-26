@@ -2928,9 +2928,11 @@ async function loadWalletConnect() {
   const dark = (document.documentElement.getAttribute("data-theme") || "dark") !== "light";
   wcProvider = await EthereumProvider.init({
     projectId: WC_PROJECT_ID,
-    // optional, not required: a wallet that does not know Arc yet can still pair, and
-    // connect() then asks it to add the chain, as it does with an injected wallet
-    optionalChains: [CFG.chainId],
+    // Arc is required at pairing time. Asked for as optional it was left out of the session
+    // by a wallet app that had not enabled it, and the switch/add requests that followed
+    // had to reach an app already in the background, which they did not (27 Sep 2026). A
+    // wallet that cannot offer Arc now refuses the pairing with its own message instead.
+    chains: [CFG.chainId],
     rpcMap: { [CFG.chainId]: CFG.rpc },
     optionalMethods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_sign",
       "wallet_switchEthereumChain", "wallet_addEthereumChain"],
@@ -2957,7 +2959,10 @@ async function connectWalletConnect() {
   } catch (e) {
     try { if (!userAddr) localStorage.removeItem(LAST_WALLET_KEY); } catch {}
     const { message } = walletError(e);
-    if (!/closed|cancel|reject|user/i.test(message)) toast(walletErrorText(e, "WalletConnect failed"));
+    console.warn("walletconnect", message);
+    if (/chain|namespace|unsupported|not supported/i.test(message)) {
+      toast(`That wallet app does not offer ${NET_NAME} (chain ${CFG.chainId}) yet. MetaMask mobile has Arc built in; or use Continue with Email or Social.`);
+    } else if (!/closed|cancel|reject|user/i.test(message)) toast(walletErrorText(e, "WalletConnect failed"));
   } finally { $("wcBtn").disabled = false; }
 }
 
