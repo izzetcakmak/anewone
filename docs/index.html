@@ -672,7 +672,9 @@
   #viewTabs { margin-left: auto; }
   .tblwrap { margin-top: 14px; overflow-x: auto; border: 1px solid var(--border);
     border-radius: var(--r-md); background: var(--surface); }
-  .tbl { width: 100%; min-width: 780px; border-collapse: collapse; }
+  /* separate borders: Safari drops position: sticky on the cells of a collapsed table,
+     which is why the token column scrolled away on iPhones */
+  .tbl { width: 100%; min-width: 780px; border-collapse: separate; border-spacing: 0; }
   .tbl th { padding: 10px 12px; text-align: right; white-space: nowrap;
     font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
     color: var(--faint); border-bottom: 1px solid var(--border); }
@@ -1746,7 +1748,7 @@
 <!-- wallet picker (EIP-6963 multi-wallet) -->
 <div id="walletModal" class="modal-bg">
   <div class="modal" style="max-width:400px">
-    <button class="modal-x" onclick="closeModals()" aria-label="Close">✕</button>
+    <button class="modal-x" onclick="closeWalletModal()" aria-label="Close">✕</button>
     <h2>Connect a wallet</h2>
     <button id="gmailBtn" class="gmailbtn" type="button">
       <span class="gicon">@</span> Continue with Email or Social
@@ -1780,7 +1782,7 @@
       <div class="hint" style="margin-top:8px">Rabby has no link that opens a page in it: copy the address, open Rabby's <b>Dapps</b> tab, paste it there and connect. The same works in any wallet app with a browser.
         WalletConnect above works too, with any wallet app; each transaction then hops to the app and back.</div>
     </div>
-    <div class="row"><button onclick="closeModals()">Cancel</button></div>
+    <div class="row"><button onclick="closeWalletModal()">Cancel</button></div>
   </div>
 </div>
 
@@ -5347,8 +5349,14 @@ function closeModals() {
   // leaving the coin's page drops its #t=, without adding a history entry to step back through
   if (/t=0x[0-9a-fA-F]{40}/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
 }
+// The wallet picker closes on its own: opened from a coin's page and then dismissed, it
+// used to take the coin's page down with it and drop the visitor back on the floor.
+function closeWalletModal() { $("walletModal").classList.remove("open"); }
 // a click on the dimmed backdrop closes a dialog; the coin's page has no backdrop to click
-document.querySelectorAll(".modal-bg:not(.tpage-bg)").forEach(m => m.addEventListener("click", e => { if (e.target === m) closeModals(); }));
+document.querySelectorAll(".modal-bg:not(.tpage-bg)").forEach(m => m.addEventListener("click", e => {
+  if (e.target !== m) return;
+  if (m.id === "walletModal") closeWalletModal(); else closeModals();
+}));
 $("connectBtn").onclick = () => {
   if (userAddr) {
     const m = $("walletMenu");
