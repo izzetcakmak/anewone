@@ -2849,7 +2849,12 @@ function onAccountsChanged(accs) {
   if (!accs || accs.length === 0) disconnect();
   else if (signer || userAddr) connect();
 }
-function onChainChanged() { if (signer || userAddr) connect(); }
+function onChainChanged() {
+  // a wallet app's chainChanged over WalletConnect is its own screen, not this session's
+  // chain: requests stay stamped with Arc, so there is nothing to reconnect for
+  if (activeRdns === "walletconnect") return;
+  if (signer || userAddr) connect();
+}
 
 // ---- session restore. Nothing about the connection survived a page load before, so
 // walking from the floor to Boarding Pass and back read as "the site dropped my wallet".
@@ -3108,7 +3113,22 @@ async function connect(forcePicker, silent) {
     return toast(walletErrorText(e, "Could not connect"));
   }
   const onArc = async () => parseInt(await w.request({ method: "eth_chainId" }), 16) === CFG.chainId;
-  if (!(await onArc())) {
+  if (activeRdns === "walletconnect") {
+    // Over WalletConnect the wallet app drives the provider's idea of the chain: every
+    // chainChanged it sends (MetaMask sends its own active network right after approving)
+    // overrides a switch the page asked for, so asking is pointless. What matters is that
+    // the session carries Arc; then every request is stamped eip155:5042 and the app runs
+    // it there whatever network it shows. The pairing required Arc, so this only fails for
+    // a stale session from before that.
+    const chains = w.session?.namespaces?.eip155?.chains || [];
+    if (!chains.includes("eip155:" + CFG.chainId)) {
+      try { w.disconnect(); } catch {}
+      try { localStorage.removeItem(LAST_WALLET_KEY); } catch {}
+      return toast(`That pairing has no ${NET_NAME} in it. Connect with WalletConnect once more and approve Arc in the wallet app.`);
+    }
+    // the universal provider underneath keeps the chain requests are stamped with
+    try { w.signer.setDefaultChain("eip155:" + CFG.chainId, CFG.rpc); } catch {}
+  } else if (!(await onArc())) {
     // Ask for the switch first. If it fails for any reason other than the user saying no,
     // add the network: wallets that do not know Arc answer 4902, but not all of them do,
     // and adding a chain the wallet already has is harmless.
@@ -3147,7 +3167,11 @@ async function connect(forcePicker, silent) {
       return toast(`Please switch your wallet to ${NET_NAME} and reconnect`);
     }
   }
-  const bp = new ethers.BrowserProvider(w);
+  // ethers re-reads eth_chainId and refuses to go on when it changes under it; through
+  // WalletConnect that value follows the wallet app's screen, so the network is pinned
+  const bp = activeRdns === "walletconnect"
+    ? new ethers.BrowserProvider(w, ARC_NET, { staticNetwork: ARC_NET })
+    : new ethers.BrowserProvider(w);
   signer = await bp.getSigner();
   userAddr = await signer.getAddress();
   $("connectBtn").textContent = userAddr.slice(0, 6) + "…" + userAddr.slice(-4);
