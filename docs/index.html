@@ -2790,7 +2790,10 @@ function walletChoices() {
 }
 
 const IS_PHONE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-function openWalletPicker() {
+// showAll: the picker is wanted even when there is exactly one injected wallet, which on a
+// first connect is picked straight away. "Change wallet" inside a wallet app's browser, or
+// with one extension, used to do nothing visible: it re-picked the same wallet.
+function openWalletPicker(showAll) {
   const list = walletChoices();
   if (list.length === 0) {
     $("walletList").innerHTML = "";
@@ -2812,7 +2815,7 @@ function openWalletPicker() {
     $("walletModal").classList.add("open");
     return;
   }
-  if (list.length === 1) { selectWallet(list[0]); return; }
+  if (list.length === 1 && !showAll) { selectWallet(list[0]); return; }
   const last = localStorage.getItem(LAST_WALLET_KEY);
   $("walletNone").style.display = "none";
   $("walletMobile").style.display = "none";
@@ -5355,7 +5358,7 @@ $("connectBtn").onclick = () => {
   }
 };
 $("switchBtn").onclick = switchAccount;
-$("changeWalletBtn").onclick = () => { $("walletMenu").style.display = "none"; openWalletPicker(); };
+$("changeWalletBtn").onclick = () => { $("walletMenu").style.display = "none"; openWalletPicker(true); };
 $("disconnectBtn").onclick = disconnect;
 
 // footer contact popover
