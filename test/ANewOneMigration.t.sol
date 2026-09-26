@@ -22,6 +22,19 @@ contract EighteenDecimals {
     }
 }
 
+/// @dev Deploys whatever it is handed. A fresh contract's first CREATE lands at nonce 1 and
+///      its second at nonce 2, so the addresses Uniswap will arrive at can be predicted
+///      without leaning on the test contract's own nonce, which forge has counted
+///      differently across versions (1.7 and 1.8 disagreed, and the prediction broke).
+contract LateDeployer {
+    function deploy(bytes memory code) external returns (address a) {
+        assembly {
+            a := create(0, add(code, 0x20), mload(code))
+        }
+        require(a != address(0) && a.code.length > 0, "deploy failed");
+    }
+}
+
 /// @notice Graduation into Uniswap v3, against Uniswap's published bytecode and a USDC that
 ///         behaves like Arc's: one balance, 18 decimals natively and 6 through the ERC-20.
 contract ANewOneMigrationTest is UniV3Fixture {
@@ -214,10 +227,10 @@ contract ANewOneMigrationTest is UniV3Fixture {
     ///      opening waits for the code to arrive, and from then on it migrates as if Uniswap had
     ///      always been there.
     function test_launchesBeforeUniswap_migratesOnceItArrives() public {
-        uint256 n = vm.getNonce(address(this));
-        address futureFactory = computeCreateAddress(address(this), n + 1);
-        address futureNfpm = computeCreateAddress(address(this), n + 2);
-        ANewOne early = new ANewOne(V0, GRAD, futureFactory, futureNfpm, ARC_USDC); // nonce n
+        LateDeployer later = new LateDeployer();
+        address futureFactory = computeCreateAddress(address(later), 1);
+        address futureNfpm = computeCreateAddress(address(later), 2);
+        ANewOne early = new ANewOne(V0, GRAD, futureFactory, futureNfpm, ARC_USDC);
 
         vm.prank(creator);
         address t = early.createToken("T", "T", "", IMG);
@@ -233,8 +246,8 @@ contract ANewOneMigrationTest is UniV3Fixture {
         early.migrate(t);
 
         // Uniswap arrives, at the addresses the platform was deployed with
-        address f = _deployArtifact("UniswapV3Factory.json", ""); // nonce n + 1
-        address pm = _deployArtifact("NonfungiblePositionManager.json", abi.encode(f, NO_WETH, address(0))); // n + 2
+        address f = later.deploy(_artifactCode("UniswapV3Factory.json", "")); // its nonce 1
+        address pm = later.deploy(_artifactCode("NonfungiblePositionManager.json", abi.encode(f, NO_WETH, address(0)))); // 2
         assertEq(f, futureFactory);
         assertEq(pm, futureNfpm);
 

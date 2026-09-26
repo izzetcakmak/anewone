@@ -123,9 +123,13 @@ abstract contract UniV3Fixture is Test {
         vm.label(address(router), "SwapRouter");
     }
 
+    /// @dev The artifact's creation code with its constructor arguments appended.
+    function _artifactCode(string memory name, bytes memory args) internal view returns (bytes memory) {
+        return abi.encodePacked(vm.parseJsonBytes(vm.readFile(string.concat(FIX, name)), ".bytecode"), args);
+    }
+
     function _deployArtifact(string memory name, bytes memory args) internal returns (address a) {
-        bytes memory code =
-            abi.encodePacked(vm.parseJsonBytes(vm.readFile(string.concat(FIX, name)), ".bytecode"), args);
+        bytes memory code = _artifactCode(name, args);
         assembly {
             a := create(0, add(code, 0x20), mload(code))
         }
