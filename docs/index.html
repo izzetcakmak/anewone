@@ -1801,6 +1801,23 @@
     if (document.hidden) stop(); else start();
   });
 })();
+// The hero's two numbers, before the app bundle: ethers is the heaviest thing on the page,
+// and on a phone the dash sat there for ten seconds until it had arrived and the floor
+// index had been read through it. The last count this browser saw paints at once, and the
+// published index (25 KB) is fetched here directly; the bundle repaints both when it lands.
+(() => {
+  const count = document.getElementById("statCount"), grad = document.getElementById("statGrad");
+  const placeholder = "–";
+  try {
+    const c = localStorage.getItem("anewone_hero_count"), g = localStorage.getItem("anewone_hero_grad");
+    if (c && count.textContent === placeholder) count.textContent = c;
+    if (g && grad.textContent === placeholder) grad.textContent = g;
+  } catch {}
+  fetch("data/floor.json", { cache: "no-cache" }).then((r) => r.json()).then((d) => {
+    if (d && Array.isArray(d.tokens) && d.tokens.length) count.textContent = String(d.tokens.length);
+    if (d && d.gradTarget) grad.textContent = Number(BigInt(d.gradTarget) / 10n ** 18n).toLocaleString("en-US") + " USDC";
+  }).catch(() => {});
+})();
 </script>
 <script src="vendor/ethers.umd.min.js"></script>
 <script src="config.js"></script>
@@ -2214,6 +2231,13 @@ function loadStatsCache() {
 //
 // The generator writes plain lowercase addresses; this page keys everything on
 // EIP-55 checksummed ones, so every address crossing the boundary is normalised.
+// what the pre-bundle script above paints on the next visit, before anything has loaded
+function rememberHero() {
+  try {
+    localStorage.setItem("anewone_hero_count", $("statCount").textContent);
+    if (gradTarget !== null) localStorage.setItem("anewone_hero_grad", $("statGrad").textContent);
+  } catch {}
+}
 async function hydrateFromFloor() {
   let d;
   try {
@@ -2246,6 +2270,7 @@ async function hydrateFromFloor() {
     $("statGrad").textContent = fmt(gradTarget, 0) + " USDC";
   }
   $("statCount").textContent = String(addrs.length);
+  rememberHero();
 
   // Which index to start from: the published one, unless this browser's own cache
   // reaches further back. This used to compare only how far FORWARD each one went, and
@@ -3327,6 +3352,7 @@ async function loadTokens() {
     lastCountPoll = Date.now();
     const count = Number(await rpc(() => platform.tokensCount()));
     $("statCount").textContent = String(count);
+    rememberHero();
     $("empty").style.display = count === 0 ? "block" : "none";
     // allTokens is append-only and an ERC20's name/symbol never change, yet every
     // load re-read all of it: four serialised calls per token, 140ms apart. Only
