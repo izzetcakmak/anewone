@@ -229,7 +229,7 @@
 
   <h2 id="launch">Launch a token</h2>
   <ol>
-    <li>Connect a wallet (or sign in with Google; see <a href="#wallets">Wallets</a>).</li>
+    <li>Connect a wallet (or continue with email or a social login; see <a href="#wallets">Wallets</a>).</li>
     <li>Click <strong>+ Create Coin</strong>.</li>
     <li>Set name, symbol, and optionally an image (JPG/PNG, ≤5&nbsp;MB, ≥100×100, auto-cropped &amp; stored on-chain), a description and socials (X / Telegram / website).</li>
     <li>Optionally add a small dev buy at launch (still subject to the anti-snipe cap).</li>
@@ -243,13 +243,16 @@
     <li>Buy or sell with an amount or the <strong>25 / 50 / 75 / MAX</strong> presets.</li>
     <li>Set a <strong>max slippage</strong> (1 / 2 / 5% or custom). The contract enforces a minimum-output so a fast-moving curve can't fill you far from the quote.</li>
     <li>Your <strong>position card</strong> shows real cost basis and P&amp;L using a live sell quote (fees + curve impact included), not an optimistic price × balance.</li>
-    <li>Discover coins via <strong>Trending / Newest / Top MC / Graduating</strong>, search, advanced filters, a live trade feed, and a watchlist.</li>
+    <li>Discover coins via <strong>Trending / Newest / Top FDV / Graduating</strong>, search, advanced filters, a live trade feed, and a watchlist.</li>
   </ul>
 
   <h2 id="wallets">Wallets &amp; funding</h2>
   <h3>Connect</h3>
-  <p>Use any injected wallet (<strong>MetaMask, OKX, Rabby</strong>) or <strong>Continue with Google</strong>
-    to instantly create a non-custodial embedded wallet with no seed phrase. Both paths behave identically once connected.</p>
+  <p>Use any injected wallet (<strong>MetaMask, OKX, Rabby</strong>) or <strong>Continue with Email or Social</strong>
+    (Google, X, Discord, Apple or a one-time email code) to instantly create a non-custodial embedded wallet with no
+    seed phrase. Both paths behave identically once connected. On a phone, Safari or Chrome cannot talk to a wallet
+    app directly: the connect dialog offers to open the page inside MetaMask or OKX, or copies the link for you to
+    paste into Rabby's (or any wallet's) built-in browser, and you connect from there.</p>
   <h3>Fund it</h3>
   <p>A fresh wallet needs USDC on Arc (it's the gas <em>and</em> the money). On testnet, the app shows a
     <strong>Get test USDC</strong> button that opens <a href="https://faucet.circle.com" target="_blank" rel="noopener">Circle's faucet</a>

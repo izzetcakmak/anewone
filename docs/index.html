@@ -1742,8 +1742,9 @@
     <button class="modal-x" onclick="closeModals()" aria-label="Close">✕</button>
     <h2>Connect a wallet</h2>
     <button id="gmailBtn" class="gmailbtn" type="button">
-      <span class="gicon">G</span> Continue with Google
+      <span class="gicon">@</span> Continue with Email or Social
     </button>
+    <div class="hint" style="margin:-6px 0 12px;text-align:center">Google, X, Discord, Apple or a one-time email code. A wallet is created for you; only you hold its key.</div>
     <div class="wdivider"><span>or use a wallet</span></div>
     <div id="walletList"></div>
     <div class="hint" id="walletNone" style="display:none">
@@ -1751,6 +1752,16 @@
       <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">MetaMask</a>,
       <a href="https://www.okx.com/web3" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">OKX Wallet</a> or
       <a href="https://rabby.io" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">Rabby</a>, then reload.
+    </div>
+    <!-- a phone browser has no wallet extension: the wallet app has a browser of its own,
+         and the page opens inside it. MetaMask and OKX take a link straight to this page;
+         the others need it pasted into their browser. -->
+    <div id="walletMobile" style="display:none">
+      <div class="hint" style="margin-bottom:10px">Phone browsers can't reach a wallet app directly. Open this page inside your wallet's own browser:</div>
+      <a class="wrow" id="wmMetaMask" href="#" rel="noopener noreferrer"><span style="font-size:22px">🦊</span><span class="wname">Open in MetaMask</span></a>
+      <a class="wrow" id="wmOkx" href="#" rel="noopener noreferrer"><span style="font-size:22px">⬛</span><span class="wname">Open in OKX Wallet</span></a>
+      <button class="wrow" id="wmCopy" type="button"><span style="font-size:22px">🔗</span><span class="wname">Copy link for Rabby, Trust, Coinbase…</span></button>
+      <div class="hint" style="margin-top:8px">In Rabby or any other wallet app: open its browser tab (Discover / DApps), paste the link, and connect from there.</div>
     </div>
     <div class="row"><button onclick="closeModals()">Cancel</button></div>
   </div>
@@ -2761,17 +2772,33 @@ function walletChoices() {
   return list;
 }
 
+const IS_PHONE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 function openWalletPicker() {
   const list = walletChoices();
   if (list.length === 0) {
     $("walletList").innerHTML = "";
-    $("walletNone").style.display = "block";
+    if (IS_PHONE) {
+      // the page's own address, coin panel included, handed to the wallet app's browser
+      const here = location.href;
+      $("wmMetaMask").href = "https://metamask.app.link/dapp/" + here.replace(/^https?:\/\//, "");
+      $("wmOkx").href = "okx://wallet/dapp/url?dappUrl=" + encodeURIComponent(here);
+      $("wmCopy").onclick = async () => {
+        try { await navigator.clipboard.writeText(here); toast("Link copied: paste it into your wallet's browser"); }
+        catch { toast(here); }
+      };
+      $("walletNone").style.display = "none";
+      $("walletMobile").style.display = "block";
+    } else {
+      $("walletMobile").style.display = "none";
+      $("walletNone").style.display = "block";
+    }
     $("walletModal").classList.add("open");
     return;
   }
   if (list.length === 1) { selectWallet(list[0]); return; }
   const last = localStorage.getItem(LAST_WALLET_KEY);
   $("walletNone").style.display = "none";
+  $("walletMobile").style.display = "none";
   $("walletList").innerHTML = list.map((d) => {
     const icon = safeImgSrc(d.info.icon) || "";
     return `<button class="wrow" data-rdns="${esc(d.info.rdns)}">
@@ -2861,8 +2888,10 @@ async function selectWallet(d) {
   await connect();
 }
 
-// ---- embedded wallet: "Continue with Google" via Web3Auth (client-side, no backend).
-// Web3Auth runs Google OAuth + key reconstruction in the browser using a PUBLIC clientId
+// ---- embedded wallet: "Continue with Email or Social" via Web3Auth (client-side, no backend).
+// wa.connect() opens Web3Auth's own modal, which offers Google, X, Discord, Apple and a
+// one-time email code (whatever the dashboard project enables); the button on our picker
+// just says so. Web3Auth runs the OAuth + key reconstruction in the browser using a PUBLIC clientId
 // gated by a domain allowlist, then hands us a standard EIP-1193 provider — which we route
 // through the exact same selectWallet()/connect() path as an injected wallet, so all
 // trading code is identical. Activates only when config.web3authClientId is set.
@@ -2924,9 +2953,9 @@ async function loadWeb3Auth() {
 }
 
 async function loginWithGoogle() {
-  if (!WEB3AUTH_CLIENT_ID) return toast("Google sign-in isn't configured yet");
+  if (!WEB3AUTH_CLIENT_ID) return toast("Email and social sign-in isn't configured yet");
   $("gmailBtn").disabled = true;
-  $("gmailBtn").querySelector(".gicon").nextSibling.textContent = " Opening Google…";
+  $("gmailBtn").querySelector(".gicon").nextSibling.textContent = " Opening sign-in…";
   try {
     const wa = await loadWeb3Auth();
     // a redirect login leaves this page, so the choice is remembered first: on the way back
@@ -2937,10 +2966,10 @@ async function loginWithGoogle() {
     await connectEmbedded(provider, "google");
   } catch (e) {
     if (W3A_REDIRECT && !userAddr) { try { localStorage.removeItem(LAST_WALLET_KEY); } catch {} }
-    toast(e.shortMessage || e.message || "Google sign-in failed");
+    toast(e.shortMessage || e.message || "Sign-in failed");
   } finally {
     $("gmailBtn").disabled = false;
-    $("gmailBtn").querySelector(".gicon").nextSibling.textContent = " Continue with Google";
+    $("gmailBtn").querySelector(".gicon").nextSibling.textContent = " Continue with Email or Social";
   }
 }
 
