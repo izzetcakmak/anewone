@@ -185,6 +185,13 @@
       supply is burned. Anyone can trigger the move once a coin has graduated, and trading resumes in the pool.</li>
     <li>Buys and sells always clear against the contract, so there is always liquidity to exit.</li>
   </ul>
+  <p>Where the supply ends up: a coin that graduates at the 5,000 USDC target settles at roughly
+    <strong>55.6%</strong> held by the people who bought it, <strong>24.7%</strong> locked in the Uniswap pool,
+    and <strong>19.7%</strong> burned. Every curve opens with 4,000 USDC of <em>virtual</em> reserve that sets the
+    starting price and never existed as real money, which is why the raised USDC cannot pair with every unsold
+    token. If it did, the pool would open about 44% below the curve's last price and everyone who bought on the
+    curve would be down the moment it moved. Burning the difference is what keeps the price continuous, and it
+    means the leftover supply ends up with nobody at all - not held back by us.</p>
 
   <h2 id="fees">Fees &amp; creator earnings</h2>
   <p>Every trade pays a flat <strong>1.5% fee</strong>:</p>
