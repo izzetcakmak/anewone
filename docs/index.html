@@ -1126,6 +1126,13 @@
     .topbar .badge { font-size: 10px; padding: 6px 9px; }
     .topbar button { white-space: nowrap; padding: 10px 13px; font-size: 13px; }
     button { min-height: 44px; }
+    /* the bar's three buttons and the crest share one explicit height: min-height plus
+       padding plus a border on one of them came out a few pixels apart on iOS, and the
+       44px rule above turned the 40px menu square into a 40×44 slab */
+    .topbar-inner > button, .topbar-inner #connectBtn, .topbar-inner .tb-menu { height: 42px; min-height: 42px; box-sizing: border-box;
+      display: inline-flex; align-items: center; justify-content: center; line-height: 1; padding: 0 13px; }
+    .topbar-inner .tb-menu { width: 42px; padding: 0; border-radius: 12px; }
+    .tb-brand img { width: 42px; height: 42px; border-radius: 11px; }
     .modal-x { min-height: 0; width: 38px; height: 38px; }
     .pctrow button, .sorts button { min-height: 44px; }
     .sorts { width: 100%; }
