@@ -3129,9 +3129,18 @@ async function connect(forcePicker, silent) {
       } catch (e2) {
         return toast(walletErrorText(e2, "Could not add the Arc network"));
       }
+      // MetaMask switches by itself after adding a chain; a WalletConnect wallet app adds it
+      // and stays where it was, and the provider only counts the switch once it is asked for
+      // again, so ask again. For a wallet that already switched this is a no-op.
+      try { await w.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CFG.chainIdHex }] }); } catch {}
     }
     // some wallets resolve the switch but silently stay on the old chain — verify for real
-    if (!(await onArc())) return toast(`Please switch your wallet to ${NET_NAME} and reconnect`);
+    if (!(await onArc())) {
+      if (activeRdns === "walletconnect") {
+        return toast(`Your wallet app is not on ${NET_NAME}. In the app, add a network with chain id ${CFG.chainId} and RPC ${CFG.rpc}, switch to it, then connect again.`);
+      }
+      return toast(`Please switch your wallet to ${NET_NAME} and reconnect`);
+    }
   }
   const bp = new ethers.BrowserProvider(w);
   signer = await bp.getSigner();
