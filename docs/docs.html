@@ -305,9 +305,11 @@
 </div>
 <script src="config.js"></script>
 <script>
-  // fill in the live contract addresses from the shared config so docs never drift
+  // Fill the testnet rows from the shared config so docs never drift. Pinned to the testnet
+  // block on purpose: the mainnet rows above are written out in full, and picking by
+  // `mainnet.live` here printed the mainnet addresses under "Arc Testnet" once mainnet opened.
   try {
-    var c = (window.ANEWONE_CONFIG.mainnet.live ? window.ANEWONE_CONFIG.mainnet : window.ANEWONE_CONFIG.testnet);
+    var c = window.ANEWONE_CONFIG.testnet;
     if (c.platform) document.getElementById("a-platform").textContent = c.platform;
     if (c.noah) document.getElementById("a-noah").textContent = c.noah;
   } catch (e) {}
