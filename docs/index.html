@@ -2898,9 +2898,9 @@ async function restoreWallet() {
     try {
       const p = await loadWalletConnect();       // init() rehydrates a pairing that is still live
       if (p.session && p.accounts && p.accounts.length) {
-        activeEip1193 = p;
+        activeEip1193 = wcFacade(p);
         activeRdns = "walletconnect";
-        bindProviderListeners(p);
+        bindProviderListeners(activeEip1193);
         await connect(false, true);
       }
     } catch {}
@@ -2968,6 +2968,38 @@ async function loadWalletConnect() {
   wcProvider.on("disconnect", () => { if (activeRdns === "walletconnect") disconnect(); });
   return wcProvider;
 }
+// Only what needs a signature or the wallet's consent goes to the wallet app. The WalletConnect
+// provider sends every method the app approved to the app, and MetaMask approves plain reads
+// (eth_call, eth_getBlockByNumber…) as well: each of those raised the "open in MetaMask?"
+// prompt on iOS and, when the app did not answer, a false "your wallet's RPC is down"
+// warning. Reads go to the site's own RPC pool instead; they are public data.
+const WC_WALLET_METHODS = new Set([
+  "eth_requestAccounts", "eth_accounts", "eth_chainId", "eth_sendTransaction", "eth_signTransaction",
+  "eth_sign", "personal_sign", "eth_signTypedData", "eth_signTypedData_v3", "eth_signTypedData_v4",
+  "wallet_switchEthereumChain", "wallet_addEthereumChain", "wallet_watchAsset", "wallet_getPermissions",
+  "wallet_requestPermissions", "wallet_sendCalls", "wallet_getCallsStatus", "wallet_getCapabilities",
+]);
+const _rawProviders = new Map();
+async function rawRpc(method, params) {
+  let last = null;
+  for (const u of _readUrls) {
+    let p = _rawProviders.get(u);
+    if (!p) { p = mkProvider(u); _rawProviders.set(u, p); }
+    try { return await p.send(method, params || []); }
+    catch (e) { last = e; if (e && e.code === "CALL_EXCEPTION") throw e; } // a revert is an answer, not an outage
+  }
+  throw last || new Error("no RPC answered");
+}
+function wcFacade(p) {
+  return {
+    request: (args) => WC_WALLET_METHODS.has(args.method) ? p.request(args) : rawRpc(args.method, args.params),
+    on: (ev, fn) => p.on(ev, fn),
+    removeListener: (ev, fn) => p.removeListener(ev, fn),
+    disconnect: () => p.disconnect(),
+    get session() { return p.session; },
+    get signer() { return p.signer; },
+  };
+}
 async function connectWalletConnect() {
   $("walletModal").classList.remove("open");
   $("wcBtn").disabled = true;
@@ -2975,7 +3007,7 @@ async function connectWalletConnect() {
     const p = await loadWalletConnect();
     if (!p.session) await p.connect(); // the QR / wallet-app list; resolves once the wallet approves
     try { localStorage.setItem(LAST_WALLET_KEY, "walletconnect"); } catch {}
-    await connectEmbedded(p, "walletconnect");
+    await connectEmbedded(wcFacade(p), "walletconnect");
     // iOS hands each request to the wallet app by deep link, and the app sometimes opens
     // before the request reaches it; saying so beats a blank screen with no explanation
     if (IS_PHONE && userAddr) setTimeout(() => toast("Each transaction opens your wallet app. If it opens blank, come back here and tap Open again; the request is waiting."), 1200);
@@ -3212,6 +3244,10 @@ let rpcHintDismissed = false;
 function showRpcHint() { if (!rpcHintDismissed) $("rpcHint").style.display = "flex"; }
 function hideRpcHint(dismiss) { if (dismiss) rpcHintDismissed = true; $("rpcHint").style.display = "none"; }
 async function checkWalletRpc(w) {
+  // over WalletConnect the wallet app's RPC is never used by this page: reads go to the
+  // site's pool and transactions run on the chain the session names, so there is nothing
+  // to check, and the question itself would open the app
+  if (activeRdns === "walletconnect") { hideRpcHint(); return true; }
   const ask = w.request({ method: "eth_getBlockByNumber", params: ["latest", false] });
   const wait = new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 6000));
   try {
