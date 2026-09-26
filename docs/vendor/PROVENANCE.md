@@ -78,6 +78,46 @@ cd build-web3auth && npm ci
 
 ---
 
+## walletconnect.esm.js
+
+| | |
+|---|---|
+| Size | 2,127,359 bytes |
+| SHA-256 | `1a4355dcd94e9887bd4829614f285cba3e4e04e1f470c413afaf55895e03ae00` |
+
+**Not an upstream release**, like the Web3Auth bundle: WalletConnect's EIP-1193 provider with
+its QR / deep-link modal, bundled locally with esbuild from official npm packages so the site
+keeps `script-src 'self'`. Loaded only when somebody picks WalletConnect in the wallet picker.
+The recipe is committed in `build-walletconnect/`:
+
+- `package.json` — `@walletconnect/ethereum-provider` at `^2.21.0`, `buffer`, `esbuild`
+- `package-lock.json` — 308 packages, every one resolved from `registry.npmjs.org` and every one
+  carrying an integrity hash (zero exceptions)
+- `entry.mjs` — re-exports exactly one symbol: `EthereumProvider`
+- `shim.mjs` — the `globalThis.Buffer` polyfill
+
+Resolved versions: `@walletconnect/ethereum-provider`, `universal-provider`, `sign-client` at
+2.25.0; `@reown/appkit` (the modal) at 1.8.19. Built 27 Sep 2026 with `npm run build`.
+
+This bundle has wallet access, so it was also checked for where it can talk to. Every remote
+host referenced belongs to WalletConnect/Reown infrastructure (`*.walletconnect.org`,
+`*.walletconnect.com`, `*.reown.com`, `api.web3modal.org`, `fonts.reown.com`), wallet deep-link
+domains the modal offers (`go.cb-w.com`, `app.binance.com`, `phantom.app`, `solflare.com`,
+`app.safe.global`, `t.me`), `4byte.sourcify.dev` (function-signature lookups for the modal's
+transaction preview), `ipfs.io` / `arweave.net` (wallet icon fallbacks), or documentation URLs
+in library error strings (`viem.sh`, `abitype.dev`, `oxlib.sh`, `docs.soliditylang.org`,
+`feross.org`, `github.com`, `www.npmjs.com`). No unrecognised endpoint appears. The provider
+talks to the relay at `wss://relay.walletconnect.org` with the project id in `docs/config.js`,
+which is public and allowlisted to `anewone.xyz`.
+
+To re-verify the inputs:
+
+```bash
+cd build-walletconnect && npm ci && npm run build && sha256sum ../docs/vendor/walletconnect.esm.js
+```
+
+---
+
 ## gangway-kit.js
 
 | | |

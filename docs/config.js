@@ -94,6 +94,10 @@ window.ANEWONE_CONFIG = {
   // sapphire_mainnet project at dashboard.web3auth.io, whitelist https://anewone.xyz, and
   // paste its clientId into web3auth.mainnet.clientId. Empty clientId => the Google button
   // simply stays hidden on that network (nothing breaks).
+  // WalletConnect (Reown) project for the QR / deep-link path to wallet apps: Rabby, Trust,
+  // MetaMask mobile and the rest, from any phone browser. A public identifier, allowlisted to
+  // anewone.xyz at dashboard.walletconnect.com; empty => the WalletConnect row stays hidden.
+  walletConnect: { projectId: "5808bca9b4de2d02fae56788e1ded303" },
   web3auth: {
     testnet: {
       clientId: "BHMuvLRDj0_XO7RJoviuCgjbSLcvMWUgAgdCCSrStDO41bmuiyXZw9haSXuNDTtwqwR7IpqqZ_KKjqc-Jlvjqqk",

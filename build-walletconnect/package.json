@@ -1,0 +1,14 @@
+{
+  "name": "build-walletconnect",
+  "private": true,
+  "description": "Bundles WalletConnect's EthereumProvider (with its QR/deep-link modal) into docs/vendor/walletconnect.esm.js. See docs/vendor/PROVENANCE.md.",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild entry.mjs --bundle --format=esm --platform=browser --target=es2020 --minify --inject:./shim.mjs --define:process.env.NODE_ENV=\\\"production\\\" --define:global=globalThis --outfile=../docs/vendor/walletconnect.esm.js"
+  },
+  "dependencies": {
+    "@walletconnect/ethereum-provider": "^2.21.0",
+    "buffer": "^6.0.3",
+    "esbuild": "^0.25.0"
+  }
+}

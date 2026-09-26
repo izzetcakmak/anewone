@@ -20,7 +20,7 @@ boards. Everyone's boarding the Arc. Two by two. 🦒🦒
 | Sniping | Anti-snipe: at most 2% of supply per wallet for the first 20 blocks, creator included. Per wallet, so it slows a multi-wallet snipe rather than preventing it |
 | Graduation | At 5,000 USDC raised the curve moves into a Uniswap v3 pool at the price it ended on |
 | Liquidity | The pool position stays in the platform contract forever; there is no function that can withdraw it |
-| Sign-in | Any browser wallet (MetaMask, OKX, Rabby), the wallet app's own browser on a phone, or Continue with Email or Social (Google, X, Discord, Apple, email code) for a non-custodial wallet |
+| Sign-in | Any browser wallet (MetaMask, OKX, Rabby), WalletConnect to a wallet app from a phone or by QR, or Continue with Email or Social (Google, X, Discord, Apple, email code) for a non-custodial wallet |
 | Deck Hand | `/chat/`: an assistant over the live floor that remembers you across sessions and devices, memory Seal-encrypted on Walrus mainnet via [MemWal](https://github.com/MystenLabs/MemWal); model Qwen3.8 27B on Groq |
 
 ## How it works

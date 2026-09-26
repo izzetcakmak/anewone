@@ -1754,6 +1754,13 @@
     <div class="hint" style="margin:-6px 0 12px;text-align:center">Google, X, Discord, Apple or a one-time email code. A wallet is created for you; only you hold its key.</div>
     <div class="wdivider"><span>or use a wallet</span></div>
     <div id="walletList"></div>
+    <!-- WalletConnect: a QR code on a desktop, a list of wallet apps with deep links on a
+         phone; the wallet app signs, the page never sees a key. Shown once config.js
+         carries a project id. -->
+    <button class="wrow" id="wcBtn" type="button" style="display:none">
+      <span style="font-size:22px">🔗</span>
+      <span class="wname">WalletConnect <small style="color:var(--dim);font-weight:500">· Rabby, Trust, MetaMask mobile…</small></span>
+    </button>
     <div class="hint" id="walletNone" style="display:none">
       No browser wallet detected. Install
       <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">MetaMask</a>,
@@ -1764,7 +1771,7 @@
          and the page opens inside it. MetaMask and OKX take a link straight to this page;
          the others need it pasted into their browser. -->
     <div id="walletMobile" style="display:none">
-      <div class="hint" style="margin-bottom:10px">Phone browsers can't reach a wallet app directly. Open this page inside your wallet's own browser:</div>
+      <div class="hint" style="margin-bottom:10px">Phone browsers can't reach a wallet app directly. WalletConnect above hands you over to the app and back; or open this page inside your wallet's own browser:</div>
       <a class="wrow" id="wmMetaMask" href="#" rel="noopener noreferrer"><span style="font-size:22px">🦊</span><span class="wname">Open in MetaMask</span></a>
       <a class="wrow" id="wmOkx" href="#" rel="noopener noreferrer"><span style="font-size:22px">⬛</span><span class="wname">Open in OKX Wallet</span></a>
       <button class="wrow" id="wmCopy" type="button"><span style="font-size:22px">🔗</span><span class="wname">Copy link for Rabby, Trust, Coinbase…</span></button>
@@ -2866,6 +2873,19 @@ async function restoreWallet() {
     } catch {}
     return;
   }
+  if (last === "walletconnect") {
+    if (!WC_PROJECT_ID) return;
+    try {
+      const p = await loadWalletConnect();       // init() rehydrates a pairing that is still live
+      if (p.session && p.accounts && p.accounts.length) {
+        activeEip1193 = p;
+        activeRdns = "walletconnect";
+        bindProviderListeners(p);
+        await connect(false, true);
+      }
+    } catch {}
+    return;
+  }
 
   // injected wallets announce themselves asynchronously; give them a moment to arrive
   let d = null;
@@ -2893,6 +2913,52 @@ async function selectWallet(d) {
   try { localStorage.setItem(LAST_WALLET_KEY, activeRdns); } catch {}
   bindProviderListeners(activeEip1193);
   await connect();
+}
+
+// ---- WalletConnect: the way in from a phone browser to a wallet app (Rabby, Trust, MetaMask
+// mobile…) and from a desktop to a phone by QR. WalletConnect's EthereumProvider is an
+// EIP-1193 provider like any injected wallet, so once it is connected everything downstream
+// is the same connect() path. Vendored (docs/vendor/walletconnect.esm.js, PROVENANCE.md) and
+// loaded only when somebody picks it: it is 2 MB.
+const WC_PROJECT_ID = (window.ANEWONE_CONFIG.walletConnect || {}).projectId || "";
+let wcProvider = null;
+async function loadWalletConnect() {
+  if (wcProvider) return wcProvider;
+  const { EthereumProvider } = await import("./vendor/walletconnect.esm.js");
+  const dark = (document.documentElement.getAttribute("data-theme") || "dark") !== "light";
+  wcProvider = await EthereumProvider.init({
+    projectId: WC_PROJECT_ID,
+    // optional, not required: a wallet that does not know Arc yet can still pair, and
+    // connect() then asks it to add the chain, as it does with an injected wallet
+    optionalChains: [CFG.chainId],
+    rpcMap: { [CFG.chainId]: CFG.rpc },
+    optionalMethods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_sign",
+      "wallet_switchEthereumChain", "wallet_addEthereumChain"],
+    showQrModal: true,
+    qrModalOptions: { themeMode: dark ? "dark" : "light" },
+    metadata: {
+      name: "A NEW ONE",
+      description: "Meme launchpad on Arc: bonding curves priced in USDC, liquidity nobody can pull.",
+      url: "https://anewone.xyz",
+      icons: ["https://anewone.xyz/apple-touch-icon.png"],
+    },
+  });
+  wcProvider.on("disconnect", () => { if (activeRdns === "walletconnect") disconnect(); });
+  return wcProvider;
+}
+async function connectWalletConnect() {
+  $("walletModal").classList.remove("open");
+  $("wcBtn").disabled = true;
+  try {
+    const p = await loadWalletConnect();
+    if (!p.session) await p.connect(); // the QR / wallet-app list; resolves once the wallet approves
+    try { localStorage.setItem(LAST_WALLET_KEY, "walletconnect"); } catch {}
+    await connectEmbedded(p, "walletconnect");
+  } catch (e) {
+    try { if (!userAddr) localStorage.removeItem(LAST_WALLET_KEY); } catch {}
+    const { message } = walletError(e);
+    if (!/closed|cancel|reject|user/i.test(message)) toast(walletErrorText(e, "WalletConnect failed"));
+  } finally { $("wcBtn").disabled = false; }
 }
 
 // ---- embedded wallet: "Continue with Email or Social" via Web3Auth (client-side, no backend).
@@ -3250,6 +3316,10 @@ function disconnect() {
   // if signed in through Google/Web3Auth, end that session too
   if (web3authInstance && activeRdns === "google") {
     try { web3authInstance.logout(); } catch {}
+  }
+  // a WalletConnect pairing is ended on both sides, so the wallet app forgets the site too
+  if (wcProvider && activeRdns === "walletconnect") {
+    try { wcProvider.disconnect(); } catch {}
   }
   signer = null; userAddr = null;
   activeEip1193 = null; activeRdns = null;
@@ -5260,6 +5330,8 @@ document.addEventListener("click", (e) => {
   if (!e.target.closest(".foot-contact")) $("contactMenu").hidden = true;
 });
 $("gmailBtn").onclick = loginWithGoogle;
+$("wcBtn").onclick = connectWalletConnect;
+if (WC_PROJECT_ID) $("wcBtn").style.display = "flex";
 // the Google option only appears once a Web3Auth clientId is configured
 if (!WEB3AUTH_CLIENT_ID) {
   $("gmailBtn").style.display = "none";

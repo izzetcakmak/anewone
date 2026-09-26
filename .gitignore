@@ -15,6 +15,12 @@ build-web3auth/*
 !build-web3auth/package-lock.json
 !build-web3auth/entry.mjs
 !build-web3auth/shim.mjs
+# same for the WalletConnect provider bundle
+build-walletconnect/*
+!build-walletconnect/package.json
+!build-walletconnect/package-lock.json
+!build-walletconnect/entry.mjs
+!build-walletconnect/shim.mjs
 build-video/
 monitor/bridge-attestation.json
 monitor/snapshot-cache.json
