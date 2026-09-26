@@ -412,6 +412,8 @@
     const t = erc20On(addr);
     let symbol = addr.slice(0, 8), name = "";
     try { symbol = await t.symbol(); name = await t.name(); } catch {}
+    // $NOAH's on-chain name reads "Noah's Arc" on purpose (the chain it launched first on); the site shows the ark
+    if (arcCfg.noah && addr.toLowerCase() === arcCfg.noah.toLowerCase()) name = "Noah's Ark";
     const d = { address: ethers.getAddress(addr), symbol, name, graduated: inf.graduated, venue: "curve", pool: null, mcap: 0n };
     if (inf.graduated && dexFactory && dexFactory !== ethers.ZeroAddress) {
       let migrated = false, reopened = false;

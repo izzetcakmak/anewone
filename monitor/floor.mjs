@@ -216,7 +216,7 @@ function liveNetwork() {
   // mostly does), then the rest; keyed/domain-locked entries are objects and are skipped
   const urls = [...(net.logRpcs || []), ...(net.rpcs || []), net.rpc]
     .filter((u) => typeof u === "string").filter((u, i, a) => u && a.indexOf(u) === i);
-  return { platform: net.platform, mainnet, rpcs: urls };
+  return { platform: net.platform, noah: net.noah, mainnet, rpcs: urls };
 }
 export function livePlatform() { return liveNetwork().platform; }
 
@@ -395,7 +395,10 @@ export async function runFloor({ platform, log = console.log } = {}) {
   for (let i = 0; i < count; i++) {
     const addr = toAddr(word(await ethCall(platform, SEL.allTokens + encUint(i)), 0));
     const info = decodeInfo(await ethCall(platform, SEL.info + encAddr(addr)));
-    const [name, symbol] = [await callString(addr, SEL.name), await callString(addr, SEL.symbol)];
+    let [name, symbol] = [await callString(addr, SEL.name), await callString(addr, SEL.symbol)];
+    // $NOAH is Noah's Ark; its on-chain name reads "Noah's Arc" on purpose, for the chain it
+    // was the first coin to launch on, and cannot be edited. The index and the cards show the ark.
+    if (net.noah && addr.toLowerCase() === net.noah.toLowerCase()) name = "Noah's Ark";
     tokens.push({ addr, name, symbol, ...info });
   }
 

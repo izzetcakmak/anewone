@@ -1570,7 +1570,7 @@
   <div class="modal">
     <button class="modal-x" onclick="closeModals()" aria-label="Close">✕</button>
     <h2>Launch a token</h2>
-    <label>Name</label><input id="cName" placeholder="Noah's Arc" maxlength="48">
+    <label>Name</label><input id="cName" placeholder="Noah's Ark" maxlength="48">
     <label>Symbol</label><input id="cSymbol" placeholder="NOAH" maxlength="12">
     <div class="dupe" id="cDupe" style="display:none"></div>
     <label>Image <span style="color:var(--red)">*</span></label>
@@ -2127,6 +2127,11 @@ const TOTAL_SUPPLY_TOKENS = 1_000_000_000n; // fixed 1B per launch in the contra
 const NAME_MAX = 48, SYMBOL_MAX = 12;
 const oneLine = (s, max) => String(s ?? "").replace(/[\p{Cc}\p{Cf}\s]+/gu, " ").trim().slice(0, max);
 const nameMeta = (name, symbol) => ({ name: oneLine(name, NAME_MAX) || "?", symbol: oneLine(symbol, SYMBOL_MAX) || "?" });
+// $NOAH is Noah's Ark. Its on-chain name reads "Noah's Arc" on purpose, for the chain it was
+// the first coin to launch on, and a token's name is written once and cannot be edited; the
+// site shows the ark. Keyed by address, so a copycat launched under the same name is left alone.
+const DISPLAY_NAMES = { [String(CFG.noah || "").toLowerCase()]: "Noah's Ark" };
+const displayMeta = (addr, name, symbol) => nameMeta(DISPLAY_NAMES[String(addr).toLowerCase()] || name, symbol);
 const TOTAL_SUPPLY_WEI = TOTAL_SUPPLY_TOKENS * (10n ** 18n);
 function compactUsd(wei) {
   const n = Number(ethers.formatEther(wei));
@@ -2220,7 +2225,7 @@ async function hydrateFromFloor() {
   for (const t of d.tokens || []) {
     const a = cs(t.addr);
     if (!a) continue;
-    tokenMeta[a] = nameMeta(t.name, t.symbol);
+    tokenMeta[a] = displayMeta(a, t.name, t.symbol);
     tokenInfo[a] = normInfo({ ...t, creator: cs(t.creator) || t.creator });
     addrs.push(a);
   }
@@ -3316,7 +3321,7 @@ async function loadTokens() {
         const t = new ethers.Contract(addr, ERC20, readProvider);
         const name = await rpc(() => t.name());
         const symbol = await rpc(() => t.symbol());
-        tokenMeta[addr] = nameMeta(name, symbol);
+        tokenMeta[addr] = displayMeta(addr, name, symbol);
       }
       // an already-known curve is re-read only when it traded; the rest are
       // exactly as the last read left them

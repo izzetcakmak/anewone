@@ -6,7 +6,9 @@ A memecoin launchpad on **Arc Network**, Circle's stablecoin L1 where gas is pai
 USDC bonding curve and graduate into a Uniswap v3 pool whose liquidity nobody can withdraw. Every token on the
 floor is... a new one.
 
-**First coin on the platform: [$NOAH, Noah's Arc](docs/meta/noah.json).** Everyone's boarding the Arc. Two by two. 🦒🦒
+**First coin on the platform: [$NOAH, Noah's Ark](docs/meta/noah.json).** On chain its name reads "Noah's Arc",
+on purpose: it was the first coin to launch on Arc's public mainnet, and the name tips its hat to the chain it
+boards. Everyone's boarding the Arc. Two by two. 🦒🦒
 
 ## At a glance
 
