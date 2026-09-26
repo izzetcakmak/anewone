@@ -1771,11 +1771,12 @@
          and the page opens inside it. MetaMask and OKX take a link straight to this page;
          the others need it pasted into their browser. -->
     <div id="walletMobile" style="display:none">
-      <div class="hint" style="margin-bottom:10px">Phone browsers can't reach a wallet app directly. WalletConnect above hands you over to the app and back; or open this page inside your wallet's own browser:</div>
+      <div class="hint" style="margin-bottom:10px">Smoothest on a phone: open this page inside the wallet app's own browser, where every approval shows up at once.</div>
       <a class="wrow" id="wmMetaMask" href="#" rel="noopener noreferrer"><span style="font-size:22px">🦊</span><span class="wname">Open in MetaMask</span></a>
       <a class="wrow" id="wmOkx" href="#" rel="noopener noreferrer"><span style="font-size:22px">⬛</span><span class="wname">Open in OKX Wallet</span></a>
       <button class="wrow" id="wmCopy" type="button"><span style="font-size:22px">🔗</span><span class="wname">Copy link for Rabby, Trust, Coinbase…</span></button>
-      <div class="hint" style="margin-top:8px">In Rabby or any other wallet app: open its browser tab (Discover / DApps), paste the link, and connect from there.</div>
+      <div class="hint" style="margin-top:8px">In Rabby or any other wallet app: open its browser tab (Discover / DApps), paste the link, and connect from there.
+        WalletConnect above works too, with any wallet app; each transaction then hops to the app and back.</div>
     </div>
     <div class="row"><button onclick="closeModals()">Cancel</button></div>
   </div>
@@ -2961,6 +2962,9 @@ async function connectWalletConnect() {
     if (!p.session) await p.connect(); // the QR / wallet-app list; resolves once the wallet approves
     try { localStorage.setItem(LAST_WALLET_KEY, "walletconnect"); } catch {}
     await connectEmbedded(p, "walletconnect");
+    // iOS hands each request to the wallet app by deep link, and the app sometimes opens
+    // before the request reaches it; saying so beats a blank screen with no explanation
+    if (IS_PHONE && userAddr) setTimeout(() => toast("Each transaction opens your wallet app. If it opens blank, come back here and tap Open again; the request is waiting."), 1200);
   } catch (e) {
     try { if (!userAddr) localStorage.removeItem(LAST_WALLET_KEY); } catch {}
     const { message } = walletError(e);
