@@ -681,7 +681,10 @@
   .tbl th.on { color: var(--accent); }
   .tbl td { padding: 9px 12px; text-align: right; white-space: nowrap;
     font-size: 13px; font-family: var(--mono); border-bottom: 1px solid var(--border); }
-  .tbl th:first-child, .tbl td:first-child { text-align: left; font-family: inherit; }
+  .tbl th:first-child, .tbl td:first-child { text-align: left; font-family: inherit;
+    /* the token column stays put while the rest of the table scrolls sideways */
+    position: sticky; left: 0; z-index: 1; background: var(--bg-2); box-shadow: 1px 0 0 var(--border); }
+  .tbl tbody tr:hover td:first-child { background: var(--bg-2); }
   .tbl tbody tr { cursor: pointer; }
   .tbl tbody tr:hover { background: var(--surface-2); }
   .tbl tbody tr:last-child td { border-bottom: none; }
@@ -1137,8 +1140,12 @@
     .pctrow button, .sorts button { min-height: 44px; }
     .sorts { width: 100%; }
     .sorts button { flex: 1; min-width: 0; padding: 10px 6px; }
-    .searchwrap { max-width: none; width: 100%; }
+    /* the search takes a line of its own; Watchlist and Filters share the next one at the
+       same height, instead of the search sitting beside one button and above the other */
+    .searchwrap { max-width: none; width: 100%; flex-basis: 100%; height: auto; }
     #search { min-height: 44px; }
+    #watchToggle, #filterToggle { flex: 1 1 0; justify-content: center; min-height: 44px; }
+    #viewTabs { width: 100%; margin-left: 0; }
     input { min-height: 44px; }
     /* the filter panel opts out of min-height for density; on touch it must opt back in */
     .filters input[type=number], .filters select, .filters #fClear { min-height: 44px; }
