@@ -2083,13 +2083,16 @@ const esc = (s) => String(s ?? "").replace(/[&<>"'`]/g, (c) => ({
 // place these values reach today; the day one of those sinks becomes <object>,
 // <iframe> or an inline SVG, allowing it would become stored XSS on a page that
 // signs transactions. The launcher itself only ever emits image/jpeg.
+const OUR_ORIGINS = ["https://anewone.xyz", "https://www.anewone.xyz", location.origin];
+const isOurUrl = (s) => OUR_ORIGINS.some((o) => s.startsWith(o + "/"));
 const safeImgSrc = (u) => {
   const s = String(u || "").trim();
   if (/^data:image\/(png|jpeg|jpg|gif|webp);/i.test(s)) return s;
   // No remote artwork: an image on somebody else's server would tell that server who is
   // looking at the floor and when, and could weigh whatever it likes. Every coin launched
-  // on this platform carries its picture on chain (TokenImage), so nothing is lost.
-  if (/^https?:\/\//i.test(s)) return "";
+  // on this platform carries its picture on chain (TokenImage), so nothing is lost. This
+  // site's own host is the one exception: $NOAH's launch event points at meta/noah.svg here.
+  if (/^https?:\/\//i.test(s)) return isOurUrl(s) ? s : "";
   // same-origin relative asset (e.g. meta/noah.svg) — must not start with "/" or "//",
   // which would escape to another host
   if (/^[\w][\w./-]*$/.test(s) && !s.includes("//")) return s;
@@ -3768,7 +3771,7 @@ async function resolveImgOnce(addr) {
   const img = String(m.i || "");
   // on-chain data URIs and this site's own files only; a remote URL in metadata is ignored
   // (safeImgSrc would drop it anyway), so the fetch that used to follow it is gone too
-  if (img.startsWith("data:image") || (!/^https?:\/\//i.test(img) && /\.(png|jpe?g|svg|gif|webp)(\?.*)?$/i.test(img))) out = img;
+  if (img.startsWith("data:image") || ((!/^https?:\/\//i.test(img) || isOurUrl(img)) && /\.(png|jpe?g|svg|gif|webp)(\?.*)?$/i.test(img))) out = img;
   // v6+ tokens carry their image in the TokenImage launch event, not in metadata
   if (!out) out = await imageFromEvent(addr);
   // $NOAH's testnet metadata predates anewone.xyz — serve its art locally
