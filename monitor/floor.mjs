@@ -34,7 +34,14 @@ const SEL = {
   gradTarget: "0x9a3a8ee1",
   name: "0x06fdde03",
   symbol: "0x95d89b41",
+  // supply after graduation: what migrate() burned and what sits in the Uniswap pool
+  balanceOf: "0x70a08231",
+  migrated: "0x4ba0a5ee",
+  v3Factory: "0x7c887c59",
+  usdc: "0x3e413bee",
+  getPool: "0x1698ee82",
 };
+const BURN = "0x000000000000000000000000000000000000dead";
 const TOPIC_TRADE = "0xf7dd8a134438de4c59401760e24ef5c6cc9c74583b2b022085697f3021e59768";
 const TOPIC_COMMENT = "0x83e5a18f10338a7eb46107a07561cf75d2e07dc4f8d10230f6cfed01cd98b505";
 const TOPIC_IMAGE = "0x4fe20d8f61958f75787f29537de90577ad84befe73f9f2c69d2b8a0d95770e16";
@@ -398,10 +405,28 @@ export async function runFloor({ platform, log = console.log } = {}) {
     const addr = toAddr(word(await ethCall(platform, SEL.allTokens + encUint(i)), 0));
     const info = decodeInfo(await ethCall(platform, SEL.info + encAddr(addr)));
     let [name, symbol] = [await callString(addr, SEL.name), await callString(addr, SEL.symbol)];
+    // A graduated coin's supply is no longer 1B in anyone's hands: migrate() burns the part of
+    // the curve's reserve the raised USDC cannot pair with, and the rest sits in the pool. Read
+    // both, so the API can give a real circulating supply instead of assuming the launch one.
+    let supply = {};
+    if (info.graduated) {
+      try {
+        const migrated = toBig(word(await ethCall(platform, SEL.migrated + encAddr(addr)), 0)) === 1n;
+        const burned = toBig(word(await ethCall(addr, SEL.balanceOf + encAddr(BURN)), 0));
+        let inPool = 0n;
+        if (migrated) {
+          const factory = toAddr(word(await ethCall(platform, SEL.v3Factory), 0));
+          const usdc = toAddr(word(await ethCall(platform, SEL.usdc), 0));
+          const pool = toAddr(word(await ethCall(factory, SEL.getPool + encAddr(addr) + encAddr(usdc) + encUint(10000)), 0));
+          if (!/^0x0{40}$/.test(pool)) inPool = toBig(word(await ethCall(addr, SEL.balanceOf + encAddr(pool)), 0));
+        }
+        supply = { migrated, burned: burned.toString(), inPool: inPool.toString() };
+      } catch {}
+    }
     // $NOAH is Noah's Ark; its on-chain name reads "Noah's Arc" on purpose, for the chain it
     // was the first coin to launch on, and cannot be edited. The index and the cards show the ark.
     if (net.noah && addr.toLowerCase() === net.noah.toLowerCase()) name = "Noah's Ark";
-    tokens.push({ addr, name, symbol, ...info });
+    tokens.push({ addr, name, symbol, ...info, ...supply });
   }
 
   const earliest = tokens.length ? Math.min(...tokens.map((t) => t.createdBlock)) : Number(tip);

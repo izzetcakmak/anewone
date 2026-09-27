@@ -31,7 +31,7 @@ const RATE = 240; // requests per IP per minute; a terminal polling every 5s nee
 const WAD = 10n ** 18n;
 const BPS = 10_000n;
 const FEE_BPS = 150n; // 1.5% trade fee, of which a third goes to the coin's creator
-const SUPPLY = 1_000_000_000; // every coin on this platform has the same fixed supply
+const SUPPLY = 1_000_000_000; // every coin launches with the same 1B; migrate() burns part of it
 const DAY_BLOCKS = 172_800;
 const MAX_LIST = 500;
 const MAX_TRADES = 1000;
@@ -100,6 +100,13 @@ function shape(floor) {
     };
 
     const lastBlock = Math.max(a.lastBlock || 0, d.last || 0);
+    // Supply as it is, not as it launched. On the curve the unsold tokens are the curve's own
+    // (tReserve) and nobody holds them; after migration the burned part is gone for good and
+    // the pool's inventory is liquidity, not holdings. Circulating is what is left in wallets.
+    const burned = num(BigInt(t.burned || "0"));
+    const totalSupply = SUPPLY - burned;
+    const notCirculating = t.migrated ? num(BigInt(t.inPool || "0")) : num(BigInt(t.tReserve));
+    const circulatingSupply = Math.max(0, totalSupply - notCirculating);
     return {
       address: addr,
       name: t.name,
@@ -111,8 +118,14 @@ function shape(floor) {
       venue: t.graduated ? "uniswap-v3" : "bonding-curve",
       priceUsd,
       priceWad: priceWad.toString(),
-      marketCapUsd: round(priceUsd * SUPPLY, 2),
-      totalSupply: SUPPLY,
+      // price x circulating supply: what screeners call market cap
+      marketCapUsd: round(priceUsd * circulatingSupply, 2),
+      // price x total supply (1B less anything burned): fully diluted value
+      fdvUsd: round(priceUsd * totalSupply, 2),
+      circulatingSupply: round(circulatingSupply, 6),
+      totalSupply: round(totalSupply, 6),
+      burnedSupply: round(burned, 6),
+      initialSupply: SUPPLY,
       // USDC actually sitting in the curve and withdrawable by sellers; the curve also carries
       // a virtual 4,000 USDC that sets the opening price and is not real money
       liquidityUsd: round(raisedUsd, 2),
@@ -156,7 +169,7 @@ function meta(floor) {
     contract: floor.platform,
     mechanics: {
       model: "constant product bonding curve priced in USDC",
-      totalSupply: SUPPLY,
+      initialSupply: SUPPLY,
       virtualUsdc: 4000,
       tradeFeeBps: Number(FEE_BPS),
       creatorShareOfFeeBps: 50,
@@ -180,7 +193,8 @@ function meta(floor) {
       "GET /api/basedbot/distribution?address={a}          holder count and concentration",
     ],
     privacy: "no wallet is named: holders come back as a count and concentration shares, trades as sides and sizes. Every trade is in the Trade event on chain if you index it yourself.",
-    sorts: ["volume24h", "volumeAll", "marketCap", "liquidity", "trades24h", "holders", "age", "created"],
+    sorts: ["volume24h", "volumeAll", "marketCap", "fdv", "liquidity", "trades24h", "holders", "age", "created"],
+    supply: "marketCapUsd = price x circulatingSupply (tokens in wallets: not the curve's unsold reserve, not the Uniswap pool's inventory, not burned). fdvUsd = price x totalSupply, where totalSupply is 1B minus what migration burned.",
     freshness: {
       publishedEverySec: 60,
       cachedSec: CACHE_S,
@@ -329,6 +343,7 @@ export default async function handler(req, res) {
       volume24h: (t) => t.volumeUsd24h,
       volumeall: (t) => t.volumeUsdAll,
       marketcap: (t) => t.marketCapUsd,
+      fdv: (t) => t.fdvUsd,
       liquidity: (t) => t.liquidityUsd,
       trades24h: (t) => t.trades24h,
       holders: (t) => t.holders,
