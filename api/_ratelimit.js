@@ -14,6 +14,12 @@ function limitedLocally(key, max, windowSec) {
   return recent.length > max;
 }
 
+// Once Redis has said a caller is over the limit, this instance knows the answer until that
+// window closes and stops asking: a flood at one function must not drain the Redis command
+// quota that sessions and every other function share. Windows are aligned to the clock, so
+// every instance knows when the current one closes without asking Redis for a TTL.
+const over = new Map(); // "rl:scope:ip" -> ms at which the window it went over in closes
+
 /** The caller's IP as Vercel presents it. */
 export function clientIp(req) {
   return (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "?";
@@ -21,14 +27,24 @@ export function clientIp(req) {
 
 /**
  * True when `ip` has made more than `max` calls to `scope` in the current fixed window of
- * `windowSec` seconds. One INCR and one EXPIRE per call, in a single round trip.
+ * `windowSec` seconds. One INCR and one EXPIRE per call, in a single round trip, and none at
+ * all for a caller this instance already knows to be over.
  */
 export async function limited(scope, ip, max, windowSec = 60) {
   const key = `rl:${scope}:${ip}`;
+  const now = Date.now(), w = windowSec * 1000;
+  const until = over.get(key);
+  if (until > now) return true;
+  if (until) over.delete(key);
   if (kvAvailable()) {
+    const win = Math.floor(now / w);
+    const wkey = `${key}:${win}`;
     try {
-      const [n] = await kvPipeline([["INCR", key], ["EXPIRE", key, windowSec, "NX"]]);
-      return Number(n) > max;
+      const [n] = await kvPipeline([["INCR", wkey], ["EXPIRE", wkey, windowSec, "NX"]]);
+      if (Number(n) <= max) return false;
+      if (over.size >= 5000) over.clear(); // a warm instance never hoards addresses
+      over.set(key, (win + 1) * w);
+      return true;
     } catch {
       // Redis unreachable: the instance counter below carries on
     }
