@@ -449,9 +449,11 @@
      the network state keeps a highlighted pill), spread at equal gaps across the bar, and
      sized with the screen (30% below the earlier 1.5x step) */
   @media (min-width: 901px) {
-    .topbar-inner { justify-content: space-between; gap: 12px;
+    /* the crest on the left, the controls grouped on the right at one small, even gap */
+    .topbar-inner { justify-content: flex-start; gap: 10px;
       --tbc-h: clamp(32px, 2.43vw, 39px); --tbc-f: clamp(11.5px, 0.78vw, 12.5px); --tbc-p: clamp(10px, 0.78vw, 13px); }
     .topbar-inner .tb-ark { margin: 0; }
+    .topbar-inner .tb-brand { margin-right: auto; }
     .tb-brand img { width: var(--tbc-h); height: var(--tbc-h); }
     .tb-brand span { font-size: clamp(18px, 1.2vw, 22px); }
     .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav .tb-more-btn, .tb-nav .tb-theme, .tb-nav #netBadge,
