@@ -128,6 +128,13 @@ function shape(floor) {
     const totalSupply = SUPPLY - burned;
     const circulatingSupply = Math.max(0, t.migrated ? totalSupply : totalSupply - num(BigInt(t.tReserve)));
     const holderSupply = Math.max(0, circulatingSupply - (t.migrated ? num(BigInt(t.inPool || "0")) : 0));
+    // Where it trades, as the contract's _curveOpen() decides: on the curve until graduation
+    // and again while an owner has reopened it; in its Uniswap pool once migrated; and in
+    // between nowhere, since this platform closes a curve at graduation. The flags come from
+    // the index, which keeps the last known ones when a read fails; a graduated coin without
+    // them reads as migrating, which sends nobody to a venue that may not trade.
+    const curveOpen = !t.graduated || (!!t.reopened && !t.migrated);
+    const venue = curveOpen ? "bonding-curve" : t.migrated ? "uniswap-v3" : "migrating";
     return {
       address: addr,
       name: t.name,
@@ -136,7 +143,8 @@ function shape(floor) {
       createdBlock: t.createdBlock,
       createdAt: at(t.createdBlock),
       graduated: !!t.graduated,
-      venue: t.graduated ? "uniswap-v3" : "bonding-curve",
+      venue,
+      poolAddress: t.migrated && isAddr(t.pool) ? t.pool.toLowerCase() : null,
       priceUsd,
       priceWad: priceWad.toString(),
       // price x circulating supply: what screeners call market cap
@@ -156,7 +164,8 @@ function shape(floor) {
       raisedUsd: round(raisedUsd, 2),
       raisedWei: String(t.raised || "0"),
       graduationTargetUsd: gradTarget,
-      graduationProgressPct: gradTarget ? round(Math.min(100, (raisedUsd / gradTarget) * 100), 2) : null,
+      // a graduated coin is done, as the contract's progressBps() says: migrate() zeroes raised
+      graduationProgressPct: t.graduated ? 100 : gradTarget ? round(Math.min(100, (raisedUsd / gradTarget) * 100), 2) : null,
       volumeUsd24h: round(num(d.vol), 2),
       volumeUsdAll: round(num(BigInt(a.volAll || "0")), 2),
       trades24h: d.trades,
@@ -224,14 +233,14 @@ function meta(floor) {
       units: "18 decimals on both sides: token amounts, and USDC as native value, so 1 USDC is 1e18 here, not 1e6 (see quote)",
       buy: "msg.value is the USDC to spend, the fee included, and no approval is needed; the coin goes to msg.sender",
       sell: "approve the platform contract on the coin first (a plain ERC-20; an allowance of 2^256-1 is never spent down). The USDC, fee deducted, is paid to msg.sender as native value, so a contract that sells needs a receive()",
-      quotes: "quoteBuy takes what buy's msg.value would be, quoteSell a token amount; both count the fee and give exactly what the trade would at the same block. priceWad is the spot price every coin here carries",
+      quotes: "quoteBuy takes what buy's msg.value would be, quoteSell a token amount; both count the fee and give exactly what the trade would at the same block. priceWad is the curve's spot price, the one every coin on its curve carries here; after migration it stays frozen at the last curve price",
       slippage: "minTokensOut and minUsdcOut are the only guard and there is no deadline: set them from a fresh quote less your tolerance",
       antiSnipe: {
         blocks: ANTI_SNIPE_BLOCKS,
         maxTokensPerWallet: ANTI_SNIPE_MAX,
         note: `from a coin's createdBlock through ${ANTI_SNIPE_BLOCKS} blocks later (about ${Math.round(ANTI_SNIPE_BLOCKS * bt)} s) one wallet can buy at most ${ANTI_SNIPE_MAX.toLocaleString("en-US")} tokens, 2% of the supply; a buy past that reverts with 'anti-snipe cap'. Sells are never capped`,
       },
-      lifecycle: `a coin trades on its curve until a buy lifts its raised USDC to ${gradUsd.toLocaleString("en-US")}; that buy fills in full and graduates it. The curve then closes: buy, sell and both quotes revert with 'graduated'. migrate() moves the coin into a full range Uniswap v3 pool against the ERC-20 USDC (quote.erc20, 6 decimals) at the 1% fee tier, and the Migrated event names the pool; from then on it trades there like any v3 pool. Should the move stall, the platform may reopen the curve an hour after graduation, and the quotes answer again`,
+      lifecycle: `a coin trades on its curve until a buy lifts its raised USDC to ${gradUsd.toLocaleString("en-US")}; that buy fills in full and graduates it. The curve then closes: buy, sell and both quotes revert with 'graduated'. migrate() moves the coin into a full range Uniswap v3 pool against the ERC-20 USDC (quote.erc20, 6 decimals) at the 1% fee tier, and the Migrated event names the pool, as poolAddress does here; from then on it trades there like any v3 pool. Should the move stall, the platform may reopen the curve an hour after graduation, and the quotes answer again. venue says which of these a coin is in (see venues)`,
       reverts: {
         "unknown token": "not a coin of this platform (the quotes answer 0 instead)",
         graduated: "the curve is closed, see lifecycle",
@@ -243,6 +252,12 @@ function meta(floor) {
         balance: "a sell of more tokens than the wallet holds, from the coin's own transferFrom",
         send: "the USDC could not be paid to msg.sender: a contract without receive()",
       },
+    },
+    venues: {
+      "bonding-curve": "trades on its curve through the platform contract, see trading: not graduated yet, or graduated and reopened by the platform",
+      migrating: "graduated and not yet moved: the curve takes no trades and the platform's liquidity is not in Uniswap yet. A pool at the address migrate() will use may already exist, opened by someone else at a price of their choosing; it is not this coin's venue until the move, which pulls its price back to the curve's. migrate() is open to anyone and our scanner sends it, so this usually passes within minutes; if the move cannot go through, the platform may reopen the curve an hour after graduation",
+      "uniswap-v3": "trades in its Uniswap v3 pool (poolAddress) like any v3 pool; the curve is closed for good. The market fields here still come from the curve and stop at the move (price frozen at the last curve price, raised and liquidity 0), so read the pool for live numbers",
+      note: "venue is as fresh as the index (see freshness). For a coin on its curve, quoteBuy answers live: it reverts with 'graduated' once the curve has closed",
     },
     endpoints: [
       "GET /api/basedbot                                  this document",
