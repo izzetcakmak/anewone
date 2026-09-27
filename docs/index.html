@@ -958,6 +958,9 @@
   .wrow:hover { border-color: var(--accent); background: var(--bg-2); }
   .wrow img { width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; }
   .wrow .wname { font-weight: 600; }
+  .wback { all: unset; cursor: pointer; font-size: 18px; margin-right: 6px; color: var(--dim); }
+  .wback:hover { color: var(--text); }
+  #wStep1 .gmailbtn + .wdivider { margin: 14px 0; }
   .wrow .wlast { margin-left: auto; font-size: 11px; color: var(--accent); }
   .sliprow { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap;
     font-size: 12px; color: var(--faint); }
@@ -1784,42 +1787,44 @@
 
 <!-- wallet picker (EIP-6963 multi-wallet) -->
 <div id="walletModal" class="modal-bg">
+  <!-- Two steps: first the choice between an email/social wallet and a wallet of one's own,
+       then, only for the second, the wallets this browser actually has. -->
   <div class="modal" style="max-width:400px">
     <button class="modal-x" onclick="closeWalletModal()" aria-label="Close">✕</button>
-    <h2>Connect a wallet</h2>
-    <button id="gmailBtn" class="gmailbtn" type="button">
-      <span class="gicon">@</span> Continue with Email or Social
-    </button>
-    <div class="hint" style="margin:-6px 0 12px;text-align:center">Google, X, Discord, Apple or a one-time email code. A wallet is created for you; only you hold its key.</div>
-    <div class="wdivider"><span>or use a wallet</span></div>
-    <div id="walletList"></div>
-    <!-- WalletConnect: a QR code on a desktop, a list of wallet apps with deep links on a
-         phone; the wallet app signs, the page never sees a key. Shown once config.js
-         carries a project id. -->
-    <button class="wrow" id="wcBtn" type="button" style="display:none">
-      <span style="font-size:22px">🔗</span>
-      <span class="wname">WalletConnect <small style="color:var(--dim);font-weight:500">· Rabby, Trust, MetaMask mobile…</small></span>
-    </button>
-    <div class="hint" id="walletNone" style="display:none">
-      No browser wallet detected. Install
-      <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">MetaMask</a>,
-      <a href="https://www.okx.com/web3" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">OKX Wallet</a> or
-      <a href="https://rabby.io" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">Rabby</a>, then reload.
+    <div id="wStep1">
+      <h2>Connect</h2>
+      <button id="gmailBtn" class="gmailbtn" type="button">
+        <span class="gicon">@</span> Continue with Email or Social
+      </button>
+      <div class="wdivider" id="wOr"><span>or</span></div>
+      <button id="wWalletBtn" class="gmailbtn" type="button">
+        <span class="gicon">◎</span> Connect a Wallet
+      </button>
     </div>
-    <!-- a phone browser has no wallet extension: the wallet app has a browser of its own,
-         and the page opens inside it. MetaMask and OKX take a link straight to this page;
-         the others need it pasted into their browser. -->
-    <div id="walletMobile" style="display:none">
-      <div class="hint" style="margin-bottom:10px">Smoothest on a phone: open this page inside the wallet app's own browser, where every approval shows up at once.</div>
-      <a class="wrow" id="wmMetaMask" href="#" rel="noopener noreferrer"><span style="font-size:22px">🦊</span><span class="wname">Open in MetaMask</span></a>
-      <a class="wrow" id="wmOkx" href="#" rel="noopener noreferrer"><span style="font-size:22px">⬛</span><span class="wname">Open in OKX Wallet</span></a>
-      <!-- Rabby mobile has no link that opens a page in it (its WalletConnect registry entry
-           carries no native or universal link), so the address is copied for its Dapps tab -->
-      <button class="wrow" id="wmCopy" type="button"><span style="font-size:22px">🐰</span><span class="wname">Rabby, Trust, Coinbase… <small style="color:var(--dim);font-weight:500">· copy the link</small></span></button>
-      <div class="hint" style="margin-top:8px">Rabby has no link that opens a page in it: copy the address, open Rabby's <b>Dapps</b> tab, paste it there and connect. The same works in any wallet app with a browser.
-        WalletConnect above works too, with any wallet app; each transaction then hops to the app and back.</div>
+    <div id="wStep2" hidden>
+      <h2><button type="button" id="wBack" class="wback" aria-label="Back">←</button> Choose a wallet</h2>
+      <div id="walletList"></div>
+      <!-- a phone browser has no wallet extension: the wallet app has a browser of its own,
+           and the page opens inside it. MetaMask and OKX take a link straight to this page;
+           Rabby mobile has none (its WalletConnect registry entry carries no native or
+           universal link), so its address is copied for the app's Dapps tab. -->
+      <div id="walletMobile" hidden>
+        <a class="wrow" id="wmMetaMask" href="#" rel="noopener noreferrer"><span style="font-size:22px">🦊</span><span class="wname">Open in MetaMask</span></a>
+        <a class="wrow" id="wmOkx" href="#" rel="noopener noreferrer"><span style="font-size:22px">⬛</span><span class="wname">Open in OKX Wallet</span></a>
+      </div>
+      <!-- WalletConnect: a QR code on a desktop, a list of wallet apps on a phone -->
+      <button class="wrow" id="wcBtn" type="button" style="display:none">
+        <span style="font-size:22px">🔗</span>
+        <span class="wname">WalletConnect <small style="color:var(--dim);font-weight:500">· Rabby, Trust, any wallet app</small></span>
+      </button>
+      <button class="wrow" id="wmCopy" type="button" hidden><span style="font-size:22px">📋</span><span class="wname">Copy link <small style="color:var(--dim);font-weight:500">· paste into your wallet app's browser</small></span></button>
+      <div class="hint" id="walletNone" hidden>
+        No browser wallet found. Install
+        <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">MetaMask</a>,
+        <a href="https://www.okx.com/web3" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">OKX Wallet</a> or
+        <a href="https://rabby.io" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">Rabby</a>, or use WalletConnect.
+      </div>
     </div>
-    <div class="row"><button onclick="closeWalletModal()">Cancel</button></div>
   </div>
 </div>
 
@@ -2823,32 +2828,22 @@ const IS_PHONE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 // showAll: the picker is wanted even when there is exactly one injected wallet, which on a
 // first connect is picked straight away. "Change wallet" inside a wallet app's browser, or
 // with one extension, used to do nothing visible: it re-picked the same wallet.
+function walletStep(n) {
+  $("wStep1").hidden = n !== 1;
+  $("wStep2").hidden = n !== 2;
+}
 function openWalletPicker(showAll) {
+  pickerShowAll = !!showAll;
+  // without an email/social provider there is only one path, so it opens on the wallets
+  if (!WEB3AUTH_CLIENT_ID) showWallets(); else walletStep(1);
+  $("walletModal").classList.add("open");
+}
+let pickerShowAll = false;
+function showWallets() {
   const list = walletChoices();
-  if (list.length === 0) {
-    $("walletList").innerHTML = "";
-    if (IS_PHONE) {
-      // the page's own address, coin panel included, handed to the wallet app's browser
-      const here = location.href;
-      $("wmMetaMask").href = "https://metamask.app.link/dapp/" + here.replace(/^https?:\/\//, "");
-      $("wmOkx").href = "okx://wallet/dapp/url?dappUrl=" + encodeURIComponent(here);
-      $("wmCopy").onclick = async () => {
-        try { await navigator.clipboard.writeText(here); toast("Link copied: paste it into your wallet's browser"); }
-        catch { toast(here); }
-      };
-      $("walletNone").style.display = "none";
-      $("walletMobile").style.display = "block";
-    } else {
-      $("walletMobile").style.display = "none";
-      $("walletNone").style.display = "block";
-    }
-    $("walletModal").classList.add("open");
-    return;
-  }
-  if (list.length === 1 && !showAll) { selectWallet(list[0]); return; }
+  // one wallet in this browser, and the visitor is not trying to change it: use it
+  if (list.length === 1 && !pickerShowAll) { selectWallet(list[0]); return; }
   const last = localStorage.getItem(LAST_WALLET_KEY);
-  $("walletNone").style.display = "none";
-  $("walletMobile").style.display = "none";
   $("walletList").innerHTML = list.map((d) => {
     const icon = safeImgSrc(d.info.icon) || "";
     return `<button class="wrow" data-rdns="${esc(d.info.rdns)}">
@@ -2863,6 +2858,20 @@ function openWalletPicker(showAll) {
       if (d) selectWallet(d);
     };
   });
+  const none = list.length === 0;
+  const here = location.href;
+  $("walletMobile").hidden = !(none && IS_PHONE);
+  $("wmCopy").hidden = !(none && IS_PHONE);
+  $("walletNone").hidden = !(none && !IS_PHONE);
+  if (none && IS_PHONE) {
+    $("wmMetaMask").href = "https://metamask.app.link/dapp/" + here.replace(/^https?:\/\//, "");
+    $("wmOkx").href = "okx://wallet/dapp/url?dappUrl=" + encodeURIComponent(here);
+    $("wmCopy").onclick = async () => {
+      try { await navigator.clipboard.writeText(here); toast("Link copied: open your wallet app's browser and paste it"); }
+      catch { toast(here); }
+    };
+  }
+  walletStep(2);
   $("walletModal").classList.add("open");
 }
 
@@ -5416,6 +5425,8 @@ function closeModals() {
 // The wallet picker closes on its own: opened from a coin's page and then dismissed, it
 // used to take the coin's page down with it and drop the visitor back on the floor.
 function closeWalletModal() { $("walletModal").classList.remove("open"); }
+$("wWalletBtn").onclick = () => showWallets();
+$("wBack").onclick = () => walletStep(1);
 // a click on the dimmed backdrop closes a dialog; the coin's page has no backdrop to click
 document.querySelectorAll(".modal-bg:not(.tpage-bg)").forEach(m => m.addEventListener("click", e => {
   if (e.target !== m) return;
@@ -5454,7 +5465,7 @@ if (WC_PROJECT_ID) $("wcBtn").style.display = "flex";
 // the Google option only appears once a Web3Auth clientId is configured
 if (!WEB3AUTH_CLIENT_ID) {
   $("gmailBtn").style.display = "none";
-  const div = document.querySelector("#walletModal .wdivider");
+  const div = $("wOr");
   if (div) div.style.display = "none";
 }
 // close the wallet menu when clicking outside it
