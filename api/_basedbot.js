@@ -191,7 +191,7 @@ function meta(floor) {
     endpoints: [
       "GET /api/basedbot                                  this document",
       "GET /api/basedbot/tokens?limit=100&sort=volume24h   every coin, newest index",
-      "GET /api/basedbot/token/{address}                   one coin, with distribution and last trades",
+      "GET /api/basedbot/{address}                         one coin, with distribution and last trades",
       "GET /api/basedbot/trades?address={a}&limit=100      trades in the last 24h, newest first",
       "GET /api/basedbot/candles?address={a}&tf=5m         OHLCV, tf one of " + Object.keys(TFS).join(", "),
       "GET /api/basedbot/distribution?address={a}          holder count and concentration",
@@ -325,8 +325,11 @@ export default async function handler(req, res) {
 
   if (!route) return res.status(200).json(envelope(floor, meta(floor)));
 
-  if (route === "tokens" || route === "token" || route === "coins") {
-    const one = addrOf(1);
+  // A serverless catch-all routes exactly one segment on this project: /api/basedbot/token/0x...
+  // answers Vercel's own 404, never this handler. So an address IS a route, and every endpoint
+  // also takes ?address= .
+  if (route === "tokens" || route === "token" || route === "coins" || isAddr(route)) {
+    const one = isAddr(route) ? route : addrOf(1);
     const all = shape(floor);
     if (one) {
       const t = all.find((x) => x.address === one);
