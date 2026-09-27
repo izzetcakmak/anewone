@@ -101,12 +101,13 @@ function shape(floor) {
 
     const lastBlock = Math.max(a.lastBlock || 0, d.last || 0);
     // Supply as it is, not as it launched. On the curve the unsold tokens are the curve's own
-    // (tReserve) and nobody holds them; after migration the burned part is gone for good and
-    // the pool's inventory is liquidity, not holdings. Circulating is what is left in wallets.
+    // (tReserve): nobody can trade them but the curve, so they are not circulating. After
+    // migration the burned part is gone for good, and the pool's inventory is on the open
+    // market, so it circulates like any pool's does. holderSupply leaves the pool out too.
     const burned = num(BigInt(t.burned || "0"));
     const totalSupply = SUPPLY - burned;
-    const notCirculating = t.migrated ? num(BigInt(t.inPool || "0")) : num(BigInt(t.tReserve));
-    const circulatingSupply = Math.max(0, totalSupply - notCirculating);
+    const circulatingSupply = Math.max(0, t.migrated ? totalSupply : totalSupply - num(BigInt(t.tReserve)));
+    const holderSupply = Math.max(0, circulatingSupply - (t.migrated ? num(BigInt(t.inPool || "0")) : 0));
     return {
       address: addr,
       name: t.name,
@@ -120,9 +121,12 @@ function shape(floor) {
       priceWad: priceWad.toString(),
       // price x circulating supply: what screeners call market cap
       marketCapUsd: round(priceUsd * circulatingSupply, 2),
+      // price x the tokens in wallets only, the Uniswap pool's inventory left out
+      holderCapUsd: round(priceUsd * holderSupply, 2),
       // price x total supply (1B less anything burned): fully diluted value
       fdvUsd: round(priceUsd * totalSupply, 2),
       circulatingSupply: round(circulatingSupply, 6),
+      holderSupply: round(holderSupply, 6),
       totalSupply: round(totalSupply, 6),
       burnedSupply: round(burned, 6),
       initialSupply: SUPPLY,
@@ -194,7 +198,7 @@ function meta(floor) {
     ],
     privacy: "no wallet is named: holders come back as a count and concentration shares, trades as sides and sizes. Every trade is in the Trade event on chain if you index it yourself.",
     sorts: ["volume24h", "volumeAll", "marketCap", "fdv", "liquidity", "trades24h", "holders", "age", "created"],
-    supply: "marketCapUsd = price x circulatingSupply (tokens in wallets: not the curve's unsold reserve, not the Uniswap pool's inventory, not burned). fdvUsd = price x totalSupply, where totalSupply is 1B minus what migration burned.",
+    supply: "fdvUsd = price x totalSupply, where totalSupply is 1B minus what migration burned. marketCapUsd = price x circulatingSupply: before migration the curve's unsold reserve is left out; after it, everything not burned circulates, the Uniswap pool's inventory included. holderCapUsd = price x holderSupply, the tokens in wallets only (circulating less the pool's inventory).",
     freshness: {
       publishedEverySec: 60,
       cachedSec: CACHE_S,
