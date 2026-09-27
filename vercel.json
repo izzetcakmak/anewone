@@ -1,6 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "docs",
+  "functions": {
+    "api/basedbot.js": { "includeFiles": "docs/data/floor.json" },
+    "api/basedbot/*.js": { "includeFiles": "docs/data/floor.json" }
+  },
   "redirects": [
     {
       "source": "/(.*)",

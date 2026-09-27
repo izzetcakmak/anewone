@@ -2,9 +2,10 @@
 // (basedbot.app asked for nothing; this is what a terminal needs to list a launchpad).
 //
 // Everything here is already public: it is derived from data/floor.json, the same on-chain
-// index the floor itself reads, which the scanner republishes every minute. Nothing is signed,
-// nothing is private, and no caller is identified. GET only, CORS open, cached at the edge for
-// CACHE_S seconds so a busy terminal costs one origin read per window.
+// index the floor itself reads, which the scanner rebuilds at most every half hour and
+// republishes only when something moved. Nothing is signed, nothing is private, and no caller
+// is identified. GET only, CORS open, cached at the edge for CACHE_S seconds so a busy terminal
+// costs one origin read per window.
 //
 // Amounts: USD figures are plain numbers in dollars (Arc's native currency is USDC, so a
 // dollar IS the chain's unit); token amounts are plain numbers of whole tokens. Where exactness
@@ -22,6 +23,7 @@
 // themselves; this API deliberately does not hand it over ready made. Holders are a count and a
 // concentration figure, trades are a tape of sides and sizes. A terminal needs nothing else, and
 // our traders do not get their book served to a third party by us.
+import { readFile } from "node:fs/promises";
 import { tooMany } from "./_ratelimit.js";
 
 const SITE = "https://anewone.xyz";
@@ -37,6 +39,7 @@ const MAX_LIST = 500;
 const MAX_TRADES = 1000;
 const MAX_CANDLES = 1000;
 const TFS = { "1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14_400, "1d": 86_400 };
+const NO_COIN = "no coin at that address on this platform";
 
 /** The curve-side USDC of a trade: a buy paid the fee on top, a sell had it deducted. */
 const curveSide = (u, isBuy) => (isBuy ? (u * (BPS - FEE_BPS)) / BPS : (u * BPS) / (BPS - FEE_BPS));
@@ -45,13 +48,28 @@ const num = (wei, dp = 18) => Number(wei) / 10 ** dp;
 const round = (x, dp) => (Number.isFinite(x) ? Number(x.toFixed(dp)) : 0);
 const isAddr = (s) => typeof s === "string" && /^0x[0-9a-fA-F]{40}$/.test(s);
 
+// The index ships with this function. The scanner publishes data/floor.json by pushing it, a
+// push is a deployment, and vercel.json bundles the file into this function, so the copy on
+// disk is the very file the site serves. Reading it there keeps the API off the public edge,
+// where a firewall challenge or a slow answer would take every endpoint down with it. The
+// public URL is only the fallback for a bundle that lacks the file.
+const BUNDLED = new URL("../docs/data/floor.json", import.meta.url);
+let warnedBundle = false;
+
 let cache = { at: 0, floor: null };
 
 async function loadFloor() {
   if (cache.floor && Date.now() - cache.at < CACHE_S * 1000) return cache.floor;
-  const r = await fetch(FLOOR_URL, { signal: AbortSignal.timeout(8000) });
-  if (!r.ok) throw new Error("index unavailable (" + r.status + ")");
-  const floor = await r.json();
+  let floor;
+  try {
+    floor = JSON.parse(await readFile(BUNDLED, "utf8"));
+  } catch (e) {
+    if (!warnedBundle) console.warn("basedbot: bundled index unreadable, reading the public copy:", e.message);
+    warnedBundle = true;
+    const r = await fetch(FLOOR_URL, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error("index unavailable (" + r.status + ")");
+    floor = await r.json();
+  }
   cache = { at: Date.now(), floor };
   return floor;
 }
@@ -199,10 +217,13 @@ function meta(floor) {
     privacy: "no wallet is named: holders come back as a count and concentration shares, trades as sides and sizes. Every trade is in the Trade event on chain if you index it yourself.",
     sorts: ["volume24h", "volumeAll", "marketCap", "fdv", "liquidity", "trades24h", "holders", "age", "created"],
     supply: "fdvUsd = price x totalSupply, where totalSupply is 1B minus what migration burned. marketCapUsd = price x circulatingSupply: before migration the curve's unsold reserve is left out; after it, everything not burned circulates, the Uniswap pool's inventory included. holderCapUsd = price x holderSupply, the tokens in wallets only (circulating less the pool's inventory).",
+    untrusted: "name, symbol and metadataURI are whatever the coin's creator wrote on chain: escape them before rendering, and check metadataURI's scheme before following it",
     freshness: {
-      publishedEverySec: 60,
+      // FLOOR_REFRESH_MS in monitor/scan.mjs: the scanner runs every minute, but rebuilds the
+      // index at most this often, and publishes it only when a chain event or a coin landed
+      publishedEverySec: 1800,
       cachedSec: CACHE_S,
-      note: "indexed from chain by our scanner; updatedAt and blockHeight on every response",
+      note: "indexed from chain by our scanner at most every 30 minutes and published only when something changed, so in quiet hours updatedAt can be older than that; updatedAt and blockHeight on every response",
     },
     rateLimit: { perIpPerMinute: RATE },
     contact: { x: "https://x.com/anewone_xyz" },
@@ -291,7 +312,7 @@ function candlesOf(floor, addr, tfSec, limit) {
   }));
 }
 
-export default async function handler(req, res) {
+async function serve(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Max-Age", "86400");
@@ -314,12 +335,19 @@ export default async function handler(req, res) {
     const a = (parts[i] || q.get("address") || q.get("token") || "").toLowerCase();
     return isAddr(a) ? a : null;
   };
+  // whether the request names an address at all: a malformed one is an error, never a request
+  // for every coin
+  const named = (i) => !!(parts[i] || q.get("address") || q.get("token"));
+  const badAddr = (i) => ({ error: named(i) ? "address must be a 0x address" : "address required" });
 
   let floor;
   try { floor = await loadFloor(); } catch (e) {
+    // what went wrong is for the function log; the caller only needs to know to retry
+    console.error("basedbot: index unavailable:", e);
     res.setHeader("Cache-Control", "no-store");
-    return res.status(503).json({ error: String((e && e.message) || e) });
+    return res.status(503).json({ error: "index unavailable, try again shortly" });
   }
+  const known = (a) => (floor.tokens || []).some((t) => t.addr === a);
 
   const route = (parts[0] || "").toLowerCase();
 
@@ -330,10 +358,11 @@ export default async function handler(req, res) {
   // also takes ?address= .
   if (route === "tokens" || route === "token" || route === "coins" || isAddr(route)) {
     const one = isAddr(route) ? route : addrOf(1);
+    if (!one && named(1)) return res.status(400).json(badAddr(1));
     const all = shape(floor);
     if (one) {
       const t = all.find((x) => x.address === one);
-      if (!t) return res.status(404).json({ error: "no coin at that address on this platform" });
+      if (!t) return res.status(404).json({ error: NO_COIN });
       return res.status(200).json(envelope(floor, {
         token: t,
         distribution: distributionOf(floor, one),
@@ -346,7 +375,7 @@ export default async function handler(req, res) {
     if (graduated === "true") rows = rows.filter((t) => t.graduated);
     if (graduated === "false") rows = rows.filter((t) => !t.graduated);
     if (search) rows = rows.filter((t) => (t.name + " " + t.symbol).toLowerCase().includes(search));
-    const key = {
+    const sorts = {
       volume24h: (t) => t.volumeUsd24h,
       volumeall: (t) => t.volumeUsdAll,
       marketcap: (t) => t.marketCapUsd,
@@ -356,14 +385,19 @@ export default async function handler(req, res) {
       holders: (t) => t.holders,
       created: (t) => t.createdAt,
       age: (t) => -t.createdAt,
-    }[(q.get("sort") || "volume24h").toLowerCase()];
-    rows = rows.slice().sort((a, b) => (key ? key(b) - key(a) : b.volumeUsd24h - a.volumeUsd24h));
+    };
+    // own keys only: a plain lookup hands "__proto__" Object.prototype, which the sort then
+    // calls as a function and crashes on
+    const s = (q.get("sort") || "").toLowerCase();
+    const key = Object.hasOwn(sorts, s) ? sorts[s] : sorts.volume24h;
+    rows = rows.slice().sort((a, b) => key(b) - key(a));
     return res.status(200).json(envelope(floor, { count: rows.length, tokens: rows.slice(0, clamp("limit", 100, MAX_LIST)) }));
   }
 
   if (route === "trades") {
     const a = addrOf(1);
-    if (parts[1] && !a) return res.status(400).json({ error: "address must be a 0x address" });
+    if (named(1) && !a) return res.status(400).json(badAddr(1));
+    if (a && !known(a)) return res.status(404).json({ error: NO_COIN });
     return res.status(200).json(envelope(floor, {
       token: a,
       windowHours: 24,
@@ -373,15 +407,18 @@ export default async function handler(req, res) {
 
   if (route === "distribution" || route === "holders") {
     const a = addrOf(1);
-    if (!a) return res.status(400).json({ error: "address required" });
+    if (!a) return res.status(400).json(badAddr(1));
+    if (!known(a)) return res.status(404).json({ error: NO_COIN });
     return res.status(200).json(envelope(floor, { token: a, distribution: distributionOf(floor, a) }));
   }
 
   if (route === "candles" || route === "ohlcv") {
     const a = addrOf(1);
-    if (!a) return res.status(400).json({ error: "address required" });
+    if (!a) return res.status(400).json(badAddr(1));
+    if (!known(a)) return res.status(404).json({ error: NO_COIN });
     const tf = (q.get("tf") || q.get("interval") || "5m").toLowerCase();
-    if (!TFS[tf]) return res.status(400).json({ error: "tf must be one of " + Object.keys(TFS).join(", ") });
+    // own keys only, as with sort: "__proto__" or "constructor" would pass and bucket by NaN
+    if (!Object.hasOwn(TFS, tf)) return res.status(400).json({ error: "tf must be one of " + Object.keys(TFS).join(", ") });
     return res.status(200).json(envelope(floor, {
       token: a,
       tf,
@@ -391,4 +428,17 @@ export default async function handler(req, res) {
   }
 
   return res.status(404).json({ error: "unknown endpoint", endpoints: meta(floor).endpoints });
+}
+
+export default async function handler(req, res) {
+  try {
+    return await serve(req, res);
+  } catch (e) {
+    // a bug or a malformed index, never the caller's doing: the details go to the function log,
+    // the caller gets a plain 500 that no cache keeps
+    console.error("basedbot:", e);
+    if (res.headersSent) return;
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(500).json({ error: "internal error" });
+  }
 }
