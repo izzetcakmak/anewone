@@ -363,7 +363,12 @@
   /* toolbar: one compact row, no duplicated chrome */
   .toolbar { gap: 8px; margin: 0 0 14px; }
   .toolbar .sorts button { font-size: 12.5px; padding: 7px 12px; }
-  .searchwrap { height: 38px; }
+  /* one height for the whole toolbar row: the tab groups, the search box and the buttons
+     used to come out at 40, 45, 43 and 42px */
+  .toolbar .sorts, .toolbar .searchwrap, .toolbar #search, #watchToggle, #filterToggle {
+    height: 44px; min-height: 44px; box-sizing: border-box; }
+  .toolbar .sorts { align-items: stretch; }
+  .toolbar .sorts button { display: inline-flex; align-items: center; min-height: 0; }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   ::selection { background: rgba(var(--accent-rgb),.25); }
