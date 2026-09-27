@@ -37,6 +37,7 @@ const SEL = {
   // supply after graduation: what migrate() burned and what sits in the Uniswap pool
   balanceOf: "0x70a08231",
   migrated: "0x4ba0a5ee",
+  curveReopened: "0x8812de84",
   v3Factory: "0x7c887c59",
   usdc: "0x3e413bee",
   getPool: "0x1698ee82",
@@ -372,6 +373,19 @@ function saveFloorCache(c) {
   try { atomicWrite(CACHE_FILE, JSON.stringify(c)); } catch {}
 }
 
+/** The coins of the last floor.json written, by lowercase address; empty when there is none. */
+function readPublished() {
+  try {
+    const d = JSON.parse(readFileSync(OUT_FILE, "utf8"));
+    return new Map((d.tokens || []).map((t) => [String(t.addr).toLowerCase(), t]));
+  } catch { return new Map(); }
+}
+// Where a coin trades turns on these three flags (the API's venue reads them), and migrate()
+// and reopenCurve() emit no Trade log, so a change in any of them has to publish on its own.
+const venueState = (t) => (t ? [t.graduated, t.migrated, t.reopened].map((x) => (x ? 1 : 0)).join("") : "");
+// What a graduated coin carries beyond info(); kept from the last file when a read fails.
+const GRADUATED_FIELDS = ["migrated", "reopened", "burned", "inPool", "pool"];
+
 // ---------------------------------------------------------------- entry point
 export async function runFloor({ platform, log = console.log } = {}) {
   if (!platform) throw new Error("runFloor: platform address required");
@@ -400,6 +414,7 @@ export async function runFloor({ platform, log = console.log } = {}) {
   const gradTarget = toBig(word(await ethCall(platform, SEL.gradTarget), 0)).toString();
   log(`floor: ${count} tokens @ block ${tip}`);
 
+  const before = readPublished();
   const tokens = [];
   for (let i = 0; i < count; i++) {
     const addr = toAddr(word(await ethCall(platform, SEL.allTokens + encUint(i)), 0));
@@ -408,20 +423,29 @@ export async function runFloor({ platform, log = console.log } = {}) {
     // A graduated coin's supply is no longer 1B in anyone's hands: migrate() burns the part of
     // the curve's reserve the raised USDC cannot pair with, and the rest sits in the pool. Read
     // both, so the API can give a real circulating supply instead of assuming the launch one.
+    // And where it trades: its curve closed at graduation, so it is in its Uniswap pool once
+    // migrated, back on its curve while an owner has reopened it (reopened counts only until
+    // the move, as the contract's _curveOpen does), and nowhere in between.
     let supply = {};
     if (info.graduated) {
       try {
         const migrated = toBig(word(await ethCall(platform, SEL.migrated + encAddr(addr)), 0)) === 1n;
+        const reopened = !migrated && toBig(word(await ethCall(platform, SEL.curveReopened + encAddr(addr)), 0)) === 1n;
         const burned = toBig(word(await ethCall(addr, SEL.balanceOf + encAddr(BURN)), 0));
-        let inPool = 0n;
+        let inPool = 0n, pool = null;
         if (migrated) {
           const factory = toAddr(word(await ethCall(platform, SEL.v3Factory), 0));
           const usdc = toAddr(word(await ethCall(platform, SEL.usdc), 0));
-          const pool = toAddr(word(await ethCall(factory, SEL.getPool + encAddr(addr) + encAddr(usdc) + encUint(10000)), 0));
-          if (!/^0x0{40}$/.test(pool)) inPool = toBig(word(await ethCall(addr, SEL.balanceOf + encAddr(pool)), 0));
+          const p = toAddr(word(await ethCall(factory, SEL.getPool + encAddr(addr) + encAddr(usdc) + encUint(10000)), 0));
+          if (!/^0x0{40}$/.test(p)) { pool = p; inPool = toBig(word(await ethCall(addr, SEL.balanceOf + encAddr(p)), 0)); }
         }
-        supply = { migrated, burned: burned.toString(), inPool: inPool.toString() };
-      } catch {}
+        supply = { migrated, reopened, burned: burned.toString(), inPool: inPool.toString(), ...(pool ? { pool } : {}) };
+      } catch {
+        // A failed read publishes what the last file knew rather than less: dropping these
+        // would flip a coin's venue and supply until the next run, and publish the flip.
+        const was = before.get(addr.toLowerCase()) || {};
+        for (const k of GRADUATED_FIELDS) if (k in was) supply[k] = was[k];
+      }
     }
     // $NOAH is Noah's Ark; its on-chain name reads "Noah's Arc" on purpose, for the chain it
     // was the first coin to launch on, and cannot be edited. The index and the cards show the ark.
@@ -446,7 +470,11 @@ export async function runFloor({ platform, log = console.log } = {}) {
   // A launch with no trade yet emits no Trade log, hence the token-count check.
   // A new schema is published once even on a quiet chain: the page refuses a file
   // in the old shape and would fall back to scanning the chain for itself.
-  const changed = logs.length > 0 || !usable || tokens.length !== (prior?.tokenCount ?? -1) || prior.schema !== SCHEMA;
+  // A coin that graduated, moved into Uniswap or was reopened since the last file publishes
+  // too: only the graduating buy leaves a Trade log.
+  const moved = tokens.filter((t) => venueState(t) !== venueState(before.get(t.addr.toLowerCase())));
+  if (moved.length) log(`floor: venue state moved for ${moved.map((t) => t.symbol || t.addr).join(", ")}`);
+  const changed = logs.length > 0 || !usable || tokens.length !== (prior?.tokenCount ?? -1) || prior.schema !== SCHEMA || moved.length > 0;
   saveFloorCache({ schema: SCHEMA, platform, lo, hi: Number(tip), tokenCount: tokens.length, index });
 
   const payload = {
