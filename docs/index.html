@@ -1085,6 +1085,10 @@
   .foot-btn:hover { color: var(--accent); border-color: rgba(var(--accent-rgb),.4);
     background: rgba(var(--accent-rgb),.06); transform: translateY(-1px); }
   .foot-btn svg { display: block; opacity: .9; }
+  /* one is a link and one a <button>, which brings the global button padding and minimum
+     height with it; an explicit height makes the pair match */
+  .foot-btn, button.foot-btn { height: 42px; min-height: 42px; box-sizing: border-box;
+    padding: 0 15px; line-height: 1; font-size: 13px; }
   .foot-contact { position: relative; }
   .contact-menu { position: absolute; right: 0; bottom: calc(100% + 8px); min-width: 200px;
     background: var(--surface); border: 1px solid var(--border-2); border-radius: 12px;
@@ -1103,7 +1107,7 @@
   @media (max-width: 600px) {
     .foot-top { flex-direction: column; align-items: flex-start; gap: 18px; }
     .foot-links { width: 100%; }
-    .foot-btn { flex: 1; justify-content: center; min-height: 44px; }
+    .foot-btn, button.foot-btn { flex: 1; justify-content: center; height: 44px; min-height: 44px; }
   }
   .hint { font-size: 12.5px; color: var(--faint); margin-top: 6px; }
 
