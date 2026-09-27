@@ -211,6 +211,8 @@
   .seg2 button[hidden] { display: none; }
   .panel > .card, #wayCard > .card { margin: 0; }
   #bridge { max-width: none; }
+  /* every panel's card is the column's width, edge to edge with the tabs above it */
+  .flow .panel .card, .flow .panel .send, #wayCard .card { max-width: none; width: 100%; box-sizing: border-box; margin: 0; }
   /* the kit's own MAINNET badge repeats the header's; speed and a custom recipient wait under
      Advanced settings */
   #bridge .abk-badge { display: none; }
