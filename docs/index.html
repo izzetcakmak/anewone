@@ -445,17 +445,28 @@
   .tb-theme:hover { color: var(--text); }
   /* A wide screen: every nav control one height, one padding, one quiet border; only the
      network state keeps a highlighted pill */
+  /* A wide screen: every control in the bar one height, one padding, one quiet border (only
+     the network state keeps a highlighted pill), spread at equal gaps across the bar, and
+     sized up with the screen, to 1.5x on a full-width monitor */
   @media (min-width: 901px) {
-    .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav .tb-more-btn, .tb-nav .tb-theme, .tb-nav #netBadge {
-      height: 40px; box-sizing: border-box; padding: 0 14px; border-radius: 999px;
-      display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono);
-      font-size: 12.5px; letter-spacing: .4px; line-height: 1; }
+    .topbar-inner { justify-content: space-between; gap: 12px;
+      --tbc-h: clamp(40px, 3.47vw, 56px); --tbc-f: clamp(12.5px, 1.11vw, 17px); --tbc-p: clamp(14px, 1.11vw, 19px); }
+    .topbar-inner .tb-ark { margin: 0; }
+    .tb-brand img { width: var(--tbc-h); height: var(--tbc-h); }
+    .tb-brand span { font-size: clamp(22px, 1.7vw, 32px); }
+    .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav .tb-more-btn, .tb-nav .tb-theme, .tb-nav #netBadge,
+    .topbar-inner #balChip, .topbar-inner #connectBtn, .topbar-inner #createBtn {
+      height: var(--tbc-h); min-height: var(--tbc-h); box-sizing: border-box; padding: 0 var(--tbc-p);
+      border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      font-size: var(--tbc-f); letter-spacing: .4px; line-height: 1; white-space: nowrap; }
+    .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav .tb-more-btn, .tb-nav .tb-theme, .tb-nav #netBadge { font-family: var(--mono); }
     .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav .tb-more-btn, .tb-nav .tb-theme {
       border: 1px solid var(--border-2); background: transparent; color: var(--text); text-transform: none; }
     .tb-nav .tb-ark:hover, .tb-nav .tb-link:hover, .tb-nav .tb-more-btn:hover, .tb-nav .tb-theme:hover {
       border-color: rgba(var(--accent-rgb),.45); background: rgba(var(--accent-rgb),.06); color: var(--text); }
-    .tb-nav .tb-theme { width: 40px; padding: 0; justify-content: center; }
-    .tb-nav .tb-ark svg { width: 20px; height: 20px; }
+    .tb-nav .tb-theme { width: var(--tbc-h); padding: 0; }
+    .tb-nav .tb-theme svg { width: calc(var(--tbc-f) * 1.35); height: calc(var(--tbc-f) * 1.35); }
+    .tb-nav .tb-ark svg { width: calc(var(--tbc-f) * 1.6); height: calc(var(--tbc-f) * 1.6); }
   }
   .tb-link-quiet:hover { color: var(--text); border-color: var(--border-2);
     background: rgba(var(--ink-rgb),.05); }
