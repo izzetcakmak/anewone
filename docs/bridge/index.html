@@ -198,6 +198,40 @@
   .tbx.net.test { color: var(--gold, #d69200); border-color: rgba(214,146,0,.5); background: rgba(214,146,0,.10); }
   @media (max-width: 640px) { .tb-nav2 { gap: 5px; } .tbx .lbl { display: none; } .tbx { padding: 0 9px; font-size: 11.5px; height: 36px; }
     .tbx.theme { width: 36px; } .tb-brand span { display: none; } }
+
+  /* ---- one workflow column */
+  .flow { max-width: 560px; margin: 0 auto; }
+  .flow.below { margin-top: 22px; display: grid; gap: 10px; }
+  .tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px; border: 1px solid var(--border-2); background: var(--surface); margin-bottom: 16px; }
+  .tabs button { all: unset; flex: 1; text-align: center; cursor: pointer; padding: 10px 12px; border-radius: 999px; font-weight: 600; font-size: 14px; color: var(--dim); }
+  .tabs button.on { background: var(--text); color: var(--bg); }
+  .seg2 { display: flex; gap: 6px; margin-bottom: 12px; }
+  .seg2 button { all: unset; cursor: pointer; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border-2); font-size: 13px; color: var(--dim); }
+  .seg2 button.on { color: var(--text); border-color: rgba(var(--accent-rgb),.5); background: rgba(var(--accent-rgb),.08); }
+  .seg2 button[hidden] { display: none; }
+  .panel > .card, #wayCard > .card { margin: 0; }
+  #bridge { max-width: none; }
+  /* the kit's own MAINNET badge repeats the header's; speed and a custom recipient wait under
+     Advanced settings */
+  #bridge .abk-badge { display: none; }
+  #bridge:not(.adv) div:has(> .abk-seg), #bridge:not(.adv) .abk-label b { display: none; }
+  .adv-toggle { all: unset; cursor: pointer; margin: 10px 2px 0; font-size: 12.5px; color: var(--dim); }
+  .adv-toggle:hover { color: var(--text); }
+  #bridge:empty ~ .adv-toggle { display: none; }
+  .arrive { margin-top: 16px; display: grid; gap: 8px; }
+  .arrive-h { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .6px; }
+  .arrive label { display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer; }
+  .coin-pick { margin-top: 12px; }
+  .send-head .pill { display: none; }
+  details.adv-box, details.more { border: 1px solid var(--border); background: var(--surface); }
+  details.adv-box { margin: 12px 0 0; padding: 0 12px; border-radius: 10px; }
+  details.more { padding: 0 16px; border-radius: 14px; }
+  details.adv-box > summary, details.more > summary { cursor: pointer; padding: 12px 0; font-weight: 600; font-size: 13.5px; list-style: none; }
+  details.adv-box > summary::-webkit-details-marker, details.more > summary::-webkit-details-marker { display: none; }
+  details.more > summary { font-size: 14.5px; }
+  details.adv-box > summary::after, details.more > summary::after { content: " \25BE"; color: var(--dim); }
+  details.adv-box[open] > summary::after, details.more[open] > summary::after { content: " \25B4"; }
+  details.more[open] { padding-bottom: 14px; }
 </style>
 </head>
 <body>
@@ -220,28 +254,43 @@
     <h1>Bring funds aboard from any chain.<small>Pay with ETH, SOL, USDC or almost anything. It lands on Arc as USDC, no gas needed there, and can buy a coin on the floor in the same trip.</small></h1>
   </div>
 
-  <div class="grid">
-    <div>
-      <div id="bridge"></div>
-      <div id="nowallet" class="nowallet" hidden>
-        <b>No wallet found in this browser.</b> The bridge signs with an injected wallet such as MetaMask, Rabby, Phantom or Coinbase Wallet.
-        Install one, or open this page inside your wallet app's browser. Google sign-in wallets from the floor cannot bridge from here yet.
-      </div>
-      <div class="coin-link" id="coinLink" hidden></div>
+  <!-- One workflow at a time: three tabs over one centred column. Add funds has two ways
+       in (another chain, or a card), and only asks which coin to buy once "Buy a coin" is
+       picked; everything technical sits under Advanced settings or below the form. -->
+  <div class="flow">
+    <div class="tabs" role="tablist" aria-label="What do you want to do">
+      <button type="button" role="tab" class="on" data-tab="add" aria-selected="true">Add funds</button>
+      <button type="button" role="tab" data-tab="swap" aria-selected="false">Swap</button>
+      <button type="button" role="tab" data-tab="send" aria-selected="false">Send</button>
+    </div>
 
-      <div class="card send" id="sendCard">
-        <div class="send-head"><h3>Send on Arc</h3><span class="pill" id="sendNet">…</span></div>
-        <p>Move USDC or any token on Arc to another wallet. One signature; gas is paid in USDC.</p>
-        <div class="lbl"><span>Token</span><span id="sendBal"></span></div>
-        <div class="sel"><select class="field" id="sendTok"><option value="native">USDC · Arc's own money</option></select></div>
-        <div class="lbl"><span>To</span><span></span></div>
-        <input class="field mono" id="sendTo" placeholder="0x… recipient on Arc" spellcheck="false" autocomplete="off">
-        <div class="lbl"><span>Amount</span><span id="sendSym"></span></div>
-        <div class="amt"><input class="field" id="sendAmt" inputmode="decimal" placeholder="0.00" autocomplete="off"><button type="button" id="sendMax">MAX</button></div>
-        <button type="button" class="btn" id="sendGo" disabled>Connect wallet</button>
-        <div class="hint" id="sendHint"></div>
+    <section class="panel" id="pAdd">
+      <div class="seg2" id="addSeg">
+        <button type="button" class="on" data-way="chain">From another chain</button>
+        <button type="button" data-way="card" id="waySeg" hidden>Buy with card</button>
       </div>
-
+      <div id="wayChain">
+        <div id="bridge"></div>
+        <div id="nowallet" class="nowallet" hidden>
+          <b>No wallet found in this browser.</b> The bridge signs with an injected wallet such as MetaMask, Rabby, Phantom or Coinbase Wallet.
+          Install one, or open this page inside your wallet app's browser. Google sign-in wallets from the floor cannot bridge from here yet.
+        </div>
+        <button type="button" class="adv-toggle" id="advToggle" aria-expanded="false">Advanced settings ▾</button>
+        <div class="arrive">
+          <div class="arrive-h">When it arrives</div>
+          <label><input type="radio" name="arrive" value="keep" checked> Keep as USDC</label>
+          <label><input type="radio" name="arrive" value="buy"> Buy a coin</label>
+        </div>
+        <div class="card coin-pick" id="coinPick" hidden>
+        <div class="sel"><select class="field" id="buy"><option value="">just bring USDC aboard</option></select></div>
+        <div class="hint" id="buyHint">Ranking the floor by FDV…</div>
+        <div class="or"><span>or paste a coin's contract address</span></div>
+        <input class="field mono" id="ca" placeholder="0x… any A NEW ONE coin, wherever you found it" spellcheck="false" autocomplete="off">
+        <div class="hint" id="caHint"></div>
+        </div>
+        <div class="coin-link" id="coinLink" hidden></div>
+      </div>
+      <div id="wayCard" hidden>
       <div class="card onramp" id="onrampCard" hidden>
         <div class="send-head"><h3>Buy USDC with card</h3><span class="pill" id="onrampNet">…</span></div>
         <p>Card, Apple Pay or Google Pay, through Circle. The USDC lands in your connected wallet on Arc; no other chain involved.</p>
@@ -249,17 +298,10 @@
         <div class="hint" id="onrampHint"></div>
         <div class="onramp-wrap" id="onrampWrap"></div>
       </div>
-    </div>
-
-    <aside class="side">
-      <div class="card">
-        <h3>Then buy a coin with it</h3>
-        <div class="sel"><select class="field" id="buy"><option value="">just bring USDC aboard</option></select></div>
-        <div class="hint" id="buyHint">Ranking the floor by FDV…</div>
-        <div class="or"><span>or paste a coin's contract address</span></div>
-        <input class="field mono" id="ca" placeholder="0x… any A NEW ONE coin, wherever you found it" spellcheck="false" autocomplete="off">
-        <div class="hint" id="caHint"></div>
       </div>
+    </section>
+
+    <section class="panel" id="pSwap" hidden>
       <div class="card swap" id="swapCard">
         <div class="send-head"><h3>Swap on Arc</h3><span class="pill" id="swNet">…</span></div>
         <p>Any token on Arc for any other. Routes by LI.FI; A NEW ONE coins trade on their own curve.</p>
@@ -275,12 +317,30 @@
           <div class="sw-sub"><span id="swToUsd"></span><span id="swRoute"></span></div>
         </div>
         <div class="sw-details" id="swDetails" hidden></div>
+        <details class="adv-box"><summary>Advanced settings</summary>
         <div class="sw-slip"><span>Max slippage</span>
           <div class="ctf" id="swSlipBtns"><button type="button" data-s="1">1%</button><button type="button" data-s="3" class="on">3%</button><button type="button" data-s="5">5%</button><button type="button" data-s="10">10%</button>
           <input id="swSlipCustom" inputmode="decimal" placeholder="custom"></div></div>
+        </details>
         <button type="button" class="btn" id="swGo" disabled>Connect wallet</button>
         <div class="hint" id="swHint"></div>
       </div>
+    </section>
+
+    <section class="panel" id="pSend" hidden>
+      <div class="card send" id="sendCard">
+        <div class="send-head"><h3>Send on Arc</h3><span class="pill" id="sendNet">…</span></div>
+        <p>Move USDC or any token on Arc to another wallet. One signature; gas is paid in USDC.</p>
+        <div class="lbl"><span>Token</span><span id="sendBal"></span></div>
+        <div class="sel"><select class="field" id="sendTok"><option value="native">USDC · Arc's own money</option></select></div>
+        <div class="lbl"><span>To</span><span></span></div>
+        <input class="field mono" id="sendTo" placeholder="0x… recipient on Arc" spellcheck="false" autocomplete="off">
+        <div class="lbl"><span>Amount</span><span id="sendSym"></span></div>
+        <div class="amt"><input class="field" id="sendAmt" inputmode="decimal" placeholder="0.00" autocomplete="off"><button type="button" id="sendMax">MAX</button></div>
+        <button type="button" class="btn" id="sendGo" disabled>Connect wallet</button>
+        <div class="hint" id="sendHint"></div>
+      </div>
+    </section>
       <div class="sw-modal" id="swPicker" hidden>
         <div class="sw-sheet">
           <div class="sw-ph"><b>Select a token</b><button type="button" class="modal-x" id="swPickX" aria-label="Close">✕</button></div>
@@ -289,24 +349,23 @@
           <div class="sw-list" id="swList"></div>
         </div>
       </div>
-      <div class="card">
-        <h3>How the trip goes</h3>
+  </div>
+
+  <div class="flow below">
+    <details class="more"><summary>How it works</summary>
         <ol class="steps">
           <li><div><b>Pick a chain and what you pay with.</b> USDC goes straight to the bridge. Anything else is swapped into USDC first by LI.FI, on the chain you are on.</div></li>
           <li><div><b>One bridge signature.</b> Circle's CCTP burns the USDC and its Forwarding Service mints it on Arc for you. You never need gas on Arc.</div></li>
           <li><div><b>Buy on the floor.</b> If you picked a coin, the bridged USDC buys it on its bonding curve as soon as it lands; one more signature, on Arc.</div></li>
         </ol>
-      </div>
-      <div class="card">
-        <h3>Chains that can board</h3>
+    </details>
+    <details class="more"><summary>Supported chains</summary>
         <p>Base, Ethereum, Arbitrum, OP Mainnet, Polygon, Avalanche, Unichain, Linea, World Chain, Sonic, Monad, Sei, HyperEVM, Ink, and Solana. Fast transfers arrive in about 20 seconds where Circle offers them. From Solana, SOL or any Solana token becomes USDC on Arc in one LI.FI route, signed in Phantom, Solflare or Backpack; the USDC lands at your Arc address (Phantom carries one, or type it in).</p>
         <div class="chains" id="chainPills"></div>
-      </div>
-      <div class="card">
-        <h3>Fees, plainly</h3>
+    </details>
+    <details class="more"><summary>Fees</summary>
         <p>Circle takes a few basis points on fast transfers (none on standard) plus about 0.02 USDC to mint on Arc for you. LI.FI swaps carry the pool's price and a fixed fee of a cent or two; on mainnet 0.25% of a non-USDC payment goes to the floor, shown as its own line. The quote shows everything before you sign, and the amount bridged after a swap is what actually arrived in your wallet, not an estimate.</p>
-      </div>
-    </aside>
+    </details>
   </div>
 </main>
 <footer>
@@ -1225,6 +1284,41 @@ let onrampCfg = null, onrampKit = null, onrampWidget = null, onrampBusy = false;
 
   sendPick();
   sendConnectSilently();
+
+  // ---- one workflow at a time: tabs, the two ways to add funds, "when it arrives"
+  (function () {
+    const $$ = (id) => document.getElementById(id);
+    const panels = { add: $$("pAdd"), swap: $$("pSwap"), send: $$("pSend") };
+    document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
+      document.querySelectorAll(".tabs button").forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-selected", String(x === b)); });
+      for (const [k, el] of Object.entries(panels)) el.hidden = k !== b.dataset.tab;
+    }));
+    const way = (w) => {
+      document.querySelectorAll("#addSeg button").forEach((x) => x.classList.toggle("on", x.dataset.way === w));
+      $$("wayChain").hidden = w !== "chain"; $$("wayCard").hidden = w !== "card";
+    };
+    document.querySelectorAll("#addSeg button").forEach((b) => b.addEventListener("click", () => way(b.dataset.way)));
+    // "Buy with card" is offered only when the page can open the onramp (config and a wallet)
+    const oc = $$("onrampCard");
+    const syncCard = () => { $$("waySeg").hidden = oc.hidden; if (oc.hidden && !$$("wayCard").hidden) way("chain"); };
+    new MutationObserver(syncCard).observe(oc, { attributes: true, attributeFilter: ["hidden"] }); syncCard();
+    // Advanced settings: bridge speed and a custom recipient
+    const adv = $$("advToggle");
+    adv.addEventListener("click", () => {
+      const on = $$("bridge").classList.toggle("adv");
+      adv.setAttribute("aria-expanded", String(on)); adv.textContent = on ? "Advanced settings \u25B4" : "Advanced settings \u25BE";
+    });
+    // the coin chooser shows only for "Buy a coin"; "Keep as USDC" clears any pick
+    const buySel = $$("buy"), ca = $$("ca");
+    const arrive = (v) => {
+      $$("coinPick").hidden = v !== "buy";
+      if (v === "keep" && buySel.value) { buySel.value = ""; ca.value = ""; buySel.dispatchEvent(new Event("change")); }
+    };
+    document.querySelectorAll('input[name="arrive"]').forEach((r) => r.addEventListener("change", () => arrive(r.value)));
+    const syncPick = () => { if (buySel.value) { document.querySelector('input[name="arrive"][value="buy"]').checked = true; $$("coinPick").hidden = false; } };
+    buySel.addEventListener("change", syncPick);
+    setTimeout(syncPick, 1500); setTimeout(syncPick, 5000); // a ?token= link preselects a coin once the floor loads
+  })();
 })();
 </script>
 </body>
