@@ -958,6 +958,10 @@
   .wrow:hover { border-color: var(--accent); background: var(--bg-2); }
   .wrow img { width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; }
   .wrow .wname { font-weight: 600; }
+  /* the funding row: Copy address, the bridge link and the card button share one height */
+  #fundCopy, #fundLink, #fundCard { height: 44px; min-height: 44px; box-sizing: border-box;
+    display: inline-flex; align-items: center; justify-content: center; padding: 0 18px; line-height: 1; }
+  #fundCard[hidden] { display: none; }
   .wback { all: unset; cursor: pointer; font-size: 18px; margin-right: 6px; color: var(--dim); }
   .wback:hover { color: var(--text); }
   #wStep1 .gmailbtn + .wdivider { margin: 14px 0; }
@@ -3296,12 +3300,12 @@ const LOW_BAL = ethers.parseEther("0.5");
 let fundPoll = null, wasLow = false;
 if (window.ANEWONE_CONFIG.mainnet.live) {
   $("fundBody").innerHTML = 'On Arc, <b>USDC is both the gas and the money</b>. ' +
-    'One balance covers fees and trades. Bring USDC in from any chain through GangWay:';
+    'One balance covers fees and trades. Bring USDC in from any chain through the bridge:';
   $("fundLink").href = "bridge/";
   $("fundLink").target = "";
   $("fundLink").rel = "";
-  $("fundLink").textContent = "Open GangWay →";
-  $("fundNote").innerHTML = 'GangWay bridges USDC, ETH or almost anything from another chain ' +
+  $("fundLink").textContent = "Open Bridge →";
+  $("fundNote").innerHTML = 'The bridge brings USDC, ETH or almost anything from another chain ' +
     'straight to this address. This panel disappears automatically once the balance lands ' +
     '(checked every ~15s).';
 }
