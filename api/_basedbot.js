@@ -34,6 +34,8 @@ const WAD = 10n ** 18n;
 const BPS = 10_000n;
 const FEE_BPS = 150n; // 1.5% trade fee, of which a third goes to the coin's creator
 const SUPPLY = 1_000_000_000; // every coin launches with the same 1B; migrate() burns part of it
+const ANTI_SNIPE_BLOCKS = 20; // as in the contract: for this many blocks after its creation,
+const ANTI_SNIPE_MAX = SUPPLY / 50; // a coin sells one wallet at most 2% of its supply
 const DAY_BLOCKS = 172_800;
 const MAX_LIST = 500;
 const MAX_TRADES = 1000;
@@ -174,6 +176,8 @@ function shape(floor) {
 }
 
 function meta(floor) {
+  const bt = Number(floor.blockTimeSec) || 0.5;
+  const gradUsd = num(BigInt(floor.gradTarget || "0"));
   return {
     platform: "A NEW ONE",
     url: SITE,
@@ -205,6 +209,40 @@ function meta(floor) {
       Graduated: "Graduated(address indexed token, uint256 raised)",
       Migrated: "Migrated(address indexed token, address indexed pool, uint256 positionId, uint256 tokensToPool, uint256 usdcToPool, uint128 liquidity, uint256 tokensBurned)",
       note: "Trade.usdcAmount is trader centric: fee included on a buy, fee deducted on a sell. Convert to the curve side (buy x 0.985, sell / 0.985) before summing it as volume. Every field in this API is already converted.",
+    },
+    // What a terminal needs to trade a coin still on its curve, since this API only reads.
+    // Every line here is the contract's own behaviour (src/ANewOne.sol), not a policy of ours.
+    trading: {
+      note: "this API only reads. A trade is a transaction from the trader's own wallet straight to the platform contract (contract, above): nothing to register, and no caller is refused for being a bot or a contract",
+      abi: [
+        "function buy(address token, uint256 minTokensOut) payable",
+        "function sell(address token, uint256 tokenAmount, uint256 minUsdcOut)",
+        "function quoteBuy(address token, uint256 usdcIn) view returns (uint256 tokensOut)",
+        "function quoteSell(address token, uint256 tokenAmount) view returns (uint256 usdcOut)",
+        "function priceWad(address token) view returns (uint256)",
+      ],
+      units: "18 decimals on both sides: token amounts, and USDC as native value, so 1 USDC is 1e18 here, not 1e6 (see quote)",
+      buy: "msg.value is the USDC to spend, the fee included, and no approval is needed; the coin goes to msg.sender",
+      sell: "approve the platform contract on the coin first (a plain ERC-20; an allowance of 2^256-1 is never spent down). The USDC, fee deducted, is paid to msg.sender as native value, so a contract that sells needs a receive()",
+      quotes: "quoteBuy takes what buy's msg.value would be, quoteSell a token amount; both count the fee and give exactly what the trade would at the same block. priceWad is the spot price every coin here carries",
+      slippage: "minTokensOut and minUsdcOut are the only guard and there is no deadline: set them from a fresh quote less your tolerance",
+      antiSnipe: {
+        blocks: ANTI_SNIPE_BLOCKS,
+        maxTokensPerWallet: ANTI_SNIPE_MAX,
+        note: `from a coin's createdBlock through ${ANTI_SNIPE_BLOCKS} blocks later (about ${Math.round(ANTI_SNIPE_BLOCKS * bt)} s) one wallet can buy at most ${ANTI_SNIPE_MAX.toLocaleString("en-US")} tokens, 2% of the supply; a buy past that reverts with 'anti-snipe cap'. Sells are never capped`,
+      },
+      lifecycle: `a coin trades on its curve until a buy lifts its raised USDC to ${gradUsd.toLocaleString("en-US")}; that buy fills in full and graduates it. The curve then closes: buy, sell and both quotes revert with 'graduated'. migrate() moves the coin into a full range Uniswap v3 pool against the ERC-20 USDC (quote.erc20, 6 decimals) at the 1% fee tier, and the Migrated event names the pool; from then on it trades there like any v3 pool. Should the move stall, the platform may reopen the curve an hour after graduation, and the quotes answer again`,
+      reverts: {
+        "unknown token": "not a coin of this platform (the quotes answer 0 instead)",
+        graduated: "the curve is closed, see lifecycle",
+        slippage: "the trade would pay less than minTokensOut or minUsdcOut, or nothing at all",
+        "anti-snipe cap": "past a wallet's early limit, see antiSnipe",
+        "no value": "a buy sent without USDC",
+        "no amount": "a sell of 0 tokens",
+        allowance: "a sell without enough approval, from the coin's own transferFrom",
+        balance: "a sell of more tokens than the wallet holds, from the coin's own transferFrom",
+        send: "the USDC could not be paid to msg.sender: a contract without receive()",
+      },
     },
     endpoints: [
       "GET /api/basedbot                                  this document",
