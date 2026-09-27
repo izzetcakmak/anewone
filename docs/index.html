@@ -970,8 +970,17 @@
   .wrow img { width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; }
   .wrow .wname { font-weight: 600; }
   /* the funding row: Copy address, the bridge link and the card button share one height */
-  #fundCopy, #fundLink, #fundCard { height: 44px; min-height: 44px; box-sizing: border-box;
+  #fundAddr, #fundCopy, #fundLink, #fundCard { height: 44px; min-height: 44px; box-sizing: border-box;
     display: inline-flex; align-items: center; justify-content: center; padding: 0 18px; line-height: 1; }
+  /* the three actions are one fixed width; the address takes the rest and shortens with an
+     ellipsis rather than pushing a button onto the next line */
+  #fundCopy, #fundLink, #fundCard { flex: none; width: 168px; padding: 0 10px; }
+  #fundAddr { flex: 1 1 200px; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; justify-content: flex-start; display: block; line-height: 44px; }
+  @media (max-width: 600px) {
+    #fundAddr { flex-basis: 100%; }
+    #fundCopy, #fundLink, #fundCard { width: 100%; }
+  }
   #fundCard[hidden] { display: none; }
   .wback { all: unset; cursor: pointer; font-size: 18px; margin-right: 6px; color: var(--dim); }
   .wback:hover { color: var(--text); }
