@@ -158,7 +158,7 @@
     <li><strong>Card purchases</strong> (<code>/api/onramp-session</code>): opens a Circle Onramp session for
       your signed-in wallet so USDC bought with a card lands there. The purchase itself, including any identity
       checks, happens in Circle's widget under Circle's privacy policy; we never see your card details.</li>
-    <li><strong>GangWay quotes</strong> (<code>/api/lifi</code>): forwards bridge and swap quote requests to LI.FI
+    <li><strong>Swap &amp; Bridge quotes</strong> (<code>/api/lifi</code>): forwards bridge and swap quote requests to LI.FI
       with our partner key. A quote request carries the amount and the wallet addresses involved, which LI.FI sees
       under its own privacy policy.</li>
   </ul>
@@ -187,7 +187,7 @@
     <li><strong>Continue with Email or Social:</strong> if you choose it, sign-in (Google, X, Discord, Apple or a
       one-time email code) is handled by Web3Auth under its own privacy policy. It creates a non-custodial wallet;
       we never see your password or your email inbox.</li>
-    <li><strong>Bridging (GangWay):</strong> moving funds in from other chains uses Circle CCTP and LI.FI, and
+    <li><strong>Swap &amp; Bridge:</strong> moving funds in from other chains uses Circle CCTP and LI.FI, and
       the source chain's own RPC endpoints. Deck Hand uses Groq and Walrus as described above; card purchases
       use Circle.</li>
   </ul>

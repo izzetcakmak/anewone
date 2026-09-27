@@ -10,15 +10,15 @@
     catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
   })();
 </script>
-<title>GangWay - Swap/Bridge · Bring funds aboard from any chain | A NEW ONE</title>
+<title>Swap &amp; Bridge · Bring funds aboard from any chain | A NEW ONE</title>
 <link rel="canonical" href="https://anewone.xyz/bridge/">
-<meta name="description" content="The gangway onto A NEW ONE: pay with ETH, USDC or almost anything on Base, Ethereum, Arbitrum and more. It arrives on Arc as USDC, no gas needed there, and can buy a coin on the floor in the same trip.">
+<meta name="description" content="Swap &amp; Bridge onto A NEW ONE: pay with ETH, USDC or almost anything on Base, Ethereum, Arbitrum and more. It arrives on Arc as USDC, no gas needed there, and can buy a coin on the floor in the same trip.">
 <link rel="icon" type="image/png" sizes="32x32" href="../favicon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
 <meta name="theme-color" content="#07080b">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="A NEW ONE">
-<meta property="og:title" content="GangWay - Swap/Bridge · Bring funds aboard from any chain">
+<meta property="og:title" content="Swap &amp; Bridge · Bring funds aboard from any chain">
 <meta property="og:description" content="Pay with what you have on any major chain. It lands on Arc as USDC and can buy a coin on A NEW ONE in the same trip.">
 <meta property="og:url" content="https://anewone.xyz/bridge/">
 <meta property="og:image" content="https://anewone.xyz/apple-touch-icon.png">
@@ -201,7 +201,7 @@
 
 <main class="wrap">
   <div class="hero">
-    <div class="kicker">🌉 GangWay - Swap/Bridge</div>
+    <div class="kicker">🌉 Swap &amp; Bridge</div>
     <h1>Bring funds aboard from any chain.<small>Pay with ETH, SOL, USDC or almost anything. It lands on Arc as USDC, no gas needed there, and can buy a coin on the floor in the same trip.</small></h1>
   </div>
 
@@ -209,7 +209,7 @@
     <div>
       <div id="bridge"></div>
       <div id="nowallet" class="nowallet" hidden>
-        <b>No wallet found in this browser.</b> GangWay signs with an injected wallet such as MetaMask, Rabby, Phantom or Coinbase Wallet.
+        <b>No wallet found in this browser.</b> The bridge signs with an injected wallet such as MetaMask, Rabby, Phantom or Coinbase Wallet.
         Install one, or open this page inside your wallet app's browser. Google sign-in wallets from the floor cannot bridge from here yet.
       </div>
       <div class="coin-link" id="coinLink" hidden></div>
@@ -480,9 +480,9 @@
     say(caHint, "Looking it up on the floor…");
     let d = null;
     try { d = await describe(addr); } catch (e) { say(caHint, "Could not read it: " + (e.shortMessage || e.message), "bad"); return; }
-    if (!d) { say(caHint, "Not an A NEW ONE coin. The gangway buys what launched on this floor; for coins elsewhere on Arc, bring USDC aboard and trade where they live.", "bad"); return; }
+    if (!d) { say(caHint, "Not an A NEW ONE coin. The bridge buys what launched on this floor; for coins elsewhere on Arc, bring USDC aboard and trade where they live.", "bad"); return; }
     if (d.venue === "closed") { say(caHint, "$" + d.symbol + " has graduated and is waiting for its move into Uniswap; nothing trades it right now. Bring USDC aboard and come back once it has moved.", "bad"); return; }
-    if (d.venue === "pool" && !uniOk) { say(caHint, "$" + d.symbol + " trades on Uniswap v3 on Arc. Buying there from the gangway switches on once Uniswap's router on Arc is verified; until then bring USDC aboard and swap on Uniswap.", "bad"); return; }
+    if (d.venue === "pool" && !uniOk) { say(caHint, "$" + d.symbol + " trades on Uniswap v3 on Arc. Buying there from the bridge switches on once Uniswap's router on Arc is verified; until then bring USDC aboard and swap on Uniswap.", "bad"); return; }
     addOption(d);
     if (!tokens.some((t) => t.address === d.address)) tokens.push(d);
     buySel.value = d.address;

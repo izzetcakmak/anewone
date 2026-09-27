@@ -82,10 +82,10 @@ On Arc mainnet the platform points at Uniswap's official v3 deployment: factory
 - `script/DeployUniswapV3.s.sol`: stands up Uniswap v3 from its npm bytecode for testnet and anvil rehearsals.
 - `test/`: the forge test suite and the Uniswap v3 fixtures (provenance in `test/fixtures/uniswap-v3/PROVENANCE.md`).
 - `docs/`: the static site, deployed by Vercel on every push: the app, docs, the ark, the Boarding Pass,
-  GangWay (`bridge/`), Deck Hand (`chat/`), privacy and terms.
+  Swap & Bridge (`bridge/`), Deck Hand (`chat/`), privacy and terms.
 - `api/`: Vercel functions. `chat.js` is Deck Hand: verifies the wallet signature, recalls from and remembers to
   Walrus Memory under a per-wallet namespace, reads the floor index for live Arc data and answers with an
-  OpenAI-compatible model. `rpc.js` relays reads for browsers that block `*.arc.io`; `lifi/` proxies GangWay quotes.
+  OpenAI-compatible model. `rpc.js` relays reads for browsers that block `*.arc.io`; `lifi/` proxies Swap & Bridge quotes.
 - `monitor/`: the jobs behind the launch, run every minute by Windows Task Scheduler (`AnewoneMainnetScan`):
   - `scan.mjs` finds Arc mainnet, bridges USDC, deploys, confirms the launch on chain and flips `docs/config.js`
   - `bridge.mjs` moves 10 USDC from Base to Arc with CCTP V2 and Circle's Forwarding Service
