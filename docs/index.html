@@ -438,6 +438,25 @@
     border-color: rgba(var(--accent-rgb),.5); color: var(--accent); }
   /* Docs is secondary: same shape, no accent until hovered */
   .tb-link-quiet { border-color: var(--border-2); background: transparent; color: var(--dim); }
+  .tb-theme { all: unset; cursor: pointer; display: inline-grid; place-items: center; color: var(--dim); }
+  .tb-theme svg { width: 17px; height: 17px; }
+  .tb-theme .i-moon, :root[data-theme="dark"] .tb-theme .i-sun, :root[data-theme="dim"] .tb-theme .i-sun { display: none; }
+  :root[data-theme="dark"] .tb-theme .i-moon, :root[data-theme="dim"] .tb-theme .i-moon { display: block; }
+  .tb-theme:hover { color: var(--text); }
+  /* A wide screen: every nav control one height, one padding, one quiet border; only the
+     network state keeps a highlighted pill */
+  @media (min-width: 901px) {
+    .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav .tb-more-btn, .tb-nav .tb-theme, .tb-nav #netBadge {
+      height: 40px; box-sizing: border-box; padding: 0 14px; border-radius: 999px;
+      display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono);
+      font-size: 12.5px; letter-spacing: .4px; line-height: 1; }
+    .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav .tb-more-btn, .tb-nav .tb-theme {
+      border: 1px solid var(--border-2); background: transparent; color: var(--text); text-transform: none; }
+    .tb-nav .tb-ark:hover, .tb-nav .tb-link:hover, .tb-nav .tb-more-btn:hover, .tb-nav .tb-theme:hover {
+      border-color: rgba(var(--accent-rgb),.45); background: rgba(var(--accent-rgb),.06); color: var(--text); }
+    .tb-nav .tb-theme { width: 40px; padding: 0; justify-content: center; }
+    .tb-nav .tb-ark svg { width: 20px; height: 20px; }
+  }
   .tb-link-quiet:hover { color: var(--text); border-color: var(--border-2);
     background: rgba(var(--ink-rgb),.05); }
   /* ---- the fold-away nav.
@@ -545,6 +564,8 @@
       padding: 0; gap: 8px; background: none; border: 0; box-shadow: none; }
     .tb-nav .tb-more-menu a { min-height: 42px; border: 1px solid var(--border-2); border-radius: 999px; padding: 9px 14px; color: var(--dim); }
     .tb-nav .theme-sw { align-self: flex-start; margin: 0; }
+    .tb-nav .tb-theme { align-self: flex-start; width: 42px; height: 42px; box-sizing: border-box;
+      border: 1px solid var(--border-2); border-radius: 999px; }
     /* The wallet menu was pinned to the right edge of the Connect button. With the
        theme switch folded away that button sits further left, and the menu ran off
        the left of the screen, address row first. Hang it off the bar instead, full
@@ -1373,13 +1394,13 @@
         <path d="M18 23 H42 V32 H18 Z" fill="#F8D49B"/>
         <path d="M5 32 H55 Q51 44 30 46 Q9 44 5 32 Z" fill="#C9925E"/>
       </svg>
-      <span>the ark</span>
+      <span>Ark</span>
       <span class="ark-tip">If you're curious about our story, <b>CLICK</b></span>
     </a>
     <!-- The gangway is how you board: funds from any chain arrive on Arc as USDC and can
          buy a coin on the floor in the same trip. Same shape as the Boarding Pass link. -->
-    <a class="tb-link" href="bridge/" title="GangWay - Swap/Bridge: bring ETH, USDC or almost anything aboard from any chain, then buy on the floor">🌉 GangWay - Swap/Bridge</a>
-    <a class="tb-link" href="chat/" title="Deck Hand: the chat that remembers you, memory on Walrus"><img src="chat/deckhand.svg" alt="" width="16" height="16" style="border-radius:4px;vertical-align:-3px"> Deck Hand / Ask AI</a>
+    <a class="tb-link" href="bridge/" title="Swap &amp; Bridge (GangWay): bring ETH, USDC or almost anything aboard from any chain, then buy on the floor">Swap &amp; Bridge</a>
+    <a class="tb-link" href="chat/" title="Deckhand, the AI assistant: ask about any coin; it remembers you, memory on Walrus">Deckhand</a>
     <!-- Everything that is not a door or the money: one quiet menu on a wide screen,
          plain rows inside the phone panel. The footer no longer repeats any of it. -->
     <div class="tb-more" id="moreWrap">
@@ -1390,17 +1411,11 @@
         <a href="mailto:support@anewone.xyz">✉ Contact</a>
       </div>
     </div>
-    <div class="theme-sw" id="themeSw" role="group" aria-label="Colour theme">
-      <button type="button" data-theme-set="light" title="Light" aria-pressed="false" aria-label="Light theme">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
-      </button>
-      <button type="button" data-theme-set="dim" title="Dim" aria-pressed="false" aria-label="Dim theme">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 3.8a8.2 8.2 0 0 0 0 16.4z" fill="currentColor" stroke="none"/></svg>
-      </button>
-      <button type="button" data-theme-set="dark" title="Dark" aria-pressed="false" aria-label="Dark theme">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg>
-      </button>
-    </div>
+    <!-- one light/dark toggle; the old dim theme is still honoured if a visitor had picked it -->
+    <button type="button" class="tb-theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark">
+      <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+      <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg>
+    </button>
     <span id="netBadge" class="badge">Testnet</span>
     <span id="balChip" class="badge" hidden title="Your USDC on Arc. Pays gas and trades"></span>
     </div>
@@ -2732,26 +2747,17 @@ const cssVar = (name) =>
 (function themeSwitcher() {
   const KEY = "anewone_theme";
   const root = document.documentElement;
-  const sw = $("themeSw");
-  if (!sw) return;
-
-  const paint = (t) => {
+  const btn = $("themeSw");
+  if (!btn) return;
+  const isLight = () => (root.getAttribute("data-theme") || "light") === "light";
+  const paint = () => btn.setAttribute("aria-pressed", String(!isLight()));
+  paint();
+  btn.addEventListener("click", () => {
+    const t = isLight() ? "dark" : "light";
     root.setAttribute("data-theme", t);
-    for (const b of sw.querySelectorAll("button")) {
-      b.setAttribute("aria-pressed", String(b.dataset.themeSet === t));
-    }
-  };
-  paint(root.getAttribute("data-theme") || "light");
-
-  sw.addEventListener("click", (e) => {
-    const btn = e.target.closest("button[data-theme-set]");
-    if (!btn) return;
-    const t = btn.dataset.themeSet;
     try { localStorage.setItem(KEY, t); } catch {}
-    paint(t);
+    paint();
   });
-
-
 })();
 
 // ---- mainnet countdown.
