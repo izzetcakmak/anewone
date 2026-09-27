@@ -168,9 +168,12 @@
   .rail-h h3 { font-size: 14.5px; font-weight: 600; letter-spacing: -.2px; }
   .rail-count { font-size: 11px; color: var(--dim); background: var(--surface-2);
     border-radius: 999px; padding: 2px 8px; }
-  .rail-tabs { display: flex; gap: 2px; padding: 0 10px 10px; }
+  /* equal-width tabs with centred labels: with padding alone, the gap between two plain labels
+     was twice the gap between the lit pill and its neighbour */
+  .rail-tabs { display: flex; gap: 4px; padding: 0 10px 10px; }
   .rail-tabs button { all: unset; cursor: pointer; font-size: 12.5px; color: var(--dim);
-    padding: 5px 10px; border-radius: 999px; transition: background .15s, color .15s; }
+    flex: 1 1 0; text-align: center; padding: 5px 6px; border-radius: 999px;
+    transition: background .15s, color .15s; }
   .rail-tabs button:hover { color: var(--text); }
   .rail-tabs button.on { background: var(--text); color: var(--bg); font-weight: 500; }
   .rail-list { max-height: calc(100vh - 210px); overflow-y: auto; }
