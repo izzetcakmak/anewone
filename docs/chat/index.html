@@ -282,7 +282,7 @@
   };
   const nonceHex = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
   let auth = null;
-  try { const a = JSON.parse(localStorage.getItem(AUTH_KEY) || "null"); if (a && a.address && (a.session || a.signature) && Date.now() - Date.parse(a.issued) < SIGN_TTL_MS - 30 * 60 * 1000) auth = a; } catch {}
+  try { const a = JSON.parse(localStorage.getItem(AUTH_KEY) || "null"); if (a && a.address && (a.session || (a.signature && a.nonce)) && Date.now() - Date.parse(a.issued) < SIGN_TTL_MS - 30 * 60 * 1000) auth = a; } catch {}
   const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
   function paintAuth() {
     $("signedOut").hidden = !!auth; $("signedIn").hidden = !auth;

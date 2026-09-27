@@ -3394,7 +3394,7 @@ async function onrampAuth() {
   // reuse the chat's session when it is for this wallet and still fresh
   try {
     const a = JSON.parse(localStorage.getItem(ONRAMP_AUTH_KEY) || "null");
-    if (a && a.address && (a.session || a.signature) && a.address.toLowerCase() === userAddr.toLowerCase() &&
+    if (a && a.address && (a.session || (a.signature && a.nonce)) && a.address.toLowerCase() === userAddr.toLowerCase() &&
         Date.now() - Date.parse(a.issued) < SIGN_TTL_MS - 30 * 60 * 1000) return a;
   } catch {}
   const issued = new Date().toISOString(), nonce = nonceHex();
@@ -3428,6 +3428,8 @@ $("fundCard").onclick = async () => {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ auth }),
     });
     const session = await r.json().catch(() => ({}));
+    // an expired or old-format sign-in: forget it, so the next press signs a fresh one
+    if (r.status === 401) { try { localStorage.removeItem(ONRAMP_AUTH_KEY); } catch {} throw new Error("Your sign-in expired. Press the button again to sign once more."); }
     if (!r.ok) throw new Error(session.error || ("onramp session " + r.status));
     if (!onrampKit) {
       const { createOnrampKit } = await import("./vendor/onramp-kit.js");

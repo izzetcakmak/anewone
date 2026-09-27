@@ -1210,9 +1210,18 @@
   // proving the address (the Deck Hand sign-in, cached a week), /api/onramp-session mints a
   // session pinned to Arc USDC for that address, the vendored kit frames Circle's widget in
   // the card. The button exists only when the deployment holds an Onramp key.
+  // The Sign-In with Ethereum message of api/_auth.js, word for word, traded at /api/auth for
+  // a day's session token. This page still sent the old "Deck Hand sign-in" text after the
+  // server moved on, so every card purchase from here came back "sign in first".
   const ONRAMP_AUTH_KEY = "anewone_deckhand_auth";
-  const onrampSignInText = (address, issued) =>
-    `A NEW ONE — Deck Hand sign-in\n\nWallet: ${address}\nIssued: ${issued}\n\nThis signature only proves you own this wallet so the deck hand can keep your memory. It costs nothing and moves nothing.`;
+  const SIGN_TTL_MS = 24 * 3600 * 1000;
+  const onrampSignInText = (address, nonce, issued) => {
+    const expires = new Date(Date.parse(issued) + SIGN_TTL_MS).toISOString();
+    return `anewone.xyz wants you to sign in with your Ethereum account:\n${address}\n\n` +
+      `Sign in to A NEW ONE. This signature proves you own this wallet for two things only: keeping your Deck Hand memory, and opening card purchases that land in this wallet. It costs nothing, moves nothing, and cannot spend from the wallet.\n\n` +
+      `URI: https://anewone.xyz\nVersion: 1\nChain ID: 5042\nNonce: ${nonce}\nIssued At: ${issued}\nExpiration Time: ${expires}`;
+  };
+  const nonceHex = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
   const onrampCard = S("onrampCard"), onrampGo = S("onrampGo"), onrampWrap = S("onrampWrap"), onrampHint = S("onrampHint");
   const onrampSay = (t, cls) => { onrampHint.textContent = t; onrampHint.className = "hint" + (cls ? " " + cls : ""); };
 
@@ -1231,12 +1240,19 @@ let onrampCfg = null, onrampKit = null, onrampWidget = null, onrampBusy = false;
   async function onrampAuth(address) {
     try {
       const a = JSON.parse(localStorage.getItem(ONRAMP_AUTH_KEY) || "null");
-      if (a && a.address && a.signature && a.address.toLowerCase() === address.toLowerCase() &&
-          Date.now() - Date.parse(a.issued) < 6.5 * 864e5) return a;
+      // a session, or a SIWE signature (it carries a nonce); an old-format one is signed again
+      if (a && a.address && (a.session || (a.signature && a.nonce)) && a.address.toLowerCase() === address.toLowerCase() &&
+          Date.now() - Date.parse(a.issued) < SIGN_TTL_MS - 30 * 60 * 1000) return a;
     } catch {}
-    const issued = new Date().toISOString();
-    const signature = await wallet().request({ method: "personal_sign", params: [onrampSignInText(address, issued), address] });
-    const a = { address, issued, signature };
+    const issued = new Date().toISOString(), nonce = nonceHex();
+    const signature = await wallet().request({ method: "personal_sign", params: [onrampSignInText(address, nonce, issued), address] });
+    const signed = { address, nonce, issued, signature };
+    let a = signed;
+    try {
+      const r = await fetch("../api/auth", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ auth: signed }) });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.session) a = { address, issued, session: j.session };
+    } catch {}
     try { localStorage.setItem(ONRAMP_AUTH_KEY, JSON.stringify(a)); } catch {}
     return a;
   }
@@ -1259,6 +1275,8 @@ let onrampCfg = null, onrampKit = null, onrampWidget = null, onrampBusy = false;
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ auth }),
       });
       const session = await r.json().catch(() => ({}));
+      // an expired or old-format sign-in: forget it, so the next press signs a fresh one
+      if (r.status === 401) { try { localStorage.removeItem(ONRAMP_AUTH_KEY); } catch {} throw new Error("Your sign-in expired. Press the button again to sign once more."); }
       if (!r.ok) throw new Error(session.error || ("onramp session " + r.status));
       if (!onrampKit) {
         const { createOnrampKit } = await import("../vendor/onramp-kit.js");
