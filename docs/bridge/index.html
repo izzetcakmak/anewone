@@ -180,21 +180,35 @@
   .send .btn:disabled { opacity: .55; cursor: default; }
   footer { max-width: 1160px; margin: 0 auto; padding: 20px; color: var(--faint); font-size: 12px; border-top: 1px solid var(--border); }
   footer a { color: var(--dim); margin-right: 14px; }
+
+  /* the same bar as the floor: one height, one padding, one quiet border for every control,
+     one light/dark toggle, and only the network in a highlighted pill */
+  .tb-nav2 { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+  .tbx { height: 39px; box-sizing: border-box; padding: 0 13px; border-radius: 999px; display: inline-flex;
+    align-items: center; justify-content: center; gap: 7px; font: 500 12.5px var(--mono); letter-spacing: .4px;
+    line-height: 1; white-space: nowrap; border: 1px solid var(--border-2); background: transparent; color: var(--text); text-decoration: none; }
+  a.tbx:hover, button.tbx:hover { text-decoration: none; border-color: rgba(var(--accent-rgb),.45); background: rgba(var(--accent-rgb),.06); }
+  button.tbx { cursor: pointer; }
+  .tbx.theme { width: 39px; padding: 0; }
+  .tbx.theme svg { width: 17px; height: 17px; }
+  .tbx.theme .i-moon, :root[data-theme="dark"] .tbx.theme .i-sun, :root[data-theme="dim"] .tbx.theme .i-sun { display: none; }
+  :root[data-theme="dark"] .tbx.theme .i-moon, :root[data-theme="dim"] .tbx.theme .i-moon { display: block; }
+  .tbx.net { color: var(--green); border-color: rgba(var(--green-rgb),.5); background: rgba(var(--green-rgb),.10); }
+  .tbx.net::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
+  .tbx.net.test { color: var(--gold, #d69200); border-color: rgba(214,146,0,.5); background: rgba(214,146,0,.10); }
+  @media (max-width: 640px) { .tb-nav2 { gap: 6px; } .tbx .lbl { display: none; } .tbx { padding: 0 10px; } }
 </style>
 </head>
 <body>
 <nav class="topbar">
   <div class="topbar-inner">
     <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../brand/mark.png" alt=""><span>A NEW ONE</span></a>
-    <a class="tb-link tb-link-quiet" href="/">← <span class="lbl">the floor</span></a>
-    <a class="tb-link tb-link-quiet" href="../ark/" target="_blank">🛶 <span class="lbl">the ark</span></a>
-    <a class="tb-link tb-link-quiet" href="../chat/"><img src="../chat/deckhand.svg" alt="" width="16" height="16" style="border-radius:4px;vertical-align:-3px"> <span class="lbl">Deck Hand / Ask AI</span></a>
-    <div class="tb-spacer"></div>
-    <span class="pill" id="netPill">…</span>
-    <div class="theme-sw" id="themeSw" role="group" aria-label="Colour theme">
-      <button type="button" data-theme-set="light" title="Light" aria-label="Light theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg></button>
-      <button type="button" data-theme-set="dim" title="Dim" aria-label="Dim theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 3.8a8.2 8.2 0 0 0 0 16.4z" fill="currentColor" stroke="none"/></svg></button>
-      <button type="button" data-theme-set="dark" title="Dark" aria-label="Dark theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></button>
+    <div class="tb-nav2">
+      <a class="tbx" href="/">← <span class="lbl">Floor</span></a>
+      <a class="tbx" href="../ark/" target="_blank">🛶 <span class="lbl">Ark</span></a>
+      <a class="tbx" href="../chat/" title="Deckhand, the AI assistant">Deckhand</a>
+      <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
+      <span class="tbx net" id="netPill">…</span>
     </div>
   </div>
 </nav>
@@ -339,17 +353,12 @@
   // ---- theme switcher (same key as the floor)
   const KEY = "anewone_theme";
   const sw = document.getElementById("themeSw");
-  function paintTheme() {
-    const t = document.documentElement.getAttribute("data-theme") || "light";
-    sw.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themeSet === t)));
-  }
-  sw.addEventListener("click", (e) => {
-    const b = e.target.closest("button[data-theme-set]"); if (!b) return;
-    document.documentElement.setAttribute("data-theme", b.dataset.themeSet);
-    try { localStorage.setItem(KEY, b.dataset.themeSet); } catch {}
-    paintTheme();
+  sw.addEventListener("click", () => {
+    const light = (document.documentElement.getAttribute("data-theme") || "light") === "light";
+    const t = light ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+    try { localStorage.setItem(KEY, t); } catch {}
   });
-  paintTheme();
 
   // ---- network pill + chain pills
   const pill = document.getElementById("netPill");
