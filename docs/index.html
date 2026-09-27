@@ -411,6 +411,13 @@
   .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px;
     letter-spacing: .8px; color: var(--text); white-space: nowrap; }
   .topbar .badge { white-space: nowrap; }
+  /* .badge sets a display that beat the hidden attribute, so an empty balance pill showed
+     before any wallet was connected */
+  #balChip[hidden] { display: none !important; }
+  /* the balance, Connect and Create Coin share one height and sit on one line */
+  .topbar-inner #balChip, .topbar-inner #connectBtn, .topbar-inner #createBtn {
+    height: 44px; min-height: 44px; box-sizing: border-box; display: inline-flex;
+    align-items: center; justify-content: center; line-height: 1; }
 
   /* ---- theme switcher: three states, the active one lit in the accent */
   .theme-sw { display: inline-flex; align-items: center; gap: 2px; padding: 3px;
