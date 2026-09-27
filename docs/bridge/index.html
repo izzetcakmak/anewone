@@ -196,7 +196,8 @@
   .tbx.net { color: var(--green); border-color: rgba(var(--green-rgb),.5); background: rgba(var(--green-rgb),.10); }
   .tbx.net::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
   .tbx.net.test { color: var(--gold, #d69200); border-color: rgba(214,146,0,.5); background: rgba(214,146,0,.10); }
-  @media (max-width: 640px) { .tb-nav2 { gap: 6px; } .tbx .lbl { display: none; } .tbx { padding: 0 10px; } }
+  @media (max-width: 640px) { .tb-nav2 { gap: 5px; } .tbx .lbl { display: none; } .tbx { padding: 0 9px; font-size: 11.5px; height: 36px; }
+    .tbx.theme { width: 36px; } .tb-brand span { display: none; } }
 </style>
 </head>
 <body>
@@ -206,7 +207,7 @@
     <div class="tb-nav2">
       <a class="tbx" href="/">← <span class="lbl">Floor</span></a>
       <a class="tbx" href="../ark/" target="_blank">🛶 <span class="lbl">Ark</span></a>
-      <a class="tbx" href="../chat/" title="Deckhand, the AI assistant">Deckhand</a>
+      <a class="tbx" href="../chat/" title="Deckhand, the AI assistant"><img src="../chat/deckhand.svg" alt="" width="16" height="16" style="border-radius:4px"> <span class="lbl">Deckhand</span></a>
       <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
       <span class="tbx net" id="netPill">…</span>
     </div>
