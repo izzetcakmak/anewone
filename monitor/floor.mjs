@@ -47,6 +47,18 @@ const BURN = "0x000000000000000000000000000000000000dead";
 const TOPIC_TRADE = "0xf7dd8a134438de4c59401760e24ef5c6cc9c74583b2b022085697f3021e59768";
 const TOPIC_COMMENT = "0x83e5a18f10338a7eb46107a07561cf75d2e07dc4f8d10230f6cfed01cd98b505";
 const TOPIC_IMAGE = "0x4fe20d8f61958f75787f29537de90577ad84befe73f9f2c69d2b8a0d95770e16";
+// Uniswap v3 Swap(address indexed sender, address indexed recipient, int256 amount0,
+// int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)
+const TOPIC_SWAP = "0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67";
+const POOL_FEE_BPS = 100n; // the 1% tier migrate() opens; v3 takes it from a swap's input side
+// Migrated(address indexed token, address indexed pool, uint256 positionId, uint256 tokensToPool,
+// uint256 usdcToPool, uint128 liquidity, uint256 tokensBurned), the platform's last log in migrate()
+const TOPIC_MIGRATED = "0xabd0ad51ae0f062ec47f8d5a093b2ab9378f5778866ec8e77148decd301ca4c8";
+// A pool's 24h volume is kept in 5-minute buckets rather than one row per swap: a busy pool
+// would otherwise add thousands of rows to a file every visitor downloads. The API reads the
+// same bucket size (DAY_BUCKET in api/_basedbot.js).
+const DAY_BUCKET = 600;
+const MAX_POOL_TAPE = 1000; // the newest swaps kept for the API's trades tape, which serves 1000 at most
 
 /** Where the cards are served from; og:image has to be an absolute URL. */
 const SITE = "https://anewone.xyz";
@@ -374,6 +386,122 @@ function saveFloorCache(c) {
   try { atomicWrite(CACHE_FILE, JSON.stringify(c)); } catch {}
 }
 
+// ---------------------------------------------------------------- pool swaps
+// A migrated coin trades in its Uniswap v3 pool, and the platform logs nothing of that: its
+// Trade log ends at the move. So the pool's own Swap logs are indexed here, incrementally like
+// the platform's, into index.pool[coin]: all-time volume and count, 24h buckets, the newest
+// swaps for the tape and price points. Kept apart from agg/recent/series on purpose: the
+// browser tails those from the platform's logs alone and must not change shape (see buildIndex).
+//
+// Units as the curve's, so the API adds the two: u is the trader's USDC in native 18-decimal
+// units (paid on a buy, received on a sell), t the coin amount, p the price after the swap as
+// priceWad, and a point's u the USDC that crossed the pool's reserve: v3 takes its fee from the
+// input, so a buy less the fee, a sell as paid out.
+const Q192 = 1n << 192n;
+const E30 = 10n ** 30n; // 1e12 from USDC's 6 decimals up to 18, and 1e18 for the wad
+const toInt = (w) => { const x = BigInt("0x" + w); return x >= 1n << 255n ? x - (1n << 256n) : x; };
+const abs = (x) => (x < 0n ? -x : x);
+const poolSide = (u, isBuy) => (isBuy ? (u * (BPS - POOL_FEE_BPS)) / BPS : u);
+const sqrtToWad = (s, zero) => (s === 0n ? 0n : zero ? (s * s * E30) / Q192 : (Q192 * E30) / (s * s));
+
+/**
+ * One Swap log as { b, i, u, t, buy, p }, or null when it does not decode or moved nothing (a
+ * swap through no liquidity only walks the price, as migrate()'s correction of an empty pool does).
+ */
+function decodeSwap(lg, zero) {
+  try {
+    const a0 = toInt(word(lg.data, 0)), a1 = toInt(word(lg.data, 1));
+    const s = toBig(word(lg.data, 2));
+    const coin = zero ? a0 : a1, usdc = zero ? a1 : a0; // positive: the pool received it
+    if (coin === 0n && usdc === 0n) return null;
+    return { b: Number(BigInt(lg.blockNumber)), i: Number(BigInt(lg.logIndex ?? "0x0")), u: abs(usdc) * 10n ** 12n, t: abs(coin), buy: coin < 0n, p: sqrtToWad(s, zero) };
+  } catch { return null; }
+}
+
+/**
+ * index.pool for this run: every migrated coin's entry carried from the last one and brought up
+ * to the tip. A coin's pool counts from its Migrated log on: swaps in a pool somebody opened
+ * before the move are not its market, and neither are migrate()'s own correction and buyback,
+ * which come before that log in the same transaction. Until that log is read the coin gets no
+ * entry, and a failed read keeps the entry as it was: either way the next run picks up where
+ * this one could not.
+ *
+ * Entry: movedAt { b, i } (the Migrated log), hi (read up to), volAll, trades, lastBlock, day
+ * [[bucket start block, volume, swaps]] for the last 24h, recent (the newest MAX_POOL_TAPE
+ * swaps of the last 24h), series (the newest MAX_SERIES price points) and trimmed, true once
+ * older points were dropped, so a reader knows the series does not reach back to the move.
+ */
+async function indexPools(platform, tokens, index, prior, tip, log) {
+  const out = {};
+  let events = 0, usdc = null;
+  const cutoff = tip - DAY_BLOCKS;
+  for (const t of tokens) {
+    const addr = t.addr.toLowerCase();
+    if (!t.migrated || !t.pool || /^0x0{40}$/.test(t.pool)) continue;
+    const was = prior && prior[addr] && prior[addr].pool === t.pool && prior[addr].movedAt ? prior[addr] : null;
+    try {
+      usdc = usdc || toAddr(word(await ethCall(platform, SEL.usdc), 0));
+      const zero = addr < usdc.toLowerCase();
+      let e;
+      if (was) {
+        e = {
+          pool: was.pool, movedAt: was.movedAt, hi: was.hi, volAll: BigInt(was.volAll), trades: was.trades,
+          lastBlock: was.lastBlock, trimmed: !!was.trimmed,
+          day: new Map((was.day || []).map(([b, v, n]) => [b, { v: BigInt(v), n }])),
+          recent: was.recent.map((r) => ({ b: r.b, u: BigInt(r.u), t: BigInt(r.t), buy: r.buy })),
+          series: was.series.map((x) => ({ b: x.b, p: BigInt(x.p), u: BigInt(x.u) })),
+        };
+      } else {
+        // the move itself, searched from the coin's last curve trade on, since it comes after
+        const from = ((index.agg || {})[addr] || {}).lastBlock || t.createdBlock;
+        const moved = (await fetchLogs(platform, BigInt(from), BigInt(tip), TOPIC_MIGRATED, log))
+          .find((lg) => lg.topics[1] && toAddr(lg.topics[1].slice(2)) === addr && lg.topics[2] && toAddr(lg.topics[2].slice(2)) === t.pool.toLowerCase());
+        if (!moved) { log(`floor: no Migrated log for ${t.symbol || addr} read yet; its pool waits for the next run`); continue; }
+        const b = Number(BigInt(moved.blockNumber)), i = Number(BigInt(moved.logIndex ?? "0x0"));
+        e = { pool: t.pool, movedAt: { b, i }, hi: b - 1, volAll: 0n, trades: 0, lastBlock: 0, trimmed: false, day: new Map(), recent: [], series: [] };
+      }
+      if (e.hi < tip) {
+        const after = (lg) => {
+          const b = Number(BigInt(lg.blockNumber));
+          return b > e.movedAt.b || (b === e.movedAt.b && Number(BigInt(lg.logIndex ?? "0x0")) > e.movedAt.i);
+        };
+        const logs = await fetchLogs(t.pool, BigInt(e.hi + 1), BigInt(tip), TOPIC_SWAP, log);
+        const swaps = logs.filter(after).map((lg) => decodeSwap(lg, zero)).filter(Boolean).sort((x, y) => x.b - y.b || x.i - y.i);
+        for (const s of swaps) {
+          const v = poolSide(s.u, s.buy);
+          e.volAll += v;
+          e.trades++;
+          if (s.b > e.lastBlock) e.lastBlock = s.b;
+          const k = Math.floor(s.b / DAY_BUCKET) * DAY_BUCKET;
+          const d = e.day.get(k) || { v: 0n, n: 0 };
+          d.v += v; d.n++;
+          e.day.set(k, d);
+          e.recent.push({ b: s.b, u: s.u, t: s.t, buy: s.buy });
+          e.series.push({ b: s.b, p: s.p, u: v });
+        }
+        events += swaps.length;
+        e.hi = tip;
+      }
+      for (const k of [...e.day.keys()]) if (k + DAY_BUCKET <= cutoff) e.day.delete(k);
+      e.recent = e.recent.filter((r) => r.b >= cutoff).slice(-MAX_POOL_TAPE);
+      if (e.series.length > MAX_SERIES) { e.series = e.series.slice(-MAX_SERIES); e.trimmed = true; }
+      out[addr] = {
+        pool: e.pool, movedAt: e.movedAt, hi: e.hi, volAll: e.volAll.toString(), trades: e.trades, lastBlock: e.lastBlock,
+        day: [...e.day.entries()].sort((x, y) => x[0] - y[0]).map(([b, d]) => [b, d.v.toString(), d.n]),
+        recent: e.recent.map((r) => ({ b: r.b, u: r.u.toString(), t: r.t.toString(), buy: r.buy })),
+        series: e.series.map((x) => ({ b: x.b, p: x.p.toString(), u: x.u.toString() })),
+        trimmed: e.trimmed,
+      };
+    } catch (err) {
+      log(`floor: the pool of ${t.symbol || addr} not read this run: ${(err && err.message) || err}`);
+      if (was) out[addr] = was;
+    }
+  }
+  // a coin whose flags could not be read this run keeps the entry it had
+  for (const [k, v] of Object.entries(prior || {})) if (!out[k]) out[k] = v;
+  return { pool: out, events };
+}
+
 /** The coins of the last floor.json written, by lowercase address; empty when there is none. */
 function readPublished() {
   try {
@@ -485,6 +613,18 @@ export async function runFloor({ platform, log = console.log } = {}) {
   log(`floor: ${logs.length} new events from block ${from}${usable ? " (incremental)" : " (full scan)"}`);
 
   const index = buildIndex(logs, lo, Number(tip), usable ? prior.index : null);
+  // The pools of migrated coins, next to the curve's index. A failure here keeps the pools as
+  // the last run left them and costs the rest of the run nothing.
+  let poolEvents = 0;
+  try {
+    const r = await indexPools(platform, tokens, index, usable ? prior.index.pool : null, Number(tip), log);
+    if (Object.keys(r.pool).length) index.pool = r.pool;
+    poolEvents = r.events;
+    if (poolEvents) log(`floor: ${poolEvents} new swaps in the pools of migrated coins`);
+  } catch (e) {
+    log(`floor: pool index failed: ${(e && e.message) || e}`);
+    if (usable && prior.index.pool) index.pool = prior.index.pool;
+  }
   // Publishing costs a deployment, so say plainly whether anything actually moved.
   // A launch with no trade yet emits no Trade log, hence the token-count check.
   // A new schema is published once even on a quiet chain: the page refuses a file
@@ -493,7 +633,7 @@ export async function runFloor({ platform, log = console.log } = {}) {
   // too: only the graduating buy leaves a Trade log.
   const moved = tokens.filter((t) => venueState(t) !== venueState(before.get(t.addr.toLowerCase())));
   if (moved.length) log(`floor: venue state moved for ${moved.map((t) => t.symbol || t.addr).join(", ")}`);
-  const changed = logs.length > 0 || !usable || tokens.length !== (prior?.tokenCount ?? -1) || prior.schema !== SCHEMA || moved.length > 0;
+  const changed = logs.length > 0 || poolEvents > 0 || !usable || tokens.length !== (prior?.tokenCount ?? -1) || prior.schema !== SCHEMA || moved.length > 0;
   saveFloorCache({ schema: SCHEMA, platform, lo, hi: Number(tip), tokenCount: tokens.length, index });
 
   const payload = {
