@@ -1225,9 +1225,14 @@
     /* the bar's three buttons and the crest share one explicit height: min-height plus
        padding plus a border on one of them came out a few pixels apart on iOS, and the
        44px rule above turned the 40px menu square into a 40×44 slab */
-    .topbar-inner > button, .topbar-inner #connectBtn, .topbar-inner .tb-menu { height: 42px; min-height: 42px; box-sizing: border-box;
+    .topbar-inner > button, .topbar-inner #connectBtn, .topbar-inner #createBtn, .topbar-inner .tb-menu { height: 42px; min-height: 42px; box-sizing: border-box;
       display: inline-flex; align-items: center; justify-content: center; line-height: 1; padding: 0 13px; }
     .topbar-inner .tb-menu { width: 42px; padding: 0; border-radius: 12px; }
+    /* Connect and Create are one size: a width that fits "+ Create Coin" and a connected
+       address, shrinking together on the narrowest phones */
+    #walletWrap, .topbar-inner #createBtn { flex: 0 1 100px; }
+    .topbar-inner #connectBtn { width: 100%; }
+    .topbar-inner #connectBtn, .topbar-inner #createBtn { padding: 0 9px; }
     .tb-brand img { width: 42px; height: 42px; border-radius: 11px; }
     .modal-x { min-height: 0; width: 38px; height: 38px; }
     .pctrow button, .sorts button { min-height: 44px; }
