@@ -42,6 +42,10 @@ const SEL = {
   usdc: "0x3e413bee",
   getPool: "0x1698ee82",
   slot0: "0x3850c7bd",
+  // a Uniswap v3 pool's own identity, to tell one holding a coin from a wallet
+  token0: "0x0dfe1681",
+  token1: "0xd21220a7",
+  fee: "0xddca3f43",
 };
 const BURN = "0x000000000000000000000000000000000000dead";
 const TOPIC_TRADE = "0xf7dd8a134438de4c59401760e24ef5c6cc9c74583b2b022085697f3021e59768";
@@ -502,6 +506,149 @@ async function indexPools(platform, tokens, index, prior, tip, log) {
   return { pool: out, events };
 }
 
+// ---------------------------------------------------------------- holders
+// Who holds each coin, from the coins' own Transfer logs. Curve trades, pool swaps and plain
+// transfers between wallets all move balances, and only Transfer sees all three: the
+// platform's Trade log, which `net` is built from, sees the first alone, so a migrated coin's
+// holders would stop at the move and a wallet that was sent coins would never count.
+//
+// The balances live in the floor cache, never in floor.json: the published index carries per
+// coin a count and a few figures (the largest balances, the creator's, the curve's, the
+// pool's, the burned), no wallet. The history is read once, HOLD_CHUNKS_PER_RUN windows a run
+// so no run grows long (a first pass takes a few runs), then only what is new; figures are
+// published once every coin is read up to the tip, and until then the API keeps counting from
+// `net` as it did.
+const TOPIC_TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const HOLD_CHUNKS_PER_RUN = 25; // a full first pass on mainnet ran ~100 s per 40 windows, 240 s at worst
+const HOLD_CHUNK = 9_999; // blocks per getLogs, the public RPC's cap
+const ZERO = "0x0000000000000000000000000000000000000000";
+const TOP_N = 10;
+
+/** Applies Transfer logs, oldest first, to one coin's balances. The zero address is not a holder. */
+function applyTransfers(bal, logs) {
+  const sorted = logs.slice().sort((x, y) => Number(BigInt(x.blockNumber) - BigInt(y.blockNumber)) || Number(BigInt(x.logIndex ?? "0x0") - BigInt(y.logIndex ?? "0x0")));
+  let n = 0;
+  for (const lg of sorted) {
+    let v;
+    try { v = toBig(word(lg.data, 0)); } catch { continue; }
+    const from = toAddr(lg.topics[1].slice(2)), to = toAddr(lg.topics[2].slice(2));
+    if (from !== ZERO) bal.set(from, (bal.get(from) || 0n) - v);
+    if (to !== ZERO) bal.set(to, (bal.get(to) || 0n) + v);
+    n++;
+  }
+  return n;
+}
+
+/**
+ * Whether `a`, holding `coin`, is a Uniswap v3 pool of that coin on the platform's own factory:
+ * a contract whose token0/token1 include the coin and which the factory returns for its pair and
+ * fee. Such a pool is liquidity, not a holder: the one migrate() fills, and any somebody else
+ * opens, before the move or on another tier. Answers are kept per coin and address (a wallet stays
+ * a wallet, a pool a pool); a read that fails is not kept, so the address is asked again next run.
+ */
+async function isCoinPool(kind, coin, a, factory) {
+  const k = coin + ":" + a;
+  if (kind[k]) return kind[k] === "pool";
+  let pool = false;
+  try {
+    const code = await rpc("eth_getCode", [a, "latest"]);
+    if (code && code !== "0x") {
+      const out = await Promise.all([SEL.token0, SEL.token1, SEL.fee].map((s) => ethCall(a, s).catch(() => "0x")));
+      if (out.every((x) => typeof x === "string" && x.length >= 66)) {
+        const t0 = toAddr(word(out[0], 0)), t1 = toAddr(word(out[1], 0)), fee = toBig(word(out[2], 0));
+        if (t0 === coin || t1 === coin) {
+          pool = toAddr(word(await ethCall(factory, SEL.getPool + encAddr(t0) + encAddr(t1) + encUint(fee)), 0)) === a;
+        }
+      }
+    }
+  } catch { return false; }
+  kind[k] = pool ? "pool" : "other";
+  return pool;
+}
+
+/**
+ * Brings every coin's balances forward: a coin that joined behind the others (created before the
+ * blocks already read, or not read that far yet) catches up on its own, then the coins that are
+ * level are read together, one getLogs per window. A failed window stops the run where it is; the
+ * next run carries on from there. Returns the state for the cache, the per-coin figures when every
+ * coin is read to the tip (else the last complete ones), and how many transfers were applied.
+ * A coin created after the tip (its creation seen while this run read the token list) waits for
+ * the next run rather than be counted with none of its transfers.
+ */
+async function indexHolders(platform, tokens, prior, tip, log) {
+  const h = prior && typeof prior.hi === "number" && prior.coins
+    ? {
+        hi: prior.hi, stats: prior.stats || null, kind: { ...(prior.kind || {}) },
+        coins: Object.fromEntries(Object.entries(prior.coins).map(([k, c]) => [k, { cur: c.cur, bal: new Map(Object.entries(c.bal).map(([a, v]) => [a, BigInt(v)])) }])),
+      }
+    : { hi: Math.min(...tokens.map((t) => t.createdBlock)) - 1, stats: null, kind: {}, coins: {} };
+  tokens = tokens.filter((t) => t.createdBlock <= tip);
+  for (const t of tokens) {
+    const a = t.addr.toLowerCase();
+    if (!h.coins[a]) h.coins[a] = { cur: Math.min(t.createdBlock - 1, h.hi), bal: new Map() };
+  }
+  let budget = HOLD_CHUNKS_PER_RUN, events = 0;
+  try {
+    for (const [a, c] of Object.entries(h.coins)) {
+      while (c.cur < h.hi && budget > 0) {
+        const to = Math.min(h.hi, c.cur + HOLD_CHUNK);
+        events += applyTransfers(c.bal, await fetchLogs(a, BigInt(c.cur + 1), BigInt(to), TOPIC_TRANSFER, log));
+        c.cur = to; budget--;
+      }
+    }
+    const level = Object.keys(h.coins).filter((a) => h.coins[a].cur === h.hi);
+    while (h.hi < tip && budget > 0 && level.length) {
+      const to = Math.min(tip, h.hi + HOLD_CHUNK);
+      const logs = await fetchLogs(level, BigInt(h.hi + 1), BigInt(to), TOPIC_TRANSFER, log);
+      for (const a of level) events += applyTransfers(h.coins[a].bal, logs.filter((lg) => String(lg.address).toLowerCase() === a));
+      for (const a of level) h.coins[a].cur = to;
+      h.hi = to; budget--;
+    }
+  } catch (e) {
+    log(`floor: holders read stopped at block ${h.hi}: ${(e && e.message) || e}`);
+  }
+  const behind = tokens.filter((t) => h.coins[t.addr.toLowerCase()].cur < tip).length;
+  if (behind) log(`floor: holders read to block ${h.hi} of ${tip} (${behind} coins behind); figures wait until every coin is read`);
+  // A failure working out the figures keeps the last ones; the balances read this run are kept.
+  if (!behind) try {
+    // not holders: nobody (mint and burn ends), the curve, burned coins, and the coin's pools
+    const fixed = new Set([ZERO, platform.toLowerCase(), BURN]);
+    const factory = toAddr(word(await ethCall(platform, SEL.v3Factory), 0));
+    const stats = { hi: tip, coins: {} };
+    for (const t of tokens) {
+      const coin = t.addr.toLowerCase(), bal = h.coins[coin].bal;
+      const held = [];
+      let inPools = 0n;
+      for (const [a, v] of bal.entries()) {
+        if (v <= 0n || fixed.has(a)) continue;
+        if (a === String(t.pool || "").toLowerCase() || (await isCoinPool(h.kind, coin, a, factory))) inPools += v;
+        else held.push(v);
+      }
+      held.sort((x, y) => (y > x ? 1 : y < x ? -1 : 0));
+      const of = (a) => (bal.get(String(a || "").toLowerCase()) || 0n).toString();
+      stats.coins[coin] = {
+        holders: held.length, top: held.slice(0, TOP_N).map(String),
+        creator: of(t.creator), curve: of(platform), pool: inPools.toString(), burned: of(BURN),
+      };
+    }
+    h.stats = stats;
+  } catch (e) {
+    log(`floor: holder figures not worked out this run, the last ones stay: ${(e && e.message) || e}`);
+  }
+  const state = {
+    hi: h.hi, stats: h.stats, kind: h.kind,
+    coins: Object.fromEntries(Object.entries(h.coins).map(([k, c]) => [k, {
+      cur: c.cur, bal: Object.fromEntries([...c.bal.entries()].filter(([, v]) => v !== 0n).map(([a, v]) => [a, v.toString()])),
+    }])),
+  };
+  return { state, stats: h.stats, events };
+}
+
+/** index.hold of the last floor.json written, or null. */
+function readPublishedHold() {
+  try { return JSON.parse(readFileSync(OUT_FILE, "utf8")).index.hold || null; } catch { return null; }
+}
+
 /** The coins of the last floor.json written, by lowercase address; empty when there is none. */
 function readPublished() {
   try {
@@ -625,6 +772,20 @@ export async function runFloor({ platform, log = console.log } = {}) {
     log(`floor: pool index failed: ${(e && e.message) || e}`);
     if (usable && prior.index.pool) index.pool = prior.index.pool;
   }
+  // Holders from the coins' Transfer logs (see indexHolders); their state goes to the cache and
+  // only the per-coin figures to the index. Anything failing here keeps the last state.
+  const priorHold = prior && prior.platform === platform ? prior.hold || null : null;
+  let holdState = priorHold;
+  try {
+    const r = await indexHolders(platform, tokens, priorHold, Number(tip), log);
+    holdState = r.state;
+    if (r.stats) index.hold = r.stats;
+  } catch (e) {
+    log(`floor: holders index failed: ${(e && e.message) || e}`);
+    if (priorHold && priorHold.stats) index.hold = priorHold.stats;
+  }
+  const holdMoved = JSON.stringify((index.hold || {}).coins || null) !== JSON.stringify((readPublishedHold() || {}).coins || null);
+  if (holdMoved && index.hold) log("floor: holder figures changed");
   // Publishing costs a deployment, so say plainly whether anything actually moved.
   // A launch with no trade yet emits no Trade log, hence the token-count check.
   // A new schema is published once even on a quiet chain: the page refuses a file
@@ -633,8 +794,8 @@ export async function runFloor({ platform, log = console.log } = {}) {
   // too: only the graduating buy leaves a Trade log.
   const moved = tokens.filter((t) => venueState(t) !== venueState(before.get(t.addr.toLowerCase())));
   if (moved.length) log(`floor: venue state moved for ${moved.map((t) => t.symbol || t.addr).join(", ")}`);
-  const changed = logs.length > 0 || poolEvents > 0 || !usable || tokens.length !== (prior?.tokenCount ?? -1) || prior.schema !== SCHEMA || moved.length > 0;
-  saveFloorCache({ schema: SCHEMA, platform, lo, hi: Number(tip), tokenCount: tokens.length, index });
+  const changed = logs.length > 0 || poolEvents > 0 || holdMoved || !usable || tokens.length !== (prior?.tokenCount ?? -1) || prior.schema !== SCHEMA || moved.length > 0;
+  saveFloorCache({ schema: SCHEMA, platform, lo, hi: Number(tip), tokenCount: tokens.length, index, hold: holdState });
 
   const payload = {
     schema: SCHEMA,
