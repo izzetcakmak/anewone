@@ -2382,6 +2382,15 @@ function rememberHero() {
     if (gradTarget !== null) localStorage.setItem("anewone_hero_grad", $("statGrad").textContent);
   } catch {}
 }
+// The file is republished only when its index changes, so on a quiet chain its tip can be
+// hours old, and every age counted from it froze where the file was built: a trade read
+// "7m ago" for hours, and the 24h window reached back that much further. The tip is carried
+// forward by the time since the file was built, until the live tail reads the chain's own.
+function floorTipNow(d) {
+  const built = Date.parse(d.generatedAt), bt = Number(d.blockTimeSec);
+  if (!d.tip || !(built > 0) || !(bt > 0)) return d.tip || 0;
+  return d.tip + Math.max(0, Math.floor((Date.now() - built) / 1000 / bt));
+}
 async function hydrateFromFloor() {
   let d;
   try {
@@ -2444,7 +2453,7 @@ async function hydrateFromFloor() {
   const idx = d.index;
   const local = loadStatsCache();
   // ages need a current block whichever index is used
-  latestBlock = Math.max(latestBlock || 0, d.tip || 0);
+  latestBlock = Math.max(latestBlock || 0, floorTipNow(d));
   const localIsDeeper = local.hi !== null && local.lo !== null &&
     !(idx && typeof idx.lo === "number" && idx.lo <= local.lo);
   if (localIsDeeper) {
@@ -2467,7 +2476,7 @@ async function hydrateFromFloor() {
       ahead: {},
     };
     indexFloor = idx.lo;
-    latestBlock = Math.max(latestBlock || 0, d.tip || 0);
+    latestBlock = Math.max(latestBlock || 0, floorTipNow(d));
     rebuildStats();
     // The ticker used to be drawn by the history scan this hydration replaces,
     // so nothing painted it at boot any more: on a quiet chain the bar stayed
@@ -5671,6 +5680,13 @@ async function liveTail() {
       // filtered out of the ticker, so go and find it now rather than at the next
       // poll — this is the one case where waiting is visible to everyone.
       if ([...dirtyTokens].some((a) => !tokenInfo[a])) discoverNow();
+    } else {
+      // a quiet floor still ages too: with no trade to redraw it, the ticker kept the ages it
+      // was drawn with against the prebuilt index's tip, so a 3h-old sell read "52s ago".
+      // renderFeed() repaints only when latestBlock crosses a 150-block step, so this is cheap.
+      renderFeed();
+      // a quiet coin's trades still age: the list used to keep the ages it opened with
+      if (currentToken && $("tradeModal").classList.contains("open")) renderTrades(currentToken);
     }
   } catch (e) {
     // transient RPC noise: the next tick retries from the same watermark
