@@ -436,6 +436,9 @@
     background: rgba(var(--accent-rgb),.07); transition: background .2s, border-color .2s, color .2s; }
   .tb-link:hover { text-decoration: none; background: rgba(var(--accent-rgb),.14);
     border-color: rgba(var(--accent-rgb),.5); color: var(--accent); }
+  /* Swap & Bridge and Deckhand carry the same icons as on every other page's bar:
+     the bridge emoji, and the Deckhand's walrus */
+  .tb-link .tb-ico { width: 16px; height: 16px; border-radius: 4px; flex: none; }
   /* Docs is secondary: same shape, no accent until hovered */
   .tb-link-quiet { border-color: var(--border-2); background: transparent; color: var(--dim); }
   .tb-theme { all: unset; cursor: pointer; display: inline-grid; place-items: center; color: var(--dim); }
@@ -469,6 +472,12 @@
     .tb-nav .tb-theme { width: var(--tbc-h); padding: 0; }
     .tb-nav .tb-theme svg { width: calc(var(--tbc-f) * 1.35); height: calc(var(--tbc-f) * 1.35); }
     .tb-nav .tb-ark svg { width: calc(var(--tbc-f) * 1.6); height: calc(var(--tbc-f) * 1.6); }
+    .tb-nav .tb-link .tb-ico { width: calc(var(--tbc-f) * 1.28); height: calc(var(--tbc-f) * 1.28); }
+  }
+  /* the narrowest full bar: with a wallet connected its balance and address leave no slack
+     at 901-1000px, so the controls sit a little closer together there */
+  @media (min-width: 901px) and (max-width: 1000px) {
+    .topbar-inner { gap: 6px; --tbc-p: 8px; }
   }
   .tb-link-quiet:hover { color: var(--text); border-color: var(--border-2);
     background: rgba(var(--ink-rgb),.05); }
@@ -546,15 +555,21 @@
   }
   /* the header is already fighting for room on a phone; the footer carries it there */
   /* only the label folds away on a narrower header — not the bubble, which is
-     the whole point of the badge once the words are gone */
-  @media (max-width: 1080px) {
-    .tb-ark > span:not(.ark-tip) { display: none; }
+     the whole point of the badge once the words are gone. Swap & Bridge and Deckhand
+     fold to their icons at the same width: below it a connected wallet's balance and
+     address no longer fit on the line beside the three labels */
+  @media (max-width: 1180px) {
+    .tb-ark > span:not(.ark-tip), .tb-link .tb-lbl { display: none; }
     .tb-ark { padding: 5px 7px; }
   }
-  /* ---- phone: the bar keeps the logo, the wallet and Create; everything else
-     folds into one panel. Without this the ark, the Boarding Pass, the network
-     badge and the balance were simply gone on a phone, with no way to reach them. */
-  @media (max-width: 760px) {
+  /* ---- phone and tablet: the bar keeps the logo, the wallet and Create; everything
+     else folds into one panel. Without this the ark, the Boarding Pass, the network
+     badge and the balance were simply gone on a phone, with no way to reach them.
+     The full bar needs a desktop's width: at 761-900px it ran off the screen. */
+  @media (max-width: 900px) {
+    /* the crest on the left; the wallet, Create and the menu button at the right edge,
+       under the panel they open */
+    .topbar-inner .tb-brand { margin-right: auto; }
     .tb-menu { display: inline-flex; }
     .tb-nav { display: none; position: absolute; top: 100%; right: 10px; margin-top: 8px;
       flex-direction: column; align-items: stretch; gap: 8px; padding: 10px;
@@ -567,7 +582,7 @@
     .tb-nav #balChip:not([hidden]) {
       display: flex !important; margin: 0; justify-content: flex-start;
       width: 100%; min-height: 42px; align-items: center; }
-    .tb-nav .tb-ark > span:not(.ark-tip) { display: inline !important; }
+    .tb-nav .tb-ark > span:not(.ark-tip), .tb-nav .tb-link .tb-lbl { display: inline !important; }
     .tb-nav .ark-tip { display: none; }      /* no room for a bubble in a dropdown */
     .tb-nav .nav-only { display: flex !important; }
     /* on a phone the More menu dissolves: its rows join the panel, the button goes */
@@ -579,6 +594,8 @@
     .tb-nav .theme-sw { align-self: flex-start; margin: 0; }
     .tb-nav .tb-theme { align-self: flex-start; width: 42px; height: 42px; box-sizing: border-box;
       border: 1px solid var(--border-2); border-radius: 999px; }
+  }
+  @media (max-width: 760px) {
     /* The wallet menu was pinned to the right edge of the Connect button. With the
        theme switch folded away that button sits further left, and the menu ran off
        the left of the screen, address row first. Hang it off the bar instead, full
@@ -1428,8 +1445,8 @@
     </a>
     <!-- The gangway is how you board: funds from any chain arrive on Arc as USDC and can
          buy a coin on the floor in the same trip. Same shape as the Boarding Pass link. -->
-    <a class="tb-link" href="bridge/" title="Swap &amp; Bridge: bring ETH, USDC or almost anything aboard from any chain, then buy on the floor">Swap &amp; Bridge</a>
-    <a class="tb-link" href="chat/" title="Deckhand, the AI assistant: ask about any coin; it remembers you, memory on Walrus">Deckhand</a>
+    <a class="tb-link" href="bridge/" aria-label="Swap &amp; Bridge" title="Swap &amp; Bridge: bring ETH, USDC or almost anything aboard from any chain, then buy on the floor"><span aria-hidden="true">🌉</span><span class="tb-lbl">Swap &amp; Bridge</span></a>
+    <a class="tb-link" href="chat/" aria-label="Deckhand" title="Deckhand, the AI assistant: ask about any coin; it remembers you, memory on Walrus"><img class="tb-ico" src="chat/deckhand.svg" alt=""><span class="tb-lbl">Deckhand</span></a>
     <!-- Everything that is not a door or the money: one quiet menu on a wide screen,
          plain rows inside the phone panel. The footer no longer repeats any of it. -->
     <div class="tb-more" id="moreWrap">

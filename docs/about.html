@@ -67,10 +67,15 @@
     padding: 14px 0 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap;
     position: sticky; top: 0; z-index: 100; background: rgba(var(--bg-rgb),.82);
     -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+  /* the crest and wordmark at the floor's exact sizes, breakpoint for breakpoint, so the brand
+     never changes size between pages: 44px and 22px, on a wide screen 32-39px and 18-22px growing
+     with it, and on a phone the crest alone at 42px */
   .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-  .brand img { width: 34px; height: 34px; border-radius: 9px; }
-  .brand b { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 19px; color: var(--text);
-    letter-spacing: .5px; }
+  .brand img { width: 44px; height: 44px; border-radius: 11px; }
+  .brand b { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; color: var(--text);
+    letter-spacing: .8px; white-space: nowrap; }
+  @media (min-width: 901px) { .brand img { width: clamp(32px, 2.43vw, 39px); height: clamp(32px, 2.43vw, 39px); }
+    .brand b { font-size: clamp(18px, 1.2vw, 22px); } }
   .toplinks { display: flex; gap: 10px; }
   .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 15px; border-radius: 10px;
     border: 1px solid var(--border-2); color: var(--dim); font-family: 'Space Grotesk', sans-serif;
@@ -108,7 +113,7 @@
     align-items: baseline; }
   .timeline .when { font-family: var(--mono); font-size: 12.5px; color: var(--faint); }
   @media (max-width: 600px) {
-    .brand b { font-size: 17px; } .btn { padding: 10px 14px; }
+    .brand img { width: 42px; height: 42px; } .brand b { display: none; } .btn { padding: 10px 14px; }
     .timeline li { grid-template-columns: 1fr; gap: 2px; }
   }
   .footer { margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--faint); font-size: 13px; }
@@ -118,8 +123,8 @@
 <body>
 <div class="wrap">
   <div class="top">
-    <a class="brand" href="/">
-      <img src="brand/mark.png" alt="">
+    <a class="brand" href="/" aria-label="A NEW ONE, home">
+      <img src="brand/logo.svg" alt="">
       <b>A NEW ONE</b>
     </a>
     <div class="toplinks">

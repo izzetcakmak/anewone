@@ -34,10 +34,14 @@
   a:hover { text-decoration: underline; }
   .topbar { border-bottom: 1px solid var(--border); }
   .topbar-inner { max-width: 1160px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 10px; }
-  .tb-brand { display: flex; align-items: center; gap: 10px; }
+  /* the crest and wordmark at the floor's exact sizes, breakpoint for breakpoint */
+  .tb-brand { display: flex; align-items: center; gap: 12px; }
   .tb-brand:hover { text-decoration: none; }
-  .tb-brand img { width: 30px; height: 30px; border-radius: 8px; }
-  .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: .6px; color: var(--text); }
+  .tb-brand img { width: 44px; height: 44px; border-radius: 11px; }
+  .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: .8px; color: var(--text); white-space: nowrap; }
+  @media (min-width: 901px) { .tb-brand img { width: clamp(32px, 2.43vw, 39px); height: clamp(32px, 2.43vw, 39px); }
+    .tb-brand span { font-size: clamp(18px, 1.2vw, 22px); } }
+  @media (max-width: 600px) { .tb-brand img { width: 42px; height: 42px; } .tb-brand span { display: none; } }
   main { flex: 1; display: grid; place-items: center; padding: 40px 20px; }
   .card { max-width: 560px; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px 28px; text-align: center; }
   .code { font: 500 12px var(--mono); letter-spacing: 1.4px; color: var(--accent); text-transform: uppercase; }
@@ -57,7 +61,7 @@
 </head>
 <body>
 <nav class="topbar"><div class="topbar-inner">
-  <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="/brand/mark.png" alt=""><span>A NEW ONE</span></a>
+  <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="/brand/logo.svg" alt=""><span>A NEW ONE</span></a>
 </div></nav>
 <main>
   <div class="card">
