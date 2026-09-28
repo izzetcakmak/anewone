@@ -41,6 +41,7 @@ const SEL = {
   v3Factory: "0x7c887c59",
   usdc: "0x3e413bee",
   getPool: "0x1698ee82",
+  slot0: "0x3850c7bd",
 };
 const BURN = "0x000000000000000000000000000000000000dead";
 const TOPIC_TRADE = "0xf7dd8a134438de4c59401760e24ef5c6cc9c74583b2b022085697f3021e59768";
@@ -384,7 +385,7 @@ function readPublished() {
 // and reopenCurve() emit no Trade log, so a change in any of them has to publish on its own.
 const venueState = (t) => (t ? [t.graduated, t.migrated, t.reopened].map((x) => (x ? 1 : 0)).join("") : "");
 // What a graduated coin carries beyond info(); kept from the last file when a read fails.
-const GRADUATED_FIELDS = ["migrated", "reopened", "burned", "inPool", "pool"];
+const GRADUATED_FIELDS = ["migrated", "reopened", "burned", "inPool", "pool", "poolSqrtPriceX96", "poolUsdc", "poolReadAt"];
 
 // ---------------------------------------------------------------- entry point
 export async function runFloor({ platform, log = console.log } = {}) {
@@ -432,14 +433,32 @@ export async function runFloor({ platform, log = console.log } = {}) {
         const migrated = toBig(word(await ethCall(platform, SEL.migrated + encAddr(addr)), 0)) === 1n;
         const reopened = !migrated && toBig(word(await ethCall(platform, SEL.curveReopened + encAddr(addr)), 0)) === 1n;
         const burned = toBig(word(await ethCall(addr, SEL.balanceOf + encAddr(BURN)), 0));
-        let inPool = 0n, pool = null;
+        let inPool = 0n, pool = null, poolState = {};
         if (migrated) {
           const factory = toAddr(word(await ethCall(platform, SEL.v3Factory), 0));
           const usdc = toAddr(word(await ethCall(platform, SEL.usdc), 0));
           const p = toAddr(word(await ethCall(factory, SEL.getPool + encAddr(addr) + encAddr(usdc) + encUint(10000)), 0));
-          if (!/^0x0{40}$/.test(p)) { pool = p; inPool = toBig(word(await ethCall(addr, SEL.balanceOf + encAddr(p)), 0)); }
+          if (!/^0x0{40}$/.test(p)) {
+            pool = p;
+            inPool = toBig(word(await ethCall(addr, SEL.balanceOf + encAddr(p)), 0));
+            // The API reads a migrated coin's pool live; this is what it falls back on when the
+            // chain does not answer it, dated by poolReadAt, which a failed read carries over
+            // with the rest so an old read never passes for a new one. Not a reason to publish:
+            // the pool moves with every swap. Its own try: a failure here must not cost the
+            // coin its fresh migrated and pool, which decide its venue.
+            try {
+              poolState = {
+                poolSqrtPriceX96: toBig(word(await ethCall(p, SEL.slot0), 0)).toString(),
+                poolUsdc: toBig(word(await ethCall(usdc, SEL.balanceOf + encAddr(p)), 0)).toString(),
+                poolReadAt: Math.floor(Date.now() / 1000),
+              };
+            } catch {
+              const was = before.get(addr.toLowerCase()) || {};
+              if (was.pool === p) for (const k of ["poolSqrtPriceX96", "poolUsdc", "poolReadAt"]) if (k in was) poolState[k] = was[k];
+            }
+          }
         }
-        supply = { migrated, reopened, burned: burned.toString(), inPool: inPool.toString(), ...(pool ? { pool } : {}) };
+        supply = { migrated, reopened, burned: burned.toString(), inPool: inPool.toString(), ...(pool ? { pool, ...poolState } : {}) };
       } catch {
         // A failed read publishes what the last file knew rather than less: dropping these
         // would flip a coin's venue and supply until the next run, and publish the flip.
