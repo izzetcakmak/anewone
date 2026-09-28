@@ -12,7 +12,8 @@
 // matters the wei string is given alongside (priceWad, raisedWei). Every volume figure is
 // already converted to the CURVE side of the trade, the way the contract's own comment on the
 // Trade event asks indexers to do it; summing the raw event values would overstate buys by the
-// fee.
+// fee. A migrated coin's pool swaps are counted the same way, on the pool's side: the USDC that
+// crossed its reserve, so a buy less the 1% pool fee and a sell as paid out.
 //
 // Times are unix seconds. The chain emits block numbers, not timestamps, so a block is turned
 // into a time with the index's measured block time; expect a second or two of drift on old
@@ -45,6 +46,31 @@ const NO_COIN = "no coin at that address on this platform";
 
 /** The curve-side USDC of a trade: a buy paid the fee on top, a sell had it deducted. */
 const curveSide = (u, isBuy) => (isBuy ? (u * (BPS - FEE_BPS)) / BPS : (u * BPS) / (BPS - FEE_BPS));
+/** The pool-side USDC of a swap: v3 takes its 1% from the input, so off a buy's USDC only. */
+const POOL_FEE_BPS = 100n;
+const poolSide = (u, isBuy) => (isBuy ? (u * (BPS - POOL_FEE_BPS)) / BPS : u);
+const DAY_BUCKET = 600; // the scanner keeps a pool's 24h volume in buckets of this many blocks
+
+/**
+ * A migrated coin's pool swaps as the index read them (index.pool, written by the scanner from
+ * the coin's Migrated log on), or null: for a coin on its curve, or an entry for another pool.
+ */
+function poolOf(floor, t) {
+  const e = t && t.migrated ? ((floor.index || {}).pool || {})[t.addr] : null;
+  return e && e.pool === t.pool && Array.isArray(e.recent) && Array.isArray(e.series) && Array.isArray(e.day) ? e : null;
+}
+/**
+ * A coin's price points, the curve's and then its pool's, in block order. When the scanner has
+ * dropped the pool's oldest points, the first one kept is marked `gap`: nothing is known between
+ * the curve's last point and it, so no candle or price change may bridge the two.
+ */
+function seriesOf(floor, t) {
+  const curve = ((floor.index || {}).series || {})[t.addr] || [];
+  const px = poolOf(floor, t);
+  if (!px) return curve;
+  const pool = px.series.map((x, i) => (i === 0 && px.trimmed ? { ...x, gap: true } : x));
+  return [...curve, ...pool].sort((x, y) => x.b - y.b);
+}
 
 const num = (wei, dp = 18) => Number(wei) / 10 ** dp;
 const round = (x, dp) => (Number.isFinite(x) ? Number(x.toFixed(dp)) : 0);
@@ -225,6 +251,19 @@ function shape(floor, live = {}) {
     d.trades++;
     if (r.b > d.last) d.last = r.b;
   }
+  // and the pool swaps of migrated coins, on the pool's side, from the scanner's 5-minute
+  // buckets: a bucket that reaches into the window counts, so the day's far edge is exact to
+  // the bucket, not the block
+  for (const t of floor.tokens || []) {
+    const px = poolOf(floor, t);
+    if (!px) continue;
+    for (const [b, v, n] of px.day) {
+      if (b + DAY_BUCKET <= cutoff) continue;
+      const d = day[t.addr] || (day[t.addr] = { vol: 0n, trades: 0, last: 0 });
+      d.vol += big(v) ?? 0n;
+      d.trades += Number(n) || 0;
+    }
+  }
 
   return (floor.tokens || []).map((t) => {
     const addr = t.addr;
@@ -256,24 +295,32 @@ function shape(floor, live = {}) {
     const raisedUsd = num(BigInt(t.raised || "0"));
     const a = (ix.agg || {})[addr] || { volAll: "0", trades: 0, lastBlock: 0 };
     const d = day[addr] || { vol: 0n, trades: 0, last: 0 };
-    const series = (ix.series || {})[addr] || [];
+    const px = poolOf(floor, t);
+    const curvePoints = (ix.series || {})[addr] || [];
+    const series = seriesOf(floor, t);
     const holders = Object.values((ix.net || {})[addr] || {}).filter((h) => BigInt(h.t) > 0n).length;
 
     // The price `sec` before priceAt, from the last point at or before that block: the window
-    // ends when the price was read, which for a live pool price is now, not the index tip. The
-    // points are the curve's, so a migrated coin has none for a window that opens after its
-    // last curve trade: that change is unknown here, not zero, and not a change since the move.
-    const lastCurveBlock = series.length ? series[series.length - 1].b : 0;
+    // ends when the price was read, which for a live pool price is now, not the index tip. A
+    // migrated coin's points reach as far as its pool was read (px.hi), or without a pool index
+    // only to its last curve trade: a window that opens past them is unknown here, not zero.
+    const lastCurve = curvePoints.length ? curvePoints[curvePoints.length - 1].b : 0;
+    const knownTo = !t.migrated ? Infinity : px ? px.hi : lastCurve;
+    // and when the pool's oldest points were dropped, nothing is known between the curve's last
+    // point and the first pool point kept
+    const gapTo = px && px.trimmed && px.series.length ? px.series[0].b : null;
     const back = (sec) => {
       const b = floor.tip - Math.round((genSec - priceAt + sec) / bt); // for priceAt = genSec, exactly tip - round(sec/bt)
-      if (t.migrated && b > lastCurveBlock) return null;
+      if (b > knownTo || (gapTo !== null && b > lastCurve && b < gapTo)) return null;
       let p = null;
       for (const x of series) { if (x.b > b) break; p = x.p; }
       if (p === null || BigInt(p) === 0n) return null;
       return round((priceUsd / num(BigInt(p)) - 1) * 100, 2);
     };
 
-    const lastBlock = Math.max(a.lastBlock || 0, d.last || 0);
+    const lastBlock = Math.max(a.lastBlock || 0, d.last || 0, (px && px.lastBlock) || 0);
+    const volAllWei = BigInt(a.volAll || "0") + ((px && big(px.volAll)) || 0n);
+    const tradesAll = (a.trades || 0) + ((px && px.trades) || 0);
     // Supply as it is, not as it launched. On the curve the unsold tokens are the curve's own
     // (tReserve): nobody can trade them but the curve, so they are not circulating. After
     // migration the burned part is gone for good, and the pool's inventory is on the open
@@ -326,9 +373,9 @@ function shape(floor, live = {}) {
       // a graduated coin is done, as the contract's progressBps() says: migrate() zeroes raised
       graduationProgressPct: t.graduated ? 100 : gradTarget ? round(Math.min(100, (raisedUsd / gradTarget) * 100), 2) : null,
       volumeUsd24h: round(num(d.vol), 2),
-      volumeUsdAll: round(num(BigInt(a.volAll || "0")), 2),
+      volumeUsdAll: round(num(volAllWei), 2),
       trades24h: d.trades,
-      tradesAll: a.trades || 0,
+      tradesAll,
       holders,
       lastTradeAt: lastBlock ? at(lastBlock) : null,
       priceChangePct: { m5: back(300), h1: back(3600), h24: back(86_400) },
@@ -376,6 +423,7 @@ function meta(floor) {
       Trade: "Trade(address indexed token, address indexed trader, bool indexed isBuy, uint256 usdcAmount, uint256 tokenAmount, uint256 newPriceWad)",
       Graduated: "Graduated(address indexed token, uint256 raised)",
       Migrated: "Migrated(address indexed token, address indexed pool, uint256 positionId, uint256 tokensToPool, uint256 usdcToPool, uint128 liquidity, uint256 tokensBurned)",
+      Swap: "Uniswap v3 Swap(address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick), from a migrated coin's pool (poolAddress): its trading after the move. Counted as volume on the pool's side: a buy's USDC less the 1% pool fee, a sell's as paid out",
       note: "Trade.usdcAmount is trader centric: fee included on a buy, fee deducted on a sell. Convert to the curve side (buy x 0.985, sell / 0.985) before summing it as volume. Every field in this API is already converted.",
     },
     // What a terminal needs to trade a coin still on its curve, since this API only reads.
@@ -415,18 +463,18 @@ function meta(floor) {
     venues: {
       "bonding-curve": "trades on its curve through the platform contract, see trading: not graduated yet, or graduated and reopened by the platform",
       migrating: "graduated and not yet moved: the curve takes no trades and the platform's liquidity is not in Uniswap yet. A pool at the address migrate() will use may already exist, opened by someone else at a price of their choosing; it is not this coin's venue until the move, which pulls its price back to the curve's. migrate() is open to anyone and our scanner sends it, so this usually passes within minutes; if the move cannot go through, the platform may reopen the curve an hour after graduation",
-      "uniswap-v3": "trades in its Uniswap v3 pool (poolAddress) like any v3 pool; the curve is closed for good. Its price, caps and liquidity come from the pool (see price); volume, trades, candles and lastTradeAt are the curve's and stop at the move, and priceChangePct is null for a window that opens after it",
+      "uniswap-v3": "trades in its Uniswap v3 pool (poolAddress) like any v3 pool; the curve is closed for good. Its price, caps and liquidity come from the pool (see price). Its volume, trade counts, lastTradeAt, the trades tape (venue on each trade) and candles add its pool swaps to its curve trades, as far as the index has read the pool (see freshness), and priceChangePct is null for a window that opens past that. Holders and distribution still count curve trades only",
       note: "venue is as fresh as the index (see freshness). For a coin on its curve, quoteBuy answers live: it reverts with 'graduated' once the curve has closed",
     },
     endpoints: [
       "GET /api/basedbot                                  this document",
       "GET /api/basedbot/tokens?limit=100&sort=volume24h   every coin, newest index",
       "GET /api/basedbot/{address}                         one coin, with distribution and last trades",
-      "GET /api/basedbot/trades?address={a}&limit=100      trades in the last 24h, newest first",
+      "GET /api/basedbot/trades?address={a}&limit=100      trades in the last 24h, newest first, curve and pool",
       "GET /api/basedbot/candles?address={a}&tf=5m         OHLCV, tf one of " + Object.keys(TFS).join(", "),
       "GET /api/basedbot/distribution?address={a}          holder count and concentration",
     ],
-    privacy: "no wallet is named: holders come back as a count and concentration shares, trades as sides and sizes. Every trade is in the Trade event on chain if you index it yourself.",
+    privacy: "no wallet is named: holders come back as a count and concentration shares, trades as sides and sizes. Every curve trade is in the platform's Trade event, and every swap of a migrated coin in its pool's Swap event, if you index them yourself.",
     sorts: ["volume24h", "volumeAll", "marketCap", "fdv", "liquidity", "trades24h", "holders", "age", "created"],
     price: `priceSource says where priceUsd and priceWad come from. 'bonding-curve': the curve's spot price, as the index read it. 'uniswap-v3': a migrated coin's pool price, read live from Arc and kept ${CACHE_S} s; when the chain does not answer, the newest earlier read, ours or the index's. priceAt is when that read was made, in unix seconds, and priceChangePct is measured back from it. The caps and supply of a migrated coin come from the same read, and its liquidityUsd is the pool's two balances at that price (null if the pool was never read)`,
     supply: "fdvUsd = price x totalSupply, where totalSupply is 1B minus everything burned: what migration burned, then the pool's token-side fees, which collectPoolFees() burns. marketCapUsd = price x circulatingSupply: before migration the curve's unsold reserve is left out; after it, everything not burned circulates, the Uniswap pool's inventory included. holderCapUsd = price x holderSupply, the tokens in wallets only (circulating less the pool's inventory).",
@@ -436,7 +484,7 @@ function meta(floor) {
       // index at most this often, and publishes it only when a chain event or a coin landed
       publishedEverySec: 1800,
       cachedSec: CACHE_S,
-      note: "indexed from chain by our scanner at most every 30 minutes and published only when something changed, so in quiet hours updatedAt can be older than that; updatedAt and blockHeight on every response. Pool prices of migrated coins are read live (see price)",
+      note: "indexed from chain by our scanner at most every 30 minutes and published only when something changed, so in quiet hours updatedAt can be older than that; updatedAt and blockHeight on every response. A migrated coin's pool swaps are indexed on the same schedule and publish like trades; its pool price is read live (see price)",
     },
     rateLimit: { perIpPerMinute: RATE },
     contact: { x: "https://x.com/anewone_xyz" },
@@ -452,18 +500,23 @@ const envelope = (floor, extra) => ({
 
 function tradesOf(floor, addr, limit) {
   const { at } = clock(floor);
-  const rows = ((floor.index || {}).recent || [])
+  const curve = ((floor.index || {}).recent || [])
     .filter((r) => !addr || r.tk === addr)
-    .slice()
-    .sort((x, y) => y.b - x.b)
-    .slice(0, limit);
+    .map((r) => ({ ...r, venue: "bonding-curve" }));
+  // a migrated coin's swaps in its pool, the same tape: its newest swaps of the index's last 24h
+  const cutoff = floor.tip - DAY_BLOCKS;
+  const pool = (floor.tokens || [])
+    .filter((t) => !addr || t.addr === addr)
+    .flatMap((t) => { const px = poolOf(floor, t); return px ? px.recent.filter((r) => r.b >= cutoff).map((r) => ({ ...r, tk: t.addr, venue: "uniswap-v3" })) : []; });
+  const rows = [...curve, ...pool].sort((x, y) => y.b - x.b).slice(0, limit);
   return rows.map((r) => ({
     token: r.tk,
     side: r.buy ? "buy" : "sell",
+    venue: r.venue,
     block: r.b,
     time: at(r.b),
     usdcPaidOrReceived: round(num(BigInt(r.u)), 6),
-    volumeUsd: round(num(curveSide(BigInt(r.u), !!r.buy)), 6),
+    volumeUsd: round(num((r.venue === "uniswap-v3" ? poolSide : curveSide)(BigInt(r.u), !!r.buy)), 6),
     tokenAmount: round(num(BigInt(r.t)), 6),
   }));
 }
@@ -495,7 +548,9 @@ function distributionOf(floor, addr) {
 
 function candlesOf(floor, addr, tfSec, limit) {
   const { at } = clock(floor);
-  const series = ((floor.index || {}).series || {})[addr] || [];
+  // the curve's points and then, for a migrated coin, its pool's
+  const coin = (floor.tokens || []).find((t) => t.addr === addr);
+  const series = coin ? seriesOf(floor, coin) : ((floor.index || {}).series || {})[addr] || [];
   const out = [];
   for (const x of series) {
     const p = num(BigInt(x.p));
@@ -509,8 +564,9 @@ function candlesOf(floor, addr, tfSec, limit) {
       last.volumeUsd += v;
       last.trades++;
     } else {
-      // a bucket opens where the last one closed, so the wick has to cover that too
-      const open = last ? last.close : p;
+      // a bucket opens where the last one closed, so the wick has to cover that too; not across
+      // a gap in the points, where the last close is not this bucket's opening price
+      const open = last && !x.gap ? last.close : p;
       out.push({ time: t, open, high: Math.max(open, p), low: Math.min(open, p), close: p, volumeUsd: v, trades: 1 });
     }
   }
@@ -638,7 +694,7 @@ async function serve(req, res) {
     return res.status(200).json(envelope(floor, {
       token: a,
       tf,
-      note: "built from the indexed price points of this curve, at most 600 per coin",
+      note: "built from the indexed price points of this curve, and of its pool once migrated, at most 600 each",
       candles: candlesOf(floor, a, TFS[tf], clamp("limit", 500, MAX_CANDLES)),
     }));
   }
