@@ -2293,11 +2293,16 @@ function ageText(blocksOld) {
 // ---- trade stats, built by an incremental in-browser indexer.
 // The public Arc RPC caps eth_getLogs at a 10k block range, so history is walked in
 // chunks and the running totals are cached in localStorage; later refreshes only scan
-// the new blocks. Holders come from net buy/sell flow per trader, so direct
-// wallet-to-wallet transfers (rare during the curve phase) are not reflected.
+// the new blocks. Holders start from the scanner's count, taken from each coin's Transfer
+// logs so wallet-to-wallet transfers and pool swaps count too (holdBase), and move with the
+// net buy/sell flow this page sees live; without that count, the net flow alone decides.
 let blockTimeSec = 0, latestBlock = 0, statsReady = false;
 let fullyIndexed = false, covers24h = false, indexPct = 0, indexFloor = 0;
 const tradeStats = {};
+// token -> { holders, netAt, top, held } from data/floor.json's index.hold: the Transfer-based
+// holder count, how many the net flow counted in that same file, the largest balance, and what
+// all holders together hold (the supply less the curve, the coin's pools and burned coins)
+let holdBase = {};
 const TRADE_TOPIC = ethers.id("Trade(address,address,bool,uint256,uint256,uint256)");
 const CREATED_TOPIC = ethers.id("TokenCreated(address,address,string,string,string)");
 const COMMENT_TOPIC = ethers.id("Comment(address,address,string)");
@@ -2388,6 +2393,25 @@ async function hydrateFromFloor() {
   }
   $("statCount").textContent = String(addrs.length);
   rememberHero();
+
+  // Holder counts as the scanner reads them from each coin's Transfer logs (index.hold): curve
+  // trades, pool swaps and transfers between wallets all count there, where the net flow sees
+  // curve trades alone. Kept with the net count of this same file, so what the live tail adds
+  // later moves the count by the wallets its trades bring in or take out (holdersOf).
+  holdBase = {};
+  const held = d.index && d.index.hold && d.index.hold.coins;
+  if (held) {
+    const big = (x) => { try { return BigInt(x); } catch { return 0n; } };
+    for (const [k, v] of Object.entries(held)) {
+      const a = cs(k);
+      if (!a || !v || !Number.isFinite(v.holders)) continue;
+      const netAt = Object.values(((d.index.net || {})[k]) || {}).filter((x) => big(x && x.t) > 0n).length;
+      holdBase[a] = {
+        holders: v.holders, netAt, top: big((v.top || [])[0] || 0),
+        held: TOTAL_SUPPLY_WEI - big(v.curve) - big(v.pool) - big(v.burned),
+      };
+    }
+  }
 
   // Which index to start from: the published one, unless this browser's own cache
   // reaches further back. This used to compare only how far FORWARD each one went, and
@@ -2577,11 +2601,18 @@ function rebuildStats() {
       // every wallet that ever traded it, sold out or not; holders below are the ones still in
       traders: Object.keys(statsIdx.net[token] || {}).length,
       lastBlock: a.lastBlock || 0,
-      holders: Object.values(statsIdx.net[token] || {}).filter((v) => v.t > 0n).length,
+      holders: holdersOf(token),
     };
   }
   statsReady = true;
   paintCoinStats();
+}
+// Holders: the scanner's Transfer-based count where the file has one, moved on by what the
+// net flow counts now beyond what it counted in that file; the net flow's own count otherwise.
+function holdersOf(token) {
+  const netNow = Object.values(statsIdx.net[token] || {}).filter((v) => v.t > 0n).length;
+  const hb = holdBase[token];
+  return hb ? Math.max(0, hb.holders + netNow - hb.netAt) : netNow;
 }
 // The coin page's headline numbers were written once, when it opened, from whatever the
 // index held then; the index kept moving underneath and the page kept the old figures
@@ -5318,9 +5349,11 @@ function renderPosition(addr) {
 }
 
 // ------- trust / risk signals.
-// Dev holdings use the creator's REAL balanceOf (accurate). Top-wallet share is derived
-// from net trade flow and is therefore approximate — direct wallet-to-wallet ERC20
-// transfers bypass Trade events — so it is labelled as such and never presented as exact.
+// Dev holdings use the creator's REAL balanceOf (accurate). Top-wallet share comes from the
+// scanner's Transfer-based figures when the file has them (exact as of that file: the largest
+// balance over what all holders hold); otherwise from net trade flow, which misses direct
+// wallet-to-wallet transfers, so it is labelled as an estimate and never presented as exact.
+// Sniper share always comes from the net flow (it needs each wallet's first buy).
 async function computeTrust(addr) {
   const box = $("tTrust");
   box.style.display = "block";
@@ -5339,7 +5372,10 @@ async function computeTrust(addr) {
   const positives = Object.values(net).filter((v) => v.t > 0n);
   const totalNet = positives.reduce((s, v) => s + v.t, 0n);
   const topNet = positives.reduce((m, v) => (v.t > m ? v.t : m), 0n);
-  const topPct = totalNet > 0n ? Number((topNet * 10000n) / totalNet) / 100 : 0;
+  const hb = holdBase[addr];
+  const topExact = !!hb && hb.held > 0n;
+  const topPct = topExact ? Number((hb.top * 10000n) / hb.held) / 100
+    : totalNet > 0n ? Number((topNet * 10000n) / totalNet) / 100 : 0;
   // sniper share: wallets that bought inside our anti-snipe window still holding
   const snipeEnd = Number(inf.createdBlock) + 20;
   const sniperNet = positives.filter((v) => v.f <= snipeEnd).reduce((s, v) => s + v.t, 0n);
@@ -5352,7 +5388,7 @@ async function computeTrust(addr) {
   const devCls = devPct >= 20 ? "bad" : devPct >= 5 ? "warn" : "good";
   const devTxt = devBal === 0n && circulating > 0n ? "Dev holds 0%" : `Dev holds ${devPct.toFixed(1)}%`;
   badges.push(`<span class="tb ${devCls}">${devPct >= 20 ? "⚠ " : ""}${devTxt}</span>`);
-  if (topPct >= 30) badges.push(`<span class="tb warn">Top wallet ${topPct.toFixed(0)}%*</span>`);
+  if (topPct >= 30) badges.push(`<span class="tb warn">Top wallet ${topPct.toFixed(0)}%${topExact ? "" : "*"}</span>`);
   if (sniperPct > 0) {
     badges.push(`<span class="tb ${sniperPct >= 25 ? "warn" : "good"}">Snipers ${sniperPct.toFixed(0)}%*</span>`);
   }
@@ -5367,7 +5403,7 @@ async function computeTrust(addr) {
       ? "Reserves are locked in the bonding curve, and at graduation they move into a Uniswap v3 pool whose position the platform contract holds for good."
       : "Reserves are locked in the bonding curve. There is no LP to pull and no migration step."}
       Dev % is the creator's live balance vs circulating supply.
-      ${topPct >= 30 || sniperPct > 0 ? "<br>*Estimated from trades (ignores direct wallet-to-wallet transfers). Snipers = wallets that bought inside the 20-block anti-snipe window." : ""}
+      ${(topPct >= 30 && !topExact) || sniperPct > 0 ? "<br>*Estimated from trades (ignores direct wallet-to-wallet transfers). Snipers = wallets that bought inside the 20-block anti-snipe window." : ""}
       <br>See the ${link}.</div>`;
 }
 
