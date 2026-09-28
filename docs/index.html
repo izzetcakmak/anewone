@@ -4722,10 +4722,19 @@ function renderFeed() {
   });
   stopFeedRotation();
   const items = tkParts.join("");
-  // the copy is aria-hidden: it exists only to make the wrap seamless
-  $("feed").innerHTML = `<div class="tk-run">${items}</div>` +
-                        `<div class="tk-run" aria-hidden="true">${items}</div>`;
+  // A run has to be at least as wide as the strip. With a few trades it was not: the two runs
+  // left the right of the strip blank on a wide screen, and trades appeared mid-page instead of
+  // entering from the right edge. So the set repeats inside each run until it fills the strip;
+  // the repeats, like the second run, exist only for the loop and are aria-hidden.
   show(true);
+  $("feed").innerHTML = `<div class="tk-run">${items}</div>`;
+  const one = $("feed").querySelector(".tk-run").scrollWidth;
+  const reps = one ? Math.max(1, Math.ceil($("feed").clientWidth / one)) : 1;
+  const run = items + tkParts.map((p) => p.replace('<span class="tk-item"', '<span class="tk-item" aria-hidden="true"'))
+    .join("").repeat(reps - 1);
+  // the copy is aria-hidden: it exists only to make the wrap seamless
+  $("feed").innerHTML = `<div class="tk-run">${run}</div>` +
+                        `<div class="tk-run" aria-hidden="true">${run}</div>`;
   const runs = $("feed").querySelectorAll(".tk-run");
   const w = runs[0].scrollWidth;
   if (w) {
@@ -4734,6 +4743,15 @@ function renderFeed() {
     runs.forEach((el) => { el.style.animationDelay = `-${(at || 0) / 1000}s`; });
   }
 }
+// a wider window needs more repeats to fill the strip (a phone's height-only resizes, as its
+// address bar comes and goes, change nothing here)
+let tkWidth = innerWidth, tkResize = null;
+addEventListener("resize", () => {
+  if (innerWidth === tkWidth) return;
+  tkWidth = innerWidth;
+  clearTimeout(tkResize);
+  tkResize = setTimeout(() => { lastFeedKey = ""; renderFeed(); }, 250);
+});
 
 // ---- left rail: the same tokens as the floor, at list density
 let liveSort = "trending";
