@@ -2,12 +2,13 @@
   "name": "anewone-site",
   "private": true,
   "type": "module",
-  "description": "A NEW ONE — static floor (docs/) plus the Vercel functions under api/. The chat function keeps memory on Walrus through MemWal.",
+  "description": "A NEW ONE \u2014 static floor (docs/) plus the Vercel functions under api/. The chat function keeps memory on Walrus through MemWal.",
   "engines": {
     "node": "22.x"
   },
   "dependencies": {
     "@circle-fin/onramp-kit": "1.0.2",
+    "@dinari/api-sdk": "0.15.0",
     "@mysten-incubation/memwal": "^0.1.8",
     "@mysten/seal": "^1.4.13",
     "@mysten/sui": "^2.31.3",

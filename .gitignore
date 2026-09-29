@@ -35,3 +35,4 @@ build-onramp/*
 !build-onramp/package-lock.json
 !build-onramp/entry.mjs
 !build-onramp/build.mjs
+monitor/dinari-smoke-state.json

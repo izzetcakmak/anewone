@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stocks · A NEW ONE</title>
+<meta name="description" content="Tokenized US stocks on A NEW ONE, through Dinari: sign in with your wallet, verify once with Dinari, buy from your own wallet in USDC. Sandbox skeleton.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="../favicon.png">
+<style>
+  :root { --bg: #0b0d12; --bg-2: #12151d; --border: #232838; --text: #e8ebf3; --dim: #9aa3b8; --faint: #6b7385; --good: #37c97a; --warn: #f0b429; --bad: #ff5c6c; --accent: #6ea8ff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; } h1 small { display: block; font-size: 14px; color: var(--dim); font-weight: 500; }
+  h2 { font-size: 15px; margin: 24px 0 8px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--bg-2); border: 1px solid var(--border); color: var(--dim); }
+  .pill.on { color: var(--good); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .stock { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px; cursor: pointer; }
+  .stock.on { border-color: var(--accent); } .stock img { width: 24px; height: 24px; border-radius: 6px; vertical-align: middle; margin-right: 6px; background: #fff; }
+  .stock b { font-size: 14px; } .stock .n { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .stock .p { font-size: 13px; margin-top: 4px; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+  .step { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; } .step h3 { margin: 0 0 6px; font-size: 14px; } .step p { margin: 0 0 8px; font-size: 13px; color: var(--dim); }
+  button { background: var(--accent); color: #08101e; border: 0; border-radius: 8px; padding: 8px 12px; font-weight: 700; cursor: pointer; } button[disabled] { opacity: .45; cursor: default; }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  input, select { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px; font: inherit; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .hint { font-size: 13px; color: var(--dim); margin-top: 6px; } .hint.bad { color: var(--bad); } .hint.good { color: var(--good); }
+  pre { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-size: 12px; overflow: auto; max-height: 320px; white-space: pre-wrap; }
+  .notice { background: var(--bg-2); border: 1px solid var(--border); border-left: 3px solid var(--warn); border-radius: 10px; padding: 12px; font-size: 13px; color: var(--dim); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Stocks <small>Tokenized US stocks through Dinari, bought from your own wallet in USDC. <span class="pill" id="envPill">…</span> <span class="pill" id="hoursPill">…</span></small></h1>
+  <div class="notice" id="notice" hidden></div>
+  <p class="hint">Dinari is the transfer agent and broker-dealer; A NEW ONE is the front end. Verification happens on Dinari's page, orders are signed in your wallet, and the shares land in your wallet as dShares. Nothing here is investment advice. <a href="../">Back to the floor</a>.</p>
+
+  <h2>Market</h2>
+  <div class="grid" id="stocks"><span class="hint">Loading…</span></div>
+
+  <h2>Your account</h2>
+  <div class="steps">
+    <div class="step"><h3>1 · Sign in</h3><p>One wallet signature, the same as Deck Hand's.</p>
+      <div class="row"><button id="connect">Connect wallet</button><button class="ghost" id="signOut" hidden>Sign out</button><span class="pill" id="who" hidden></span></div><div class="hint" id="connectHint"></div></div>
+    <div class="step"><h3>2 · Verify with Dinari</h3><p>Dinari's own KYC page; it takes a few minutes. Status: <span class="pill" id="kycPill">—</span></p>
+      <div class="row"><button id="kycBtn" disabled>Open KYC page</button><button class="ghost" id="refreshBtn" disabled>Refresh</button></div><div class="hint" id="kycHint"></div></div>
+    <div class="step"><h3>3 · Link your wallet</h3><p>Sign Dinari's message so it knows where to deliver shares. Linked: <span class="pill" id="walletPill">—</span></p>
+      <div class="row"><button id="linkBtn" disabled>Link wallet</button><button class="ghost" id="faucetBtn" disabled hidden>Sandbox faucet (1,000 mockUSD)</button></div><div class="hint" id="linkHint"></div></div>
+    <div class="step"><h3>4 · Buy</h3><p>A market order for a dollar amount; Dinari pays the gas out of it.</p>
+      <div class="row"><select id="stockSel"></select><input id="usd" type="number" min="1" step="1" value="10" style="width:90px"> <span class="hint">USD</span></div>
+      <div class="row" style="margin-top:8px"><button id="buyBtn" disabled>Sign &amp; buy</button><button class="ghost" id="portfolioBtn" disabled>Portfolio</button></div><div class="hint" id="buyHint"></div></div>
+  </div>
+
+  <h2>Log</h2>
+  <pre id="log">…</pre>
+</main>
+<script src="../vendor/ethers.umd.min.js"></script>
+<script>
+(async () => {
+  const $ = (id) => document.getElementById(id);
+  const log = (label, x) => { $("log").textContent = `[${new Date().toISOString().slice(11, 19)}] ${label}\n` + (x === undefined ? "" : JSON.stringify(x, null, 1)) + "\n\n" + $("log").textContent.slice(0, 20000); };
+  const say = (id, text, cls) => { const h = $(id); h.className = "hint " + (cls || ""); h.textContent = text; };
+  const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
+
+  // ---- is Dinari switched on here, and is it the sandbox?
+  const cfg = await fetch("../api/dinari-config").then((r) => r.json()).catch(() => ({ enabled: false }));
+  $("envPill").textContent = cfg.enabled ? (cfg.env === "sandbox" ? "DINARI SANDBOX" : "DINARI LIVE") : "OFF";
+  $("envPill").className = "pill " + (cfg.enabled ? (cfg.env === "sandbox" ? "warn" : "on") : "bad");
+  if (!cfg.enabled) { $("notice").hidden = false; $("notice").textContent = "Stocks are not switched on for this deployment (no Dinari key). The page is a skeleton until then."; $("stocks").innerHTML = ""; return; }
+  if (cfg.env === "sandbox") { $("notice").hidden = false; $("notice").textContent = "Sandbox: test stocks, mock dollars, nothing real changes hands. The flow is the production one."; $("faucetBtn").hidden = false; }
+  const api = (route) => "../api/dinari/" + route;
+
+  // Where orders are placed. The wallet has to sit on that chain to sign the permit, so the
+  // page switches it there first; MetaMask refuses typed data whose chainId is not the current one.
+  const CHAINS = {
+    "eip155:421614": { hex: "0x66eee", name: "Arbitrum Sepolia", rpc: ["https://sepolia-rollup.arbitrum.io/rpc"], explorer: "https://sepolia.arbiscan.io", native: "ETH" },
+    "eip155:42161": { hex: "0xa4b1", name: "Arbitrum One", rpc: ["https://arb1.arbitrum.io/rpc"], explorer: "https://arbiscan.io", native: "ETH" },
+    "eip155:8453": { hex: "0x2105", name: "Base", rpc: ["https://mainnet.base.org"], explorer: "https://basescan.org", native: "ETH" },
+    "eip155:1": { hex: "0x1", name: "Ethereum", rpc: ["https://ethereum-rpc.publicnode.com"], explorer: "https://etherscan.io", native: "ETH" },
+  };
+  async function onChain(caip) {
+    const c = CHAINS[caip]; if (!c) throw new Error("unknown order chain " + caip);
+    const eth = window.ethereum;
+    if ((await eth.request({ method: "eth_chainId" })).toLowerCase() === c.hex) return;
+    try { await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: c.hex }] }); }
+    catch (e) {
+      if (e && e.code !== 4902) throw e;
+      await eth.request({ method: "wallet_addEthereumChain", params: [{ chainId: c.hex, chainName: c.name, rpcUrls: c.rpc, blockExplorerUrls: [c.explorer], nativeCurrency: { name: c.native, symbol: c.native, decimals: 18 } }] });
+    }
+  }
+
+  // ---- market: the tradable list and a price on demand
+  let stocks = [], picked = null;
+  async function loadStocks() {
+    const j = await fetch(api("stocks")).then((r) => r.json());
+    stocks = j.stocks || [];
+    $("stocks").innerHTML = stocks.map((s) => `<div class="stock" data-id="${s.id}"><b>${s.logo ? `<img src="${s.logo}" alt="">` : ""}${s.symbol}</b><div class="n">${s.name}</div><div class="p" id="p-${s.id}">${s.onChain ? "" : "<span class='hint'>not on this chain</span>"}</div></div>`).join("") || "<span class='hint'>No tradable stocks returned.</span>";
+    $("stockSel").innerHTML = stocks.filter((s) => s.fractional).map((s) => `<option value="${s.id}">${s.symbol} · ${s.name}</option>`).join("");
+    $("stocks").addEventListener("click", async (e) => {
+      const el = e.target.closest(".stock"); if (!el) return;
+      document.querySelectorAll(".stock.on").forEach((x) => x.classList.remove("on")); el.classList.add("on");
+      picked = el.dataset.id; $("stockSel").value = picked;
+      const j = await fetch(api("price?stock=" + picked)).then((r) => r.json()).catch(() => null);
+      const p = j && j.price; const qq = j && j.quote;
+      $("p-" + picked).textContent = p ? `$${Number(p.price).toFixed(2)} ${p.change_percent != null ? `(${Number(p.change_percent).toFixed(2)}%)` : ""}${qq ? ` · bid ${qq.bid_price} / ask ${qq.ask_price}` : ""}` : "price unavailable";
+    });
+  }
+  fetch(api("hours")).then((r) => r.json()).then((h) => { $("hoursPill").textContent = h.is_market_open ? "MARKET OPEN" : "MARKET CLOSED"; $("hoursPill").className = "pill " + (h.is_market_open ? "on" : "warn"); }).catch(() => { $("hoursPill").hidden = true; });
+  loadStocks().catch((e) => { $("stocks").innerHTML = `<span class="hint bad">${e.message}</span>`; });
+
+  // ---- sign-in: the same SIWE message as Deck Hand's (api/_auth.js), traded for a session
+  const AUTH_KEY = "anewone_stocks_auth";
+  const SIGN_TTL_MS = 24 * 3600 * 1000;
+  const signInText = (address, nonce, issued) => {
+    const expires = new Date(Date.parse(issued) + SIGN_TTL_MS).toISOString();
+    return `anewone.xyz wants you to sign in with your Ethereum account:\n${address}\n\n` +
+      `Sign in to A NEW ONE. This signature proves you own this wallet for two things only: keeping your Deck Hand memory, and opening card purchases that land in this wallet. It costs nothing, moves nothing, and cannot spend from the wallet.\n\n` +
+      `URI: https://anewone.xyz\nVersion: 1\nChain ID: 5042\nNonce: ${nonce}\nIssued At: ${issued}\nExpiration Time: ${expires}`;
+  };
+  const nonceHex = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+  let auth = null, me = null;
+  try { const a = JSON.parse(localStorage.getItem(AUTH_KEY) || "null"); if (a && a.address && (a.session || (a.signature && a.nonce)) && Date.now() - Date.parse(a.issued) < SIGN_TTL_MS - 30 * 60 * 1000) auth = a; } catch {}
+  const post = async (route, body) => {
+    const r = await fetch(api(route), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...body, auth }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
+    return j;
+  };
+  function paint() {
+    const signed = !!auth;
+    $("signOut").hidden = !signed; $("who").hidden = !signed; if (signed) $("who").textContent = short(auth.address);
+    $("kycBtn").disabled = $("refreshBtn").disabled = !signed;
+    const kycOk = me && me.kyc === "PASS", linked = !!(me && me.wallet && me.wallet.linked);
+    $("kycPill").textContent = me ? me.kyc : "—"; $("kycPill").className = "pill " + (kycOk ? "on" : me && me.kyc !== "NONE" ? "warn" : "");
+    $("walletPill").textContent = linked ? "yes" : me && me.wallet ? "another wallet" : "no"; $("walletPill").className = "pill " + (linked ? "on" : "");
+    $("linkBtn").disabled = !(signed && me && !linked);
+    $("faucetBtn").disabled = !(signed && linked);
+    $("buyBtn").disabled = $("portfolioBtn").disabled = !(signed && kycOk && linked);
+  }
+  async function refresh() { if (!auth) return; try { me = await post("me", {}); log("me", me); } catch (e) { say("kycHint", e.message, "bad"); } paint(); }
+
+  $("connect").addEventListener("click", async () => {
+    say("connectHint", "");
+    const eth = window.ethereum;
+    if (!eth) return say("connectHint", "No wallet in this browser. Open this page inside MetaMask, Rabby or your wallet app's browser.", "bad");
+    try {
+      const accts = await eth.request({ method: "eth_requestAccounts" });
+      const address = ethers.getAddress(accts[0]);
+      const issued = new Date().toISOString(), nonce = nonceHex();
+      const signature = await eth.request({ method: "personal_sign", params: [signInText(address, nonce, issued), address] });
+      auth = { address, nonce, issued, signature };
+      try {
+        const r = await fetch("../api/auth", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ auth }) });
+        const j = await r.json().catch(() => ({}));
+        if (r.ok && j.session) auth = { address, issued, session: j.session };
+      } catch {}
+      try { localStorage.setItem(AUTH_KEY, JSON.stringify(auth)); } catch {}
+      await refresh();
+    } catch (e) { say("connectHint", e && e.code === 4001 ? "Signature refused in the wallet." : (e.shortMessage || e.message || String(e)), "bad"); }
+  });
+  $("signOut").addEventListener("click", () => { auth = null; me = null; try { localStorage.removeItem(AUTH_KEY); } catch {} paint(); });
+  $("refreshBtn").addEventListener("click", refresh);
+
+  // ---- 2: Dinari's KYC page in a new tab; the status shows up on refresh
+  $("kycBtn").addEventListener("click", async () => {
+    try { const j = await post("kyc", {}); log("kyc", j); window.open(j.url, "_blank", "noopener"); say("kycHint", "Finish on Dinari's page, then Refresh.", "good"); }
+    catch (e) { say("kycHint", e.message, "bad"); }
+  });
+
+  // ---- 3: prove the wallet to Dinari with its own message
+  $("linkBtn").addEventListener("click", async () => {
+    try {
+      const { message, nonce } = await post("nonce", {}); log("dinari message", message);
+      const signature = await window.ethereum.request({ method: "personal_sign", params: [message, auth.address] });
+      log("wallet", await post("wallet", { nonce, signature }));
+      await refresh(); say("linkHint", "Linked.", "good");
+    } catch (e) { say("linkHint", e.shortMessage || e.message, "bad"); }
+  });
+  $("faucetBtn").addEventListener("click", async () => {
+    try { log("faucet", await post("faucet", {})); say("linkHint", "1,000 mockUSD on the way.", "good"); } catch (e) { say("linkHint", e.message, "bad"); }
+  });
+
+  // ---- 4: permit -> sign in the wallet (typed data, on the order chain) -> submit -> poll
+  const withDomainType = (td) => {
+    // eth_signTypedData_v4 wants the EIP712Domain type spelled out; Dinari may or may not include it
+    if (td.types.EIP712Domain) return td;
+    const kinds = { name: "string", version: "string", chainId: "uint256", verifyingContract: "address", salt: "bytes32" };
+    return { ...td, types: { EIP712Domain: Object.keys(td.domain).filter((k) => kinds[k]).map((k) => ({ name: k, type: kinds[k] })), ...td.types } };
+  };
+  $("buyBtn").addEventListener("click", async () => {
+    const stockId = $("stockSel").value, usd = Number($("usd").value);
+    if (!stockId || !(usd >= 1)) return say("buyHint", "Pick a stock and an amount.", "bad");
+    try {
+      $("buyBtn").disabled = true;
+      const prep = await post("permit", { stockId, usd, side: "BUY" }); log("permit", prep);
+      const td = prep.permit.typedData || prep.permit.typed_data || prep.permit;
+      if (!td.domain || !td.types || !td.message) throw new Error("permit is not typed data as expected; see the log and fix docs/stocks (and api/_dinari.js) to its real shape");
+      await onChain(prep.chain);
+      const signature = await window.ethereum.request({ method: "eth_signTypedData_v4", params: [auth.address, JSON.stringify(withDomainType({ primaryType: td.primaryType || Object.keys(td.types).find((k) => k !== "EIP712Domain"), ...td }))] });
+      const sub = await post("submit", { orderRequestId: prep.orderRequestId, signature }); log("submitted", sub);
+      say("buyHint", "Submitted. Waiting for Dinari…", "good");
+      const done = new Set(["SUBMITTED", "ERROR", "CANCELLED", "EXPIRED", "REJECTED"]);
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const st = await post("order", { orderRequestId: prep.orderRequestId }); log("order", st);
+        say("buyHint", `Order request ${st.request.status}${st.order ? " · order " + st.order.status : ""}`, done.has(st.request.status) ? (st.request.status === "SUBMITTED" ? "good" : "bad") : "");
+        if (done.has(st.request.status)) break;
+      }
+    } catch (e) { say("buyHint", e.shortMessage || e.message, "bad"); }
+    finally { paint(); }
+  });
+  $("portfolioBtn").addEventListener("click", async () => { try { log("portfolio", await post("portfolio", {})); } catch (e) { say("buyHint", e.message, "bad"); } });
+
+  paint();
+  await refresh();
+})();
+</script>
+</body>
+</html>

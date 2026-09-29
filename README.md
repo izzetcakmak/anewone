@@ -86,6 +86,8 @@ On Arc mainnet the platform points at Uniswap's official v3 deployment: factory
 - `api/`: Vercel functions. `chat.js` is Deck Hand: verifies the wallet signature, recalls from and remembers to
   Walrus Memory under a per-wallet namespace, reads the floor index for live Arc data and answers with an
   OpenAI-compatible model. `rpc.js` relays reads for browsers that block `*.arc.io`; `lifi/` proxies Swap & Bridge quotes.
+  `_dinari.js` is the Stocks page's side of Dinari's partner API: customer, KYC hand-off, wallet link and the gasless
+  proxied orders a visitor signs in their own wallet (`docs/stocks/`; sandbox until Dinari admits the site as a partner).
 - `monitor/`: the jobs behind the launch, run every minute by Windows Task Scheduler (`AnewoneMainnetScan`):
   - `scan.mjs` finds Arc mainnet, bridges USDC, deploys, confirms the launch on chain and flips `docs/config.js`
   - `bridge.mjs` moves 10 USDC from Base to Arc with CCTP V2 and Circle's Forwarding Service
