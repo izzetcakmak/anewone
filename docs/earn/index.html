@@ -366,7 +366,7 @@
   // Injected wallets announce themselves over EIP-6963; "Email or Social" is Web3Auth
   // (vendored, redirect flow, same clientId as the floor); WalletConnect for wallet apps.
   // Whichever is picked ends up in `active`, and the Earn Kit adapter wraps that.
-  let account = null, adapter = null, active = null, activeKind = null;
+  let account = null, adapter = null, vadapter = null, active = null, activeKind = null;
   const wallet = () => active;
   async function ensureArc() {
     const have = BigInt(await wallet().request({ method: "eth_chainId" }));
@@ -509,6 +509,9 @@
     try { localStorage.setItem(LAST_KEY, kind); } catch {}
     await loadKit();
     adapter = await kitMod.createEthersAdapterFromProvider({ provider });
+    // Borrow needs an atomic batch: the viem "next" adapter gives a plain wallet one on Arc
+    // through the chain's sender-preserving batcher (the ethers adapter has no batching)
+    try { vadapter = kitMod.createViemNextAdapterFromProvider({ provider }); } catch (e) { console.warn("viem adapter", e); vadapter = null; }
     $("connectBtn").textContent = account.slice(0, 6) + "…" + account.slice(-4);
     modal.classList.remove("open");
     provider.on && provider.on("accountsChanged", () => location.reload());
@@ -623,7 +626,7 @@
   let bkit = null, markets = [], loans = [];
   const B = (id) => $(id);
   async function loadBorrowKit() { await loadKit(); if (!bkit) bkit = new kitMod.BorrowKit(); return bkit; }
-  const from = () => ({ adapter, chain: CHAIN });
+  const from = () => ({ adapter: vadapter || adapter, chain: CHAIN });
   const amt = (a, d = 2) => (a ? `${fmt(a.amount, d)} ${a.token}` : "—");
   const usd = (a) => (a ? money(a.amount) : "—");
   const hfBand = (b) => b ? `<span class="hf ${esc(b)}">${esc(b === "SAFE" ? "healthy" : b.toLowerCase())}</span>` : "";

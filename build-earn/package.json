@@ -5,6 +5,7 @@
   "description": "Bundles @circle-fin/earn-kit and @circle-fin/borrow-kit with the ethers v6 adapter into docs/vendor/earn-kit.js. Recipe in build.mjs.",
   "dependencies": {
     "@circle-fin/adapter-ethers-v6": "latest",
+    "@circle-fin/adapter-viem-v2": "1.19.0",
     "@circle-fin/borrow-kit": "1.0.0",
     "@circle-fin/earn-kit": "1.8.1",
     "esbuild": "^0.28.1",

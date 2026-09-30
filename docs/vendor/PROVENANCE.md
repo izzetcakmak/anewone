@@ -178,19 +178,21 @@ To re-verify:
 
 | | |
 |---|---|
-| Package | `@circle-fin/earn-kit` 1.8.1 + `@circle-fin/borrow-kit` 1.0.0 + `@circle-fin/adapter-ethers-v6` (Circle, Apache-2.0) |
+| Package | `@circle-fin/earn-kit` 1.8.1 + `@circle-fin/borrow-kit` 1.0.0 + `@circle-fin/adapter-ethers-v6` + `@circle-fin/adapter-viem-v2` 1.19 (`/next`, with viem) (Circle, Apache-2.0) |
 | File | `earn-kit.js` (ESM, minified) |
-| Size | 1,383,746 bytes |
-| SHA-256 | `a7c53da3c12bf5864ca75ece1c6250d46b230e250f31c510af36071256e74b09` |
+| Size | 2,002,356 bytes |
+| SHA-256 | `982e027ff34873d1d88a38b2e4592b3203723511c2fe12b1fc20f777db5102ea` |
 
 **Not an upstream release file**: bundled locally with esbuild from the official npm packages,
 recipe in `build-earn/` (`entry.mjs` re-exports `EarnKit`, `BorrowKit`, `KitError`,
-`getErrorMessage`, `isRetryableError`, `createEthersAdapterFromProvider`; `build.mjs` prints the
-hash). Runs in Circle's permissionless mode: no API key is bundled or needed. Vault and market
+`getErrorMessage`, `isRetryableError`, `createEthersAdapterFromProvider` and the viem `/next`
+adapter as `createViemNextAdapterFromProvider`, which Borrow uses because a loan is one atomic
+batch: on Arc a plain wallet gets that through the chain's sender-preserving batcher, which only
+this adapter knows; `build.mjs` prints the hash). Runs in Circle's permissionless mode: no API key is bundled or needed. Vault and market
 data come from `https://api.circle.com`; deposits, withdrawals and loan operations are signed by
 the visitor's own wallet through the ethers adapter and go to the Morpho contracts on Arc. The
 bundle also carries Circle's chain table (public RPC and explorer URLs for every chain the kits
-know, incl. `@solana/web3.js`), which is why it is 1.4 MB; only the Arc entries are used.
+know, incl. `@solana/web3.js`) and viem, which is why it is 2 MB; only the Arc entries are used.
 Loaded lazily, only on `/earn/`.
 
 To re-verify:
