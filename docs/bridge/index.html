@@ -434,12 +434,17 @@
   // Starts from the endpoint that answered last. In Brave every *.arc.io endpoint is blocked and
   // each attempt costs most of a second; walking past them on every read made the page crawl.
   let readGood = 0;
+  // Brave (desktop and iOS) blocks every *.arc.io host: start from the site's own relay, the
+  // last entry of the pool, instead of failing through the blocked ones on every read
+  try { Promise.resolve(navigator.brave && navigator.brave.isBrave()).then((b) => { if (b && readProviders.length > 1) readGood = readProviders.length - 1; }); } catch {}
   async function readAny(fn) {
     let last;
     for (let k = 0; k < readProviders.length; k++) {
       const i = (readGood + k) % readProviders.length;
       try { const out = await fn(readProviders[i]); readGood = i; return out; }
-      catch (e) { last = e; if (!/429|500|502|503|limit|timeout|failed to fetch|network/i.test(String(e && (e.shortMessage || e.message)))) throw e; }
+      // a revert is an answer and stops here; anything else (a throttle, a host Brave blocks, a
+      // WebKit "Load failed", a timeout) moves on to the next endpoint
+      catch (e) { last = e; if (e && e.code === "CALL_EXCEPTION") throw e; }
     }
     throw last;
   }
