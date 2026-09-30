@@ -1010,7 +1010,11 @@ Time: ${new Date().toISOString()}`;
       const debt = ln.loan && ln.loan.borrowed ? Number(ln.loan.borrowed.amount) : Infinity;
       const w = await tokenBal(la), spendable = Math.max(0, Number(w) - (isGas ? GAS_RESERVE : 0));
       B("lnAmt").value = trim6(Math.min(debt, spendable).toFixed(6));
+      // Circle's repay is a partial repayment by amount and interest accrues by the second, so
+      // paying the figure shown can leave a hair of debt; more than the debt reverts on Morpho.
+      // The exact settlement is Close, which sizes the last share on-chain.
       if (isGas && spendable < debt) lnStatus(`Kept ${GAS_RESERVE} USDC back for gas.`);
+      else if (spendable >= debt) lnStatus("Interest accrues by the second, so a hair of debt may remain after this. Close this loan settles it exactly and returns the collateral.");
     } else B("lnAmt").value = trim6(lnWalletBal);
     quote();
   };
