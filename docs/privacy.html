@@ -13,7 +13,7 @@
     } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   })();
 </script>
-<title>Privacy | A NEW ONE</title>
+<title>Privacy · KVKK Aydınlatma Metni | A NEW ONE</title>
 <link rel="canonical" href="https://anewone.xyz/privacy.html">
 <meta name="description" content="How A NEW ONE handles your data: no accounts, no trackers, a few small server functions that are listed here, and we never ask for your keys.">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
@@ -119,15 +119,19 @@
 
   <h1>Privacy</h1>
   <p class="lede">A NEW ONE is a static website with a handful of small server functions, each listed below.
-    There are no accounts, no trackers, and we will never ask for your seed phrase or private key.</p>
-  <p class="updated">Last updated: 26 September 2026</p>
+    There are no accounts, no trackers, and we will never ask for your seed phrase or private key. The data
+    controller is İzzet Çakmak (Türkiye), <a href="mailto:support@anewone.xyz">support@anewone.xyz</a>. The
+    privacy notice required by Türkiye's Personal Data Protection Law No. 6698 (KVKK) is at the end of this page,
+    in Turkish: <a href="#kvkk">KVKK Aydınlatma Metni</a>.</p>
+  <p class="updated">Last updated: 30 September 2026</p>
 
   <h2>What we do not collect</h2>
   <ul>
     <li>No sign-up, no user accounts, no profiles, no email addresses.</li>
     <li>No analytics, advertising or tracking scripts, and no tracking cookies.</li>
-    <li>The launchpad itself (the floor, coin pages, launching and trading) runs entirely in your browser against
-      the Arc network. No server of ours records what you look at or trade.</li>
+    <li>Earn, Borrow and the launchpad (the floor, coin pages, launching and trading) run entirely in your browser
+      against the Arc network and the services named below. No server of ours records what you look at, deposit,
+      borrow or trade.</li>
   </ul>
 
   <h2>What stays in your browser</h2>
@@ -195,16 +199,73 @@
     <li><strong>Swap &amp; Bridge:</strong> moving funds in from other chains uses Circle CCTP and LI.FI, and
       the source chain's own RPC endpoints. Deck Hand uses Groq and Walrus as described above; card purchases
       use Circle.</li>
+    <li><strong>Earn and Borrow:</strong> vault and market data, quotes and the parameters of a deposit, loan or
+      repayment are fetched from Circle's Earn and Borrow services (api.circle.com), which see the wallet address
+      and amounts involved under Circle's privacy policy. The transactions themselves go from your wallet to the
+      Morpho contracts on Arc. When a loan is opened, Circle records the loan against your wallet address so it can
+      show you its state; we hold no copy.</li>
+    <li><strong>Wallet apps over WalletConnect:</strong> if you connect a phone wallet, the pairing runs through
+      WalletConnect's relay (Reown) under its policy; only signing requests travel over it.</li>
+    <li><strong>Regulated issuers:</strong> where an asset requires eligibility or identity checks, those happen with
+      the issuer, on the issuer's own site or widget, under the issuer's privacy policy. We do not receive the
+      documents or the result.</li>
   </ul>
 
   <h2>Your keys stay yours</h2>
   <div class="note">A NEW ONE never asks for a seed phrase, a private key or a password. Every transaction is
     shown in your own wallet and needs your approval. Anyone asking for your keys in our name is a scam.</div>
 
+  <h2>Your rights</h2>
+  <p>Under KVKK (and, where it applies to you, the GDPR) you can ask us whether we process personal data about
+    you, ask for a copy, correction or deletion, object to processing, and complain to the Personal Data
+    Protection Authority (KVKK Kurumu) or your local authority. Because we hold no accounts, what we can act on
+    is limited to a wallet's Deck Hand memory and the short-lived logs described above. Write to
+    <a href="mailto:support@anewone.xyz">support@anewone.xyz</a> with the wallet address; we answer within
+    30 days as the law requires.</p>
+
   <h2>Contact</h2>
   <p>Questions about privacy or security: <a href="mailto:support@anewone.xyz">support@anewone.xyz</a>.
     Security reports are also welcome on <a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">GitHub</a>.
     If this page changes, the date above changes with it.</p>
+
+  <h2 id="kvkk">KVKK Aydınlatma Metni</h2>
+  <p>6698 sayılı Kişisel Verilerin Korunması Kanunu'nun (“KVKK”) 10. maddesi uyarınca, veri sorumlusu sıfatıyla
+    anewone.xyz'i işleten <strong>İzzet Çakmak</strong> (Türkiye; <a href="mailto:support@anewone.xyz">support@anewone.xyz</a>)
+    tarafından hazırlanmıştır.</p>
+  <p><strong>Hangi veriler, nasıl toplanır.</strong> Sitede hesap, üyelik, profil ve e-posta kaydı yoktur; analitik,
+    reklam veya izleme çerezi kullanılmaz. Siteyi kullanırken elektronik ortamda otomatik yollarla şu veriler
+    işlenebilir: (1) <em>IP adresi, zaman ve istek yolu</em>: barındırma sağlayıcısı Vercel'in standart erişim
+    kayıtları ve sunucu fonksiyonlarımızın bir dakikalık hız sınırlama sayaçları (Upstash Redis, Frankfurt);
+    (2) <em>cüzdan adresi</em>: Deck Hand hafızası, kart ile alım oturumu ve kredi kayıtları için, ayrıca zincir
+    üzerindeki herkese açık işlem verisi olarak; (3) <em>Deck Hand'e yazdıklarınız</em>: hafızayı açtıysanız,
+    cüzdan adresinizden türetilen bir ad altında şifreli olarak Walrus ağında saklanır, yanıtlar saklanmaz;
+    (4) <em>oturum belirteci</em>: cüzdan imzasıyla giriş yaptığınızda bir gün geçerli rastgele bir belirteç.
+    Tarayıcınızda yerel olarak tutulan tema, son cüzdan, izleme listesi ve önbellek verileri cihazınızdan çıkmaz.</p>
+  <p><strong>Amaçlar ve hukuki sebepler.</strong> Veriler; siteyi sunmak ve güvenliğini sağlamak, kötüye kullanımı
+    ve aşırı isteği önlemek, seçtiğiniz özellikleri (Deck Hand hafızası, kart ile alım, kredi durumu) yerine
+    getirmek ve yasal yükümlülükleri karşılamak amacıyla; KVKK m. 5/2 kapsamında bir sözleşmenin kurulması ve
+    ifası için gerekli olması (c), hukuki yükümlülüğün yerine getirilmesi (ç) ve temel hak ve özgürlüklerinize zarar
+    vermemek kaydıyla meşru menfaatimiz (f) hukuki sebeplerine dayanılarak işlenir. Deck Hand hafızası yalnızca
+    siz açtığınızda, açık rızanızla işlenir; hafızayı kapatarak rızanızı geri alabilirsiniz.</p>
+  <p><strong>Aktarım.</strong> Veriler şu alıcı gruplarına, yalnızca ilgili özelliği kullandığınızda aktarılır:
+    barındırma (Vercel), hız sınırlama ve oturum deposu (Upstash), dil modeli (Groq), şifreli hafıza (Walrus/MemWal),
+    kart ile alım, Earn ve Borrow servisleri (Circle), köprü ve takas fiyatları (LI.FI), cüzdan eşleştirme (WalletConnect/Reown),
+    e-posta veya sosyal hesapla giriş (Web3Auth), yazı tipleri (Google) ve Arc ağı RPC sağlayıcıları. Bu
+    sağlayıcıların sunucuları yurt dışındadır (AB ve ABD). Yurt dışına aktarım KVKK m. 9 çerçevesinde, ilgili
+    özelliği kendi tercihinizle kullanmanız suretiyle verdiğiniz açık rızaya ve/veya sağlayıcılarla yapılan
+    sözleşmelere dayanır; bu özellikleri kullanmadığınızda aktarım gerçekleşmez. Zincir üzerindeki işlemler
+    niteliği gereği herkese açık ve kalıcıdır; bunları biz dahil kimse silemez.</p>
+  <p><strong>Saklama.</strong> Erişim kayıtları Vercel'in standart süresi kadar; hız sınırlama sayaçları bir dakika;
+    oturum belirteci bir gün; Deck Hand hafızası siz sildirene kadar saklanır. 5651 sayılı Kanun kapsamındaki
+    trafik bilgisi barındırma sağlayıcısı tarafından kanuni süresince tutulur.</p>
+  <p><strong>Haklarınız (KVKK m. 11).</strong> Kişisel verinizin işlenip işlenmediğini öğrenme, işlenmişse bilgi
+    talep etme, amacına uygun kullanılıp kullanılmadığını öğrenme, yurt içinde veya dışında aktarıldığı üçüncü
+    kişileri bilme, eksik veya yanlış işlenmişse düzeltilmesini isteme, KVKK m. 7 çerçevesinde silinmesini veya yok
+    edilmesini isteme, bu işlemlerin aktarıldığı üçüncü kişilere bildirilmesini isteme, otomatik sistemlerle analiz
+    sonucu aleyhinize bir sonucun ortaya çıkmasına itiraz etme ve kanuna aykırı işleme nedeniyle zararınızın
+    giderilmesini talep etme haklarına sahipsiniz. Başvurularınızı, ilgili cüzdan adresini belirterek
+    <a href="mailto:support@anewone.xyz">support@anewone.xyz</a> adresine iletebilirsiniz; başvurular en geç 30 gün
+    içinde sonuçlandırılır. Kişisel Verileri Koruma Kurulu'na şikâyet hakkınız saklıdır.</p>
 
   <div class="footer">
     Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a> ·
