@@ -173,3 +173,25 @@ Loaded lazily, only when a visitor presses "Buy USDC with card".
 To re-verify:
 
     cd build-onramp && npm ci && node build.mjs
+
+## earn-kit.js
+
+| | |
+|---|---|
+| Package | `@circle-fin/earn-kit` 1.8.1 + `@circle-fin/adapter-ethers-v6` (Circle, Apache-2.0) |
+| File | `earn-kit.js` (ESM, minified) |
+| Size | 1,051,397 bytes |
+| SHA-256 | `e4e8547a2d8830dba35980cb3074b7589c9b2dc906a517bba926bd48a5bdaae2` |
+
+**Not an upstream release file**: bundled locally with esbuild from the official npm packages,
+recipe in `build-earn/` (`entry.mjs` re-exports `EarnKit`, `KitError`, `getErrorMessage`,
+`createEthersAdapterFromProvider`; `build.mjs` prints the hash). Runs in Circle's permissionless
+mode: no API key is bundled or needed. Vault data comes from `https://api.circle.com`; deposits and
+withdrawals are signed by the visitor's own wallet through the ethers adapter and go to the Morpho
+vault contract on Arc. The bundle also carries Circle's chain table (public RPC and explorer URLs
+for every chain the kit knows, incl. `@solana/web3.js`), which is why it is 1 MB; only the Arc
+entries are used. Loaded lazily, only on `/earn/`.
+
+To re-verify:
+
+    cd build-earn && npm ci && node build.mjs

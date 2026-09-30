@@ -35,3 +35,9 @@ build-onramp/*
 !build-onramp/package-lock.json
 !build-onramp/entry.mjs
 !build-onramp/build.mjs
+# Same for the Circle Earn bundle (docs/vendor/earn-kit.js): recipe in, node_modules out.
+build-earn/*
+!build-earn/package.json
+!build-earn/package-lock.json
+!build-earn/entry.mjs
+!build-earn/build.mjs
