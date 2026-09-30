@@ -621,6 +621,8 @@ Time: ${new Date().toISOString()}`;
     provider.on && provider.on("accountsChanged", () => location.reload());
     provider.on && provider.on("chainChanged", () => location.reload());
     provider.on && provider.on("disconnect", () => location.reload());
+    // the swap sheet (the bridge page framed from this site) uses this same wallet
+    window.__anewoneWallet = { provider, account, kind };
     refreshPositions();
     syncAck().then(ensureAck);
   }

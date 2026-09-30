@@ -406,6 +406,12 @@
 (function () {
   "use strict";
   const cfg = window.ANEWONE_CONFIG;
+  // Framed inside Earn's swap sheet: the wallet Earn already holds (WalletConnect, e-mail or an
+  // injected one) becomes this page's wallet, so no second pairing and the balances show.
+  try {
+    if (new URLSearchParams(location.search).get("embed") === "1" && window.parent !== window && window.parent.__anewoneWallet && window.parent.__anewoneWallet.provider)
+      window.ethereum = window.parent.__anewoneWallet.provider;
+  } catch {}
   const net = cfg.mainnet && cfg.mainnet.live ? "mainnet" : "testnet";
   const arcCfg = cfg[net];
   const host = location.host;
