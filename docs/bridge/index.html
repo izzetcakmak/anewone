@@ -412,7 +412,7 @@
   try {
     if (new URLSearchParams(location.search).get("embed") === "1") {
       const w = window.parent !== window ? window.parent.__anewoneWallet : null;
-      if (w && w.provider) { window.ethereum = w.provider; embedNote = "Wallet from Earn: " + w.account.slice(0, 6) + "…" + w.account.slice(-4) + " (" + (w.kind || "wallet") + ")"; }
+      if (w && w.provider) { window.ethereum = w.provider; window.__embedAccount = w.account; embedNote = "Wallet from Earn: " + w.account.slice(0, 6) + "…" + w.account.slice(-4) + " (" + (w.kind || "wallet") + ")"; }
       else embedNote = "No wallet handed over from Earn. Connect on Earn first, then open the swap again.";
     }
   } catch (e) { embedNote = "Could not take Earn's wallet: " + (e.message || e); }
@@ -829,6 +829,10 @@
   const wallet = () => window.ethereum;
   async function sendConnectSilently() {
     if (!wallet()) return;
+    // Inside Earn's swap sheet the account is handed over with the wallet: asking the wallet
+    // for it would send eth_accounts to a phone wallet app in the background, which never
+    // answers (1 Oct 2026), and the balances would stay blank.
+    if (window.__embedAccount) { try { sendAccount = ethers.getAddress(window.__embedAccount); } catch { sendAccount = null; } sendRefresh(); return; }
     try { const a = await wallet().request({ method: "eth_accounts" }); sendAccount = a && a[0] ? ethers.getAddress(a[0]) : null; } catch { sendAccount = null; }
     sendRefresh();
   }

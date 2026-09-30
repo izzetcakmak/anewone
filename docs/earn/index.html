@@ -615,6 +615,9 @@ Time: ${new Date().toISOString()}`;
     // wallet can be sitting on another chain
     if (kind !== "google" && kind !== "walletconnect") await ensureArc();
     account = accts[0];
+    // handed to the swap sheet now, before the adapters are built: building them can ask the
+    // wallet again, and a phone wallet app in the background may never answer
+    window.__anewoneWallet = { provider, account, kind };
     try { localStorage.setItem(LAST_KEY, kind); } catch {}
     await loadKit();
     // Both adapters read the chain through the site's RPC pool, not the single endpoint Circle's
@@ -632,8 +635,6 @@ Time: ${new Date().toISOString()}`;
     provider.on && provider.on("accountsChanged", () => location.reload());
     provider.on && provider.on("chainChanged", () => location.reload());
     provider.on && provider.on("disconnect", () => location.reload());
-    // the swap sheet (the bridge page framed from this site) uses this same wallet
-    window.__anewoneWallet = { provider, account, kind };
     refreshPositions();
     syncAck().then(ensureAck);
   }
