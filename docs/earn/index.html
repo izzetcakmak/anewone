@@ -322,12 +322,20 @@
   const ERC20 = ["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)"];
   // Morpho vaults are ERC-4626: the position is the assets the wallet's shares redeem for.
   const ERC4626 = ["function balanceOf(address) view returns (uint256)", "function convertToAssets(uint256) view returns (uint256)"];
+  // Read through the RPC pool in turn: one endpoint answering 429 (drpc does, under a burst
+  // of reads from the kits) must not turn a real balance into "0" on the sheet.
   async function chainBalances(v) {
-    const rp = readProvider();
-    const t = new ethers.Contract(v.assetAddress, ERC20, rp), vc = new ethers.Contract(v.vaultAddress, ERC4626, rp);
-    const [raw, dec, shares] = await Promise.all([t.balanceOf(account), t.decimals(), vc.balanceOf(account)]);
-    const assets = shares > 0n ? await vc.convertToAssets(shares) : 0n;
-    return { wallet: ethers.formatUnits(raw, dec), vault: ethers.formatUnits(assets, dec) };
+    let last = null;
+    for (const u of READ_URLS) {
+      try {
+        const rp = readProvider(u);
+        const t = new ethers.Contract(v.assetAddress, ERC20, rp), vc = new ethers.Contract(v.vaultAddress, ERC4626, rp);
+        const [raw, dec, shares] = await Promise.all([t.balanceOf(account), t.decimals(), vc.balanceOf(account)]);
+        const assets = shares > 0n ? await vc.convertToAssets(shares) : 0n;
+        return { wallet: ethers.formatUnits(raw, dec), vault: ethers.formatUnits(assets, dec) };
+      } catch (e) { last = e; }
+    }
+    throw last || new Error("no RPC answered");
   }
   const fmt = (n, d = 2) => Number(n).toLocaleString("en-US", { maximumFractionDigits: d });
   const money = (s) => { const n = Number(s); return n >= 1e6 ? "$" + fmt(n / 1e6, 2) + "M" : n >= 1e3 ? "$" + fmt(n / 1e3, 1) + "K" : "$" + fmt(n, 2); };
@@ -646,9 +654,15 @@ Time: ${new Date().toISOString()}`;
     await showBalances(v);
   }
   async function showBalances(v) {
+    let ok = true;
     try { const b = await chainBalances(v); walletBal = b.wallet; vaultBal = b.vault; }
-    catch { walletBal = "0"; vaultBal = "0"; }
-    $("balL").textContent = `Wallet: ${fmt(walletBal, 2)} ${v.asset}`;
+    catch {
+      // the chain did not answer: the vault figure Circle reported for the card stands in,
+      // and the wallet side says so instead of pretending to be empty
+      ok = false; walletBal = "0";
+      const p = positions[v.vaultAddress]; vaultBal = p ? p.currentBalance : "0";
+    }
+    $("balL").textContent = ok ? `Wallet: ${fmt(walletBal, 2)} ${v.asset}` : "Wallet: could not read, try again";
     $("balR").textContent = `In vault: ${fmt(vaultBal, 2)} ${v.asset}`;
     if (Number(vaultBal) > 0) { positions[v.vaultAddress] = { currentBalance: vaultBal }; render(); }
   }
