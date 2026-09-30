@@ -707,7 +707,13 @@
   function marketOf(l) { return markets.find((m) => m.marketId === l.marketId); }
   function renderLoans() {
     B("loansWrap").hidden = !loans.length;
-    B("loans").innerHTML = loans.map((l, i) => {
+    // Circle's service opens a loan record when a borrow is requested. If the batch then
+    // reverts on-chain, the record stays "PENDING" with nothing in it: a ghost, not a loan.
+    // It gets one quiet line, not a card of buttons that can only fail.
+    const ghost = (l) => l.dataStatus === "PENDING" && !l.borrowed && !l.collateral;
+    const notes = loans.filter(ghost).map((l) => `<div class="empty" style="padding:12px 0;font-size:13px">Loan record ${esc(l.loanId.slice(0, 8))}… is still being indexed. If its transaction reverted, it stays empty and can be ignored.</div>`).join("");
+    B("loans").innerHTML = notes + loans.map((l, i) => {
+      if (ghost(l)) return "";
       const m = marketOf(l);
       const col = l.collateral ? l.collateral.token : (m ? m.collateralAsset.symbol : "");
       const debt = l.borrowed ? l.borrowed.token : (m ? m.loanAsset.symbol : "");
