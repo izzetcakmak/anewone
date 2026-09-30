@@ -706,16 +706,18 @@
     renderLoans();
   }
   function marketOf(l) { return markets.find((m) => m.marketId === l.marketId); }
+  // loans this session just opened: a fresh one is PENDING for a minute while Circle indexes
+  // the receipt, and only that one is worth a "pending" card. Any other empty record is a
+  // borrow that never landed (a reverted batch) and must not look like a loan.
+  const fresh = new Map(); // loanId -> time opened
   function renderLoans() {
-    B("loansWrap").hidden = !loans.length;
-    // Circle's service opens a loan record when a borrow is requested. If the batch then
-    // reverts on-chain, the record stays "PENDING" with nothing in it: a ghost, not a loan.
-    // It gets one quiet line, not a card of buttons that can only fail.
     const ghost = (l) => l.dataStatus === "PENDING" && !l.borrowed && !l.collateral;
+    loans = loans.filter((l) => !ghost(l) || (fresh.has(l.loanId) && Date.now() - fresh.get(l.loanId) < 3 * 60 * 1000));
+    B("loansWrap").hidden = !loans.length;
     const notes = loans.filter(ghost).map((l) => { const m = marketOf(l); return `<div class="vault ghost">
       <div class="head"><div><div class="pair">${m ? esc(m.collateralAsset.symbol) + ' <span class="arrow">→</span> ' + esc(m.loanAsset.symbol) : "Loan"}</div>
-        <div class="curator">record ${esc(l.loanId.slice(0, 8))}… · not on-chain</div></div><span class="tag warn">⏳ pending</span></div>
-      <div class="curator">Circle opened this record for a borrow whose transaction did not go through. Nothing was borrowed and no collateral is locked. It clears on its own; if you want the loan, borrow again.</div>
+        <div class="curator">record ${esc(l.loanId.slice(0, 8))}… · just opened</div></div><span class="tag warn">⏳ indexing</span></div>
+      <div class="curator">Your loan is confirmed on-chain; Circle is still indexing it. The figures appear here within a minute.</div>
     </div>`; }).join("");
     B("loans").innerHTML = notes + loans.map((l, i) => {
       if (ghost(l)) return "";
@@ -844,6 +846,8 @@
       B("lnStatus").className = "status ok";
       B("lnStatus").innerHTML = `${esc(done)}${r.status && r.status !== "confirmed" ? " (" + esc(r.status) + ")" : ""}. ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">View transaction ↗</a>` : ""}`;
       B("lnAmt").value = ""; B("lnQuote").hidden = true;
+      // the fresh loan must be marked before the list is read, or the filter drops it as a ghost
+      if (r.loanId) { fresh.set(r.loanId, Date.now()); setTimeout(refreshLoans, 15000); setTimeout(refreshLoans, 45000); }
       await refreshLoans();
       if (ln.loan) { ln.loan = loans.find((l) => l.loanId === ln.loan.loanId) || ln.loan; }
       else if (r.loanId) { ln = { loan: loans.find((l) => l.loanId === r.loanId) || { loanId: r.loanId, marketId: lnMarket().marketId }, market: undefined }; B("lnTabs").querySelectorAll("button").forEach((b) => b.hidden = false); B("lnClose2").hidden = false; }
