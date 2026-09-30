@@ -227,7 +227,7 @@
     </div>
     <!-- collateral first: whoever holds only USDC swaps it for cirBTC, ETH or the rest on Arc -->
     <div class="getcol">
-      <div><b>Need the collateral first?</b> Swap USDC for cirBTC, WETH or any of the assets below on Arc, then come back and borrow against it. Or bring funds in from another chain.</div>
+      <div><b>Need the collateral first?</b> Swap USDC for cirBTC or WETH on Arc, then come back and borrow against it. Some collateral has no swap route on Arc yet; those markets say so.</div>
       <button class="btn primary" id="swapLink" type="button">Swap on Arc →</button>
     </div>
     <div class="grid" id="markets"><div class="empty">Loading markets from Arc…</div></div>
@@ -780,9 +780,21 @@ Time: ${new Date().toISOString()}`;
   }
   if (location.hash === "#borrow") setView("borrow");
 
+  // Which collateral LI.FI can actually route on Arc: the swap sheet quotes through LI.FI, and a
+  // token it does not list (sUSDai, PST on 1 Oct 2026) only ever answers "No available quotes".
+  let swappable = null; // Set of lowercase addresses, or null when the list could not be read
+  async function loadSwappable() {
+    try {
+      const r = await fetch("https://li.quest/v1/tokens?chains=" + arcCfg.chainId, { signal: AbortSignal.timeout(10000) });
+      const j = await r.json();
+      swappable = new Set(((j.tokens && j.tokens[String(arcCfg.chainId)]) || []).map((t) => String(t.address).toLowerCase()));
+    } catch { swappable = null; }
+  }
+  const canSwap = (addr) => !swappable || swappable.has(String(addr).toLowerCase());
   async function loadMarkets() {
     try {
       const k = await loadBorrowKit();
+      await loadSwappable();
       const seen = [];
       for await (const m of k.exploreMarketsIterator({ chain: CHAIN, sortBy: "borrowApy" })) seen.push(m);
       // a market with nothing to lend is noise, and a token that is its own collateral is a test
@@ -804,7 +816,9 @@ Time: ${new Date().toISOString()}`;
       <div class="apy">${pct(m.borrowApy)}<small>BORROW APY</small></div>
       <div class="stats"><div>${money(m.liquidity.amount)}<span>Available to borrow</span></div><div>${usd(m.borrowAssets)}<span>Borrowed</span></div><div>${m.lltv == null ? "—" : fmt(m.lltv * 100, 1) + "%"}<span>Max LTV</span></div></div>
       ${Number(m.liquidity.amount) < 100 ? `<span class="tag warn">⚠ thin: only ${esc(fmt(m.liquidity.amount, 2))} ${esc(m.loanAsset.symbol)} left to borrow</span>` : ""}
-      <button class="getlink" type="button" data-swap="${i}">Get ${esc(m.collateralAsset.symbol)} with a swap →</button>
+      ${canSwap(m.collateralAsset.address)
+        ? `<button class="getlink" type="button" data-swap="${i}">Get ${esc(m.collateralAsset.symbol)} with a swap →</button>`
+        : `<span class="getlink" style="color:var(--faint)">No swap route for ${esc(m.collateralAsset.symbol)} on Arc yet · you need to hold it already</span>`}
       <button class="btn primary" data-market="${i}">Borrow ${esc(m.loanAsset.symbol)}</button>
     </div>`).join("") || `<div class="empty">No open markets on ${CHAIN} right now.</div>`;
   }
@@ -818,7 +832,7 @@ Time: ${new Date().toISOString()}`;
   // "to" list cut down to the collateral the markets take. USDC is the default "from".
   function openSwap(tok) {
     const seen = new Set();
-    const only = markets.map((m) => m.collateralAsset).filter((c) => !seen.has(c.address) && seen.add(c.address)).map((c) => `${c.address}:${c.symbol}:${c.decimals}`).join(",");
+    const only = markets.map((m) => m.collateralAsset).filter((c) => canSwap(c.address) && !seen.has(c.address) && seen.add(c.address)).map((c) => `${c.address}:${c.symbol}:${c.decimals}`).join(",");
     // a fresh query each time: Safari keeps a framed page's old copy long after a deploy
     const q = new URLSearchParams({ embed: "1", tab: "swap", only, v: String(Date.now()) });
     if (tok) { q.set("to", tok.address); q.set("symbol", tok.symbol); q.set("decimals", String(tok.decimals)); }
