@@ -212,6 +212,7 @@
     <button class="chip on" data-f="USDC">USDC</button>
     <button class="chip" data-f="EURC">EURC</button>
     <button class="chip" data-f="all">All</button>
+    <button class="chip" id="showAllBtn" title="Vaults with no named curator, test deployments and vaults Circle flags">Show unlisted</button>
     <span class="count" id="count">loading vaults…</span>
   </div>
   <div class="grid" id="grid"><div class="empty">Loading vaults from Arc…</div></div>
@@ -360,7 +361,17 @@
   }
 
   // ---- vaults ----
-  let vaults = [], filter = "USDC", positions = {};
+  let vaults = [], filter = "USDC", positions = {}, showAll = false;
+  // "Curated" means what the page promises: a named curator, no risk warning from Circle,
+  // and not a test deployment. Circle's list also carries look-alikes ("Steakhouse Prime
+  // USDC" run by a plain wallet at 15% performance fee) and "Test" vaults; those only show
+  // when the visitor asks for everything, and then carry a warning.
+  const curated = (v) => !!(v.manager && v.manager.name) && !/\btest\b/i.test(v.name || "")
+    && !((v.riskSignals && v.riskSignals.warnings) || []).some(badSignal) && !((v.riskSignals && v.riskSignals.earnKitWarnings) || []).length;
+  // Circle's signals: `not_whitelisted` and a RED `timelock` mark the look-alikes and the test
+  // deployments; `low_liquidity` is a state a real vault can be in (Keyrock, 75M) and is shown
+  // as such, not hidden; `circleSentinel` means Circle guards the vault, a good sign.
+  function badSignal(w) { return !!w && (w.type === "not_whitelisted" || w.level === "RED"); }
   async function loadVaults() {
     try {
       const k = await loadKit();
@@ -375,12 +386,14 @@
   }
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   function render() {
-    const list = vaults.filter((v) => filter === "all" || v.asset === filter);
-    $("count").textContent = `${list.length} vault${list.length === 1 ? "" : "s"}`;
+    const list = vaults.filter((v) => (filter === "all" || v.asset === filter) && (showAll || curated(v)));
+    const hidden = vaults.filter((v) => (filter === "all" || v.asset === filter) && !curated(v)).length;
+    $("count").textContent = `${list.length} vault${list.length === 1 ? "" : "s"}${!showAll && hidden ? ` · ${hidden} unlisted hidden` : ""}`;
     if (!list.length) { $("grid").innerHTML = `<div class="empty">No ${filter} vaults on ${CHAIN} right now.</div>`; return; }
     $("grid").innerHTML = list.map((v, i) => {
       const cur = v.manager && v.manager.name ? v.manager.name : "unlisted curator";
       const low = v.status !== "active";
+      const uncurated = !curated(v);
       const p = positions[v.vaultAddress];
       const fee = v.fee ? `${pct(v.fee.performance)} perf · ${pct(v.fee.management)} mgmt` : pct(v.vaultFee);
       return `<div class="vault" data-i="${vaults.indexOf(v)}">
@@ -389,15 +402,17 @@
         <div class="apy">${pct(v.currentApy)}<small>APY</small></div>
         <div class="stats"><div>${money(v.totalDeposits)}<span>Deposits</span></div><div>${money(v.liquidity)}<span>Liquidity</span></div><div>${esc(fee)}<span>Vault fee</span></div></div>
         ${low ? `<span class="tag warn">⚠ ${esc(String(v.status).replace(/_/g, " "))}</span>` : ""}
+        ${uncurated ? `<span class="tag warn">⚠ not curated: no named curator or flagged by Circle. Anyone can deploy a vault with any name.</span>` : (v.riskSignals && v.riskSignals.circleSentinel ? `<span class="tag usdc">✓ Circle-guarded vault</span>` : "")}
         <div class="pos ${p && Number(p.currentBalance) > 0 ? "show" : ""}">You: ${p ? fmt(p.currentBalance, 2) + " " + esc(v.asset) : ""}</div>
         <button class="btn primary" data-open="${vaults.indexOf(v)}">Deposit ${esc(v.asset)}</button>
       </div>`;
     }).join("");
   }
-  document.querySelectorAll(".chip").forEach((c) => c.onclick = () => {
-    document.querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", x === c));
+  document.querySelectorAll(".chip[data-f]").forEach((c) => c.onclick = () => {
+    document.querySelectorAll(".chip[data-f]").forEach((x) => x.classList.toggle("on", x === c));
     filter = c.dataset.f; render();
   });
+  $("showAllBtn").onclick = () => { showAll = !showAll; $("showAllBtn").classList.toggle("on", showAll); $("showAllBtn").textContent = showAll ? "Hide unlisted" : "Show unlisted"; render(); };
   $("grid").addEventListener("click", (e) => {
     const b = e.target.closest("[data-open]");
     if (b) openSheet(vaults[Number(b.dataset.open)]);
@@ -724,7 +739,17 @@ Time: ${new Date().toISOString()}`;
   }
   $("tabDep").onclick = () => { mode = "deposit"; setMode(); };
   $("tabWd").onclick = () => { mode = "withdraw"; setMode(); };
-  $("maxBtn").onclick = () => { $("amt").value = trim6(mode === "deposit" ? walletBal : vaultBal); };
+  // On Arc USDC is the gas token too: a deposit of the whole balance leaves nothing for the
+  // approve and the deposit, so the approve spends gas and the deposit fails. MAX keeps a
+  // little back for USDC; other assets (EURC) are not gas.
+  const GAS_RESERVE = 0.05;
+  $("maxBtn").onclick = () => {
+    if (mode !== "deposit") { $("amt").value = trim6(vaultBal); return; }
+    const isGas = cur && String(cur.assetAddress).toLowerCase() === "0x3600000000000000000000000000000000000000";
+    const v = Math.max(0, Number(walletBal) - (isGas ? GAS_RESERVE : 0));
+    $("amt").value = trim6(v.toFixed(6));
+    if (isGas && Number(walletBal) > 0) setStatus(`Kept ${GAS_RESERVE} USDC back for gas.`);
+  };
   $("closeBtn").onclick = () => $("overlay").classList.remove("open");
   $("overlay").addEventListener("click", (e) => { if (e.target === $("overlay")) $("overlay").classList.remove("open"); });
   const trim6 = (s) => { const [a, b = ""] = String(s).split("."); return b ? `${a}.${b.slice(0, 6)}`.replace(/\.?0+$/, "") : a; };
@@ -1022,6 +1047,7 @@ Time: ${new Date().toISOString()}`;
   async function runLoan(fn, done) {
     B("lnGo").disabled = true; B("lnClose2").disabled = true;
     lnStatus("Confirm in your wallet…");
+    let ok = false;
     try {
       const r = await fn();
       const url = r.txHash && arcCfg.explorer ? `${arcCfg.explorer.replace(/\/$/, "")}/tx/${r.txHash}` : "";
@@ -1034,9 +1060,11 @@ Time: ${new Date().toISOString()}`;
       if (ln.loan) { ln.loan = loans.find((l) => l.loanId === ln.loan.loanId) || ln.loan; }
       else if (r.loanId) { ln = { loan: loans.find((l) => l.loanId === r.loanId) || { loanId: r.loanId, marketId: lnMarket().marketId }, market: undefined }; B("lnTabs").querySelectorAll("button").forEach((b) => b.hidden = false); B("lnClose2").hidden = false; }
       await lnBalances();
+      ok = true;
     } catch (e) {
       lnStatus(kitMod.getErrorMessage ? kitMod.getErrorMessage(e) : (e.shortMessage || e.message || String(e)), "err");
     } finally { B("lnGo").disabled = false; B("lnClose2").disabled = false; }
+    return ok;
   }
   B("lnGo").onclick = async () => {
     if (!account) { B("loanOverlay").classList.remove("open"); openPicker(); return; }
@@ -1060,8 +1088,10 @@ Time: ${new Date().toISOString()}`;
     try { const q = await k.getCloseLoanQuote({ loanId: ln.loan.loanId, chain: CHAIN });
       if (!confirm(`Close this loan? Up to ${amt(q.bundledRepayment)} is repaid from your wallet and ${amt(q.collateralAmount, 6)} comes back.`)) return;
     } catch (e) { lnStatus(e.message || String(e), "err"); return; }
-    await runLoan(() => k.closeLoan({ from: from(), loanId: ln.loan.loanId }), "Loan closed");
-    loans = loans.filter((l) => l.loanId !== ln.loan.loanId); renderLoans();
+    // the loan leaves the list only when the close confirmed; a refusal or a revert keeps it,
+    // with its interest and its liquidation risk, in plain view
+    if (!(await runLoan(() => k.closeLoan({ from: from(), loanId: ln.loan.loanId }), "Loan closed"))) return;
+    await refreshLoans();
     B("loanOverlay").classList.remove("open");
   };
 </script>

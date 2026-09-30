@@ -3627,7 +3627,7 @@ setInterval(renderCreatorFee, 30_000);
 $("cfClaim").onclick = async () => {
   if (!signer) return toast("Connect first");
   try {
-    const tx = await platform.connect(signer).claimCreatorFees();
+    const tx = await platform.connect(signer).claimCreatorFees({ chainId: CFG.chainId });
     toast("Collecting…"); const rcpt = await tx.wait();
     // The contract decides at mining time: a claim sent in the last minute of the window
     // can land after it, and then the pot goes to the platform (CreatorFeesExpired) rather
@@ -5102,7 +5102,7 @@ $("cGo").onclick = async () => {
     const meta = buildMetadata();
     if (meta === null) return; // invalid link, already toasted
     const c = platform.connect(signer);
-    const tx = await c.createToken(name, sym, meta, cImageDataUri, { value: ethers.parseEther(String(buyVal || 0)) });
+    const tx = await c.createToken(name, sym, meta, cImageDataUri, { value: ethers.parseEther(String(buyVal || 0)), chainId: CFG.chainId });
     toast("Launching…");
     const rcpt = await tx.wait();
     toast(`$${sym} IS LIVE!`);
@@ -5314,7 +5314,9 @@ $("tGo").onclick = async () => {
     let rcpt;
     if (isBuy) {
       const q = localQuoteBuy(inf, wei);
-      const tx = await c.buy(currentToken, applySlip(q), { value: wei });
+      // chainId travels with the transaction: a wallet that slipped to another chain refuses it
+      // instead of sending the value to an empty address there
+      const tx = await c.buy(currentToken, applySlip(q), { value: wei, chainId: CFG.chainId });
       toast("Buying…"); rcpt = await tx.wait(); toast("GET! +" + fmt(q, 2));
     } else {
       const t = new ethers.Contract(currentToken, ERC20, signer);
@@ -5322,9 +5324,9 @@ $("tGo").onclick = async () => {
       // Exactly what this sale needs, never unlimited: wallet scanners (Zerion's, Rabby's)
       // mark an unlimited approval to a young contract as a malicious request, and a holder
       // is right to be wary of one. It costs one approval per sale; the sale is still safe.
-      if (allowance < wei) { toast("Approving " + fmt(wei, 2) + " $" + ((tokenMeta[currentToken] || {}).symbol || "") + "…"); await (await t.approve(CFG.platform, wei)).wait(); }
+      if (allowance < wei) { toast("Approving " + fmt(wei, 2) + " $" + ((tokenMeta[currentToken] || {}).symbol || "") + "…"); await (await t.approve(CFG.platform, wei, { chainId: CFG.chainId })).wait(); }
       const q = localQuoteSell(inf, wei);
-      const tx = await c.sell(currentToken, wei, applySlip(q));
+      const tx = await c.sell(currentToken, wei, applySlip(q), { chainId: CFG.chainId });
       toast("Selling…"); rcpt = await tx.wait(); toast("SOLD! +" + fmt(q, 4) + " USDC");
     }
     // The receipt carries the Trade log itself, so the chart, the card, the rail and the
@@ -5491,7 +5493,7 @@ $("tCommentGo").onclick = async () => {
   const text = $("tCommentInput").value.trim();
   if (!text) return;
   try {
-    const tx = await platform.connect(signer).comment(currentToken, text);
+    const tx = await platform.connect(signer).comment(currentToken, text, { chainId: CFG.chainId });
     toast("Posting…"); await tx.wait();
     $("tCommentInput").value = "";
     toast("Comment posted!");

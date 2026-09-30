@@ -625,8 +625,18 @@
       label: "Buy $" + tok.symbol + (onPool ? " on Uniswap" : " on the floor"),
       buttonLabel: "Buy $" + tok.symbol,
       doneLabel: "$" + tok.symbol + " was bought " + (onPool ? "on Uniswap v3" : "on its curve"),
-      auto: true,
-      build: async ({ received, signer, ethers }) => {
+      // Never automatic: a transfer the kit resumes from storage on a later visit (months old,
+      // or another wallet's, on a shared browser) must not turn into a purchase by itself. The
+      // kit shows a "Buy $X" button once the USDC has landed, and that click is the consent.
+      auto: false,
+      build: async ({ transfer, received, signer, ethers }) => {
+        // the leg belongs to the wallet the USDC was sent to, spends at most what that
+        // transfer brought, and is not offered for a transfer older than a week
+        const owner = (await signer.getAddress()).toLowerCase();
+        if (transfer && transfer.recipient && String(transfer.recipient).toLowerCase() !== owner) throw new Error("This transfer went to a different wallet; connect that wallet to buy with it.");
+        if (transfer && transfer.startedAt && Date.now() - transfer.startedAt > 7 * 86_400_000) throw new Error("This transfer is more than a week old. Buy from the Swap tab instead.");
+        const brought = transfer && transfer.amount ? BigInt(transfer.amount) : received;
+        if (received > brought) received = brought;
         const native = received * 10n ** 12n;                 // 6-dec USDC from CCTP -> 18-dec native on Arc
         const fee = await signer.provider.getFeeData();
         const gasPrice = fee.maxFeePerGas || fee.gasPrice || 0n;

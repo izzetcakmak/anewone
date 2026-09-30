@@ -14,3 +14,7 @@ test
 monitor
 foundry.toml
 README.md
+# Secrets live in Vercel's env settings, never in the upload: a `vercel --prod` from this
+# folder must not carry the local .env (it holds the admin and API keys).
+.env
+.env.*
