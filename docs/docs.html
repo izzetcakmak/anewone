@@ -13,9 +13,9 @@
     } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   })();
 </script>
-<title>A NEW ONE Docs | anewone.xyz</title>
+<title>A NEW ONE Docs · Real-world assets on Arc | anewone.xyz</title>
 <link rel="canonical" href="https://anewone.xyz/docs.html">
-<meta name="description" content="How A NEW ONE works: the rug-proof bonding curve, fees, launching and trading tokens on Arc.">
+<meta name="description" content="How A NEW ONE works: a launch and distribution front end for real-world assets on Arc. Earn and Borrow on Morpho through Circle's kits, tokenized funds, credit and stocks from regulated issuers, and AnewOne.Fun, the launchpad.">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <meta name="theme-color" content="#07080b">
@@ -140,12 +140,17 @@
   </div>
 
   <h1>A NEW ONE Docs</h1>
-  <p class="lede">The meme launchpad built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a>,
-    Circle's stablecoin L1 where gas <em>is</em> USDC. Launch a token in seconds, trade it on a
-    rug-proof bonding curve, and watch it graduate into a Uniswap v3 pool nobody can pull, ever.</p>
+  <p class="lede">The launch and distribution front end for real-world assets on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a>,
+    Circle's stablecoin L1 where gas <em>is</em> USDC. Funds, credit and stocks from regulated issuers; USDC that earns
+    and USDC you can borrow, today. We are the interface, never the issuer.</p>
 
   <div class="toc">
-    <a href="#what">What it is</a>
+    <a href="#vision">What we are</a>
+    <a href="#earn">Earn</a>
+    <a href="#borrow">Borrow</a>
+    <a href="#assets">Real-world assets</a>
+    <a href="#fun">AnewOne.Fun</a>
+    <a href="#what">The launchpad</a>
     <a href="#curve">The curve</a>
     <a href="#fees">Fees &amp; creator earnings</a>
     <a href="#safety">Safety</a>
@@ -158,8 +163,60 @@
     <a href="#addresses">Contracts</a>
   </div>
 
-  <h2 id="what">What it is</h2>
-  <p>A NEW ONE is a permissionless memecoin launchpad. Anyone can create a token for free (you pay
+  <h2 id="vision">What we are</h2>
+  <p><strong>Vision.</strong> Real-world assets on Arc, for anyone with a wallet. Arc is the first L1 built for
+    stablecoin finance: USDC pays the gas, finality is deterministic and the markets never close. A NEW ONE is the
+    front door to that: one place where a tokenized fund, a credit pool, a stock or a yield vault is launched,
+    found and bought, settled in USDC.</p>
+  <p><strong>Mission.</strong> To be the <strong>launch and distribution front end</strong> for real-world assets on Arc.
+    The issuer is always a regulated entity, and we never issue anything ourselves: Centrifuge rails carry funds and
+    credit, licensed issuers bring stocks, Morpho carries the lending. We build the interface: wallet onboarding,
+    USDC settlement, bridging from other chains, and a page for every asset that shows who stands behind it,
+    on what terms, with what on-chain data.</p>
+  <div class="grid">
+    <div class="card"><span class="tag good">live</span><h3>Earn</h3><p>USDC and EURC into Morpho vaults on Arc, run by
+      curators such as Bitwise, Gauntlet and Steakhouse. Your money stays in the vault contract. <a href="earn/">Open Earn →</a></p></div>
+    <div class="card"><span class="tag good">live</span><h3>Borrow</h3><p>USDC or EURC against cirBTC, ETH and tokenized
+      assets on Morpho markets, from your own wallet, with the health factor and liquidation price shown before you sign. <a href="earn/#borrow">Open Borrow →</a></p></div>
+    <div class="card"><span class="tag">coming</span><h3>Real-world assets</h3><p>Tokenized funds and private credit on
+      Centrifuge rails, and stocks from licensed issuers. Each one arrives with its issuer, its terms and its reporting.</p></div>
+    <div class="card"><span class="tag good">live</span><h3>AnewOne.Fun</h3><p>The memecoin launchpad we started with,
+      now the fun side of the house: bonding curves in USDC, liquidity locked for good. <a href="fun/">Open the floor →</a></p></div>
+  </div>
+  <p>Three rules hold everywhere on the site: <strong>we never custody</strong> (every deposit, loan and trade is signed by
+    your wallet and lives in a public contract), <strong>we never issue</strong> (assets come from regulated issuers or
+    open protocols, never from us), and <strong>we never advise</strong> (we show data and terms, and the choice is yours).</p>
+
+  <h2 id="earn">Earn</h2>
+  <p>Earn lists lending vaults on Arc through Circle's Earn service: Morpho vaults where curators lend USDC or EURC into
+    over-collateralised markets. Every card shows the current APY, total deposits, withdrawable liquidity, the vault's
+    performance and management fees, and the curator. You deposit and withdraw from your own wallet; the vault shares
+    (ERC-4626) sit in your address and the balance shown is read from the chain. Vault fees go to the curator, none to
+    us. Yields are variable and a vault marked <em>low liquidity</em> may not let you withdraw at once.</p>
+
+  <h2 id="borrow">Borrow</h2>
+  <p>Borrow lists Morpho markets on Arc through Circle's Borrow Kit: collateral on one side (cirBTC, WETH, sUSDai, PST and
+    more), USDC or EURC on the other. You say how much to borrow; the service sizes the collateral and the quote shows
+    what gets locked, the health factor, the liquidation price and every fee before you sign. A loan opens in a single
+    atomic transaction through the batcher Arc publishes for plain wallets. From the loan card you repay, borrow more,
+    add or withdraw collateral, or close. If the collateral's price falls until the health factor reaches 1.0, Morpho
+    liquidates part of it with a penalty, so keep an eye on the band. On a new loan A NEW ONE takes an origination fee
+    of 0.15% (15 bps), shown in the quote; 90% of it goes to the site and 10% to Arc.</p>
+
+  <h2 id="assets">Real-world assets</h2>
+  <p>This is what the site is becoming. Tokenized money-market and treasury funds and private-credit pools arrive on
+    <a href="https://centrifuge.io" target="_blank" rel="noopener">Centrifuge</a> rails; stocks come from licensed
+    issuers. In every case the issuer creates and legally stands behind the asset, runs eligibility and KYC, holds the
+    underlying and handles redemptions. A NEW ONE gives each asset a launch page on Arc, wallet access, USDC payments and
+    cross-chain onboarding. Some assets will be limited to eligible investors in some jurisdictions; the issuer decides
+    that, and the page says so.</p>
+
+  <h2 id="fun">AnewOne.Fun</h2>
+  <p>The launchpad lives on at <a href="fun/">anewone.xyz/fun</a>, unchanged: a free, permissionless place to launch a
+    coin on a USDC bonding curve that graduates into a locked Uniswap v3 pool. Everything below this line documents it.</p>
+
+  <h2 id="what">The launchpad</h2>
+  <p>AnewOne.Fun is a permissionless memecoin launchpad. Anyone can create a token for free (you pay
     only network gas), and every token trades immediately on its own <strong>constant-product bonding
     curve</strong> priced in <strong>USDC</strong>. There is no order book, no seeding liquidity, and
     no listing step. The contract itself is the market maker.</p>
@@ -326,7 +383,9 @@
     <a href="mailto:contact@anewone.xyz">contact@anewone.xyz</a> ·
     <a href="about.html">About</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> ·
     <a href="/">Launch app</a>
-    <br><br>Nothing here is financial advice. Memecoins are highly risky, so only trade what you can afford to lose.
+    <br><br>Nothing here is financial advice or an offer. Yields are variable, loans can be liquidated and memecoins
+    are highly risky, so only commit what you can afford to lose. A NEW ONE never custodies funds, never issues an
+    asset and never chooses for you.
   </div>
 </div>
 <script src="config.js"></script>

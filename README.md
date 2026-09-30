@@ -1,10 +1,15 @@
 # 🕹 A NEW ONE: anewone.xyz
 
-**Insert Coin. Launch a New One.**
+**Real assets. Launched on a new one.**
 
-A memecoin launchpad on **Arc Network**, Circle's stablecoin L1 where gas is paid in USDC. Coins launch on a
-USDC bonding curve and graduate into a Uniswap v3 pool whose liquidity nobody can withdraw. Every token on the
-floor is... a new one.
+The launch and distribution front end for real-world assets on **Arc Network**, Circle's stablecoin L1 where gas
+is paid in USDC. Funds and credit on Centrifuge rails, stocks from licensed issuers, and, live today, USDC that
+earns and USDC you can borrow on Morpho through Circle's Earn and Borrow kits (`docs/earn/`). The issuer is always
+a regulated entity; A NEW ONE never issues, never custodies and never advises. It is the interface.
+
+The memecoin launchpad the project started as lives on as **AnewOne.Fun** (`docs/fun/`): coins launch on a USDC
+bonding curve and graduate into a Uniswap v3 pool whose liquidity nobody can withdraw. Everything below about the
+curve, the floor and $NOAH is about that side of the house.
 
 **First coin on the platform: [$NOAH, Noah's Ark](docs/meta/noah.json).** On chain its name reads "Noah's Arc",
 on purpose: it was the first coin to launch on Arc's public mainnet, and the name tips its hat to the chain it
