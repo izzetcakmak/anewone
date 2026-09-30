@@ -544,11 +544,15 @@
           if (d.pool && d.pool !== ethers.ZeroAddress) {
             const slot0 = await readAny((p) => new ethers.Contract(d.pool, POOL_ABI, p).slot0());
             const token0 = await readAny((p) => new ethers.Contract(d.pool, POOL_ABI, p).token0());
-            // price of 1 token in USDC-wei from sqrtPriceX96 (both sides 18 decimals on Arc)
-            const q = BigInt(slot0.sqrtPriceX96);
-            const p1per0 = (q * q * 10n ** 18n) >> 192n;               // token1 per token0, ×1e18
+            // Price of 1 token in the curve's unit (USDC per whole token, ×1e18), as api/_basedbot.js
+            // poolPriceWad. The pool prices in raw units and its sides do not share decimals: the
+            // coin has 18, USDC's ERC-20 face 6. s²/2^192 is USDC units per coin wei when the coin
+            // sorts first, coin wei per USDC unit when it sorts second; 1e30 = 1e12 (6 to 18
+            // decimals) × 1e18 (the ×1e18 scale). Treating both sides as 18 decimals read every
+            // pool coin 1e12 times too cheap.
+            const s2 = BigInt(slot0.sqrtPriceX96) ** 2n;
             const usdcIsToken0 = token0.toLowerCase() === (arcCfg.usdc || "0x3600000000000000000000000000000000000000").toLowerCase();
-            const priceWad = usdcIsToken0 ? (p1per0 > 0n ? (10n ** 36n) / p1per0 : 0n) : p1per0;
+            const priceWad = s2 === 0n ? 0n : usdcIsToken0 ? ((1n << 192n) * 10n ** 30n) / s2 : (s2 * 10n ** 30n) >> 192n;
             d.mcap = priceWad * SUPPLY;
             d.priceWad = priceWad;
           } else d.venue = "closed";
@@ -635,21 +639,26 @@
           return { to: platformAddr, value, data: c.interface.encodeFunctionData("buy", [addr, quoted * 97n / 100n]) };
         }
         // Uniswap v3: USDC's ERC-20 face is approved to the router and swapped exact-in on the 1% pool.
+        // That face has 6 decimals, so the approval, the quote and amountIn are all in its units;
+        // the 18-decimal native figure above would ask for 1e12 times the money and revert.
+        const amountIn = value / 10n ** 12n;
+        if (amountIn <= 0n) throw new Error("bridged amount too small to cover gas on Arc");
         const usdc = arcCfg.usdc || "0x3600000000000000000000000000000000000000";
         const me = await signer.getAddress();
         const erc = new ethers.Contract(usdc, ERC20_ABI, signer);
-        if ((await erc.allowance(me, uni.router)) < value) { const tx = await erc.approve(uni.router, value); await tx.wait(); }
+        if ((await erc.allowance(me, uni.router)) < amountIn) { const tx = await erc.approve(uni.router, amountIn); await tx.wait(); }
         let minOut = 0n;
         if (uni.quoter) {
           const q = new ethers.Contract(uni.quoter, QUOTER_ABI, signer);
-          const r = await q.quoteExactInputSingle.staticCall({ tokenIn: usdc, tokenOut: addr, amountIn: value, fee: POOL_FEE, sqrtPriceLimitX96: 0 });
+          const r = await q.quoteExactInputSingle.staticCall({ tokenIn: usdc, tokenOut: addr, amountIn, fee: POOL_FEE, sqrtPriceLimitX96: 0 });
           minOut = (r[0] ?? r.amountOut) * 95n / 100n;
         } else if (tok.priceWad > 0n) {
-          minOut = (value * 10n ** 18n / tok.priceWad) * 99n / 100n * 95n / 100n;   // spot price, 1% fee, 5% guard
+          // priceWad is USDC per whole coin ×1e18, so coin wei = 18-decimal USDC × 1e18 / priceWad
+          minOut = (amountIn * 10n ** 12n * 10n ** 18n / tok.priceWad) * 99n / 100n * 95n / 100n;   // spot price, 1% fee, 5% guard
         }
         const router = new ethers.Contract(uni.router, ROUTER_ABI, signer);
         return { to: uni.router, value: 0n, data: router.interface.encodeFunctionData("exactInputSingle", [{
-          tokenIn: usdc, tokenOut: addr, fee: POOL_FEE, recipient: me, amountIn: value, amountOutMinimum: minOut, sqrtPriceLimitX96: 0 }]) };
+          tokenIn: usdc, tokenOut: addr, fee: POOL_FEE, recipient: me, amountIn, amountOutMinimum: minOut, sqrtPriceLimitX96: 0 }]) };
       },
     };
   }
@@ -1283,9 +1292,12 @@
     if (d.venue === "closed") throw new Error("$" + d.symbol + " graduated and is waiting for its move into Uniswap; nothing trades it right now.");
     if (d.venue === "pool") {
       if (!uniOk || !uni.quoter) throw new Error("$" + d.symbol + " trades on Uniswap v3; its router on Arc is not verified yet.");
-      const out = await readAny((p) => new ethers.Contract(uni.quoter, QUOTER_ABI, p).quoteExactInputSingle.staticCall({ tokenIn: USDC_ARC, tokenOut: to.address, amountIn: value, fee: POOL_FEE, sqrtPriceLimitX96: 0 }));
+      // The pool takes USDC through its ERC-20 face, 6 decimals: v6 as typed, not the 18-decimal
+      // native value the curve is paid in. A pool quote's `value` is that amount, and the approval
+      // and the swap below spend exactly it.
+      const out = await readAny((p) => new ethers.Contract(uni.quoter, QUOTER_ABI, p).quoteExactInputSingle.staticCall({ tokenIn: USDC_ARC, tokenOut: to.address, amountIn: v6, fee: POOL_FEE, sqrtPriceLimitX96: 0 }));
       const amt = out[0] ?? out.amountOut;
-      return { kind: "pool", tool: "Uniswap v3", toAmount: amt, toAmountMin: amt * BigInt(Math.round((100 - swSlip) * 100)) / 10000n, slippage: swSlip, value };
+      return { kind: "pool", tool: "Uniswap v3", toAmount: amt, toAmountMin: amt * BigInt(Math.round((100 - swSlip) * 100)) / 10000n, slippage: swSlip, value: v6 };
     }
     const out = await platform.quoteBuy(to.address, value);
     return { kind: "curve", tool: "A NEW ONE curve", toAmount: out, toAmountMin: out * BigInt(Math.round((100 - swSlip) * 100)) / 10000n, slippage: swSlip, value };
