@@ -38,10 +38,11 @@
   .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
   header { border-bottom: 1px solid var(--line); }
   .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 72px; }
-  .brand { display: flex; align-items: center; gap: 12px; font: 700 20px "Space Grotesk", sans-serif; letter-spacing: .02em; }
+  .brand { display: flex; align-items: center; gap: 12px; font: 700 20px "Space Grotesk", sans-serif; letter-spacing: .02em; white-space: nowrap; }
   .brand img { width: 40px; height: 40px; border-radius: 10px; }
-  nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .pill { font: 500 14px "JetBrains Mono", monospace; padding: 9px 16px; border: 1px solid var(--line); border-radius: 999px; }
+  nav { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+  /* every pill one height, so the row reads as one row on a phone */
+  .pill { display: inline-flex; align-items: center; height: 38px; padding: 0 16px; font: 500 14px "JetBrains Mono", monospace; border: 1px solid var(--line); border-radius: 999px; white-space: nowrap; }
   .pill:hover { border-color: var(--accent); }
   .pill.fun { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
   .hide-sm { display: inline-block; }
@@ -73,6 +74,10 @@
   @media (max-width: 800px) {
     .grid, .roles, .stats { grid-template-columns: 1fr; }
     .hide-sm { display: none; }
+    .bar { height: 64px; gap: 8px; }
+    .brand { font-size: 17px; gap: 8px; }
+    .brand img { width: 34px; height: 34px; }
+    .pill { height: 34px; padding: 0 12px; font-size: 12px; }
     .hero { padding: 64px 0 48px; }
   }
 </style>
