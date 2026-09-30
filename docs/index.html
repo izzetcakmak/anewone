@@ -44,7 +44,8 @@
   /* every pill one height, so the row reads as one row on a phone */
   .pill { display: inline-flex; align-items: center; height: 38px; padding: 0 16px; font: 500 14px "JetBrains Mono", monospace; border: 1px solid var(--line); border-radius: 999px; white-space: nowrap; }
   .pill:hover { border-color: var(--accent); }
-  .pill.fun { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+  /* the two doors, Earn and AnewOne.Fun: same green, same width, side by side */
+  .pill.fun { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; justify-content: center; min-width: 132px; }
   .hide-sm { display: inline-block; }
   .hero { padding: 96px 0 72px; text-align: center; }
   .eyebrow { font: 700 12px "JetBrains Mono", monospace; letter-spacing: .2em; color: var(--accent); text-transform: uppercase; }
@@ -78,6 +79,8 @@
     .brand { font-size: 17px; gap: 8px; }
     .brand img { width: 34px; height: 34px; }
     .pill { height: 34px; padding: 0 12px; font-size: 12px; }
+    .pill.fun { min-width: 0; flex: 1 1 0; }
+    nav { flex: 1; }
     .hero { padding: 64px 0 48px; }
   }
 </style>
@@ -89,7 +92,7 @@
     <nav>
       <a class="pill hide-sm" href="#assets">Assets</a>
       <a class="pill hide-sm" href="#how">How it works</a>
-      <a class="pill" href="earn/">Earn</a>
+      <a class="pill fun" href="earn/">Earn</a>
       <a class="pill hide-sm" href="docs.html">Docs</a>
       <a class="pill fun" href="fun/" title="The memecoin launchpad: bonding curves in USDC">AnewOne.Fun →</a>
     </nav>
