@@ -428,8 +428,11 @@
   const arcRpcs = (arcCfg.rpcs || [arcCfg.rpc]).filter(Boolean)
     .map((r) => (typeof r === "string" ? r : (r.hosts && r.hosts.includes(host) ? r.url : null))).filter(Boolean);
   // One provider per read RPC. Reads walk the pool in config order and move on when one throttles.
+  // Each request gives up after 5 s: a host Brave blocks can hang rather than fail, and the
+  // pool must reach the site's own relay before the reader loses patience.
+  const readReq = (u) => { const r = new ethers.FetchRequest(u); r.timeout = 5000; return r; };
   const readProviders = (arcRpcs.length ? arcRpcs : [arcCfg.rpc]).map((u) =>
-    new ethers.JsonRpcProvider(u, undefined, { staticNetwork: true, polling: false }));
+    new ethers.JsonRpcProvider(readReq(u), undefined, { staticNetwork: true, polling: false }));
   let readProvider = readProviders[0];
   // Starts from the endpoint that answered last. In Brave every *.arc.io endpoint is blocked and
   // each attempt costs most of a second; walking past them on every read made the page crawl.

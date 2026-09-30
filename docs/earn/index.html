@@ -486,7 +486,9 @@
   };
   const readProvider = (u = READ_URLS[0]) => {
     let p = readProviders.get(u);
-    if (!p) { p = new ethers.JsonRpcProvider(u, Number(arcCfg.chainId), { staticNetwork: true }); readProviders.set(u, p); }
+    // 5 s per request: a host Brave blocks may hang instead of failing, and the pool has to
+    // move on to the site's relay
+    if (!p) { const r = new ethers.FetchRequest(u); r.timeout = 5000; p = new ethers.JsonRpcProvider(r, Number(arcCfg.chainId), { staticNetwork: true }); readProviders.set(u, p); }
     return p;
   };
   async function rawRpc(method, params) {
