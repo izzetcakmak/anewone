@@ -408,10 +408,19 @@
   const cfg = window.ANEWONE_CONFIG;
   // Framed inside Earn's swap sheet: the wallet Earn already holds (WalletConnect, e-mail or an
   // injected one) becomes this page's wallet, so no second pairing and the balances show.
+  let embedNote = "";
   try {
-    if (new URLSearchParams(location.search).get("embed") === "1" && window.parent !== window && window.parent.__anewoneWallet && window.parent.__anewoneWallet.provider)
-      window.ethereum = window.parent.__anewoneWallet.provider;
-  } catch {}
+    if (new URLSearchParams(location.search).get("embed") === "1") {
+      const w = window.parent !== window ? window.parent.__anewoneWallet : null;
+      if (w && w.provider) { window.ethereum = w.provider; embedNote = "Wallet from Earn: " + w.account.slice(0, 6) + "…" + w.account.slice(-4) + " (" + (w.kind || "wallet") + ")"; }
+      else embedNote = "No wallet handed over from Earn. Connect on Earn first, then open the swap again.";
+    }
+  } catch (e) { embedNote = "Could not take Earn's wallet: " + (e.message || e); }
+  document.addEventListener("DOMContentLoaded", () => {
+    if (!embedNote) return;
+    const n = document.createElement("div"); n.className = "hint"; n.style.cssText = "margin:0 0 10px;font-family:var(--mono);font-size:11.5px;color:var(--dim)"; n.textContent = embedNote;
+    const card = document.querySelector("#pSwap .card, #pSwap"); if (card) card.prepend(n);
+  });
   const net = cfg.mainnet && cfg.mainnet.live ? "mainnet" : "testnet";
   const arcCfg = cfg[net];
   const host = location.host;
