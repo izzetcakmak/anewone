@@ -941,14 +941,19 @@ Time: ${new Date().toISOString()}`;
   B("lnClose").onclick = () => B("loanOverlay").classList.remove("open");
   B("loanOverlay").addEventListener("click", (e) => { if (e.target === B("loanOverlay")) B("loanOverlay").classList.remove("open"); });
   function lnStatus(t, cls) { const s = B("lnStatus"); s.textContent = t; s.className = "status " + (cls || ""); }
+  // through the pool in turn (Brave blocks the first hosts); the card's own reading of the
+  // collateral stands in when no endpoint answers
   async function tokenBal(tok) {
     if (!account || !tok || !tok.address && !tok.tokenAddress) return "0";
     const addr = tok.address || tok.tokenAddress;
-    try {
-      const c = new ethers.Contract(addr, ERC20, readProvider());
-      const [raw, dec] = await Promise.all([c.balanceOf(account), c.decimals()]);
-      return ethers.formatUnits(raw, dec);
-    } catch { return "0"; }
+    for (const u of READ_URLS) {
+      try {
+        const c = new ethers.Contract(addr, ERC20, readProvider(u));
+        const [raw, dec] = await Promise.all([c.balanceOf(account), c.decimals()]);
+        return ethers.formatUnits(raw, dec);
+      } catch {}
+    }
+    return colBal[addr] != null ? colBal[addr] : "0";
   }
   async function lnBalances() {
     const l = ln.loan, col = lnCol(), la = lnLoanAsset();
