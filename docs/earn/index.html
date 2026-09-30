@@ -162,6 +162,10 @@
   .status.err { color: var(--red); }
   .status.ok { color: var(--green); }
 
+  .ack { margin: 0 0 16px; padding-left: 18px; color: var(--dim); font-size: 13px; line-height: 1.5; }
+  .ack li { margin: 6px 0; }
+  .ack b { color: var(--text); }
+  .ack a { text-decoration: underline; }
   /* wallet picker */
   .wrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; margin-top: 8px; border: 1px solid var(--border-2); border-radius: var(--r-sm); background: var(--bg); color: var(--text); font-weight: 600; text-align: left; }
   .wrow:hover { border-color: var(--accent); }
@@ -266,6 +270,23 @@
     <button class="close" id="lnClose2" hidden style="color:var(--red)">Close this loan (repay all, withdraw all)</button>
     <div class="status" id="lnStatus"></div>
     <button class="close" id="lnClose">Close</button>
+  </div>
+</div>
+
+<div class="overlay" id="ackModal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2>Before you start</h2>
+    <p class="sub">One signature, once per wallet. It costs nothing and moves nothing; it only records that you accept the terms.</p>
+    <ul class="ack">
+      <li>A NEW ONE is a <b>non-custodial interface</b>: it never holds your funds or keys, never issues an asset and never gives advice.</li>
+      <li>Vaults and markets are run by third parties on Morpho. <b>Yields are variable</b> and <b>loans can be liquidated</b> without notice. You can lose everything you put in.</li>
+      <li>Fees are shown before you sign: none on Earn, 0.15% on a new loan.</li>
+      <li>You are 18 or older, act for yourself, and are responsible for your own taxes and local rules.</li>
+      <li>You accept the <a href="../terms.html" target="_blank" rel="noopener">Terms of Use</a> and the <a href="../privacy.html" target="_blank" rel="noopener">Privacy Notice</a>.</li>
+    </ul>
+    <button class="go" id="ackSign">Sign to accept</button>
+    <div class="status" id="ackStatus"></div>
+    <button class="close" id="ackClose">Not now</button>
   </div>
 </div>
 
@@ -499,6 +520,48 @@
     } catch (e) { try { localStorage.removeItem(LAST_KEY); } catch {} fail(e); }
     finally { $("wcBtn").disabled = false; wcLabel.innerHTML = orig; }
   };
+  // ---- terms acknowledgment: one personal_sign per wallet, kept in this browser with the
+  // signature, the text version and the time. Asked once a wallet is on and again before any
+  // deposit, withdrawal or loan operation if it is missing.
+  const ACK_VERSION = "2026-09-30";
+  const ACK_KEY = "anewone_terms_ack";
+  function ackStore() { try { return JSON.parse(localStorage.getItem(ACK_KEY) || "{}"); } catch { return {}; } }
+  function hasAck() { const a = ackStore()[String(account).toLowerCase()]; return !!(a && a.version === ACK_VERSION && a.sig); }
+  function ackText() {
+    return `A NEW ONE (anewone.xyz) - Terms acknowledgment
+
+I have read and accept the Terms of Use (anewone.xyz/terms.html) and the Privacy Notice (anewone.xyz/privacy.html), version ${ACK_VERSION}.
+
+I understand that A NEW ONE is a non-custodial interface: it never holds my funds or keys, never issues any asset and never gives financial advice. Vaults and markets are run by third parties; yields are variable, loans can be liquidated, and I can lose everything I put in. Fees are shown before I sign. I am 18 or older, I act for myself, and I am responsible for my own taxes and local rules.
+
+Wallet: ${account}
+Time: ${new Date().toISOString()}`;
+  }
+  let ackResolve = null;
+  function ensureAck() {
+    if (!account || hasAck()) return Promise.resolve(true);
+    $("ackStatus").textContent = ""; $("ackStatus").className = "status";
+    $("ackModal").classList.add("open");
+    return new Promise((res) => { ackResolve = res; });
+  }
+  $("ackSign").onclick = async () => {
+    $("ackSign").disabled = true;
+    $("ackStatus").textContent = "Confirm the signature in your wallet…"; $("ackStatus").className = "status";
+    try {
+      const text = ackText();
+      const hex = "0x" + Array.from(new TextEncoder().encode(text)).map((b) => b.toString(16).padStart(2, "0")).join("");
+      const sig = await wallet().request({ method: "personal_sign", params: [hex, account] });
+      const st = ackStore(); st[String(account).toLowerCase()] = { version: ACK_VERSION, sig, text, at: Date.now() };
+      try { localStorage.setItem(ACK_KEY, JSON.stringify(st)); } catch {}
+      $("ackModal").classList.remove("open");
+      if (ackResolve) { ackResolve(true); ackResolve = null; }
+    } catch (e) {
+      $("ackStatus").textContent = e.code === 4001 || /reject|denied/i.test(e.message || "") ? "Signature refused. You can read the terms and sign later." : (e.shortMessage || e.message || String(e));
+      $("ackStatus").className = "status err";
+    } finally { $("ackSign").disabled = false; }
+  };
+  $("ackClose").onclick = () => { $("ackModal").classList.remove("open"); if (ackResolve) { ackResolve(false); ackResolve = null; } };
+
   async function use(provider, kind) {
     active = provider; activeKind = kind;
     const accts = await provider.request({ method: kind === "walletconnect" ? "eth_accounts" : "eth_requestAccounts" });
@@ -519,6 +582,7 @@
     provider.on && provider.on("chainChanged", () => location.reload());
     provider.on && provider.on("disconnect", () => location.reload());
     refreshPositions();
+    ensureAck();
   }
   // back from a Web3Auth redirect, or a wallet used last time: pick it up without a click
   (async () => {
@@ -595,6 +659,7 @@
     if (!account) { $("overlay").classList.remove("open"); openPicker(); return; }
     const amount = trim6($("amt").value.trim());
     if (!(Number(amount) > 0)) { setStatus("Enter an amount.", "err"); return; }
+    if (!(await ensureAck())) { setStatus("Accept the terms to continue.", "err"); return; }
     $("goBtn").disabled = true;
     setStatus(mode === "deposit" ? "Confirm the approval and the deposit in your wallet…" : "Confirm the withdrawal in your wallet…");
     const before = vaultBal;
@@ -862,6 +927,7 @@
     if (!(Number(v) > 0)) { lnStatus("Enter an amount.", "err"); return; }
     await quote();
     if (lnBlocked) return;
+    if (!(await ensureAck())) { lnStatus("Accept the terms to continue.", "err"); return; }
     const k = await loadBorrowKit();
     if (activeKind !== "google" && activeKind !== "walletconnect") await ensureArc();
     const id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
@@ -872,6 +938,7 @@
   };
   B("lnClose2").onclick = async () => {
     if (!ln.loan) return;
+    if (!(await ensureAck())) { lnStatus("Accept the terms to continue.", "err"); return; }
     const k = await loadBorrowKit();
     try { const q = await k.getCloseLoanQuote({ loanId: ln.loan.loanId, chain: CHAIN });
       if (!confirm(`Close this loan? Up to ${amt(q.bundledRepayment)} is repaid from your wallet and ${amt(q.collateralAmount, 6)} comes back.`)) return;
