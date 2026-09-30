@@ -1243,9 +1243,15 @@
 
   // ---- quoting
   function swAmount() { const t = SW("swAmt").value.trim(); if (!swFrom || !t || !/^\d*\.?\d*$/.test(t)) return null; try { return ethers.parseUnits(t, swFrom.decimals); } catch { return null; } }
-  function swRequote() { clearTimeout(swQuoteTimer); swQuote = null; SW("swOut").value = ""; SW("swDetails").hidden = true; SW("swRoute").textContent = ""; swValidate(); swQuoteTimer = setTimeout(swFetchQuote, 600); }
+  // A quote carries what it was priced for, and is only ever used for exactly that. Changing the
+  // amount or a token also retires any quote still in flight: before, one that came back inside
+  // the 600 ms debounce was stored for the old amount and tokens, and the button, which reads
+  // the new ones, offered to swap them at the stale quote's price, value and minimum.
+  const swQuoteFits = (q) => !!(q && q.for && swFrom && swTo && q.for.from === swFrom.address &&
+    q.for.to === swTo.address && q.for.v === swAmount() && q.for.slip === swSlip);
+  function swRequote() { clearTimeout(swQuoteTimer); swQuoteRun++; swQuote = null; SW("swOut").value = ""; SW("swDetails").hidden = true; SW("swRoute").textContent = ""; swValidate(); swQuoteTimer = setTimeout(swFetchQuote, 600); }
   async function swFetchQuote() {
-    const v = swAmount(), from = swFrom, to = swTo, run = ++swQuoteRun;
+    const v = swAmount(), from = swFrom, to = swTo, slip = swSlip, run = ++swQuoteRun;
     if (!v || v <= 0n || !from || !to) return;
     SW("swRoute").textContent = "Finding a route…";
     let q = null;
@@ -1254,7 +1260,8 @@
       else if (swIsFloor(from.address) || swIsFloor(to.address)) q = { error: swIsFloor(from.address) ? "A NEW ONE coins are sold on the floor; open $" + from.symbol + " there." : "$" + to.symbol + " is bought with USDC. Sell into USDC first." };
       else q = await swQuoteLifi(from, to, v);
     } catch (e) { q = { error: (e && (e.shortMessage || e.message)) || String(e) }; }
-    if (run !== swQuoteRun) return;
+    q.for = { from: from.address, to: to.address, v, slip };
+    if (run !== swQuoteRun || !swQuoteFits(q)) return;
     swQuote = q;
     if (q.error) { SW("swRoute").textContent = ""; SW("swOut").value = ""; SW("swDetails").hidden = true; swValidate(q.error); return; }
     SW("swOut").value = ethers.formatUnits(q.toAmount, to.decimals);
@@ -1315,7 +1322,7 @@
     const v = swAmount();
     if (v === null || v <= 0n) return "Enter an amount.";
     if (swBal[swFrom.address] != null && v > swBal[swFrom.address]) return "More than you hold (" + swFmt(swBal[swFrom.address], swFrom.decimals) + " " + swFrom.symbol + ").";
-    if (!swQuote) return "quoting";
+    if (!swQuote || !swQuoteFits(swQuote)) return "quoting";
     if (swQuote.error) return swQuote.error;
     return "";
   }
@@ -1377,11 +1384,12 @@
         }
         swSaySw("Confirm the swap in your wallet…");
         tx = await signer.sendTransaction(req);
+        fresh.for = { from: from.address, to: to.address, v, slip: q.for.slip };
         swQuote = fresh;
       }
       const rc = await swWaitMined(tx.hash, swSayS, "Swap sent");
       if (!rc || Number(rc.status) !== 1) throw new Error("The swap reverted on chain (tx " + tx.hash.slice(0, 10) + "…). Nothing left your wallet but the gas; try again, with more slippage if the pool is thin.");
-      SW("swAmt").value = ""; SW("swOut").value = ""; SW("swDetails").hidden = true; swQuote = null; swBusy = false;
+      SW("swAmt").value = ""; SW("swOut").value = ""; SW("swDetails").hidden = true; swQuote = null; swQuoteRun++; swBusy = false;
       await swRefreshBalances();
       SW("swHint").className = "hint good"; SW("swHint").textContent = "";
       SW("swHint").append("Swapped " + swFmt(v, from.decimals) + " " + from.symbol + " for " + to.symbol + ". ");
