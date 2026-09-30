@@ -1003,6 +1003,14 @@ Time: ${new Date().toISOString()}`;
       try { const q = await (await loadBorrowKit()).getMaxBorrow({ chain: CHAIN, marketId: lnMarket().marketId, collateralAmount: trim6(lnWalletBal) });
         const liq = Number(lnMarket().liquidity?.amount ?? Infinity);
         B("lnAmt").value = trim6(String(Math.min(Number(q.maxBorrowAmount.amount), liq))); } catch (e) { lnStatus(e.message || String(e), "err"); return; }
+    } else if (lnMode === "repay") {
+      // USDC is also the gas on Arc: a repay of the whole wallet balance leaves nothing for the
+      // approve and the repay, so keep a little back unless the debt itself is smaller
+      const la = lnLoanAsset(), isGas = la && String(la.address || la.tokenAddress || "").toLowerCase() === "0x3600000000000000000000000000000000000000";
+      const debt = ln.loan && ln.loan.borrowed ? Number(ln.loan.borrowed.amount) : Infinity;
+      const w = await tokenBal(la), spendable = Math.max(0, Number(w) - (isGas ? GAS_RESERVE : 0));
+      B("lnAmt").value = trim6(Math.min(debt, spendable).toFixed(6));
+      if (isGas && spendable < debt) lnStatus(`Kept ${GAS_RESERVE} USDC back for gas.`);
     } else B("lnAmt").value = trim6(lnWalletBal);
     quote();
   };

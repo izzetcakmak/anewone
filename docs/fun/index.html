@@ -3644,7 +3644,7 @@ $("cfClaim").onclick = async () => {
 $("pfClaim").onclick = async () => {
   if (!signer) return toast("Connect first");
   try {
-    const tx = await platform.connect(signer).withdrawPlatformFees(userAddr);
+    const tx = await platform.connect(signer).withdrawPlatformFees(userAddr, { chainId: CFG.chainId });
     toast("Collecting…"); await tx.wait();
     toast("PLATFORM FEES CLAIMED!");
     refreshFees(); refreshNativeBalance();
@@ -3657,7 +3657,7 @@ $("pfSweep").onclick = async () => {
   for (const c of creators) {
     try {
       if (!(await rpc(() => platform.creatorFeeExpired(c)))) continue;
-      const tx = await platform.connect(signer).sweepExpired(c);
+      const tx = await platform.connect(signer).sweepExpired(c, { chainId: CFG.chainId });
       await tx.wait(); swept++;
     } catch (e) { console.error(e); }
   }
