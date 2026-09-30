@@ -290,6 +290,17 @@
   </div>
 </div>
 
+<div class="overlay" id="acctModal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2>Your wallet</h2>
+    <p class="sub" id="acctAddr" style="font-family:var(--mono);word-break:break-all"></p>
+    <p class="sub" id="acctKind"></p>
+    <button class="wrow" id="acctSwitch" type="button"><span style="font-size:20px">⇄</span><span>Switch wallet <small>· connect a different one</small></span></button>
+    <button class="wrow" id="acctDisconnect" type="button" style="color:var(--red)"><span style="font-size:20px">⏏</span><span>Disconnect <small>· ends the session, also in the wallet app</small></span></button>
+    <button class="close" id="acctClose">Close</button>
+  </div>
+</div>
+
 <div class="overlay" id="walletModal" role="dialog" aria-modal="true">
   <div class="sheet">
     <h2>Connect</h2>
@@ -644,7 +655,20 @@ Time: ${new Date().toISOString()}`;
       }
     } catch { try { localStorage.removeItem(LAST_KEY); } catch {} }
   })();
-  $("connectBtn").onclick = () => { if (account) location.reload(); else openPicker(); };
+  // the wallet button: a picker when nothing is on, otherwise the account sheet with a real
+  // disconnect, because a WalletConnect session the phone restores can be dead on the app's
+  // side and must be droppable without clearing the browser
+  $("connectBtn").onclick = () => { if (!account) return openPicker(); $("acctAddr").textContent = account; $("acctKind").textContent = { walletconnect: "Connected through WalletConnect", google: "Signed in with email or social (Web3Auth)" }[activeKind] || "Browser wallet"; $("acctModal").classList.add("open"); };
+  $("acctClose").onclick = () => $("acctModal").classList.remove("open");
+  $("acctModal").addEventListener("click", (e) => { if (e.target === $("acctModal")) $("acctModal").classList.remove("open"); });
+  async function disconnectWallet() {
+    try { localStorage.removeItem(LAST_KEY); } catch {}
+    try { if (activeKind === "walletconnect" && wcProvider) await withTimeout(wcProvider.disconnect(), 4000, "Disconnect"); } catch {}
+    try { if (activeKind === "google" && w3a) await withTimeout(w3a.logout(), 4000, "Sign-out"); } catch {}
+    try { window.__anewoneWallet = null; } catch {}
+  }
+  $("acctDisconnect").onclick = async () => { $("acctDisconnect").disabled = true; await disconnectWallet(); location.reload(); };
+  $("acctSwitch").onclick = async () => { $("acctSwitch").disabled = true; await disconnectWallet(); $("acctModal").classList.remove("open"); account = null; adapter = null; vadapter = null; active = null; activeKind = null; $("connectBtn").textContent = "Connect"; positions = {}; loans = []; render(); renderLoans(); openPicker(); $("acctSwitch").disabled = false; };
   async function refreshPositions() {
     if (!account || !adapter) return;
     await Promise.all(vaults.map(async (v) => {
