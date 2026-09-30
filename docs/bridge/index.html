@@ -116,6 +116,8 @@
   .chains { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .nowallet { background: var(--surface); border: 1px dashed var(--border-2); border-radius: var(--r-md); padding: 18px; color: var(--dim); font-size: 13px; }
   .nowallet b { color: var(--text); }
+  .nowallet .wcbtn { display: block; width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: var(--r-sm); background: var(--grad); color: var(--bg); font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; }
+  .nowallet .wcbtn:disabled { opacity: .55; cursor: default; }
   .onramp .btn { width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: var(--r-sm); background: var(--grad); color: var(--bg); font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; }
   .onramp .btn:disabled { opacity: .55; cursor: default; }
   /* Circle's onramp renders in a cross-origin iframe that cannot size itself, so the host
@@ -285,8 +287,9 @@
       <div id="wayChain">
         <div id="bridge"></div>
         <div id="nowallet" class="nowallet" hidden>
-          <b>No wallet found in this browser.</b> The bridge signs with an injected wallet such as MetaMask, Rabby, Phantom or Coinbase Wallet.
-          Install one, or open this page inside your wallet app's browser. Google sign-in wallets from the floor cannot bridge from here yet.
+          <b>No wallet found in this browser.</b> Connect a wallet app over WalletConnect, install a browser wallet such as MetaMask, Rabby or Coinbase Wallet,
+          or open this page inside your wallet app's browser. Google sign-in wallets from the floor cannot bridge from here yet.
+          <button type="button" class="wcbtn" id="wcConnect">🔗 Connect a wallet app · WalletConnect</button>
         </div>
         <button type="button" class="adv-toggle" id="advToggle" aria-expanded="false">Advanced settings ▾</button>
         <div class="arrive">
@@ -622,6 +625,80 @@
   const lifiReady = fetch("../api/lifi-config").then((r) => r.json())
     .then((c) => { if (c && c.proxied) lifiApi = location.origin + c.base; }).catch(() => {});
 
+  // ---- a wallet app over WalletConnect, when the browser has no wallet of its own (a phone).
+  // The provider becomes window.ethereum, so the kit, the send card and the swap card see it
+  // as any injected wallet. Only signing and chain switches travel to the app; plain reads go
+  // to a public RPC of whichever chain the session is on (the bridge reads Base, Ethereum…
+  // as well as Arc), because a phone wallet answers reads slowly or not at all.
+  const WC_ID = (cfg.walletConnect || {}).projectId || "";
+  const WC_RPC = net === "mainnet" ? {
+    [arcCfg.chainId]: arcCfg.rpc, 8453: "https://mainnet.base.org", 1: "https://ethereum-rpc.publicnode.com",
+    42161: "https://arb1.arbitrum.io/rpc", 10: "https://mainnet.optimism.io", 137: "https://polygon-bor-rpc.publicnode.com",
+    43114: "https://api.avax.network/ext/bc/C/rpc", 130: "https://mainnet.unichain.org", 59144: "https://rpc.linea.build",
+  } : { [arcCfg.chainId]: arcCfg.rpc, 84532: "https://sepolia.base.org", 11155111: "https://ethereum-sepolia-rpc.publicnode.com" };
+  const WC_WALLET_METHODS = new Set(["eth_requestAccounts", "eth_accounts", "eth_chainId", "eth_sendTransaction", "eth_signTransaction",
+    "eth_sign", "personal_sign", "eth_signTypedData", "eth_signTypedData_v3", "eth_signTypedData_v4",
+    "wallet_switchEthereumChain", "wallet_addEthereumChain", "wallet_watchAsset", "wallet_getPermissions",
+    "wallet_requestPermissions", "wallet_sendCalls", "wallet_getCallsStatus", "wallet_getCapabilities"]);
+  let wcRpcId = 0;
+  async function wcRead(url, method, params) {
+    const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: ++wcRpcId, method, params: params || [] }), signal: AbortSignal.timeout(15000) });
+    const j = await r.json();
+    if (j.error) { const e = new Error(j.error.message || "rpc error"); e.code = j.error.code; e.data = j.error.data; throw e; }
+    return j.result;
+  }
+  const wcFacade = (p) => ({
+    isWalletConnect: true,
+    request: (args) => {
+      if (WC_WALLET_METHODS.has(args.method)) return p.request(args);
+      const url = WC_RPC[Number(p.chainId)];
+      return url ? wcRead(url, args.method, args.params) : p.request(args);
+    },
+    on: (ev, fn) => p.on(ev, fn), removeListener: (ev, fn) => p.removeListener(ev, fn),
+    disconnect: () => p.disconnect(), get session() { return p.session; }, get chainId() { return p.chainId; },
+  });
+  let wcRaw = null;
+  async function loadWalletConnect() {
+    if (wcRaw) return wcRaw;
+    const { EthereumProvider } = await import("../vendor/walletconnect.esm.js");
+    wcRaw = await EthereumProvider.init({
+      projectId: WC_ID,
+      chains: [arcCfg.chainId],
+      optionalChains: Object.keys(WC_RPC).map(Number).filter((c) => c !== arcCfg.chainId),
+      rpcMap: WC_RPC,
+      optionalMethods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_sign", "wallet_switchEthereumChain", "wallet_addEthereumChain"],
+      showQrModal: true,
+      qrModalOptions: { themeMode: (document.documentElement.getAttribute("data-theme") || "light") === "light" ? "light" : "dark" },
+      metadata: { name: "A NEW ONE", description: "Bring funds aboard Arc from any chain.", url: "https://anewone.xyz", icons: ["https://anewone.xyz/apple-touch-icon.png"] },
+    });
+    return wcRaw;
+  }
+  const wcBtn = document.getElementById("wcConnect");
+  async function connectWalletApp(silent) {
+    if (!WC_ID || window.ethereum) return false;
+    if (wcBtn) { wcBtn.disabled = true; wcBtn.textContent = silent ? "Reconnecting your wallet app…" : "Opening WalletConnect…"; }
+    try {
+      const p = await loadWalletConnect();
+      if (p.session) {
+        try { const a = await p.request({ method: "eth_accounts" }); if (!a || !a[0]) throw new Error("empty"); }
+        catch { try { await p.disconnect(); } catch {} }
+      }
+      if (!p.session) { if (silent) return false; if (wcBtn) wcBtn.textContent = "Approve in your wallet app…"; await p.connect(); }
+      window.ethereum = wcFacade(p);
+      try { localStorage.setItem("anewone_last_wallet", "walletconnect"); } catch {}
+      p.on("disconnect", () => { if (window.ethereum && window.ethereum.isWalletConnect) { window.ethereum = undefined; try { localStorage.removeItem("anewone_last_wallet"); } catch {} location.reload(); } });
+      boot();
+      bindWalletEvents();
+      sendConnectSilently();
+      return true;
+    } catch (e) {
+      if (!silent) alert(e.shortMessage || e.message || String(e));
+      return false;
+    } finally { if (wcBtn) { wcBtn.disabled = false; wcBtn.textContent = "🔗 Connect a wallet app · WalletConnect"; } }
+  }
+  if (wcBtn) { wcBtn.hidden = !WC_ID; wcBtn.onclick = () => connectWalletApp(false); }
+
   // ---- mount
   let kit = null;
   const coinLink = document.getElementById("coinLink");
@@ -692,15 +769,20 @@
     sendRefresh();
   }
   async function sendConnect() {
-    if (!wallet()) { sendSay("No wallet in this browser. Open this page in MetaMask, Rabby or your wallet app's browser.", "bad"); return; }
+    if (!wallet()) {
+      if (WC_ID && await connectWalletApp(false)) return;
+      sendSay("No wallet in this browser. Connect a wallet app over WalletConnect, or open this page in MetaMask, Rabby or your wallet app's browser.", "bad"); return;
+    }
     try { const a = await wallet().request({ method: "eth_requestAccounts" }); sendAccount = a && a[0] ? ethers.getAddress(a[0]) : null; }
     catch (e) { sendSay(e.code === 4001 ? "Connection refused in the wallet." : (e.shortMessage || e.message), "bad"); return; }
     sendRefresh();
   }
-  if (wallet() && wallet().on) {
+  function bindWalletEvents() {
+    if (!wallet() || !wallet().on) return;
     wallet().on("accountsChanged", (a) => { sendAccount = a && a[0] ? ethers.getAddress(a[0]) : null; sendRefresh(); });
     wallet().on("chainChanged", () => sendRefresh());
   }
+  bindWalletEvents();
   function sendSay(text, cls) { sendHint.textContent = text; sendHint.className = "hint" + (cls ? " " + cls : ""); }
   const fmtAmt = (v, d) => { const n = Number(ethers.formatUnits(v, d)); return n >= 1e6 ? n.toLocaleString("en-US", { maximumFractionDigits: 0 }) : n.toLocaleString("en-US", { maximumFractionDigits: n >= 1 ? 4 : 6 }); };
 
@@ -1332,6 +1414,10 @@ let onrampCfg = null, onrampKit = null, onrampWidget = null, onrampBusy = false;
   window.addEventListener("focus", () => { try { sendRefresh(); swRefreshBalances(); } catch {} });
   sendPick();
   sendConnectSilently();
+  (async () => {
+    let last = null; try { last = localStorage.getItem("anewone_last_wallet"); } catch {}
+    if (last === "walletconnect" && !window.ethereum) await connectWalletApp(true);
+  })();
 
   // ---- one workflow at a time: tabs, the two ways to add funds, "when it arrives"
   (function () {

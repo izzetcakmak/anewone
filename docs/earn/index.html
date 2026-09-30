@@ -54,14 +54,23 @@
   .tb-brand img { width: 40px; height: 40px; border-radius: 11px; }
   .tb-brand span { font: 700 20px 'Space Grotesk', sans-serif; letter-spacing: .8px; color: var(--text); white-space: nowrap; }
   .tb-nav { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-  .tbx { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 999px; color: var(--text); font: 500 13px var(--mono); background: var(--bg-2); }
+  .tbx { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; color: var(--text); font: 500 13px var(--mono); background: var(--bg-2); white-space: nowrap; }
   .tbx:hover { text-decoration: none; border-color: var(--accent); }
   .tbx.net { color: var(--accent); border-color: rgba(var(--accent-rgb),.4); }
   .tbx.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
   .tbx.theme .i-sun, .tbx.theme .i-moon { width: 16px; height: 16px; }
   :root[data-theme="light"] .i-sun { display: none; }
   :root:not([data-theme="light"]) .i-moon { display: none; }
-  @media (max-width: 600px) { .tb-brand span, .tbx .lbl { display: none; } }
+  /* on a phone the bar is two rows of equal pills: the crest, then the doors; then the
+     network and the wallet. Icons alone at the same 42px height as the wallet button. */
+  @media (max-width: 600px) {
+    .tb-brand span, .tbx .lbl { display: none; }
+    .topbar-inner { padding: 10px 14px; gap: 8px; }
+    .tb-nav { gap: 8px; }
+    .tbx { height: 42px; min-width: 42px; padding: 0 12px; font-size: 16px; }
+    .tbx.net, .tbx.primary { font-size: 13px; padding: 0 14px; }
+    .tbx.theme .i-sun, .tbx.theme .i-moon { width: 20px; height: 20px; }
+  }
 
   .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
   .hero { padding: 48px 0 28px; }
