@@ -5,11 +5,12 @@ import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 const out = "../docs/vendor/earn-kit.js";
 const ver = JSON.parse(readFileSync("node_modules/@circle-fin/earn-kit/package.json", "utf8")).version;
+const bver = JSON.parse(readFileSync("node_modules/@circle-fin/borrow-kit/package.json", "utf8")).version;
 const aver = JSON.parse(readFileSync("node_modules/@circle-fin/adapter-ethers-v6/package.json", "utf8")).version;
 await build({
   entryPoints: ["entry.mjs"], bundle: true, minify: true, format: "esm", platform: "browser",
   target: ["es2020"], outfile: out, legalComments: "none", sourcemap: false,
-  banner: { js: `/* @circle-fin/earn-kit ${ver} + @circle-fin/adapter-ethers-v6 ${aver} — bundled locally, see build-earn/ and docs/vendor/PROVENANCE.md. Apache-2.0. */` },
+  banner: { js: `/* @circle-fin/earn-kit ${ver} + @circle-fin/borrow-kit ${bver} + @circle-fin/adapter-ethers-v6 ${aver} — bundled locally, see build-earn/ and docs/vendor/PROVENANCE.md. Apache-2.0. */` },
   define: { "process.env.NODE_ENV": '"production"' },
 });
 const buf = readFileSync(out);

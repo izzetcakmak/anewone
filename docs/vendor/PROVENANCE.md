@@ -178,19 +178,20 @@ To re-verify:
 
 | | |
 |---|---|
-| Package | `@circle-fin/earn-kit` 1.8.1 + `@circle-fin/adapter-ethers-v6` (Circle, Apache-2.0) |
+| Package | `@circle-fin/earn-kit` 1.8.1 + `@circle-fin/borrow-kit` 1.0.0 + `@circle-fin/adapter-ethers-v6` (Circle, Apache-2.0) |
 | File | `earn-kit.js` (ESM, minified) |
-| Size | 1,051,397 bytes |
-| SHA-256 | `e4e8547a2d8830dba35980cb3074b7589c9b2dc906a517bba926bd48a5bdaae2` |
+| Size | 1,383,746 bytes |
+| SHA-256 | `a7c53da3c12bf5864ca75ece1c6250d46b230e250f31c510af36071256e74b09` |
 
 **Not an upstream release file**: bundled locally with esbuild from the official npm packages,
-recipe in `build-earn/` (`entry.mjs` re-exports `EarnKit`, `KitError`, `getErrorMessage`,
-`createEthersAdapterFromProvider`; `build.mjs` prints the hash). Runs in Circle's permissionless
-mode: no API key is bundled or needed. Vault data comes from `https://api.circle.com`; deposits and
-withdrawals are signed by the visitor's own wallet through the ethers adapter and go to the Morpho
-vault contract on Arc. The bundle also carries Circle's chain table (public RPC and explorer URLs
-for every chain the kit knows, incl. `@solana/web3.js`), which is why it is 1 MB; only the Arc
-entries are used. Loaded lazily, only on `/earn/`.
+recipe in `build-earn/` (`entry.mjs` re-exports `EarnKit`, `BorrowKit`, `KitError`,
+`getErrorMessage`, `isRetryableError`, `createEthersAdapterFromProvider`; `build.mjs` prints the
+hash). Runs in Circle's permissionless mode: no API key is bundled or needed. Vault and market
+data come from `https://api.circle.com`; deposits, withdrawals and loan operations are signed by
+the visitor's own wallet through the ethers adapter and go to the Morpho contracts on Arc. The
+bundle also carries Circle's chain table (public RPC and explorer URLs for every chain the kits
+know, incl. `@solana/web3.js`), which is why it is 1.4 MB; only the Arc entries are used.
+Loaded lazily, only on `/earn/`.
 
 To re-verify:
 

@@ -9,9 +9,9 @@
     catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
   })();
 </script>
-<title>Earn · USDC yield on Arc | A NEW ONE</title>
+<title>Earn &amp; Borrow · USDC on Arc | A NEW ONE</title>
 <link rel="canonical" href="https://anewone.xyz/earn/">
-<meta name="description" content="Earn on USDC and EURC on Arc. Morpho vaults run by curators such as Bitwise, Gauntlet and Steakhouse; your money stays in the vault contract. A NEW ONE is the interface, never the issuer.">
+<meta name="description" content="Earn on USDC and EURC on Arc, or borrow USDC against cirBTC, ETH and tokenized assets. Morpho vaults and markets through Circle's kits; your money stays in the contracts. A NEW ONE is the interface, never the issuer.">
 <meta property="og:title" content="Earn · USDC yield on Arc">
 <meta property="og:description" content="Curated Morpho vaults on Arc, deposit and withdraw from your own wallet.">
 <meta property="og:url" content="https://anewone.xyz/earn/">
@@ -79,6 +79,12 @@
   .lead { color: var(--dim); font-size: 16px; max-width: 720px; margin: 0; }
   .lead b { color: var(--text); }
 
+  /* the two windows: Earn (lend USDC) and Borrow (USDC against collateral) */
+  .views { display: flex; gap: 6px; background: var(--card); border-radius: 999px; padding: 5px; width: max-content; max-width: 100%; margin: 4px 0 8px; }
+  .views button { padding: 10px 22px; border: 0; border-radius: 999px; background: transparent; color: var(--dim); font: 600 14px Inter, sans-serif; }
+  .views button.on { background: var(--bg-2); color: var(--text); box-shadow: var(--shadow); }
+  @media (max-width: 600px) { .views { width: 100%; } .views button { flex: 1; } }
+  .view[hidden] { display: none; }
   .filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 24px 0 14px; }
   .chip { padding: 7px 14px; border: 1px solid var(--border-2); border-radius: 999px; background: var(--bg-2); color: var(--dim); font: 500 12px var(--mono); }
   .chip.on { background: var(--accent-soft); color: var(--accent); border-color: rgba(var(--accent-rgb),.5); }
@@ -105,6 +111,20 @@
   .vault .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .vault .btn:disabled { opacity: .5; cursor: default; }
   .empty { grid-column: 1 / -1; color: var(--dim); text-align: center; padding: 40px 0; }
+  /* borrow: markets and loans */
+  .pair { display: flex; align-items: center; gap: 8px; font: 600 16px 'Space Grotesk', sans-serif; }
+  .pair .arrow { color: var(--faint); }
+  .hf { font: 700 12px var(--mono); padding: 4px 8px; border-radius: 6px; }
+  .hf.SAFE { color: var(--green); background: rgba(var(--green-rgb),.12); }
+  .hf.WARN { color: var(--gold); background: rgba(var(--gold-rgb),.12); }
+  .hf.URGENT, .hf.IMMINENT, .hf.LIQUIDATABLE { color: var(--red); background: rgba(var(--red-rgb),.12); }
+  .loanacts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
+  .loanacts .btn { margin-top: 0 !important; }
+  h2.sec { font: 600 20px 'Space Grotesk', sans-serif; margin: 28px 0 12px; }
+  .quote { background: var(--card); border-radius: var(--r-sm); padding: 10px 12px; margin-bottom: 14px; font: 500 12px var(--mono); color: var(--dim); display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; }
+  .quote b { color: var(--text); text-align: right; }
+  .quote[hidden] { display: none; }
+  .sheet .tabs.four button { padding: 8px 4px; font-size: 12px; }
 
   .legal { margin: 40px 0 56px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--faint); font-size: 12px; max-width: 860px; }
   .legal a { color: var(--dim); text-decoration: underline; }
@@ -160,11 +180,17 @@
 
 <main class="wrap">
   <div class="hero">
-    <div class="eyebrow">Earn · Morpho vaults on Arc · settled in USDC</div>
-    <h1>Put your USDC to work.<br>It never leaves the vault.</h1>
-    <p class="lead">Lending vaults on Arc, run by curators such as <b>Bitwise</b>, <b>Gauntlet</b> and <b>Steakhouse</b> on the Morpho protocol. You deposit and withdraw from your own wallet; the money sits in the vault contract, never with us. <b>A NEW ONE is the interface, not the issuer.</b> Vault data by Circle's Earn service.</p>
+    <div class="eyebrow">Earn &amp; Borrow · Morpho on Arc · settled in USDC</div>
+    <h1>Put your USDC to work,<br>or borrow against what you hold.</h1>
+    <p class="lead">Lending vaults on Arc, run by curators such as <b>Bitwise</b>, <b>Gauntlet</b> and <b>Steakhouse</b> on the Morpho protocol. You deposit, withdraw, borrow and repay from your own wallet; the money sits in the Morpho contracts, never with us. <b>A NEW ONE is the interface, not the issuer.</b> Vault data by Circle's Earn service.</p>
   </div>
 
+  <div class="views" role="tablist">
+    <button id="viewEarn" class="on" role="tab">Earn</button>
+    <button id="viewBorrow" role="tab">Borrow</button>
+  </div>
+
+  <div class="view" id="earnView">
   <div class="filters">
     <button class="chip on" data-f="USDC">USDC</button>
     <button class="chip" data-f="EURC">EURC</button>
@@ -172,8 +198,20 @@
     <span class="count" id="count">loading vaults…</span>
   </div>
   <div class="grid" id="grid"><div class="empty">Loading vaults from Arc…</div></div>
+  </div>
 
-  <p class="legal">Yields are variable, set by the market, and shown as reported by the vault; past rates do not predict future ones. Vaults carry smart-contract and credit risk, including loss of principal, and a vault marked <b>low liquidity</b> may not let you withdraw at once. Vault fees go to the curator, none to us. Nothing here is investment advice or an offer; A NEW ONE does not custody funds, does not issue any asset and does not choose for you. Some jurisdictions restrict these products. <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></p>
+  <div class="view" id="borrowView" hidden>
+    <div id="loansWrap" hidden>
+      <h2 class="sec">Your loans</h2>
+      <div class="grid" id="loans"></div>
+    </div>
+    <div class="filters">
+      <span class="count" id="mcount">loading markets…</span>
+    </div>
+    <div class="grid" id="markets"><div class="empty">Loading markets from Arc…</div></div>
+  </div>
+
+  <p class="legal">Yields are variable, set by the market, and shown as reported by the vault; past rates do not predict future ones. Vaults carry smart-contract and credit risk, including loss of principal, and a vault marked <b>low liquidity</b> may not let you withdraw at once. Vault fees go to the curator, none to us. A loan is over-collateralised: if the collateral's price falls until the health factor reaches 1.0, Morpho liquidates part of it, with a penalty. Borrow rates are variable. A NEW ONE may take an origination fee on a new loan, shown in the quote before you sign. Nothing here is investment advice or an offer; A NEW ONE does not custody funds, does not issue any asset and does not choose for you. Some jurisdictions restrict these products. <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></p>
 </main>
 
 <div class="overlay" id="overlay" role="dialog" aria-modal="true">
@@ -186,6 +224,23 @@
     <button class="go" id="goBtn">Deposit</button>
     <div class="status" id="status"></div>
     <button class="close" id="closeBtn">Close</button>
+  </div>
+</div>
+
+<div class="overlay" id="loanOverlay" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2 id="lnName">Borrow</h2>
+    <p class="sub" id="lnSub"></p>
+    <div class="tabs four" id="lnTabs">
+      <button data-m="borrow" class="on">Borrow</button><button data-m="repay">Repay</button><button data-m="add">Add collateral</button><button data-m="withdraw">Withdraw</button>
+    </div>
+    <div class="amt"><input id="lnAmt" inputmode="decimal" placeholder="0.00" autocomplete="off"><span id="lnUnit" style="font:600 12px var(--mono);color:var(--dim);padding:0 8px"></span><button id="lnMax">MAX</button></div>
+    <div class="bal"><span id="lnBalL"></span><span id="lnBalR"></span></div>
+    <div class="quote" id="lnQuote" hidden></div>
+    <button class="go" id="lnGo">Borrow</button>
+    <button class="close" id="lnClose2" hidden style="color:var(--red)">Close this loan (repay all, withdraw all)</button>
+    <div class="status" id="lnStatus"></div>
+    <button class="close" id="lnClose">Close</button>
   </div>
 </div>
 
@@ -535,6 +590,225 @@
   };
 
   loadVaults();
+
+  // =====================================================================================
+  // Borrow: USDC (or EURC) against collateral on Morpho, through Circle's Borrow Kit. The
+  // service sizes the collateral for the amount asked; the quote shows it, with the
+  // health factor and the liquidation price, before anything is signed.
+  // =====================================================================================
+  let bkit = null, markets = [], loans = [];
+  const B = (id) => $(id);
+  async function loadBorrowKit() { await loadKit(); if (!bkit) bkit = new kitMod.BorrowKit(); return bkit; }
+  const from = () => ({ adapter, chain: CHAIN });
+  const amt = (a, d = 2) => (a ? `${fmt(a.amount, d)} ${a.token}` : "—");
+  const usd = (a) => (a ? money(a.amount) : "—");
+  const hfBand = (b) => b ? `<span class="hf ${esc(b)}">${esc(b === "SAFE" ? "healthy" : b.toLowerCase())}</span>` : "";
+
+  B("viewEarn").onclick = () => setView("earn");
+  B("viewBorrow").onclick = () => setView("borrow");
+  function setView(v) {
+    B("viewEarn").classList.toggle("on", v === "earn"); B("viewBorrow").classList.toggle("on", v === "borrow");
+    B("earnView").hidden = v !== "earn"; B("borrowView").hidden = v !== "borrow";
+    try { history.replaceState(null, "", v === "borrow" ? "#borrow" : location.pathname); } catch {}
+    if (v === "borrow" && !markets.length) loadMarkets();
+  }
+  if (location.hash === "#borrow") setView("borrow");
+
+  async function loadMarkets() {
+    try {
+      const k = await loadBorrowKit();
+      const seen = [];
+      for await (const m of k.exploreMarketsIterator({ chain: CHAIN, sortBy: "borrowApy" })) seen.push(m);
+      // a market with nothing to lend is noise, and a token that is its own collateral is a test
+      markets = seen.filter((m) => Number(m.liquidity?.amount || 0) > 0 && m.loanAsset.symbol !== m.collateralAsset.symbol)
+        .sort((a, b) => Number(b.liquidity.amount) - Number(a.liquidity.amount));
+      renderMarkets();
+      if (account) refreshLoans();
+    } catch (e) {
+      B("markets").innerHTML = `<div class="empty">Could not load markets: ${esc(e.message || e)}</div>`;
+      B("mcount").textContent = "";
+    }
+  }
+  function renderMarkets() {
+    B("mcount").textContent = `${markets.length} market${markets.length === 1 ? "" : "s"} · borrow USDC or EURC against your collateral`;
+    B("markets").innerHTML = markets.map((m, i) => `<div class="vault">
+      <div class="head"><div><div class="pair">${esc(m.collateralAsset.symbol)} <span class="arrow">→</span> ${esc(m.loanAsset.symbol)}</div>
+        <div class="curator">collateral ${esc(m.collateralAsset.symbol)}, borrow ${esc(m.loanAsset.symbol)} · ${esc(m.protocol)}</div></div>
+        <span class="tag ${m.loanAsset.symbol === "USDC" ? "usdc" : ""}">${esc(m.loanAsset.symbol)}</span></div>
+      <div class="apy">${pct(m.borrowApy)}<small>BORROW APY</small></div>
+      <div class="stats"><div>${money(m.liquidity.amount)}<span>Available</span></div><div>${usd(m.borrowAssets)}<span>Borrowed</span></div><div>${m.lltv == null ? "—" : fmt(m.lltv * 100, 1) + "%"}<span>Max LTV</span></div></div>
+      <button class="btn primary" data-market="${i}">Borrow ${esc(m.loanAsset.symbol)}</button>
+    </div>`).join("") || `<div class="empty">No open markets on ${CHAIN} right now.</div>`;
+  }
+  B("markets").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-market]");
+    if (b) openLoanSheet({ market: markets[Number(b.dataset.market)] });
+  });
+  B("loans").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-loan]");
+    if (b) openLoanSheet({ loan: loans[Number(b.dataset.loan)], mode: b.dataset.mode });
+  });
+
+  async function refreshLoans() {
+    if (!account) return;
+    try {
+      const k = await loadBorrowKit();
+      const r = await k.getLoans({ walletAddress: account, chain: CHAIN, pageSize: 50 });
+      loans = (r.loans || []).filter((l) => l.status === "active");
+    } catch { loans = []; }
+    renderLoans();
+  }
+  function marketOf(l) { return markets.find((m) => m.marketId === l.marketId); }
+  function renderLoans() {
+    B("loansWrap").hidden = !loans.length;
+    B("loans").innerHTML = loans.map((l, i) => {
+      const m = marketOf(l);
+      const col = l.collateral ? l.collateral.token : (m ? m.collateralAsset.symbol : "");
+      const debt = l.borrowed ? l.borrowed.token : (m ? m.loanAsset.symbol : "");
+      return `<div class="vault">
+        <div class="head"><div><div class="pair">${esc(col)} <span class="arrow">→</span> ${esc(debt)}</div>
+          <div class="curator">loan ${esc(l.loanId.slice(0, 10))}… ${l.dataStatus === "PENDING" ? "· updating" : ""}</div></div>${hfBand(l.healthFactorBand)}</div>
+        <div class="apy">${l.healthFactor == null ? "—" : fmt(l.healthFactor, 2)}<small>HEALTH FACTOR</small></div>
+        <div class="stats"><div>${amt(l.borrowed)}<span>Debt</span></div><div>${amt(l.collateral, 6)}<span>Collateral</span></div><div>${l.liquidationPrice ? money(l.liquidationPrice.amount) : "—"}<span>Liq. price</span></div></div>
+        <div class="curator">${pct(l.borrowApy)} borrow APY · LTV ${l.ltv == null ? "—" : fmt(l.ltv * 100, 1) + "%"} · interest ${amt(l.accruedInterest, 4)}</div>
+        <div class="loanacts">
+          <button class="btn" data-loan="${i}" data-mode="repay">Repay</button>
+          <button class="btn" data-loan="${i}" data-mode="borrow">Borrow more</button>
+          <button class="btn" data-loan="${i}" data-mode="add">Add collateral</button>
+          <button class="btn" data-loan="${i}" data-mode="withdraw">Withdraw</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  // loans refresh with the positions once a wallet is on
+  const _refreshPositions = refreshPositions;
+  refreshPositions = async function () { await _refreshPositions(); if (markets.length || B("viewBorrow").classList.contains("on")) { if (!markets.length) await loadMarkets(); else refreshLoans(); } };
+
+  // ---- the loan sheet: open a loan on a market, or act on a loan
+  let ln = null, lnMode = "borrow", lnQuoteTimer = null, lnWalletBal = "0";
+  const lnMarket = () => ln.market || marketOf(ln.loan);
+  const lnCol = () => lnMarket() ? lnMarket().collateralAsset : (ln.loan.collateral || {});
+  const lnLoanAsset = () => lnMarket() ? lnMarket().loanAsset : (ln.loan.borrowed || {});
+  async function openLoanSheet(x) {
+    ln = x; lnMode = x.mode || "borrow";
+    const m = lnMarket();
+    B("lnName").textContent = m ? `${m.collateralAsset.symbol} → ${m.loanAsset.symbol}` : "Loan";
+    B("lnSub").textContent = m ? `${pct(m.borrowApy)} borrow APY · max LTV ${m.lltv == null ? "—" : fmt(m.lltv * 100, 1) + "%"} · Morpho on ${CHAIN.replace("_", " ")}` : "";
+    B("lnTabs").querySelectorAll("button").forEach((b) => b.hidden = !x.loan && b.dataset.m !== "borrow");
+    B("lnClose2").hidden = !x.loan;
+    B("lnAmt").value = ""; B("lnQuote").hidden = true; lnStatus("");
+    setLoanMode(lnMode);
+    B("loanOverlay").classList.add("open");
+    await lnBalances();
+  }
+  function setLoanMode(mode) {
+    lnMode = mode;
+    B("lnTabs").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.m === mode));
+    const col = lnCol().symbol || "", la = lnLoanAsset().symbol || "";
+    B("lnUnit").textContent = mode === "add" || mode === "withdraw" ? col : la;
+    B("lnGo").textContent = { borrow: ln.loan ? "Borrow more" : "Borrow", repay: "Repay", add: "Add collateral", withdraw: "Withdraw collateral" }[mode];
+    B("lnAmt").placeholder = "0.00"; B("lnQuote").hidden = true; lnStatus("");
+    lnBalances();
+  }
+  B("lnTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-m]"); if (b) setLoanMode(b.dataset.m); });
+  B("lnClose").onclick = () => B("loanOverlay").classList.remove("open");
+  B("loanOverlay").addEventListener("click", (e) => { if (e.target === B("loanOverlay")) B("loanOverlay").classList.remove("open"); });
+  function lnStatus(t, cls) { const s = B("lnStatus"); s.textContent = t; s.className = "status " + (cls || ""); }
+  async function tokenBal(tok) {
+    if (!account || !tok || !tok.address && !tok.tokenAddress) return "0";
+    const addr = tok.address || tok.tokenAddress;
+    try {
+      const c = new ethers.Contract(addr, ERC20, readProvider());
+      const [raw, dec] = await Promise.all([c.balanceOf(account), c.decimals()]);
+      return ethers.formatUnits(raw, dec);
+    } catch { return "0"; }
+  }
+  async function lnBalances() {
+    const l = ln.loan, col = lnCol(), la = lnLoanAsset();
+    if (!account) { B("lnBalL").textContent = "Wallet: connect first"; B("lnBalR").textContent = ""; return; }
+    if (lnMode === "add") { lnWalletBal = await tokenBal(col); B("lnBalL").textContent = `Wallet: ${fmt(lnWalletBal, 6)} ${col.symbol}`; }
+    else if (lnMode === "withdraw") { lnWalletBal = l && l.collateral ? l.collateral.amount : "0"; B("lnBalL").textContent = `In loan: ${fmt(lnWalletBal, 6)} ${col.symbol}`; }
+    else if (lnMode === "repay") { const w = await tokenBal(la); lnWalletBal = l && l.borrowed ? String(Math.min(Number(w), Number(l.borrowed.amount))) : w; B("lnBalL").textContent = `Wallet: ${fmt(w, 2)} ${la.symbol}`; }
+    else { lnWalletBal = await tokenBal(col); B("lnBalL").textContent = `Collateral in wallet: ${fmt(lnWalletBal, 6)} ${col.symbol}`; }
+    B("lnBalR").textContent = l && l.borrowed ? `Debt: ${fmt(l.borrowed.amount, 2)} ${l.borrowed.token}` : "";
+  }
+  B("lnMax").onclick = async () => {
+    if (lnMode === "borrow" && !ln.loan) {
+      // the most the collateral in the wallet can carry
+      try { const q = await (await loadBorrowKit()).getMaxBorrow({ chain: CHAIN, marketId: lnMarket().marketId, collateralAmount: trim6(lnWalletBal) });
+        B("lnAmt").value = trim6(q.maxBorrowAmount.amount); } catch (e) { lnStatus(e.message || String(e), "err"); return; }
+    } else B("lnAmt").value = trim6(lnWalletBal);
+    quote();
+  };
+  B("lnAmt").addEventListener("input", () => { clearTimeout(lnQuoteTimer); lnQuoteTimer = setTimeout(quote, 500); });
+  async function quote() {
+    const v = trim6(B("lnAmt").value.trim());
+    B("lnQuote").hidden = true;
+    if (!account || !(Number(v) > 0)) return;
+    const k = await loadBorrowKit();
+    try {
+      let q, rows = [];
+      if (lnMode === "borrow") {
+        q = ln.loan ? await k.getBorrowQuote({ loanId: ln.loan.loanId, borrowAmount: v })
+                    : await k.getBorrowQuote({ walletAddress: account, chain: CHAIN, marketId: lnMarket().marketId, borrowAmount: v });
+        rows = [["Collateral locked", amt(q.collateralAmount, 6)], ["You receive", amt(q.loanAssetAmount)], ["Borrow APY", pct(q.borrowApy)],
+          ["Health factor", q.resultingHealthFactor == null ? "—" : fmt(q.resultingHealthFactor, 2)], ["Liquidation price", q.liquidationPrice ? money(q.liquidationPrice.amount) : "—"]];
+      } else if (lnMode === "repay") {
+        q = await k.getRepayQuote({ loanId: ln.loan.loanId, chain: CHAIN, repayAmount: v });
+        rows = [["Repay", amt(q.repayAmount)], ["Health factor after", q.resultingHealthFactor == null ? "—" : fmt(q.resultingHealthFactor, 2)]];
+      } else if (lnMode === "add") {
+        q = await k.getAddCollateralQuote({ loanId: ln.loan.loanId, chain: CHAIN, collateralAmount: v });
+        rows = [["Health factor after", q.resultingHealthFactor == null ? "—" : fmt(q.resultingHealthFactor, 2)], ["Liquidation price", q.liquidationPrice ? money(q.liquidationPrice.amount) : "—"]];
+      } else {
+        q = await k.getWithdrawCollateralRepayIfNeededQuote({ loanId: ln.loan.loanId, chain: CHAIN, collateralAmount: v });
+        rows = [["Collateral released", amt(q.collateralAmount, 6)], ["Repaid to stay healthy", q.bundledRepayment ? amt(q.bundledRepayment) : "0"],
+          ["Health factor after", q.resultingHealthFactor == null ? "—" : fmt(q.resultingHealthFactor, 2)]];
+      }
+      for (const f of q.fees || []) rows.push([`Fee · ${f.type}`, amt(f.amount, 4)]);
+      B("lnQuote").innerHTML = rows.map(([a, b]) => `<span>${esc(a)}</span><b>${esc(b)}</b>`).join("");
+      B("lnQuote").hidden = false;
+      if (q.resultingBand && q.resultingBand !== "SAFE") lnStatus(`Careful: this leaves the loan ${q.resultingBand.toLowerCase()}.`, "err"); else lnStatus("");
+    } catch (e) { lnStatus(kitMod.getErrorMessage ? kitMod.getErrorMessage(e) : (e.message || String(e)), "err"); }
+  }
+  async function runLoan(fn, done) {
+    B("lnGo").disabled = true; B("lnClose2").disabled = true;
+    lnStatus("Confirm in your wallet…");
+    try {
+      const r = await fn();
+      const url = r.txHash && arcCfg.explorer ? `${arcCfg.explorer.replace(/\/$/, "")}/tx/${r.txHash}` : "";
+      B("lnStatus").className = "status ok";
+      B("lnStatus").innerHTML = `${esc(done)}${r.status && r.status !== "confirmed" ? " (" + esc(r.status) + ")" : ""}. ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">View transaction ↗</a>` : ""}`;
+      B("lnAmt").value = ""; B("lnQuote").hidden = true;
+      await refreshLoans();
+      if (ln.loan) { ln.loan = loans.find((l) => l.loanId === ln.loan.loanId) || ln.loan; }
+      else if (r.loanId) { ln = { loan: loans.find((l) => l.loanId === r.loanId) || { loanId: r.loanId, marketId: lnMarket().marketId }, market: undefined }; B("lnTabs").querySelectorAll("button").forEach((b) => b.hidden = false); B("lnClose2").hidden = false; }
+      await lnBalances();
+    } catch (e) {
+      lnStatus(kitMod.getErrorMessage ? kitMod.getErrorMessage(e) : (e.shortMessage || e.message || String(e)), "err");
+    } finally { B("lnGo").disabled = false; B("lnClose2").disabled = false; }
+  }
+  B("lnGo").onclick = async () => {
+    if (!account) { B("loanOverlay").classList.remove("open"); openPicker(); return; }
+    const v = trim6(B("lnAmt").value.trim());
+    if (!(Number(v) > 0)) { lnStatus("Enter an amount.", "err"); return; }
+    const k = await loadBorrowKit();
+    if (activeKind !== "google" && activeKind !== "walletconnect") await ensureArc();
+    const id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+    if (lnMode === "borrow") await runLoan(() => k.borrow(ln.loan ? { from: from(), loanId: ln.loan.loanId, borrowAmount: v, idempotencyKey: id } : { from: from(), marketId: lnMarket().marketId, borrowAmount: v, idempotencyKey: id }), `Borrowed ${v} ${lnLoanAsset().symbol}`);
+    else if (lnMode === "repay") await runLoan(() => k.repay({ from: from(), loanId: ln.loan.loanId, repayAmount: v, idempotencyKey: id }), `Repaid ${v} ${lnLoanAsset().symbol}`);
+    else if (lnMode === "add") await runLoan(() => k.addCollateral({ from: from(), loanId: ln.loan.loanId, collateralAmount: v, idempotencyKey: id }), `Added ${v} ${lnCol().symbol}`);
+    else await runLoan(() => k.withdrawCollateralRepayIfNeeded({ from: from(), loanId: ln.loan.loanId, collateralAmount: v, idempotencyKey: id }), `Withdrew ${v} ${lnCol().symbol}`);
+  };
+  B("lnClose2").onclick = async () => {
+    if (!ln.loan) return;
+    const k = await loadBorrowKit();
+    try { const q = await k.getCloseLoanQuote({ loanId: ln.loan.loanId, chain: CHAIN });
+      if (!confirm(`Close this loan? Up to ${amt(q.bundledRepayment)} is repaid from your wallet and ${amt(q.collateralAmount, 6)} comes back.`)) return;
+    } catch (e) { lnStatus(e.message || String(e), "err"); return; }
+    await runLoan(() => k.closeLoan({ from: from(), loanId: ln.loan.loanId }), "Loan closed");
+    loans = loans.filter((l) => l.loanId !== ln.loan.loanId); renderLoans();
+    B("loanOverlay").classList.remove("open");
+  };
 </script>
 </body>
 </html>
