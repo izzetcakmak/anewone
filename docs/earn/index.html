@@ -538,6 +538,20 @@ Wallet: ${account}
 Time: ${new Date().toISOString()}`;
   }
   let ackResolve = null;
+  async function syncAck() {
+    if (!account) return;
+    const st = ackStore(), mine = st[String(account).toLowerCase()];
+    try {
+      if (mine && mine.version === ACK_VERSION && mine.sig && !mine.server) {
+        const j = await fetch("../api/ack", { method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ address: account, version: ACK_VERSION, text: mine.text, signature: mine.sig }) }).then((r) => r.json());
+        if (j && j.stored) { mine.server = j.at; localStorage.setItem(ACK_KEY, JSON.stringify(st)); }
+      } else if (!mine || mine.version !== ACK_VERSION) {
+        const j = await fetch("../api/ack?address=" + account).then((r) => r.json());
+        if (j && j.accepted && j.accepted.version === ACK_VERSION) { st[String(account).toLowerCase()] = { version: ACK_VERSION, sig: "server", server: j.accepted.at, at: Date.now() }; localStorage.setItem(ACK_KEY, JSON.stringify(st)); }
+      }
+    } catch {}
+  }
   function ensureAck() {
     if (!account || hasAck()) return Promise.resolve(true);
     $("ackStatus").textContent = ""; $("ackStatus").className = "status";
@@ -553,6 +567,11 @@ Time: ${new Date().toISOString()}`;
       const sig = await wallet().request({ method: "personal_sign", params: [hex, account] });
       const st = ackStore(); st[String(account).toLowerCase()] = { version: ACK_VERSION, sig, text, at: Date.now() };
       try { localStorage.setItem(ACK_KEY, JSON.stringify(st)); } catch {}
+      // kept on the server too (api/ack.js verifies the signature); a failure here does not
+      // block the user, the browser's copy stands and the next visit sends it again
+      fetch("../api/ack", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ address: account, version: ACK_VERSION, text, signature: sig }) })
+        .then((r) => r.json()).then((j) => { if (j && j.stored) { st[String(account).toLowerCase()].server = j.at; try { localStorage.setItem(ACK_KEY, JSON.stringify(st)); } catch {} } }).catch(() => {});
       $("ackModal").classList.remove("open");
       if (ackResolve) { ackResolve(true); ackResolve = null; }
     } catch (e) {
@@ -582,7 +601,7 @@ Time: ${new Date().toISOString()}`;
     provider.on && provider.on("chainChanged", () => location.reload());
     provider.on && provider.on("disconnect", () => location.reload());
     refreshPositions();
-    ensureAck();
+    syncAck().then(ensureAck);
   }
   // back from a Web3Auth redirect, or a wallet used last time: pick it up without a click
   (async () => {

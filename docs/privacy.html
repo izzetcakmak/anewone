@@ -167,6 +167,9 @@
     <li><strong>Card purchases</strong> (<code>/api/onramp-session</code>): opens a Circle Onramp session for
       your signed-in wallet so USDC bought with a card lands there. The purchase itself, including any identity
       checks, happens in Circle's widget under Circle's privacy policy; we never see your card details.</li>
+    <li><strong>Terms acceptance</strong> (<code>/api/ack</code>): when you sign the terms acknowledgment on
+      Earn &amp; Borrow, your wallet address, the signature, the version and time of the text you signed and a
+      hash of it are kept in the Redis store, so that acceptance can be shown later. Nothing else is stored with it.</li>
     <li><strong>Swap &amp; Bridge quotes</strong> (<code>/api/lifi</code>): forwards bridge and swap quote requests to LI.FI
       with our partner key. A quote request carries the amount and the wallet addresses involved, which LI.FI sees
       under its own privacy policy.</li>
@@ -239,7 +242,9 @@
     (2) <em>cüzdan adresi</em>: Deck Hand hafızası, kart ile alım oturumu ve kredi kayıtları için, ayrıca zincir
     üzerindeki herkese açık işlem verisi olarak; (3) <em>Deck Hand'e yazdıklarınız</em>: hafızayı açtıysanız,
     cüzdan adresinizden türetilen bir ad altında şifreli olarak Walrus ağında saklanır, yanıtlar saklanmaz;
-    (4) <em>oturum belirteci</em>: cüzdan imzasıyla giriş yaptığınızda bir gün geçerli rastgele bir belirteç.
+    (4) <em>oturum belirteci</em>: cüzdan imzasıyla giriş yaptığınızda bir gün geçerli rastgele bir belirteç;
+    (5) <em>koşul kabulü</em>: Earn &amp; Borrow'da kullanım koşullarını cüzdanınızla imzaladığınızda cüzdan adresi,
+    imza, imzalanan metnin sürümü, özeti (hash) ve zamanı, kabulün ispatı amacıyla saklanır.
     Tarayıcınızda yerel olarak tutulan tema, son cüzdan, izleme listesi ve önbellek verileri cihazınızdan çıkmaz.</p>
   <p><strong>Amaçlar ve hukuki sebepler.</strong> Veriler; siteyi sunmak ve güvenliğini sağlamak, kötüye kullanımı
     ve aşırı isteği önlemek, seçtiğiniz özellikleri (Deck Hand hafızası, kart ile alım, kredi durumu) yerine
@@ -256,7 +261,8 @@
     sözleşmelere dayanır; bu özellikleri kullanmadığınızda aktarım gerçekleşmez. Zincir üzerindeki işlemler
     niteliği gereği herkese açık ve kalıcıdır; bunları biz dahil kimse silemez.</p>
   <p><strong>Saklama.</strong> Erişim kayıtları Vercel'in standart süresi kadar; hız sınırlama sayaçları bir dakika;
-    oturum belirteci bir gün; Deck Hand hafızası siz sildirene kadar saklanır. 5651 sayılı Kanun kapsamındaki
+    oturum belirteci bir gün; Deck Hand hafızası siz sildirene kadar; koşul kabulü kaydı, olası bir uyuşmazlıkta
+    ispat için genel zamanaşımı süresince saklanır. 5651 sayılı Kanun kapsamındaki
     trafik bilgisi barındırma sağlayıcısı tarafından kanuni süresince tutulur.</p>
   <p><strong>Haklarınız (KVKK m. 11).</strong> Kişisel verinizin işlenip işlenmediğini öğrenme, işlenmişse bilgi
     talep etme, amacına uygun kullanılıp kullanılmadığını öğrenme, yurt içinde veya dışında aktarıldığı üçüncü
