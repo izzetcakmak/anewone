@@ -1344,7 +1344,20 @@
   };
   if (wallet() && wallet().on) wallet().on("accountsChanged", () => setTimeout(() => { swLoadHeld(); swValidate(); }, 100));
   swPaintTokens(); swPaintSlip();
-  lifiReady.then(() => swLoadTokens());
+  lifiReady.then(() => swLoadTokens()).then(() => {
+    // Earn's Borrow window sends people here for collateral they do not hold yet:
+    // ?tab=swap&to=0x…&symbol=cirBTC&decimals=8 lands on the swap card with that token to buy
+    const q = new URLSearchParams(location.search);
+    if (q.get("tab") === "swap") {
+      const b = document.querySelector('.tabs button[data-tab="swap"]'); if (b) b.click();
+      const to = q.get("to");
+      if (to && ethers.isAddress(to)) {
+        const cur = swT[ethers.getAddress(to)] || {};
+        swTo = swAddTok({ address: to, symbol: q.get("symbol") || cur.symbol || "?", name: cur.name || q.get("symbol") || "", decimals: q.get("decimals") ? Number(q.get("decimals")) : cur.decimals ?? 18, src: cur.src || "link" });
+        swPaintTokens(); swRefreshBalances(); swRequote();
+      }
+    }
+  });
   setTimeout(() => { if (sendAccount) swLoadHeld(); else swValidate(); }, 1500);
 
   // ---- Buy USDC with card (Circle Onramp Kit). Same flow as the floor: one personal_sign

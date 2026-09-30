@@ -118,6 +118,11 @@
   .hf.SAFE { color: var(--green); background: rgba(var(--green-rgb),.12); }
   .hf.WARN { color: var(--gold); background: rgba(var(--gold-rgb),.12); }
   .hf.URGENT, .hf.IMMINENT, .hf.LIQUIDATABLE { color: var(--red); background: rgba(var(--red-rgb),.12); }
+  .getcol { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: var(--bg-2); border: 1px dashed var(--border-2); border-radius: var(--r); padding: 16px 20px; margin-bottom: 14px; color: var(--dim); font-size: 14px; }
+  .getcol b { color: var(--text); }
+  .getcol .btn { display: inline-block; padding: 11px 18px; border-radius: var(--r-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; white-space: nowrap; }
+  .getcol .btn:hover { text-decoration: none; }
+  .vault .getlink { font: 500 12px var(--mono); color: var(--accent); }
   .loanacts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
   .loanacts .btn { margin-top: 0 !important; }
   h2.sec { font: 600 20px 'Space Grotesk', sans-serif; margin: 28px 0 12px; }
@@ -207,6 +212,11 @@
     </div>
     <div class="filters">
       <span class="count" id="mcount">loading markets…</span>
+    </div>
+    <!-- collateral first: whoever holds only USDC swaps it for cirBTC, ETH or the rest on Arc -->
+    <div class="getcol">
+      <div><b>Need the collateral first?</b> Swap USDC for cirBTC, WETH or any of the assets below on Arc, then come back and borrow against it. Or bring funds in from another chain.</div>
+      <a class="btn primary" id="swapLink" href="../bridge/?tab=swap">Swap on Arc →</a>
     </div>
     <div class="grid" id="markets"><div class="empty">Loading markets from Arc…</div></div>
   </div>
@@ -637,6 +647,7 @@
         <span class="tag ${m.loanAsset.symbol === "USDC" ? "usdc" : ""}">${esc(m.loanAsset.symbol)}</span></div>
       <div class="apy">${pct(m.borrowApy)}<small>BORROW APY</small></div>
       <div class="stats"><div>${money(m.liquidity.amount)}<span>Available</span></div><div>${usd(m.borrowAssets)}<span>Borrowed</span></div><div>${m.lltv == null ? "—" : fmt(m.lltv * 100, 1) + "%"}<span>Max LTV</span></div></div>
+      <a class="getlink" href="../bridge/?tab=swap&to=${esc(m.collateralAsset.address)}&symbol=${esc(m.collateralAsset.symbol)}&decimals=${m.collateralAsset.decimals}">Get ${esc(m.collateralAsset.symbol)} with a swap ↗</a>
       <button class="btn primary" data-market="${i}">Borrow ${esc(m.loanAsset.symbol)}</button>
     </div>`).join("") || `<div class="empty">No open markets on ${CHAIN} right now.</div>`;
   }
