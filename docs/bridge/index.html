@@ -114,6 +114,9 @@
   .pill { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--mono); padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--dim); }
   .pill.test { color: var(--gold); }
   .chains { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  /* embedded in Earn's swap sheet: the swap card alone, nothing to leave the page for */
+  body.embed .topbar, body.embed .hero, body.embed .tabs, body.embed #pAdd, body.embed #pSend, body.embed footer { display: none !important; }
+  body.embed main { padding-top: 4px; }
   .nowallet { background: var(--surface); border: 1px dashed var(--border-2); border-radius: var(--r-md); padding: 18px; color: var(--dim); font-size: 13px; }
   .nowallet b { color: var(--text); }
   .nowallet .wcbtn { display: block; width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: var(--r-sm); background: var(--grad); color: var(--bg); font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; }
@@ -1068,6 +1071,11 @@
   const USDC_ARC = "0x3600000000000000000000000000000000000000";
   const swT = {};                       // address -> {address, symbol, name, decimals, logo, price, src}
   const swBal = {};                     // address -> balance (minor units) of the connected wallet
+  // ?only=0x…:SYM:decimals,… (from Earn's Borrow window): the "to" picker offers just these
+  // tokens, and a token LI.FI's list does not carry is added from the triple so it still shows
+  const swOnlyMeta = (() => { const v = new URLSearchParams(location.search).get("only"); if (!v) return []; return v.split(",").map((x) => { const [a, sym, d] = x.split(":"); return ethers.isAddress(a) ? { address: ethers.getAddress(a), symbol: sym || "?", decimals: d ? Number(d) : 18 } : null; }).filter(Boolean); })();
+  const swOnly = swOnlyMeta.length ? new Set(swOnlyMeta.map((t) => t.address)) : null;
+  if (new URLSearchParams(location.search).get("embed") === "1") document.body.classList.add("embed");
   let swFrom = null, swTo = null, swQuote = null, swBusy = false, swPickSide = null, swQuoteTimer = null, swQuoteRun = 0;
   // Max slippage in percent. Thin pools on a young chain move more than a fixed 3% under a
   // large order, and the router refuses a fill below the quote's floor, so the visitor sets it.
@@ -1083,6 +1091,7 @@
   const swEsc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const swAddTok = (t) => { const a = ethers.getAddress(t.address); const cur = swT[a] || {}; swT[a] = { ...cur, ...t, address: a, decimals: Number(t.decimals ?? cur.decimals ?? 18) }; return swT[a]; };
   swAddTok({ address: USDC_ARC, symbol: "USDC", name: "USD Coin", decimals: 6, src: "arc" });
+  for (const t of swOnlyMeta) if (t.address !== USDC_ARC) swAddTok({ ...t, name: t.symbol, src: "link" });
   swFrom = swT[USDC_ARC];
   const lifiBase = () => (lifiApi || "https://li.quest/v1");
   const swIsFloor = (a) => !!(a && coinMeta[a]);
@@ -1142,6 +1151,7 @@
     const other = swPickSide === "from" ? swTo : swFrom;
     const rows = Object.values(swT)
       .filter((t) => !other || t.address !== other.address)
+      .filter((t) => !(swOnly && swPickSide === "to") || swOnly.has(t.address))
       .filter((t) => !q || t.symbol.toLowerCase().includes(q) || (t.name || "").toLowerCase().includes(q) || t.address.toLowerCase() === q)
       .sort((x, y) => {
         const bx = swBal[x.address] > 0n ? 1 : 0, by = swBal[y.address] > 0n ? 1 : 0;

@@ -122,7 +122,14 @@
   .getcol b { color: var(--text); }
   .getcol .btn { display: inline-block; padding: 11px 18px; border-radius: var(--r-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; white-space: nowrap; }
   .getcol .btn:hover { text-decoration: none; }
-  .vault .getlink { font: 500 12px var(--mono); color: var(--accent); }
+  .vault .getlink { font: 500 12px var(--mono); color: var(--accent); background: none; border: 0; padding: 0; text-align: left; }
+  .vault .getlink:hover { text-decoration: underline; }
+  .getcol .btn { border: 0; font: 600 14px Inter, sans-serif; cursor: pointer; }
+  /* the swap sheet: the bridge's swap card, framed from this same site */
+  .swapsheet { width: 100%; max-width: 520px; height: min(760px, 92vh); background: var(--bg); border: 1px solid var(--border-2); border-radius: var(--r); overflow: hidden; display: flex; flex-direction: column; }
+  .swapsheet .bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); font: 600 15px 'Space Grotesk', sans-serif; }
+  .swapsheet .bar button { background: none; border: 0; color: var(--dim); font-size: 18px; }
+  .swapsheet iframe { flex: 1; width: 100%; border: 0; }
   .loanacts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
   .loanacts .btn { margin-top: 0 !important; }
   h2.sec { font: 600 20px 'Space Grotesk', sans-serif; margin: 28px 0 12px; }
@@ -216,7 +223,7 @@
     <!-- collateral first: whoever holds only USDC swaps it for cirBTC, ETH or the rest on Arc -->
     <div class="getcol">
       <div><b>Need the collateral first?</b> Swap USDC for cirBTC, WETH or any of the assets below on Arc, then come back and borrow against it. Or bring funds in from another chain.</div>
-      <a class="btn primary" id="swapLink" href="../bridge/?tab=swap">Swap on Arc →</a>
+      <button class="btn primary" id="swapLink" type="button">Swap on Arc →</button>
     </div>
     <div class="grid" id="markets"><div class="empty">Loading markets from Arc…</div></div>
   </div>
@@ -234,6 +241,13 @@
     <button class="go" id="goBtn">Deposit</button>
     <div class="status" id="status"></div>
     <button class="close" id="closeBtn">Close</button>
+  </div>
+</div>
+
+<div class="overlay" id="swapOverlay" role="dialog" aria-modal="true">
+  <div class="swapsheet">
+    <div class="bar"><span id="swapTitle">Swap on Arc</span><button type="button" id="swapX" aria-label="Close">✕</button></div>
+    <iframe id="swapFrame" title="Swap on Arc" src="about:blank"></iframe>
   </div>
 </div>
 
@@ -647,14 +661,31 @@
         <span class="tag ${m.loanAsset.symbol === "USDC" ? "usdc" : ""}">${esc(m.loanAsset.symbol)}</span></div>
       <div class="apy">${pct(m.borrowApy)}<small>BORROW APY</small></div>
       <div class="stats"><div>${money(m.liquidity.amount)}<span>Available</span></div><div>${usd(m.borrowAssets)}<span>Borrowed</span></div><div>${m.lltv == null ? "—" : fmt(m.lltv * 100, 1) + "%"}<span>Max LTV</span></div></div>
-      <a class="getlink" href="../bridge/?tab=swap&to=${esc(m.collateralAsset.address)}&symbol=${esc(m.collateralAsset.symbol)}&decimals=${m.collateralAsset.decimals}">Get ${esc(m.collateralAsset.symbol)} with a swap ↗</a>
+      <button class="getlink" type="button" data-swap="${i}">Get ${esc(m.collateralAsset.symbol)} with a swap →</button>
       <button class="btn primary" data-market="${i}">Borrow ${esc(m.loanAsset.symbol)}</button>
     </div>`).join("") || `<div class="empty">No open markets on ${CHAIN} right now.</div>`;
   }
   B("markets").addEventListener("click", (e) => {
+    const sw = e.target.closest("[data-swap]");
+    if (sw) return openSwap(markets[Number(sw.dataset.swap)].collateralAsset);
     const b = e.target.closest("[data-market]");
     if (b) openLoanSheet({ market: markets[Number(b.dataset.market)] });
   });
+  // The swap stays on this page: the bridge's swap card, framed from the same site, with the
+  // "to" list cut down to the collateral the markets take. USDC is the default "from".
+  function openSwap(tok) {
+    const seen = new Set();
+    const only = markets.map((m) => m.collateralAsset).filter((c) => !seen.has(c.address) && seen.add(c.address)).map((c) => `${c.address}:${c.symbol}:${c.decimals}`).join(",");
+    const q = new URLSearchParams({ embed: "1", tab: "swap", only });
+    if (tok) { q.set("to", tok.address); q.set("symbol", tok.symbol); q.set("decimals", String(tok.decimals)); }
+    B("swapTitle").textContent = tok ? `Swap USDC → ${tok.symbol}` : "Swap on Arc";
+    B("swapFrame").src = "../bridge/?" + q.toString();
+    B("swapOverlay").classList.add("open");
+  }
+  function closeSwap() { B("swapOverlay").classList.remove("open"); B("swapFrame").src = "about:blank"; if (account) refreshLoans(); }
+  B("swapLink").onclick = () => openSwap(null);
+  B("swapX").onclick = closeSwap;
+  B("swapOverlay").addEventListener("click", (e) => { if (e.target === B("swapOverlay")) closeSwap(); });
   B("loans").addEventListener("click", (e) => {
     const b = e.target.closest("[data-loan]");
     if (b) openLoanSheet({ loan: loans[Number(b.dataset.loan)], mode: b.dataset.mode });
