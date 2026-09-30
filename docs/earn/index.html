@@ -869,7 +869,9 @@ Time: ${new Date().toISOString()}`;
     try {
       const k = await loadBorrowKit();
       const r = await k.getLoans({ walletAddress: account, chain: CHAIN, pageSize: 50 });
-      loans = (r.loans || []).filter((l) => l.status === "active");
+      // Circle marks a loan closed the moment its debt is 0, even with collateral still in the
+      // market (a full Repay does that); the collateral is the user's and must stay in view
+      loans = (r.loans || []).filter((l) => l.status === "active" || Number(l.collateral?.amount || 0) > 0);
     } catch { loans = []; }
     renderLoans(); renderMarkets();
   }
@@ -892,18 +894,23 @@ Time: ${new Date().toISOString()}`;
       const m = marketOf(l);
       const col = l.collateral ? l.collateral.token : (m ? m.collateralAsset.symbol : "");
       const debt = l.borrowed ? l.borrowed.token : (m ? m.loanAsset.symbol : "");
+      const repaid = l.status !== "active" || !(Number(l.borrowed?.amount || 0) > 0);
       return `<div class="vault">
         <div class="head"><div><div class="pair">${esc(col)} <span class="arrow">→</span> ${esc(debt)}</div>
-          <div class="curator">loan ${esc(l.loanId.slice(0, 10))}… ${l.dataStatus === "PENDING" ? "· updating" : ""}</div></div>${hfBand(l.healthFactorBand)}</div>
+          <div class="curator">loan ${esc(l.loanId.slice(0, 10))}… ${l.dataStatus === "PENDING" ? "· updating" : ""}</div></div>${repaid ? `<span class="tag warn">debt repaid · collateral still in market</span>` : hfBand(l.healthFactorBand)}</div>
         <div class="apy">${l.healthFactor == null ? "—" : fmt(l.healthFactor, 2)}<small>HEALTH FACTOR</small></div>
         <div class="stats"><div>${amt(l.borrowed)}<span>Debt</span></div><div>${amt(l.collateral, 6)}<span>Collateral</span></div><div>${l.liquidationPrice ? money(l.liquidationPrice.amount) : "—"}<span>Liq. price</span></div></div>
         <div class="curator">${pct(l.borrowApy)} borrow APY · LTV ${l.ltv == null ? "—" : fmt(l.ltv * 100, 1) + "%"} · interest ${amt(l.accruedInterest, 4)}</div>
+        ${repaid ? `<div class="pos show">Your ${esc(amt(l.collateral, 6))} is still in the market. Withdraw it, or borrow against it again.</div>
         <div class="loanacts">
+          <button class="btn primary" data-loan="${i}" data-mode="withdraw">Withdraw collateral</button>
+          <button class="btn" data-loan="${i}" data-mode="borrow">Borrow again</button>
+        </div>` : `<div class="loanacts">
           <button class="btn" data-loan="${i}" data-mode="repay">Repay</button>
           <button class="btn" data-loan="${i}" data-mode="borrow">Borrow more</button>
           <button class="btn" data-loan="${i}" data-mode="add">Add collateral</button>
           <button class="btn" data-loan="${i}" data-mode="withdraw">Withdraw</button>
-        </div>
+        </div>`}
       </div>`;
     }).join("");
   }
@@ -921,8 +928,9 @@ Time: ${new Date().toISOString()}`;
     const m = lnMarket();
     B("lnName").textContent = m ? `${m.collateralAsset.symbol} → ${m.loanAsset.symbol}` : "Loan";
     B("lnSub").textContent = m ? `${pct(m.borrowApy)} borrow APY · max LTV ${m.lltv == null ? "—" : fmt(m.lltv * 100, 1) + "%"} · Morpho on ${CHAIN.replace("_", " ")}` : "";
-    B("lnTabs").querySelectorAll("button").forEach((b) => b.hidden = !x.loan && b.dataset.m !== "borrow");
-    B("lnClose2").hidden = !x.loan;
+    const repaid = x.loan && !(Number(x.loan.borrowed?.amount || 0) > 0);
+    B("lnTabs").querySelectorAll("button").forEach((b) => b.hidden = !x.loan ? b.dataset.m !== "borrow" : (repaid && (b.dataset.m === "repay" || b.dataset.m === "add")));
+    B("lnClose2").hidden = !x.loan || repaid;
     B("lnAmt").value = ""; B("lnQuote").hidden = true; lnStatus("");
     setLoanMode(lnMode);
     B("loanOverlay").classList.add("open");
@@ -996,6 +1004,7 @@ Time: ${new Date().toISOString()}`;
       } else if (lnMode === "repay") {
         q = await k.getRepayQuote({ loanId: ln.loan.loanId, chain: CHAIN, repayAmount: v });
         rows = [["Repay", amt(q.repayAmount)], ["Health factor after", q.resultingHealthFactor == null ? "—" : fmt(q.resultingHealthFactor, 2)]];
+        if (ln.loan.borrowed && Number(v) >= Number(ln.loan.borrowed.amount) * 0.999) rows.push(["Note", "Repay leaves the collateral in the market. Close this loan repays and returns it in one go."]);
       } else if (lnMode === "add") {
         q = await k.getAddCollateralQuote({ loanId: ln.loan.loanId, chain: CHAIN, collateralAmount: v });
         rows = [["Health factor after", q.resultingHealthFactor == null ? "—" : fmt(q.resultingHealthFactor, 2)], ["Liquidation price", q.liquidationPrice ? money(q.liquidationPrice.amount) : "—"]];
