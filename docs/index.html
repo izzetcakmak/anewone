@@ -37,7 +37,7 @@
   a { color: inherit; text-decoration: none; }
   .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
   header { border-bottom: 1px solid var(--line); }
-  .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 72px; }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 72px; position: relative; }
   .brand { display: flex; align-items: center; gap: 12px; font: 700 20px "Space Grotesk", sans-serif; letter-spacing: .02em; white-space: nowrap; }
   .brand img { width: 40px; height: 40px; border-radius: 10px; }
   nav { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
@@ -96,31 +96,59 @@
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
   footer { padding: 32px 0 48px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); }
   footer .links { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; }
-  @media (max-width: 800px) {
-    .grid, .roles, .stats { grid-template-columns: 1fr; }
+  /* the phone menu: the three pills the bar has no room for there, under a menu button */
+  .menu-btn, .menu { display: none; }
+  .menu { position: absolute; top: calc(100% + 6px); right: 16px; z-index: 70; width: 230px; flex-direction: column; gap: 8px;
+    padding: 10px; border-radius: 16px; background: var(--bg-2); border: 1px solid rgba(var(--accent-rgb), .35); box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+  .menu .pill { width: 100%; }
+  .menu .pillwrap { display: flex; flex-direction: column; }
+  .menu .note { position: relative; top: auto; left: auto; transform: none; width: auto; max-width: none; margin-top: 10px; display: none; opacity: 1; }
+  .menu .note.show { display: block; transform: none; }
+  /* the five pills need about 990px; below that the bar keeps Earn and AnewOne.Fun and the rest
+     goes under the menu button (it ran off the screen at 801-990px, an upright iPad included) */
+  @media (max-width: 1000px) {
     .hide-sm { display: none; }
     .bar { height: 64px; gap: 8px; }
     .brand { font-size: 17px; gap: 8px; }
     .brand img { width: 34px; height: 34px; }
     .pill { height: 34px; padding: 0 12px; font-size: 12px; }
-    .pill.fun { min-width: 0; flex: 1 1 0; }
-    nav { flex: 1; }
+    .pill.fun { min-width: 0; flex: 1 1 0; max-width: 148px; }
+    /* min-width: without it the nav kept the pills' desktop width and ran off a phone's screen */
+    nav { flex: 1; min-width: 0; justify-content: flex-end; }
+    .menu-btn { display: inline-flex; flex: none; width: 34px; padding: 0; }
+    .menu:not([hidden]) { display: flex; }
+  }
+  @media (max-width: 800px) {
+    .grid, .roles, .stats { grid-template-columns: 1fr; }
     .hero { padding: 64px 0 48px; }
   }
+  /* a narrow phone: the crest alone, so Earn, AnewOne.Fun and the menu keep their room */
+  @media (max-width: 480px) { .brand span { display: none; } }
+  @media (max-width: 380px) { .pill { padding: 0 8px; } }
+  @media (max-width: 340px) { nav { gap: 6px; } .pill { font-size: 11px; padding: 0 6px; } }
 </style>
 </head>
 <body>
 <header>
   <div class="wrap bar">
-    <a class="brand" href="/"><img src="brand/logo.png" alt="">A NEW ONE</a>
+    <a class="brand" href="/" aria-label="A NEW ONE, home"><img src="brand/logo.png" alt=""><span>A NEW ONE</span></a>
     <nav>
       <a class="pill fun" href="earn/">Earn</a>
-      <span class="pillwrap hide-sm"><a class="pill" href="#assets" id="assetsLink">Assets</a>
+      <span class="pillwrap hide-sm"><a class="pill" href="#assets" id="assetsLink" data-assets>Assets</a>
         <span class="note" id="assetsNote" role="status">Tokenized stocks are <b>coming soon</b>. Earn and Borrow are live today.</span></span>
       <a class="pill fun" href="fun/" title="The memecoin launchpad: bonding curves in USDC">AnewOne.Fun →</a>
       <a class="pill hide-sm" href="#how">How it works</a>
       <a class="pill hide-sm" href="docs.html">Docs</a>
+      <button class="pill menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
     </nav>
+    <div class="menu" id="menu" hidden>
+      <span class="pillwrap"><a class="pill" href="#assets" data-assets>Assets</a>
+        <span class="note" role="status">Tokenized stocks are <b>coming soon</b>. Earn and Borrow are live today.</span></span>
+      <a class="pill" href="#how">How it works</a>
+      <a class="pill" href="docs.html">Docs</a>
+    </div>
   </div>
 </header>
 
@@ -203,13 +231,30 @@
 </footer>
 <script>
   // Assets is not stocked yet: the pill says so right under itself, and the page stays put
+  // (the bar's pill on a wide screen, the menu's on a phone)
   (function () {
-    var n = document.getElementById("assetsNote"), timer = null;
-    document.getElementById("assetsLink").addEventListener("click", function (e) {
-      e.preventDefault();
-      n.classList.add("show"); clearTimeout(timer); timer = setTimeout(function () { n.classList.remove("show"); }, 4000);
+    var timer = null;
+    document.querySelectorAll("[data-assets]").forEach(function (a) {
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        var n = a.parentNode.querySelector(".note");
+        n.classList.add("show"); clearTimeout(timer); timer = setTimeout(function () { n.classList.remove("show"); }, 4000);
+      });
     });
-    document.addEventListener("click", function (e) { if (!e.target.closest("#assetsLink")) n.classList.remove("show"); });
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest("[data-assets]")) document.querySelectorAll(".note.show").forEach(function (n) { n.classList.remove("show"); });
+    });
+  })();
+  // the phone menu: a pick closes it, except Assets, whose note opens inside it
+  (function () {
+    var btn = document.getElementById("menuBtn"), menu = document.getElementById("menu");
+    function shut() { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); }
+    btn.addEventListener("click", function () {
+      menu.hidden = !menu.hidden; btn.setAttribute("aria-expanded", menu.hidden ? "false" : "true");
+    });
+    menu.addEventListener("click", function (e) { var a = e.target.closest("a"); if (a && !a.hasAttribute("data-assets")) shut(); });
+    document.addEventListener("click", function (e) { if (!menu.hidden && !menu.contains(e.target) && !btn.contains(e.target)) shut(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") shut(); });
   })();
 </script>
 </body>
