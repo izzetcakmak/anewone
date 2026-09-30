@@ -818,7 +818,8 @@ Time: ${new Date().toISOString()}`;
   function openSwap(tok) {
     const seen = new Set();
     const only = markets.map((m) => m.collateralAsset).filter((c) => !seen.has(c.address) && seen.add(c.address)).map((c) => `${c.address}:${c.symbol}:${c.decimals}`).join(",");
-    const q = new URLSearchParams({ embed: "1", tab: "swap", only });
+    // a fresh query each time: Safari keeps a framed page's old copy long after a deploy
+    const q = new URLSearchParams({ embed: "1", tab: "swap", only, v: String(Date.now()) });
     if (tok) { q.set("to", tok.address); q.set("symbol", tok.symbol); q.set("decimals", String(tok.decimals)); }
     B("swapTitle").textContent = tok ? `Swap USDC → ${tok.symbol}` : "Swap on Arc";
     B("swapFrame").src = "../bridge/?" + q.toString();
