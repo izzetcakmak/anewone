@@ -130,6 +130,7 @@
   .swapsheet .bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); font: 600 15px 'Space Grotesk', sans-serif; }
   .swapsheet .bar button { background: none; border: 0; color: var(--dim); font-size: 18px; }
   .swapsheet iframe { flex: 1; width: 100%; border: 0; }
+  .vault.ghost { padding: 14px 16px; gap: 8px; opacity: .8; border-style: dashed; }
   .loanacts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
   .loanacts .btn { margin-top: 0 !important; }
   h2.sec { font: 600 20px 'Space Grotesk', sans-serif; margin: 28px 0 12px; }
@@ -711,7 +712,11 @@
     // reverts on-chain, the record stays "PENDING" with nothing in it: a ghost, not a loan.
     // It gets one quiet line, not a card of buttons that can only fail.
     const ghost = (l) => l.dataStatus === "PENDING" && !l.borrowed && !l.collateral;
-    const notes = loans.filter(ghost).map((l) => `<div class="empty" style="padding:12px 0;font-size:13px">Loan record ${esc(l.loanId.slice(0, 8))}… is still being indexed. If its transaction reverted, it stays empty and can be ignored.</div>`).join("");
+    const notes = loans.filter(ghost).map((l) => { const m = marketOf(l); return `<div class="vault ghost">
+      <div class="head"><div><div class="pair">${m ? esc(m.collateralAsset.symbol) + ' <span class="arrow">→</span> ' + esc(m.loanAsset.symbol) : "Loan"}</div>
+        <div class="curator">record ${esc(l.loanId.slice(0, 8))}… · not on-chain</div></div><span class="tag warn">⏳ pending</span></div>
+      <div class="curator">Circle opened this record for a borrow whose transaction did not go through. Nothing was borrowed and no collateral is locked. It clears on its own; if you want the loan, borrow again.</div>
+    </div>`; }).join("");
     B("loans").innerHTML = notes + loans.map((l, i) => {
       if (ghost(l)) return "";
       const m = marketOf(l);
