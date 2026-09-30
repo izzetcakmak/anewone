@@ -816,6 +816,7 @@ Time: ${new Date().toISOString()}`;
       <div class="apy">${pct(m.borrowApy)}<small>BORROW APY</small></div>
       <div class="stats"><div>${money(m.liquidity.amount)}<span>Available to borrow</span></div><div>${usd(m.borrowAssets)}<span>Borrowed</span></div><div>${m.lltv == null ? "—" : fmt(m.lltv * 100, 1) + "%"}<span>Max LTV</span></div></div>
       ${Number(m.liquidity.amount) < 100 ? `<span class="tag warn">⚠ thin: only ${esc(fmt(m.liquidity.amount, 2))} ${esc(m.loanAsset.symbol)} left to borrow</span>` : ""}
+      ${account && colBal[m.collateralAsset.address] != null ? `<div class="pos show">In your wallet: ${esc(fmt(colBal[m.collateralAsset.address], 6))} ${esc(m.collateralAsset.symbol)}</div>` : ""}
       ${canSwap(m.collateralAsset.address)
         ? `<button class="getlink" type="button" data-swap="${i}">Get ${esc(m.collateralAsset.symbol)} with a swap →</button>`
         : `<span class="getlink" style="color:var(--faint)">No swap route for ${esc(m.collateralAsset.symbol)} on Arc yet · you need to hold it already</span>`}
@@ -849,14 +850,26 @@ Time: ${new Date().toISOString()}`;
     if (b) openLoanSheet({ loan: loans[Number(b.dataset.loan)], mode: b.dataset.mode });
   });
 
+  // what the wallet holds of each market's collateral, read from the chain through the pool
+  const colBal = {};
+  async function refreshCollateral() {
+    if (!account) return;
+    const seen = new Set();
+    await Promise.all(markets.map((m) => m.collateralAsset).filter((c) => !seen.has(c.address) && seen.add(c.address)).map(async (c) => {
+      for (const u of READ_URLS) {
+        try { const b = await new ethers.Contract(c.address, ERC20, readProvider(u)).balanceOf(account); colBal[c.address] = ethers.formatUnits(b, c.decimals); return; } catch {}
+      }
+    }));
+  }
   async function refreshLoans() {
     if (!account) return;
+    await refreshCollateral();
     try {
       const k = await loadBorrowKit();
       const r = await k.getLoans({ walletAddress: account, chain: CHAIN, pageSize: 50 });
       loans = (r.loans || []).filter((l) => l.status === "active");
     } catch { loans = []; }
-    renderLoans();
+    renderLoans(); renderMarkets();
   }
   function marketOf(l) { return markets.find((m) => m.marketId === l.marketId); }
   // loans this session just opened: a fresh one is PENDING for a minute while Circle indexes
