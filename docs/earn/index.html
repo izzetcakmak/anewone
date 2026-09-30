@@ -119,6 +119,16 @@
   .status { min-height: 20px; margin-top: 12px; font: 500 12px var(--mono); color: var(--dim); word-break: break-word; }
   .status.err { color: var(--red); }
   .status.ok { color: var(--green); }
+
+  /* wallet picker */
+  .wrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; margin-top: 8px; border: 1px solid var(--border-2); border-radius: var(--r-sm); background: var(--bg); color: var(--text); font-weight: 600; text-align: left; }
+  .wrow:hover { border-color: var(--accent); }
+  .wrow img { width: 24px; height: 24px; border-radius: 6px; }
+  .wrow small { color: var(--dim); font-weight: 500; }
+  .wdivider { display: flex; align-items: center; gap: 10px; color: var(--faint); font: 500 11px var(--mono); margin: 14px 0 6px; }
+  .wdivider::before, .wdivider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+  .hint { color: var(--dim); font-size: 12px; margin-top: 10px; }
+  .hint a { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -167,6 +177,18 @@
     <button class="go" id="goBtn">Deposit</button>
     <div class="status" id="status"></div>
     <button class="close" id="closeBtn">Close</button>
+  </div>
+</div>
+
+<div class="overlay" id="walletModal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2>Connect</h2>
+    <p class="sub">Same doors as the floor: your sign-in wallet, a browser wallet, or a wallet app.</p>
+    <button class="wrow" id="gmailBtn" type="button"><span style="font-size:20px">@</span><span>Continue with Email or Social <small>· Google, X, Apple…</small></span></button>
+    <div class="wdivider" id="wOr"><span>or a wallet of your own</span></div>
+    <div id="walletList"></div>
+    <button class="wrow" id="wcBtn" type="button"><span style="font-size:20px">🔗</span><span>WalletConnect <small>· Rabby, Trust, any wallet app</small></span></button>
+    <button class="close" id="walletX">Close</button>
   </div>
 </div>
 
@@ -243,9 +265,123 @@
     if (b) openSheet(vaults[Number(b.dataset.open)]);
   });
 
-  // ---- wallet (injected EIP-1193 only for now) ----
-  let account = null, adapter = null;
-  const wallet = () => window.ethereum;
+  // ---- wallet: the floor's three doors, on one EIP-1193 path ----
+  // Injected wallets announce themselves over EIP-6963; "Email or Social" is Web3Auth
+  // (vendored, redirect flow, same clientId as the floor); WalletConnect for wallet apps.
+  // Whichever is picked ends up in `active`, and the Earn Kit adapter wraps that.
+  let account = null, adapter = null, active = null, activeKind = null;
+  const wallet = () => active;
+  const LAST_KEY = "anewone_last_wallet";
+  const discovered = new Map();
+  window.addEventListener("eip6963:announceProvider", (ev) => {
+    const d = ev.detail; if (d?.info?.rdns && d?.provider) discovered.set(d.info.rdns, d);
+  });
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  const walletChoices = () => {
+    const l = [...discovered.values()];
+    if (!l.length && window.ethereum) l.push({ info: { rdns: "legacy", name: "Browser wallet" }, provider: window.ethereum });
+    return l;
+  };
+  const W3A = (cfg.web3auth || {})[net] || {};
+  const WC_ID = (cfg.walletConnect || {}).projectId || "";
+  const NET_NAME = net === "mainnet" ? "Arc" : "Arc Testnet";
+  let w3a = null, wcProvider = null;
+  async function loadWeb3Auth() {
+    if (w3a) return w3a;
+    const { Web3Auth, CHAIN_NAMESPACES, WEB3AUTH_NETWORK, EthereumPrivateKeyProvider } = await import("../vendor/web3auth.esm.js");
+    let rpcTarget = arcCfg.rpc;
+    try {
+      const brave = !!(navigator.brave && await navigator.brave.isBrave());
+      const relay = (arcCfg.rpcs || []).find((r) => r && typeof r === "object" && r.hosts && r.hosts.includes(location.hostname));
+      if (brave && relay) rpcTarget = relay.url;
+    } catch {}
+    const privateKeyProvider = new EthereumPrivateKeyProvider({ config: { chainConfig: {
+      chainNamespace: CHAIN_NAMESPACES.EIP155, chainId: arcCfg.chainIdHex, rpcTarget, displayName: NET_NAME,
+      ticker: "USDC", tickerName: "USD Coin", blockExplorerUrl: arcCfg.explorer || "" } } });
+    const netKey = (W3A.network || "sapphire_devnet").toUpperCase();
+    w3a = new Web3Auth({ clientId: W3A.clientId, web3AuthNetwork: WEB3AUTH_NETWORK[netKey] || WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
+      privateKeyProvider, uiConfig: { uxMode: "redirect" } });
+    await w3a.initModal();
+    return w3a;
+  }
+  async function loadWalletConnect() {
+    if (wcProvider) return wcProvider;
+    const { EthereumProvider } = await import("../vendor/walletconnect.esm.js");
+    wcProvider = await EthereumProvider.init({
+      projectId: WC_ID, chains: [arcCfg.chainId], rpcMap: { [arcCfg.chainId]: arcCfg.rpc },
+      optionalMethods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_sign", "wallet_switchEthereumChain", "wallet_addEthereumChain"],
+      showQrModal: true, qrModalOptions: { themeMode: document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark" },
+      metadata: { name: "A NEW ONE", description: "Earn on USDC: Morpho vaults on Arc.", url: "https://anewone.xyz", icons: ["https://anewone.xyz/apple-touch-icon.png"] },
+    });
+    return wcProvider;
+  }
+  const modal = $("walletModal");
+  function openPicker() {
+    $("gmailBtn").hidden = !W3A.clientId; $("wOr").hidden = !W3A.clientId;
+    $("wcBtn").hidden = !WC_ID;
+    const list = walletChoices();
+    $("walletList").innerHTML = list.map((d) => `<button class="wrow" data-rdns="${esc(d.info.rdns)}">${d.info.icon ? `<img src="${esc(d.info.icon)}" alt="">` : "🦊"}<span>${esc(d.info.name)}</span></button>`).join("")
+      || `<div class="hint">No browser wallet found. Install <a href="https://metamask.io" target="_blank" rel="noopener">MetaMask</a>, <a href="https://rabby.io" target="_blank" rel="noopener">Rabby</a> or <a href="https://www.okx.com/web3" target="_blank" rel="noopener">OKX</a>, or use one of the options above.</div>`;
+    $("walletList").querySelectorAll("[data-rdns]").forEach((b) => b.onclick = () => {
+      const d = list.find((x) => x.info.rdns === b.dataset.rdns);
+      if (d) use(d.provider, d.info.rdns).catch(fail);
+    });
+    modal.classList.add("open");
+  }
+  const fail = (e) => { modal.classList.remove("open"); alert(e.shortMessage || e.message || String(e)); };
+  $("walletX").onclick = () => modal.classList.remove("open");
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("open"); });
+  $("gmailBtn").onclick = async () => {
+    try {
+      $("gmailBtn").disabled = true;
+      const wa = await loadWeb3Auth();
+      try { localStorage.setItem(LAST_KEY, "google"); } catch {}
+      const p = await wa.connect();           // redirect flow: the page leaves and comes back
+      if (p) await use(p, "google");
+    } catch (e) { try { localStorage.removeItem(LAST_KEY); } catch {} fail(e); }
+    finally { $("gmailBtn").disabled = false; }
+  };
+  $("wcBtn").onclick = async () => {
+    try {
+      const p = await loadWalletConnect();
+      if (!p.session) await p.connect();
+      await use(p, "walletconnect");
+    } catch (e) { fail(e); }
+  };
+  async function use(provider, kind) {
+    active = provider; activeKind = kind;
+    const accts = await provider.request({ method: kind === "walletconnect" ? "eth_accounts" : "eth_requestAccounts" });
+    if (!accts || !accts[0]) throw new Error("No account");
+    if (kind !== "google") await ensureArc();
+    account = accts[0];
+    try { localStorage.setItem(LAST_KEY, kind); } catch {}
+    await loadKit();
+    adapter = await kitMod.createEthersAdapterFromProvider({ provider });
+    $("connectBtn").textContent = account.slice(0, 6) + "…" + account.slice(-4);
+    modal.classList.remove("open");
+    provider.on && provider.on("accountsChanged", () => location.reload());
+    provider.on && provider.on("chainChanged", () => location.reload());
+    provider.on && provider.on("disconnect", () => location.reload());
+    refreshPositions();
+  }
+  // back from a Web3Auth redirect, or a wallet used last time: pick it up without a click
+  (async () => {
+    let last = null; try { last = localStorage.getItem(LAST_KEY); } catch {}
+    if (!last) return;
+    try {
+      if (last === "google" && W3A.clientId) {
+        const wa = await loadWeb3Auth();
+        if (wa.connected && wa.provider) await use(wa.provider, "google");
+      } else if (last === "walletconnect" && WC_ID) {
+        const p = await loadWalletConnect();
+        if (p.session) await use(p, "walletconnect");
+      } else {
+        await new Promise((r) => setTimeout(r, 300));
+        const d = walletChoices().find((x) => x.info.rdns === last);
+        if (d) { const a = await d.provider.request({ method: "eth_accounts" }); if (a && a[0]) await use(d.provider, last); }
+      }
+    } catch {}
+  })();
   async function ensureArc() {
     const have = BigInt(await wallet().request({ method: "eth_chainId" }));
     if (have === BigInt(arcCfg.chainId)) return;
@@ -259,21 +395,7 @@
       } else throw e;
     }
   }
-  async function connect() {
-    if (!wallet()) { alert("No wallet found. Install MetaMask, OKX or another browser wallet, or bring funds in via Swap & Bridge first."); return; }
-    const [a] = await wallet().request({ method: "eth_requestAccounts" });
-    await ensureArc();
-    account = a;
-    await loadKit();
-    adapter = await kitMod.createEthersAdapterFromProvider({ provider: wallet() });
-    $("connectBtn").textContent = a.slice(0, 6) + "…" + a.slice(-4);
-    refreshPositions();
-  }
-  $("connectBtn").onclick = () => connect().catch((e) => alert(e.message || e));
-  if (wallet()) {
-    wallet().on && wallet().on("accountsChanged", () => location.reload());
-    wallet().on && wallet().on("chainChanged", () => location.reload());
-  }
+  $("connectBtn").onclick = () => { if (account) location.reload(); else openPicker(); };
   async function refreshPositions() {
     if (!account || !adapter) return;
     await Promise.all(vaults.map(async (v) => {
@@ -320,7 +442,7 @@
   function setStatus(t, cls) { const s = $("status"); s.textContent = t; s.className = "status " + (cls || ""); }
 
   $("goBtn").onclick = async () => {
-    if (!account) { try { await connect(); } catch (e) { setStatus(e.message || String(e), "err"); return; } await openSheet(cur); return; }
+    if (!account) { $("overlay").classList.remove("open"); openPicker(); return; }
     const amount = trim6($("amt").value.trim());
     if (!(Number(amount) > 0)) { setStatus("Enter an amount.", "err"); return; }
     $("goBtn").disabled = true;
