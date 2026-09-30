@@ -292,6 +292,7 @@
           blockExplorerUrls: arcCfg.explorer ? [arcCfg.explorer] : [] }] });
       } else throw e;
     }
+  }
 
   const LAST_KEY = "anewone_last_wallet";
   const discovered = new Map();
@@ -391,18 +392,31 @@
     } catch (e) { try { localStorage.removeItem(LAST_KEY); } catch {} fail(e); }
     finally { $("gmailBtn").disabled = false; }
   };
+  const withTimeout = (pr, ms, what) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => rej(new Error(what + " took too long. Open your wallet app and try again.")), ms))]);
+  const wcLabel = $("wcBtn").querySelector("span:last-child");
   $("wcBtn").onclick = async () => {
+    const orig = wcLabel.innerHTML;
+    $("wcBtn").disabled = true; wcLabel.textContent = "Opening WalletConnect…";
     try {
-      const p = await loadWalletConnect();
-      if (!p.session) await p.connect();
-      await use(wcFacade(p), "walletconnect");
-    } catch (e) { fail(e); }
+      const p = await withTimeout(loadWalletConnect(), 15000, "WalletConnect");
+      // a session left from an earlier visit may be dead on the wallet's side: a session that
+      // no longer answers is dropped and a fresh pairing opens instead of a silent hang
+      if (p.session) {
+        try { const a = await withTimeout(p.request({ method: "eth_accounts" }), 4000, "The old session"); if (!a || !a[0]) throw new Error("empty"); }
+        catch { try { await p.disconnect(); } catch {} }
+      }
+      if (!p.session) { wcLabel.textContent = "Approve in your wallet app…"; await p.connect(); }
+      await withTimeout(use(wcFacade(p), "walletconnect"), 20000, "Connecting");
+    } catch (e) { try { localStorage.removeItem(LAST_KEY); } catch {} fail(e); }
+    finally { $("wcBtn").disabled = false; wcLabel.innerHTML = orig; }
   };
   async function use(provider, kind) {
     active = provider; activeKind = kind;
     const accts = await provider.request({ method: kind === "walletconnect" ? "eth_accounts" : "eth_requestAccounts" });
     if (!accts || !accts[0]) throw new Error("No account");
-    if (kind !== "google") await ensureArc();
+    // WalletConnect pairs on Arc by requirement, and Web3Auth is built on it: only an injected
+    // wallet can be sitting on another chain
+    if (kind !== "google" && kind !== "walletconnect") await ensureArc();
     account = accts[0];
     try { localStorage.setItem(LAST_KEY, kind); } catch {}
     await loadKit();
@@ -423,16 +437,15 @@
         const wa = await loadWeb3Auth();
         if (wa.connected && wa.provider) await use(wa.provider, "google");
       } else if (last === "walletconnect" && WC_ID) {
-        const p = await loadWalletConnect();
-        if (p.session) await use(wcFacade(p), "walletconnect");
+        const p = await withTimeout(loadWalletConnect(), 15000, "WalletConnect");
+        if (p.session) await withTimeout(use(wcFacade(p), "walletconnect"), 20000, "Connecting");
       } else {
         await new Promise((r) => setTimeout(r, 300));
         const d = walletChoices().find((x) => x.info.rdns === last);
         if (d) { const a = await d.provider.request({ method: "eth_accounts" }); if (a && a[0]) await use(d.provider, last); }
       }
-    } catch {}
+    } catch { try { localStorage.removeItem(LAST_KEY); } catch {} }
   })();
-  }
   $("connectBtn").onclick = () => { if (account) location.reload(); else openPicker(); };
   async function refreshPositions() {
     if (!account || !adapter) return;
