@@ -210,6 +210,15 @@
   };
 
   const ERC20 = ["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)"];
+  // Morpho vaults are ERC-4626: the position is the assets the wallet's shares redeem for.
+  const ERC4626 = ["function balanceOf(address) view returns (uint256)", "function convertToAssets(uint256) view returns (uint256)"];
+  async function chainBalances(v) {
+    const rp = readProvider();
+    const t = new ethers.Contract(v.assetAddress, ERC20, rp), vc = new ethers.Contract(v.vaultAddress, ERC4626, rp);
+    const [raw, dec, shares] = await Promise.all([t.balanceOf(account), t.decimals(), vc.balanceOf(account)]);
+    const assets = shares > 0n ? await vc.convertToAssets(shares) : 0n;
+    return { wallet: ethers.formatUnits(raw, dec), vault: ethers.formatUnits(assets, dec) };
+  }
   const fmt = (n, d = 2) => Number(n).toLocaleString("en-US", { maximumFractionDigits: d });
   const money = (s) => { const n = Number(s); return n >= 1e6 ? "$" + fmt(n / 1e6, 2) + "M" : n >= 1e3 ? "$" + fmt(n / 1e3, 1) + "K" : "$" + fmt(n, 2); };
   const pct = (x) => (x == null ? "—" : fmt(x * 100, 2) + "%");
@@ -271,6 +280,19 @@
   // Whichever is picked ends up in `active`, and the Earn Kit adapter wraps that.
   let account = null, adapter = null, active = null, activeKind = null;
   const wallet = () => active;
+  async function ensureArc() {
+    const have = BigInt(await wallet().request({ method: "eth_chainId" }));
+    if (have === BigInt(arcCfg.chainId)) return;
+    try { await wallet().request({ method: "wallet_switchEthereumChain", params: [{ chainId: arcCfg.chainIdHex }] }); }
+    catch (e) {
+      if (e && (e.code === 4902 || /unrecognized|not added/i.test(e.message || ""))) {
+        await wallet().request({ method: "wallet_addEthereumChain", params: [{
+          chainId: arcCfg.chainIdHex, chainName: NET_NAME,
+          nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 }, rpcUrls: [arcCfg.rpc],
+          blockExplorerUrls: arcCfg.explorer ? [arcCfg.explorer] : [] }] });
+      } else throw e;
+    }
+
   const LAST_KEY = "anewone_last_wallet";
   const discovered = new Map();
   window.addEventListener("eip6963:announceProvider", (ev) => {
@@ -315,6 +337,34 @@
     });
     return wcProvider;
   }
+  // A WalletConnect provider sends every method to the wallet app, so on a phone each plain
+  // read (eth_call, gas estimate, receipt poll) meant a trip to the app and a wait for it to
+  // answer: the 20-second pause before the approve sheet. Reads are public data; they go to
+  // the site's RPC pool, and only what needs the wallet goes to the wallet.
+  const WALLET_METHODS = new Set(["eth_requestAccounts", "eth_accounts", "eth_chainId", "eth_sendTransaction", "eth_signTransaction",
+    "eth_sign", "personal_sign", "eth_signTypedData", "eth_signTypedData_v3", "eth_signTypedData_v4",
+    "wallet_switchEthereumChain", "wallet_addEthereumChain", "wallet_watchAsset", "wallet_getPermissions",
+    "wallet_requestPermissions", "wallet_sendCalls", "wallet_getCallsStatus", "wallet_getCapabilities"]);
+  const READ_URLS = [arcCfg.rpc, ...(arcCfg.rpcs || []).map((r) => (typeof r === "string" ? r : r.hosts && r.hosts.includes(location.hostname) ? r.url : null))].filter((u, i, a) => u && a.indexOf(u) === i);
+  const readProviders = new Map();
+  const readProvider = (u = READ_URLS[0]) => {
+    let p = readProviders.get(u);
+    if (!p) { p = new ethers.JsonRpcProvider(u, Number(arcCfg.chainId), { staticNetwork: true }); readProviders.set(u, p); }
+    return p;
+  };
+  async function rawRpc(method, params) {
+    let last = null;
+    for (const u of READ_URLS) {
+      try { return await readProvider(u).send(method, params || []); }
+      catch (e) { last = e; if (e && e.code === "CALL_EXCEPTION") throw e; }
+    }
+    throw last || new Error("no RPC answered");
+  }
+  const wcFacade = (p) => ({
+    request: (args) => WALLET_METHODS.has(args.method) ? p.request(args) : rawRpc(args.method, args.params),
+    on: (ev, fn) => p.on(ev, fn), removeListener: (ev, fn) => p.removeListener(ev, fn),
+    disconnect: () => p.disconnect(), get session() { return p.session; },
+  });
   const modal = $("walletModal");
   function openPicker() {
     $("gmailBtn").hidden = !W3A.clientId; $("wOr").hidden = !W3A.clientId;
@@ -345,7 +395,7 @@
     try {
       const p = await loadWalletConnect();
       if (!p.session) await p.connect();
-      await use(p, "walletconnect");
+      await use(wcFacade(p), "walletconnect");
     } catch (e) { fail(e); }
   };
   async function use(provider, kind) {
@@ -374,7 +424,7 @@
         if (wa.connected && wa.provider) await use(wa.provider, "google");
       } else if (last === "walletconnect" && WC_ID) {
         const p = await loadWalletConnect();
-        if (p.session) await use(p, "walletconnect");
+        if (p.session) await use(wcFacade(p), "walletconnect");
       } else {
         await new Promise((r) => setTimeout(r, 300));
         const d = walletChoices().find((x) => x.info.rdns === last);
@@ -382,18 +432,6 @@
       }
     } catch {}
   })();
-  async function ensureArc() {
-    const have = BigInt(await wallet().request({ method: "eth_chainId" }));
-    if (have === BigInt(arcCfg.chainId)) return;
-    try { await wallet().request({ method: "wallet_switchEthereumChain", params: [{ chainId: arcCfg.chainIdHex }] }); }
-    catch (e) {
-      if (e && (e.code === 4902 || /unrecognized|not added/i.test(e.message || ""))) {
-        await wallet().request({ method: "wallet_addEthereumChain", params: [{
-          chainId: arcCfg.chainIdHex, chainName: net === "mainnet" ? "Arc" : "Arc Testnet",
-          nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 }, rpcUrls: [arcCfg.rpc],
-          blockExplorerUrls: arcCfg.explorer ? [arcCfg.explorer] : [] }] });
-      } else throw e;
-    }
   }
   $("connectBtn").onclick = () => { if (account) location.reload(); else openPicker(); };
   async function refreshPositions() {
@@ -417,16 +455,23 @@
     $("overlay").classList.add("open");
     if (!account) { $("balL").textContent = "Wallet: connect first"; $("balR").textContent = ""; return; }
     $("balL").textContent = "Wallet: …"; $("balR").textContent = "In vault: …";
-    try {
-      const bp = new ethers.BrowserProvider(wallet(), Number(arcCfg.chainId));
-      const t = new ethers.Contract(v.assetAddress, ERC20, bp);
-      const [raw, dec] = await Promise.all([t.balanceOf(account), t.decimals()]);
-      walletBal = ethers.formatUnits(raw, dec);
-      const p = positions[v.vaultAddress] || await kit.getPosition({ from: { adapter, chain: CHAIN }, vaultAddress: v.vaultAddress }).catch(() => null);
-      vaultBal = p ? p.currentBalance : "0";
-    } catch { walletBal = "0"; vaultBal = "0"; }
+    await showBalances(v);
+  }
+  async function showBalances(v) {
+    try { const b = await chainBalances(v); walletBal = b.wallet; vaultBal = b.vault; }
+    catch { walletBal = "0"; vaultBal = "0"; }
     $("balL").textContent = `Wallet: ${fmt(walletBal, 2)} ${v.asset}`;
     $("balR").textContent = `In vault: ${fmt(vaultBal, 2)} ${v.asset}`;
+    if (Number(vaultBal) > 0) { positions[v.vaultAddress] = { currentBalance: vaultBal }; render(); }
+  }
+  // After a transaction the RPC pool can trail the wallet's node by a block or two: re-read
+  // until the number moves, so the sheet shows the deposit the moment the chain has it.
+  async function settleBalances(v, before) {
+    for (let i = 0; i < 8; i++) {
+      await showBalances(v);
+      if (vaultBal !== before) return;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
   }
   function setMode() {
     $("tabDep").classList.toggle("on", mode === "deposit");
@@ -447,18 +492,21 @@
     if (!(Number(amount) > 0)) { setStatus("Enter an amount.", "err"); return; }
     $("goBtn").disabled = true;
     setStatus(mode === "deposit" ? "Confirm the approval and the deposit in your wallet…" : "Confirm the withdrawal in your wallet…");
+    const before = vaultBal;
     try {
-      await ensureArc();
-      const params = { from: { adapter, chain: CHAIN }, vaultAddress: cur.vaultAddress, amount };
+      if (activeKind !== "google") await ensureArc();
+      // the atomic-batch probe (wallet_getCapabilities) is one more round trip to a phone
+      // wallet, and most of them answer it with an error: plain approve then deposit instead
+      const config = activeKind === "walletconnect" ? { batchTransactions: false } : undefined;
+      const params = { from: { adapter, chain: CHAIN }, vaultAddress: cur.vaultAddress, amount, config };
       const r = mode === "deposit" ? await kit.deposit(params) : await kit.withdraw(params);
       const tx = r.txHash || (r.transactions && r.transactions.at(-1)?.txHash) || "";
       const url = r.explorerUrl || (arcCfg.explorer && tx ? `${arcCfg.explorer.replace(/\/$/, "")}/tx/${tx}` : "");
       setStatus("", "ok");
       $("status").innerHTML = `${mode === "deposit" ? "Deposited" : "Withdrawn"} ${esc(amount)} ${esc(cur.asset)}. ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">View transaction ↗</a>` : ""}`;
-      delete positions[cur.vaultAddress];
-      await refreshPositions();
-      await openSheet(cur);
-      $("status").className = "status ok";
+      $("amt").value = "";
+      await settleBalances(cur, before);
+      refreshPositions();
     } catch (e) {
       setStatus(kitMod && kitMod.getErrorMessage ? kitMod.getErrorMessage(e) : (e.shortMessage || e.message || String(e)), "err");
     } finally { $("goBtn").disabled = false; }
