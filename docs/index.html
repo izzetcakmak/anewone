@@ -59,7 +59,7 @@
   .pill:hover { background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8)); color: var(--accent-ink); text-shadow: none; text-decoration: none; transform: translateY(-1px);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
   :root[data-theme="light"] .pill { box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); text-shadow: none; }
-  /* the two doors, Earn and AnewOne.Fun: same green, same width, side by side */
+  /* the two doors, Earn and AnewOne.Fun: same green, same width, side by side on a phone */
   .pill.fun { }
   .hide-sm { display: inline-flex; }
   .hero { padding: 96px 0 72px; text-align: center; }
@@ -114,12 +114,12 @@
   <div class="wrap bar">
     <a class="brand" href="/"><img src="brand/logo.png" alt="">A NEW ONE</a>
     <nav>
+      <a class="pill fun" href="earn/">Earn</a>
       <span class="pillwrap hide-sm"><a class="pill" href="#assets" id="assetsLink">Assets</a>
         <span class="note" id="assetsNote" role="status">Tokenized stocks are <b>coming soon</b>. Earn and Borrow are live today.</span></span>
-      <a class="pill hide-sm" href="#how">How it works</a>
-      <a class="pill fun" href="earn/">Earn</a>
-      <a class="pill hide-sm" href="docs.html">Docs</a>
       <a class="pill fun" href="fun/" title="The memecoin launchpad: bonding curves in USDC">AnewOne.Fun →</a>
+      <a class="pill hide-sm" href="#how">How it works</a>
+      <a class="pill hide-sm" href="docs.html">Docs</a>
     </nav>
   </div>
 </header>
