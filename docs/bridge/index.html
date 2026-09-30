@@ -723,9 +723,22 @@
     const box = document.getElementById("solhint");
     const phone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (show && phone) {
-      const here = location.href, ref = location.origin;
-      document.getElementById("solPhantom").href = "https://phantom.app/ul/browse/" + encodeURIComponent(here) + "?ref=" + encodeURIComponent(ref);
-      document.getElementById("solSolflare").href = "https://solflare.com/ul/v1/browse/" + encodeURIComponent(here) + "?ref=" + encodeURIComponent(ref);
+      const here = encodeURIComponent(location.href), ref = encodeURIComponent(location.origin);
+      // The app's own URL scheme opens it straight away; the https universal link is the
+      // fallback (it also reaches the App Store when the app is missing). On iOS a universal
+      // link only works from a real tap, so the scheme goes first and the link follows only
+      // if the page is still in front after a moment.
+      const wire = (id, scheme, universal) => {
+        const a = document.getElementById(id);
+        a.href = universal;
+        a.onclick = (ev) => {
+          ev.preventDefault();
+          location.href = scheme;
+          setTimeout(() => { if (!document.hidden) location.href = universal; }, 1500);
+        };
+      };
+      wire("solPhantom", "phantom://browse/" + here + "?ref=" + ref, "https://phantom.app/ul/browse/" + here + "?ref=" + ref);
+      wire("solSolflare", "solflare://ul/v1/browse/" + here + "?ref=" + ref, "https://solflare.com/ul/v1/browse/" + here + "?ref=" + ref);
     }
     box.hidden = !(show && phone);
   }
