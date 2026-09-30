@@ -42,10 +42,10 @@
   .brand img { width: 40px; height: 40px; border-radius: 10px; }
   nav { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
   /* every pill one height, so the row reads as one row on a phone */
-  .pill { display: inline-flex; align-items: center; height: 38px; padding: 0 16px; font: 500 14px "JetBrains Mono", monospace; border: 1px solid var(--line); border-radius: 999px; white-space: nowrap; }
-  .pill:hover { border-color: var(--accent); }
+  .pill { display: inline-flex; align-items: center; justify-content: center; height: 40px; width: 148px; padding: 0 12px; font: 700 14px "JetBrains Mono", monospace; background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent); border-radius: 999px; white-space: nowrap; }
+  .pill:hover { filter: brightness(1.08); text-decoration: none; }
   /* the two doors, Earn and AnewOne.Fun: same green, same width, side by side */
-  .pill.fun { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; justify-content: center; min-width: 132px; }
+  .pill.fun { }
   .hide-sm { display: inline-block; }
   .hero { padding: 96px 0 72px; text-align: center; }
   .eyebrow { font: 700 12px "JetBrains Mono", monospace; letter-spacing: .2em; color: var(--accent); text-transform: uppercase; }
@@ -70,6 +70,8 @@
   .stats b { display: block; font: 700 30px "JetBrains Mono", monospace; }
   .stats span { font: 600 11px "JetBrains Mono", monospace; letter-spacing: .16em; color: var(--muted); text-transform: uppercase; }
   .funbox { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: var(--bg-2); color: var(--text); border: 1px solid var(--accent); border-radius: 12px; padding: 12px 18px; font: 500 14px Inter, sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,.35); transition: .25s; z-index: 50; max-width: calc(100% - 32px); text-align: center; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
   footer { padding: 32px 0 48px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); }
   footer .links { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; }
   @media (max-width: 800px) {
@@ -90,7 +92,7 @@
   <div class="wrap bar">
     <a class="brand" href="/"><img src="brand/logo.png" alt="">A NEW ONE</a>
     <nav>
-      <a class="pill hide-sm" href="#assets">Assets</a>
+      <a class="pill hide-sm" href="#assets" id="assetsLink">Assets</a>
       <a class="pill hide-sm" href="#how">How it works</a>
       <a class="pill fun" href="earn/">Earn</a>
       <a class="pill hide-sm" href="docs.html">Docs</a>
@@ -117,7 +119,7 @@
       <div class="grid">
         <div class="card"><div class="tag">FUNDS</div><h3>Tokenized funds</h3><p>Money-market and treasury funds from licensed managers, issued through Centrifuge and held as on-chain shares.</p></div>
         <div class="card"><div class="tag">CREDIT</div><h3>Private credit</h3><p>Real-world credit pools on Centrifuge rails, with the issuer, the collateral and the reporting visible before you commit.</p></div>
-        <div class="card"><div class="tag">EQUITIES</div><h3>Tokenized stocks</h3><p>Stock tokens from licensed issuers only, fully backed and redeemable on their terms. We show them; they issue them.</p></div>
+        <div class="card"><div class="tag">EQUITIES · COMING SOON</div><h3>Tokenized stocks</h3><p>Stock tokens from licensed issuers only, fully backed and redeemable on their terms. We show them; they issue them.</p></div>
       </div>
     </div>
   </section>
@@ -176,5 +178,16 @@
     Nothing on this site is an offer or investment advice. Assets are issued by third-party regulated entities and may be limited to eligible investors in some jurisdictions.
   </div>
 </footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+  // Assets is not stocked yet: the pill says so on the way down to the section
+  (function () {
+    var t = document.getElementById("toast"), timer = null;
+    document.getElementById("assetsLink").addEventListener("click", function () {
+      t.textContent = "Tokenized stocks are coming soon. Earn and Borrow are live today.";
+      t.classList.add("show"); clearTimeout(timer); timer = setTimeout(function () { t.classList.remove("show"); }, 3500);
+    });
+  })();
+</script>
 </body>
 </html>
