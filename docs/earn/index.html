@@ -466,6 +466,13 @@
     "wallet_requestPermissions", "wallet_sendCalls", "wallet_getCallsStatus", "wallet_getCapabilities"]);
   const READ_URLS = [arcCfg.rpc, ...(arcCfg.rpcs || []).map((r) => (typeof r === "string" ? r : r.hosts && r.hosts.includes(location.hostname) ? r.url : null))].filter((u, i, a) => u && a.indexOf(u) === i);
   const readProviders = new Map();
+  // one ethers provider that tries the pool in order: a 429 or a dead host moves to the next
+  let _pool = null;
+  const poolProvider = () => {
+    if (_pool) return _pool;
+    _pool = new ethers.FallbackProvider(READ_URLS.map((u, i) => ({ provider: readProvider(u), priority: i + 1, weight: 1, stallTimeout: 2500 })), Number(arcCfg.chainId), { quorum: 1 });
+    return _pool;
+  };
   const readProvider = (u = READ_URLS[0]) => {
     let p = readProviders.get(u);
     if (!p) { p = new ethers.JsonRpcProvider(u, Number(arcCfg.chainId), { staticNetwork: true }); readProviders.set(u, p); }
@@ -599,10 +606,16 @@ Time: ${new Date().toISOString()}`;
     account = accts[0];
     try { localStorage.setItem(LAST_KEY, kind); } catch {}
     await loadKit();
-    adapter = await kitMod.createEthersAdapterFromProvider({ provider });
+    // Both adapters read the chain through the site's RPC pool, not the single endpoint Circle's
+    // chain table names (rpc.mainnet.arc.io), which a phone browser could not reach ("Load
+    // failed", 1 Oct 2026). Signing still goes to the wallet.
+    adapter = await kitMod.createEthersAdapterFromProvider({ provider, getProvider: () => poolProvider() });
     // Borrow needs an atomic batch: the viem "next" adapter gives a plain wallet one on Arc
     // through the chain's sender-preserving batcher (the ethers adapter has no batching)
-    try { vadapter = kitMod.createViemNextAdapterFromProvider({ provider }); } catch (e) { console.warn("viem adapter", e); vadapter = null; }
+    try {
+      vadapter = kitMod.createViemNextAdapterFromProvider({ provider,
+        getPublicClient: ({ chain }) => kitMod.createPublicClient({ chain, transport: kitMod.fallback(READ_URLS.map((u) => kitMod.http(u, { timeout: 15000 })), { rank: false }) }) });
+    } catch (e) { console.warn("viem adapter", e); vadapter = null; }
     $("connectBtn").textContent = account.slice(0, 6) + "…" + account.slice(-4);
     modal.classList.remove("open");
     provider.on && provider.on("accountsChanged", () => location.reload());

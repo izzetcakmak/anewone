@@ -7,3 +7,6 @@ export { createEthersAdapterFromProvider } from "@circle-fin/adapter-ethers-v6";
 // (EOA) on Arc through the sender-preserving batcher the chain publishes; the ethers adapter
 // cannot, so Borrow runs on this one while Earn keeps ethers.
 export { createViemAdapterFromProvider as createViemNextAdapterFromProvider } from "@circle-fin/adapter-viem-v2/next";
+// viem's client pieces, so the page can hand the Borrow adapter a public client that reads
+// through the site's own RPC pool instead of the one endpoint Circle's chain table names.
+export { createPublicClient, http, fallback } from "viem";

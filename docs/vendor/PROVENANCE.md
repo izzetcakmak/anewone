@@ -180,13 +180,13 @@ To re-verify:
 |---|---|
 | Package | `@circle-fin/earn-kit` 1.8.1 + `@circle-fin/borrow-kit` 1.0.0 + `@circle-fin/adapter-ethers-v6` + `@circle-fin/adapter-viem-v2` 1.19 (`/next`, with viem) (Circle, Apache-2.0) |
 | File | `earn-kit.js` (ESM, minified) |
-| Size | 2,002,356 bytes |
-| SHA-256 | `982e027ff34873d1d88a38b2e4592b3203723511c2fe12b1fc20f777db5102ea` |
+| Size | 2,002,407 bytes |
+| SHA-256 | `76ef39488c455d7f8e1f551b931dd9af2288eb27ff6d9033c06e90ac2fa4a118` |
 
 **Not an upstream release file**: bundled locally with esbuild from the official npm packages,
 recipe in `build-earn/` (`entry.mjs` re-exports `EarnKit`, `BorrowKit`, `KitError`,
 `getErrorMessage`, `isRetryableError`, `createEthersAdapterFromProvider` and the viem `/next`
-adapter as `createViemNextAdapterFromProvider`, which Borrow uses because a loan is one atomic
+adapter as `createViemNextAdapterFromProvider`, plus viem's `createPublicClient`, `http` and `fallback` so the page can point that adapter's reads at the site's RPC pool, which Borrow uses because a loan is one atomic
 batch: on Arc a plain wallet gets that through the chain's sender-preserving batcher, which only
 this adapter knows; `build.mjs` prints the hash). Runs in Circle's permissionless mode: no API key is bundled or needed. Vault and market
 data come from `https://api.circle.com`; deposits, withdrawals and loan operations are signed by
