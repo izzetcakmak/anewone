@@ -118,6 +118,7 @@
   .nowallet b { color: var(--text); }
   .nowallet .wcbtn { display: block; width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: var(--r-sm); background: var(--grad); color: var(--bg); font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; }
   .nowallet .wcbtn:disabled { opacity: .55; cursor: default; }
+  .nowallet a.wcbtn { text-align: center; text-decoration: none; }
   .onramp .btn { width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: var(--r-sm); background: var(--grad); color: var(--bg); font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; }
   .onramp .btn:disabled { opacity: .55; cursor: default; }
   /* Circle's onramp renders in a cross-origin iframe that cannot size itself, so the host
@@ -286,6 +287,13 @@
       </div>
       <div id="wayChain">
         <div id="bridge"></div>
+        <!-- a phone browser has no Solana wallet to discover: Phantom and Solflare each have a
+             browser of their own, and this page opens inside it with the wallet attached -->
+        <div id="solhint" class="nowallet" hidden>
+          <b>No Solana wallet in this browser.</b> On a phone, open this page inside your wallet app's browser and pay from there.
+          <a class="wcbtn" id="solPhantom" href="#" rel="noopener noreferrer">👻 Open in Phantom</a>
+          <a class="wcbtn" id="solSolflare" href="#" rel="noopener noreferrer">🔥 Open in Solflare</a>
+        </div>
         <div id="nowallet" class="nowallet" hidden>
           <b>No wallet found in this browser.</b> Connect a wallet app over WalletConnect, install a browser wallet such as MetaMask, Rabby or Coinbase Wallet,
           or open this page inside your wallet app's browser. Google sign-in wallets from the floor cannot bridge from here yet.
@@ -699,6 +707,29 @@
   }
   if (wcBtn) { wcBtn.hidden = !WC_ID; wcBtn.onclick = () => connectWalletApp(false); }
 
+  // Phantom and Solflare open a URL inside their own browser through a universal link; the
+  // page arrives there with the wallet injected, so the Solana source works as on a desktop.
+  // the kit keeps that error inside its own box (no event for it): watch the box instead
+  let solWatch = null;
+  function watchSolError() {
+    if (solWatch) solWatch.disconnect();
+    solWatch = new MutationObserver(() => {
+      const err = document.querySelector("#bridge .abk-err");
+      if (err && err.style.display !== "none" && /No Solana wallet/i.test(err.textContent)) solHint(true);
+    });
+    solWatch.observe(document.getElementById("bridge"), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["style"] });
+  }
+  function solHint(show) {
+    const box = document.getElementById("solhint");
+    const phone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (show && phone) {
+      const here = location.href, ref = location.origin;
+      document.getElementById("solPhantom").href = "https://phantom.app/ul/browse/" + encodeURIComponent(here) + "?ref=" + encodeURIComponent(ref);
+      document.getElementById("solSolflare").href = "https://solflare.com/ul/v1/browse/" + encodeURIComponent(here) + "?ref=" + encodeURIComponent(ref);
+    }
+    box.hidden = !(show && phone);
+  }
+
   // ---- mount
   let kit = null;
   const coinLink = document.getElementById("coinLink");
@@ -733,11 +764,13 @@
       defaultSource: net === "mainnet" ? "base" : "base-sepolia",
       // USDC just landed from the bridge: the send and swap cards show it at once
       onMinted: () => { try { sendRefresh(); swRefreshBalances(); swLoadHeld(); } catch {} },
+      onEvent: (e) => { if (e.type === "solana_connected") solHint(false); },
       onDestination: (t) => {
         const tok = tokens.find((x) => x.address === buySel.value);
         if (tok) { coinLink.innerHTML = ""; const a = document.createElement("a"); a.href = "../#t=" + tok.address.toLowerCase(); a.textContent = "Open $" + tok.symbol + " on the floor →"; coinLink.append(a); coinLink.hidden = false; }
       },
     });
+    watchSolError();
   }
   buySel.addEventListener("change", boot);
   lifiReady.then(async () => { boot(); await loadTokens(); if (buySel.value) boot(); });
