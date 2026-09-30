@@ -85,6 +85,13 @@
   .stats b { display: block; font: 700 30px "JetBrains Mono", monospace; }
   .stats span { font: 600 11px "JetBrains Mono", monospace; letter-spacing: .16em; color: var(--muted); text-transform: uppercase; }
   .funbox { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .pillwrap { position: relative; display: inline-flex; }
+  .note { position: absolute; top: calc(100% + 12px); left: 50%; transform: translate(-50%, -6px); opacity: 0; pointer-events: none; transition: .2s; z-index: 60;
+    width: max-content; max-width: 280px; padding: 10px 14px; border-radius: 12px; font: 500 13px Inter, sans-serif; line-height: 1.4; text-align: center;
+    background: var(--bg-2); color: var(--text); border: 1px solid rgba(var(--accent-rgb), .6); box-shadow: 0 10px 30px rgba(0,0,0,.4), 0 0 0 1px rgba(var(--accent-rgb), .08); }
+  .note b { color: var(--accent); }
+  .note::before { content: ""; position: absolute; left: 50%; top: -7px; width: 12px; height: 12px; transform: translateX(-50%) rotate(45deg); background: var(--bg-2); border-left: 1px solid rgba(var(--accent-rgb), .6); border-top: 1px solid rgba(var(--accent-rgb), .6); }
+  .note.show { opacity: 1; transform: translate(-50%, 0); }
   .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: var(--bg-2); color: var(--text); border: 1px solid var(--accent); border-radius: 12px; padding: 12px 18px; font: 500 14px Inter, sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,.35); transition: .25s; z-index: 50; max-width: calc(100% - 32px); text-align: center; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
   footer { padding: 32px 0 48px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); }
@@ -107,7 +114,8 @@
   <div class="wrap bar">
     <a class="brand" href="/"><img src="brand/logo.png" alt="">A NEW ONE</a>
     <nav>
-      <a class="pill hide-sm" href="#assets" id="assetsLink">Assets</a>
+      <span class="pillwrap hide-sm"><a class="pill" href="#assets" id="assetsLink">Assets</a>
+        <span class="note" id="assetsNote" role="status">Tokenized stocks are <b>coming soon</b>. Earn and Borrow are live today.</span></span>
       <a class="pill hide-sm" href="#how">How it works</a>
       <a class="pill fun" href="earn/">Earn</a>
       <a class="pill hide-sm" href="docs.html">Docs</a>
@@ -193,15 +201,15 @@
     Nothing on this site is an offer or investment advice. Assets are issued by third-party regulated entities and may be limited to eligible investors in some jurisdictions.
   </div>
 </footer>
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
-  // Assets is not stocked yet: the pill says so on the way down to the section
+  // Assets is not stocked yet: the pill says so right under itself, and the page stays put
   (function () {
-    var t = document.getElementById("toast"), timer = null;
-    document.getElementById("assetsLink").addEventListener("click", function () {
-      t.textContent = "Tokenized stocks are coming soon. Earn and Borrow are live today.";
-      t.classList.add("show"); clearTimeout(timer); timer = setTimeout(function () { t.classList.remove("show"); }, 3500);
+    var n = document.getElementById("assetsNote"), timer = null;
+    document.getElementById("assetsLink").addEventListener("click", function (e) {
+      e.preventDefault();
+      n.classList.add("show"); clearTimeout(timer); timer = setTimeout(function () { n.classList.remove("show"); }, 4000);
     });
+    document.addEventListener("click", function (e) { if (!e.target.closest("#assetsLink")) n.classList.remove("show"); });
   })();
 </script>
 </body>
