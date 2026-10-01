@@ -154,6 +154,14 @@
   .amt { display: flex; align-items: center; border: 1px solid var(--border-2); border-radius: var(--r-sm); padding: 6px 6px 6px 14px; background: var(--bg); }
   .amt input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font: 600 22px var(--mono); outline: none; }
   .amt button { padding: 6px 10px; border: 1px solid var(--border-2); border-radius: 7px; background: var(--bg-2); color: var(--dim); font: 600 11px var(--mono); }
+  .fromrow { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font: 500 12px var(--mono); color: var(--faint); }
+  .fromrow[hidden] { display: none; }
+  .fromchips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .fromchips button { padding: 6px 10px; border: 1px solid var(--border-2); border-radius: 999px; background: var(--bg-2); color: var(--dim); font: 500 12px var(--mono); }
+  .fromchips button.on { background: var(--accent-soft); color: var(--accent); border-color: rgba(var(--accent-rgb), .5); }
+  .xq { background: var(--card); border-radius: var(--r-sm); padding: 10px 12px; margin: -6px 0 14px; font: 500 12px var(--mono); color: var(--dim); display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; }
+  .xq b { color: var(--text); text-align: right; }
+  .xq[hidden] { display: none; }
   .bal { display: flex; justify-content: space-between; color: var(--faint); font: 500 12px var(--mono); margin: 8px 2px 16px; }
   .sheet .go { width: 100%; padding: 13px; border: 0; border-radius: var(--r-sm); background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 15px; }
   .sheet .go:disabled { opacity: .5; cursor: default; }
@@ -242,8 +250,10 @@
     <h2 id="shName">Vault</h2>
     <p class="sub" id="shSub"></p>
     <div class="tabs"><button id="tabDep" class="on">Deposit</button><button id="tabWd">Withdraw</button></div>
+    <div class="fromrow" id="fromRow"><span>From</span><div class="fromchips" id="fromChips"></div></div>
     <div class="amt"><input id="amt" inputmode="decimal" placeholder="0.00" autocomplete="off"><button id="maxBtn">MAX</button></div>
     <div class="bal"><span id="balL">Wallet: …</span><span id="balR">In vault: …</span></div>
+    <div class="xq" id="xq" hidden></div>
     <button class="go" id="goBtn">Deposit</button>
     <div class="status" id="status"></div>
     <button class="close" id="closeBtn">Close</button>
@@ -475,7 +485,8 @@
     if (wcProvider) return wcProvider;
     const { EthereumProvider } = await import("../vendor/walletconnect.esm.js");
     wcProvider = await EthereumProvider.init({
-      projectId: WC_ID, chains: [arcCfg.chainId], rpcMap: { [arcCfg.chainId]: arcCfg.rpc },
+      projectId: WC_ID, chains: [arcCfg.chainId], optionalChains: SOURCES.map((c) => c.chainId),
+      rpcMap: { [arcCfg.chainId]: arcCfg.rpc, ...Object.fromEntries(SOURCES.map((c) => [c.chainId, c.rpc[0]])) },
       optionalMethods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_sign", "wallet_switchEthereumChain", "wallet_addEthereumChain"],
       showQrModal: true, qrModalOptions: { themeMode: document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark" },
       metadata: { name: "A NEW ONE", description: "Earn on USDC: Morpho vaults on Arc.", url: "https://anewone.xyz", icons: ["https://anewone.xyz/apple-touch-icon.png"] },
@@ -490,10 +501,22 @@
     "eth_sign", "personal_sign", "eth_signTypedData", "eth_signTypedData_v3", "eth_signTypedData_v4",
     "wallet_switchEthereumChain", "wallet_addEthereumChain", "wallet_watchAsset", "wallet_getPermissions",
     "wallet_requestPermissions", "wallet_sendCalls", "wallet_getCallsStatus", "wallet_getCapabilities"]);
+  // Where a deposit can come from without leaving the page: Circle bridges USDC from these
+  // chains into the vault on Arc (the wallet only signs an ERC-3009 authorization there, no
+  // gas on the source). Public RPCs for the balance read and for the kit's own reads.
+  const SOURCES = net === "mainnet" ? [
+    { key: "Base", name: "Base", chainId: 8453, hex: "0x2105", rpc: ["https://mainnet.base.org", "https://base-rpc.publicnode.com"], usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", explorer: "https://basescan.org" },
+    { key: "Ethereum", name: "Ethereum", chainId: 1, hex: "0x1", rpc: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"], usdc: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", explorer: "https://etherscan.io" },
+    { key: "Arbitrum", name: "Arbitrum", chainId: 42161, hex: "0xa4b1", rpc: ["https://arb1.arbitrum.io/rpc", "https://arbitrum-one-rpc.publicnode.com"], usdc: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", explorer: "https://arbiscan.io" },
+  ] : [
+    { key: "Base_Sepolia", name: "Base Sepolia", chainId: 84532, hex: "0x14a34", rpc: ["https://sepolia.base.org"], usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", explorer: "https://sepolia.basescan.org" },
+    { key: "Ethereum_Sepolia", name: "Ethereum Sepolia", chainId: 11155111, hex: "0xaa36a7", rpc: ["https://ethereum-sepolia-rpc.publicnode.com"], usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", explorer: "https://sepolia.etherscan.io" },
+  ];
+  const srcById = (id) => SOURCES.find((c) => c.chainId === Number(id));
   const READ_URLS = [arcCfg.rpc, ...(arcCfg.rpcs || []).map((r) => (typeof r === "string" ? r : r.hosts && r.hosts.includes(location.hostname) ? r.url : null))].filter((u, i, a) => u && a.indexOf(u) === i);
   const readProviders = new Map();
   // one ethers provider that tries the pool in order: a 429 or a dead host moves to the next
-  let _pool = null;
+  let _pool = null; const srcProviders = new Map();
   const poolProvider = () => {
     if (_pool) return _pool;
     _pool = new ethers.FallbackProvider(READ_URLS.map((u, i) => ({ provider: readProvider(u), priority: i + 1, weight: 1, stallTimeout: 2500 })), Number(arcCfg.chainId), { quorum: 1 });
@@ -514,8 +537,20 @@
     }
     throw last || new Error("no RPC answered");
   }
+  // reads go to the chain the session is on: Arc through the pool, a source chain through its
+  // own public RPC (a cross-chain deposit reads the USDC balance and nonce on Base, say)
+  async function srcRpc(c, method, params) {
+    let last = null;
+    for (const u of c.rpc) {
+      try { const r = await fetch(u, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: params || [] }), signal: AbortSignal.timeout(15000) });
+        const j = await r.json(); if (j.error) { const e = new Error(j.error.message || "rpc error"); e.code = j.error.code; e.data = j.error.data; throw e; } return j.result; }
+      catch (e) { last = e; if (e && e.data) throw e; }
+    }
+    throw last || new Error("no RPC answered");
+  }
   const wcFacade = (p) => ({
-    request: (args) => WALLET_METHODS.has(args.method) ? p.request(args) : rawRpc(args.method, args.params),
+    request: (args) => { if (WALLET_METHODS.has(args.method)) return p.request(args); const c = srcById(p.chainId); return c ? srcRpc(c, args.method, args.params) : rawRpc(args.method, args.params); },
+    get chainId() { return p.chainId; },
     on: (ev, fn) => p.on(ev, fn), removeListener: (ev, fn) => p.removeListener(ev, fn),
     disconnect: () => p.disconnect(), get session() { return p.session; },
   });
@@ -640,7 +675,12 @@ Time: ${new Date().toISOString()}`;
     // Both adapters read the chain through the site's RPC pool, not the single endpoint Circle's
     // chain table names (rpc.mainnet.arc.io), which a phone browser could not reach ("Load
     // failed", 1 Oct 2026). Signing still goes to the wallet.
-    adapter = await kitMod.createEthersAdapterFromProvider({ provider, getProvider: () => poolProvider() });
+    adapter = await kitMod.createEthersAdapterFromProvider({ provider, getProvider: ({ chain }) => {
+      const c = chain && srcById(chain.chainId);
+      if (!c) return poolProvider();
+      if (!srcProviders.has(c.chainId)) srcProviders.set(c.chainId, new ethers.FallbackProvider(c.rpc.map((u, i) => { const r = new ethers.FetchRequest(u); r.timeout = 8000; return { provider: new ethers.JsonRpcProvider(r, c.chainId, { staticNetwork: true }), priority: i + 1, weight: 1, stallTimeout: 2500 }; }), c.chainId, { quorum: 1 }));
+      return srcProviders.get(c.chainId);
+    } });
     // Borrow needs an atomic batch: the viem "next" adapter gives a plain wallet one on Arc
     // through the chain's sender-preserving batcher (the ethers adapter has no batching)
     try {
@@ -700,11 +740,53 @@ Time: ${new Date().toISOString()}`;
 
   // ---- deposit / withdraw sheet ----
   let cur = null, mode = "deposit", walletBal = "0", vaultBal = "0";
+  // which chain the deposit comes from: null is Arc itself; only USDC vaults can be fed from
+  // another chain (the bridge carries USDC)
+  let src = null, xqTimer = null, xquote = null;
+  function paintFrom() {
+    const can = mode === "deposit" && cur && cur.asset === "USDC";
+    $("fromRow").hidden = !can;
+    if (!can) { src = null; $("xq").hidden = true; return; }
+    $("fromChips").innerHTML = [`<button data-src="" class="${src ? "" : "on"}">Arc</button>`]
+      .concat(SOURCES.map((c) => `<button data-src="${c.key}" class="${src && src.key === c.key ? "on" : ""}">${esc(c.name)}</button>`)).join("");
+  }
+  $("fromChips").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-src]"); if (!b) return;
+    src = b.dataset.src ? SOURCES.find((c) => c.key === b.dataset.src) : null;
+    paintFrom(); $("xq").hidden = true; xquote = null; setStatus(""); lnXBalances(); requote();
+  });
+  async function srcUsdcBalance(c) {
+    for (const u of c.rpc) {
+      try { const p = new ethers.JsonRpcProvider(u, c.chainId, { staticNetwork: true }); const raw = await new ethers.Contract(c.usdc, ERC20, p).balanceOf(account); return ethers.formatUnits(raw, 6); } catch {}
+    }
+    throw new Error("could not read " + c.name);
+  }
+  async function lnXBalances() {
+    if (!src || !account) return;
+    $("balL").textContent = `USDC on ${src.name}: …`;
+    try { walletBal = await srcUsdcBalance(src); $("balL").textContent = `USDC on ${src.name}: ${fmt(walletBal, 2)}`; }
+    catch { walletBal = "0"; $("balL").textContent = `USDC on ${src.name}: could not read`; }
+  }
+  $("amt").addEventListener("input", () => { clearTimeout(xqTimer); xqTimer = setTimeout(requote, 500); });
+  async function requote() {
+    $("xq").hidden = true; xquote = null;
+    const amount = trim6($("amt").value.trim());
+    if (!src || !account || !(Number(amount) > 0) || mode !== "deposit") return;
+    try {
+      const q = await kit.getDepositQuote({ from: { adapter, chain: src.key }, chain: CHAIN, address: account, vaultAddress: cur.vaultAddress, amount, transferSpeed: "FAST" });
+      xquote = q;
+      const fees = (q.fees || []).map((f) => [`Fee · ${f.type || f.symbol || "bridge"}`, `${fmt(f.amount, 6)} ${f.symbol || f.token || "USDC"}`]);
+      const total = (q.fees || []).reduce((a, f) => a + Number(f.amount || 0), 0);
+      const rows = [["Route", `${src.name} → Arc, Circle CCTP (fast)`], ...fees, ["Arrives in vault", `${fmt(Math.max(0, Number(amount) - total), 6)} USDC`], ["Expected shares", q.expectedShares ? fmt(q.expectedShares.amount, 6) : "—"], ["Gas on " + src.name, "none, one signature"]];
+      $("xq").innerHTML = rows.map(([a, b]) => `<span>${esc(a)}</span><b>${esc(b)}</b>`).join("");
+      $("xq").hidden = false;
+    } catch (e) { setStatus(kitMod.getErrorMessage ? kitMod.getErrorMessage(e) : (e.message || String(e)), "err"); }
+  }
   async function openSheet(v) {
     cur = v; mode = "deposit"; setMode();
     $("shName").textContent = v.name;
     $("shSub").textContent = `${pct(v.currentApy)} APY · by ${v.manager && v.manager.name ? v.manager.name : "unlisted curator"} · ${v.asset} on ${CHAIN.replace("_", " ")}`;
-    $("amt").value = ""; setStatus("");
+    $("amt").value = ""; setStatus(""); src = null; xquote = null; $("xq").hidden = true; paintFrom();
     $("overlay").classList.add("open");
     if (!account) { $("balL").textContent = "Wallet: connect first"; $("balR").textContent = ""; return; }
     $("balL").textContent = "Wallet: …"; $("balR").textContent = "In vault: …";
@@ -736,6 +818,7 @@ Time: ${new Date().toISOString()}`;
     $("tabDep").classList.toggle("on", mode === "deposit");
     $("tabWd").classList.toggle("on", mode === "withdraw");
     $("goBtn").textContent = mode === "deposit" ? "Deposit" : "Withdraw";
+    paintFrom(); $("xq").hidden = true; xquote = null;
   }
   $("tabDep").onclick = () => { mode = "deposit"; setMode(); };
   $("tabWd").onclick = () => { mode = "withdraw"; setMode(); };
@@ -745,6 +828,7 @@ Time: ${new Date().toISOString()}`;
   const GAS_RESERVE = 0.05;
   $("maxBtn").onclick = () => {
     if (mode !== "deposit") { $("amt").value = trim6(vaultBal); return; }
+    if (src) { $("amt").value = trim6(walletBal); requote(); return; }
     const isGas = cur && String(cur.assetAddress).toLowerCase() === "0x3600000000000000000000000000000000000000";
     const v = Math.max(0, Number(walletBal) - (isGas ? GAS_RESERVE : 0));
     $("amt").value = trim6(v.toFixed(6));
@@ -755,6 +839,34 @@ Time: ${new Date().toISOString()}`;
   const trim6 = (s) => { const [a, b = ""] = String(s).split("."); return b ? `${a}.${b.slice(0, 6)}`.replace(/\.?0+$/, "") : a; };
   function setStatus(t, cls) { const s = $("status"); s.textContent = t; s.className = "status " + (cls || ""); }
 
+  // From another chain: the wallet switches to the source, signs one ERC-3009 authorization
+  // (no gas there), Circle pulls the USDC, bridges it over CCTP and deposits into the vault
+  // for this same address on Arc. The bridge is followed by its execution id until it lands.
+  async function crossChainDeposit(amount, config) {
+    if (!xquote) await requote();
+    if (!xquote) throw new Error("No quote for this amount yet; try again in a moment.");
+    const maxFee = String((xquote.fees || []).reduce((a, f) => a + Number(f.amount || 0), 0).toFixed(6));
+    setStatus(`Switch to ${src.name} in your wallet and sign the authorization…`);
+    const r = await kit.deposit({ from: { adapter, chain: src.key }, to: { chain: CHAIN, recipientAddress: account }, vaultAddress: cur.vaultAddress, amount, maxFee, transferSpeed: "FAST", config });
+    const execId = r.execId || (r.bridge && r.bridge.execId);
+    $("status").className = "status";
+    $("status").textContent = `Signed. USDC is on its way from ${src.name} to the vault on Arc (a few minutes)…`;
+    if (execId) {
+      const w = await kit.waitForCrossChainDeposit({ execId, pollIntervalMs: 6000, maxWaitMs: 25 * 60 * 1000 });
+      const dst = w.status && w.status.destination && w.status.destination.txHash;
+      const url = dst && arcCfg.explorer ? `${arcCfg.explorer.replace(/\/$/, "")}/tx/${dst}` : "";
+      if (w.outcome === "complete") {
+        $("status").className = "status ok";
+        $("status").innerHTML = `Deposited ${esc(amount)} USDC from ${esc(src.name)} into ${esc(cur.name)}. ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">View on Arc ↗</a>` : ""}`;
+      } else if (w.outcome === "timeout") {
+        setStatus(`Still bridging (${w.status && w.status.status}). Your USDC is with Circle's bridge; the vault balance updates when it lands.`);
+      } else throw new Error(`Bridge ${w.outcome}: ${w.status && w.status.status}`);
+    }
+    $("amt").value = ""; $("xq").hidden = true; xquote = null;
+    const before = vaultBal; await settleBalances(cur, before); refreshPositions();
+    // back on Arc for whatever comes next
+    try { await ensureArc(); } catch {}
+  }
   $("goBtn").onclick = async () => {
     if (!account) { $("overlay").classList.remove("open"); openPicker(); return; }
     const amount = trim6($("amt").value.trim());
@@ -768,6 +880,7 @@ Time: ${new Date().toISOString()}`;
       // the atomic-batch probe (wallet_getCapabilities) is one more round trip to a phone
       // wallet, and most of them answer it with an error: plain approve then deposit instead
       const config = activeKind === "walletconnect" ? { batchTransactions: false } : undefined;
+      if (mode === "deposit" && src) { await crossChainDeposit(amount, config); return; }
       const params = { from: { adapter, chain: CHAIN }, vaultAddress: cur.vaultAddress, amount, config };
       const r = mode === "deposit" ? await kit.deposit(params) : await kit.withdraw(params);
       const tx = r.txHash || (r.transactions && r.transactions.at(-1)?.txHash) || "";

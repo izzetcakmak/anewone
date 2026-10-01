@@ -145,17 +145,17 @@ To re-verify after an update: `curl -s https://anewone.xyz/vendor/gangway-kit.js
 | | |
 |---|---|
 | Package | `@circle-fin/onramp-kit` (Circle, Apache-2.0), browser surface only |
-| Version | 1.0.2 |
+| Version | 1.0.3 |
 | File | `onramp-kit.js` (ESM, minified) |
-| Size | 97,690 bytes |
-| SHA-256 | `247b0f1b0ac00728839b754ee4c9809801473b58becf01d8712e52c981836f3f` |
-| SRI (sha384) | `rJDKoBjGtvQy7XYj/eP4cOuTVHZG2JCKdvx6oGqhTjkhz0Av70BuYadafGdI9prF` |
+| Size | 98,209 bytes |
+| SHA-256 | `eaa614ccec073e3956d3f77f5188e701a14c38169662c12a33c1e8f7242da64b` |
+| SRI (sha384) | `TOpBOKdQYBtYavc2RdmrIFoDPN2WjJTyNlhQkW7cl9/lJJxuxSBWQdan2Uvg1R/O` |
 
 **Not an upstream release file**: Circle ships the kit as npm modules that import `zod` and
 `pino`, so it is bundled locally with esbuild from the official npm package. The recipe is
 committed in `build-onramp/`:
 
-- `package.json` / `package-lock.json`: `@circle-fin/onramp-kit@1.0.2` pinned, every package
+- `package.json` / `package-lock.json`: `@circle-fin/onramp-kit@1.0.3` pinned, every package
   resolved from `registry.npmjs.org` with an integrity hash
 - `entry.mjs`: re-exports exactly four symbols, `createOnrampKit`, `KitError`,
   `ONRAMP_EVENT_TYPES`, `ONRAMP_EVENT_CODES`
