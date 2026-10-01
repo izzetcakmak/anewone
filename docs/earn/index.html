@@ -710,7 +710,7 @@ Time: ${new Date().toISOString()}`;
     $("connectBtn").textContent = account.slice(0, 6) + "…" + account.slice(-4);
     modal.classList.remove("open");
     provider.on && provider.on("accountsChanged", () => location.reload());
-    provider.on && provider.on("chainChanged", () => location.reload());
+    provider.on && provider.on("chainChanged", () => { if (!xchainBusy) location.reload(); });
     provider.on && provider.on("disconnect", () => location.reload());
     refreshPositions();
     syncAck().then(ensureAck);
@@ -762,7 +762,7 @@ Time: ${new Date().toISOString()}`;
   let cur = null, mode = "deposit", walletBal = "0", vaultBal = "0";
   // which chain the deposit comes from: null is Arc itself; only USDC vaults can be fed from
   // another chain (the bridge carries USDC)
-  let src = null, xqTimer = null, xquote = null;
+  let src = null, xqTimer = null, xquote = null, xchainBusy = false;
   const bridgeable = (v) => !!(v && v.asset === "USDC" && v.circleGuarded);
   function paintFrom() {
     const can = mode === "deposit" && bridgeable(cur);
@@ -873,11 +873,29 @@ Time: ${new Date().toISOString()}`;
   // From another chain: the wallet switches to the source, signs one ERC-3009 authorization
   // (no gas there), Circle pulls the USDC, bridges it over CCTP and deposits into the vault
   // for this same address on Arc. The bridge is followed by its execution id until it lands.
+  // the wallet must sit on the source chain before the ERC-3009 typed data is signed: the
+  // message names Base's chain id and MetaMask refuses to sign it from Arc ("chainId should
+  // be same as current chainId", 1 Oct 2026); the kit does not switch for a signature
+  async function switchTo(c) {
+    const have = BigInt(await wallet().request({ method: "eth_chainId" }));
+    if (have === BigInt(c.chainId)) return;
+    try { await wallet().request({ method: "wallet_switchEthereumChain", params: [{ chainId: c.hex }] }); }
+    catch (e) {
+      if (e && (e.code === 4902 || /unrecognized|not added|unsupported/i.test(e.message || ""))) {
+        await wallet().request({ method: "wallet_addEthereumChain", params: [{ chainId: c.hex, chainName: c.name, nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: [c.rpc[0]], blockExplorerUrls: [c.explorer] }] });
+      } else throw e;
+    }
+    // some wallets answer the switch before they are on the chain
+    for (let i = 0; i < 20; i++) { if (BigInt(await wallet().request({ method: "eth_chainId" })) === BigInt(c.chainId)) return; await new Promise((r) => setTimeout(r, 250)); }
+    throw new Error(`Your wallet did not switch to ${c.name}. Switch to it in the wallet and try again.`);
+  }
   async function crossChainDeposit(amount, config) {
     if (!xquote) await requote();
     if (!xquote) throw new Error("No quote for this amount yet; try again in a moment.");
     const maxFee = String((xquote.fees || []).reduce((a, f) => a + Number(f.amount || 0), 0).toFixed(6));
-    setStatus(`Switch to ${src.name} in your wallet and sign the authorization…`);
+    setStatus(`Switch to ${src.name} in your wallet…`);
+    await switchTo(src);
+    setStatus(`Sign the authorization in your wallet (no gas on ${src.name})…`);
     const r = await kit.deposit({ from: { adapter, chain: src.key }, to: { chain: CHAIN, recipientAddress: account }, vaultAddress: cur.vaultAddress, amount, maxFee, transferSpeed: "FAST", config });
     const execId = r.execId || (r.bridge && r.bridge.execId);
     $("status").className = "status";
@@ -895,8 +913,6 @@ Time: ${new Date().toISOString()}`;
     }
     $("amt").value = ""; $("xq").hidden = true; xquote = null;
     const before = vaultBal; await settleBalances(cur, before); refreshPositions();
-    // back on Arc for whatever comes next
-    try { await ensureArc(); } catch {}
   }
   $("goBtn").onclick = async () => {
     if (!account) { $("overlay").classList.remove("open"); openPicker(); return; }
@@ -911,7 +927,14 @@ Time: ${new Date().toISOString()}`;
       // the atomic-batch probe (wallet_getCapabilities) is one more round trip to a phone
       // wallet, and most of them answer it with an error: plain approve then deposit instead
       const config = activeKind === "walletconnect" ? { batchTransactions: false } : undefined;
-      if (mode === "deposit" && src) { await crossChainDeposit(amount, config); return; }
+      if (mode === "deposit" && src) {
+        // the chainChanged reload stays off until the wallet is back on Arc, or the result
+        // line would vanish with the page
+        xchainBusy = true;
+        try { await crossChainDeposit(amount, config); }
+        finally { try { await ensureArc(); } catch {} setTimeout(() => { xchainBusy = false; }, 1500); }
+        return;
+      }
       const params = { from: { adapter, chain: CHAIN }, vaultAddress: cur.vaultAddress, amount, config };
       const r = mode === "deposit" ? await kit.deposit(params) : await kit.withdraw(params);
       const tx = r.txHash || (r.transactions && r.transactions.at(-1)?.txHash) || "";
@@ -922,7 +945,8 @@ Time: ${new Date().toISOString()}`;
       await settleBalances(cur, before);
       refreshPositions();
     } catch (e) {
-      setStatus(kitMod && kitMod.getErrorMessage ? kitMod.getErrorMessage(e) : (e.shortMessage || e.message || String(e)), "err");
+      const m = kitMod && kitMod.getErrorMessage ? kitMod.getErrorMessage(e) : (e.shortMessage || e.message || String(e));
+      setStatus(/user rejected|user denied|4001/i.test(m) ? "Refused in the wallet. Nothing was sent." : m, "err");
     } finally { $("goBtn").disabled = false; }
   };
 
