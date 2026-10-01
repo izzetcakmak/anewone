@@ -54,10 +54,24 @@
   .tb-brand img { width: 40px; height: 40px; border-radius: 11px; }
   .tb-brand span { font: 700 20px 'Space Grotesk', sans-serif; letter-spacing: .8px; color: var(--text); white-space: nowrap; }
   .tb-nav { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-  .tbx { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; color: var(--text); font: 500 13px var(--mono); background: var(--bg-2); white-space: nowrap; }
-  .tbx:hover { text-decoration: none; border-color: var(--accent); }
-  .tbx.net { color: var(--accent); border-color: rgba(var(--accent-rgb),.4); }
-  .tbx.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+  /* The bar's pills as on the home page and Earn: a translucent green pane with a lit top edge and a
+     faint halo, solid green under the hand, one size; the theme switch is the round one. */
+  .tbx { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; width: 142px; padding: 0 10px;
+    font: 700 12px var(--mono); letter-spacing: .01em; white-space: nowrap; color: var(--accent); border: 1px solid rgba(var(--accent-rgb), .45); border-radius: 999px;
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
+    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
+  .tbx::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
+  .tbx:hover { text-decoration: none; color: var(--accent-ink); text-shadow: none; transform: translateY(-1px);
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
+  :root[data-theme="light"] .tbx { text-shadow: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
+  .tbx.theme { width: 40px; padding: 0; }
+  /* below 1181px the doors keep their icons alone, at the same width as on Earn */
+  @media (max-width: 1180px) { .tbx .lbl { display: none; } .tbx:not(.net):not(.primary) { width: 40px; padding: 0; } }
   .tbx.theme .i-sun, .tbx.theme .i-moon { width: 16px; height: 16px; }
   :root[data-theme="light"] .i-sun { display: none; }
   :root:not([data-theme="light"]) .i-moon { display: none; }
@@ -65,7 +79,7 @@
     .tb-brand span, .tbx .lbl { display: none; }
     .topbar-inner { padding: 10px 14px; gap: 8px; }
     .tb-nav { gap: 8px; }
-    .tbx { height: 42px; min-width: 42px; padding: 0 12px; font-size: 16px; }
+    .tbx { height: 42px; min-width: 42px; width: auto; padding: 0 12px; font-size: 16px; }
     .tbx.net, .tbx.primary { font-size: 13px; padding: 0 14px; }
     .tbx.theme .i-sun, .tbx.theme .i-moon { width: 20px; height: 20px; }
   }
