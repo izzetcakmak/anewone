@@ -134,8 +134,7 @@
     <a class="brand" href="/" aria-label="A NEW ONE, home"><img src="brand/logo.png" alt=""><span>A NEW ONE</span></a>
     <nav>
       <a class="pill fun" href="earn/">Earn</a>
-      <span class="pillwrap hide-sm"><a class="pill" href="#assets" id="assetsLink" data-assets>Assets</a>
-        <span class="note" id="assetsNote" role="status">Tokenized stocks are <b>coming soon</b>. Earn and Borrow are live today.</span></span>
+      <a class="pill hide-sm" href="assets/" title="Tokenized funds on Arc through Centrifuge">Assets</a>
       <a class="pill fun" href="fun/" title="The memecoin launchpad: bonding curves in USDC">AnewOne.Fun →</a>
       <a class="pill hide-sm" href="#how">How it works</a>
       <a class="pill hide-sm" href="docs.html">Docs</a>
@@ -144,8 +143,7 @@
       </button>
     </nav>
     <div class="menu" id="menu" hidden>
-      <span class="pillwrap"><a class="pill" href="#assets" data-assets>Assets</a>
-        <span class="note" role="status">Tokenized stocks are <b>coming soon</b>. Earn and Borrow are live today.</span></span>
+      <a class="pill" href="assets/">Assets</a>
       <a class="pill" href="#how">How it works</a>
       <a class="pill" href="docs.html">Docs</a>
     </div>
@@ -158,7 +156,7 @@
     <h1>Real assets.<br>Launched on a new one.</h1>
     <p class="lead">A NEW ONE is the <b>launch and distribution front end</b> for tokenized real-world assets on Arc: funds and private credit on <b>Centrifuge</b> rails, stocks from <b>licensed issuers</b>. The issuer is always a regulated entity. <b>We never issue anything ourselves.</b></p>
     <div class="cta">
-      <a class="btn primary" href="#assets">Explore the assets →</a>
+      <a class="btn primary" href="assets/">Explore the assets →</a>
       <a class="btn" href="mailto:support@anewone.xyz?subject=Issuer%20listing">List as an issuer</a>
     </div>
   </div>
@@ -168,8 +166,8 @@
       <h2>What comes aboard</h2>
       <p class="sub">Assets that already exist in the regulated world, brought onto Arc's stablecoin-native rails so they settle in USDC, around the clock.</p>
       <div class="grid">
-        <div class="card"><div class="tag">FUNDS</div><h3>Tokenized funds</h3><p>Money-market and treasury funds from licensed managers, issued through Centrifuge and held as on-chain shares.</p></div>
-        <div class="card"><div class="tag">CREDIT</div><h3>Private credit</h3><p>Real-world credit pools on Centrifuge rails, with the issuer, the collateral and the reporting visible before you commit.</p></div>
+        <div class="card"><div class="tag">FUNDS · LIVE ON ARC</div><h3>Tokenized funds</h3><p>Janus Henderson's treasury fund (JTRSY) and AAA CLO fund (JAAA), issued by Anemoy through Centrifuge, live on Arc since 1 October 2026. Live NAV and yield, terms and eligibility on <a href="assets/">the Assets page</a>.</p></div>
+        <div class="card"><div class="tag">CREDIT · LIVE ON ARC</div><h3>Credit funds</h3><p>New York Life Investment Management's US high-yield bond fund (HYB) on the same rails, with the manager, the custodian and the fund documents named before you commit.</p></div>
         <div class="card"><div class="tag">EQUITIES · COMING SOON</div><h3>Tokenized stocks</h3><p>Stock tokens from licensed issuers only, fully backed and redeemable on their terms. We show them; they issue them.</p></div>
       </div>
     </div>
@@ -200,6 +198,17 @@
     </div>
   </section>
 
+  <section>
+    <div class="wrap funbox">
+      <div>
+        <div class="tag">LIVE NOW</div>
+        <h2 style="margin-top:8px">Tokenized funds on Arc</h2>
+        <p class="sub" style="margin:0">JTRSY, JAAA and HYB through Centrifuge: price and yield read from the chain, the issuer's terms in plain words, and USDC orders from a whitelisted wallet. Professional investors; the issuer runs KYC.</p>
+      </div>
+      <a class="btn primary" href="assets/">Open Assets →</a>
+    </div>
+  </section>
+
   <section id="earn">
     <div class="wrap funbox">
       <div>
@@ -225,34 +234,19 @@
 
 <footer>
   <div class="wrap">
-    <div class="links"><a href="earn/">Earn</a><a href="fun/">AnewOne.Fun</a><a href="bridge/">Swap &amp; Bridge</a><a href="chat/">Deckhand</a><a href="docs.html">Docs</a><a href="about.html">About</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a></div>
+    <div class="links"><a href="assets/">Assets</a><a href="earn/">Earn</a><a href="fun/">AnewOne.Fun</a><a href="bridge/">Swap &amp; Bridge</a><a href="chat/">Deckhand</a><a href="docs.html">Docs</a><a href="about.html">About</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a></div>
     Nothing on this site is an offer or investment advice. Assets are issued by third-party regulated entities and may be limited to eligible investors in some jurisdictions.
   </div>
 </footer>
 <script>
-  // Assets is not stocked yet: the pill says so right under itself, and the page stays put
-  // (the bar's pill on a wide screen, the menu's on a phone)
-  (function () {
-    var timer = null;
-    document.querySelectorAll("[data-assets]").forEach(function (a) {
-      a.addEventListener("click", function (e) {
-        e.preventDefault();
-        var n = a.parentNode.querySelector(".note");
-        n.classList.add("show"); clearTimeout(timer); timer = setTimeout(function () { n.classList.remove("show"); }, 4000);
-      });
-    });
-    document.addEventListener("click", function (e) {
-      if (!e.target.closest("[data-assets]")) document.querySelectorAll(".note.show").forEach(function (n) { n.classList.remove("show"); });
-    });
-  })();
-  // the phone menu: a pick closes it, except Assets, whose note opens inside it
+  // the phone menu: a pick closes it
   (function () {
     var btn = document.getElementById("menuBtn"), menu = document.getElementById("menu");
     function shut() { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); }
     btn.addEventListener("click", function () {
       menu.hidden = !menu.hidden; btn.setAttribute("aria-expanded", menu.hidden ? "false" : "true");
     });
-    menu.addEventListener("click", function (e) { var a = e.target.closest("a"); if (a && !a.hasAttribute("data-assets")) shut(); });
+    menu.addEventListener("click", function (e) { if (e.target.closest("a")) shut(); });
     document.addEventListener("click", function (e) { if (!menu.hidden && !menu.contains(e.target) && !btn.contains(e.target)) shut(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") shut(); });
   })();

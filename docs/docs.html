@@ -178,8 +178,9 @@
       curators such as Bitwise, Gauntlet and Steakhouse. Your money stays in the vault contract. <a href="earn/">Open Earn →</a></p></div>
     <div class="card"><span class="tag good">live</span><h3>Borrow</h3><p>USDC or EURC against cirBTC, ETH and tokenized
       assets on Morpho markets, from your own wallet, with the health factor and liquidation price shown before you sign. <a href="earn/#borrow">Open Borrow →</a></p></div>
-    <div class="card"><span class="tag">coming</span><h3>Real-world assets</h3><p>Tokenized funds and private credit on
-      Centrifuge rails, and stocks from licensed issuers. Each one arrives with its issuer, its terms and its reporting.</p></div>
+    <div class="card"><span class="tag good">live</span><h3>Assets</h3><p>Tokenized funds from Janus Henderson and New York
+      Life Investment Management on Centrifuge rails, live on Arc: JTRSY, JAAA and HYB, each with its issuer, its terms and
+      its live price. Stocks from licensed issuers are next. <a href="assets/">Open Assets →</a></p></div>
     <div class="card"><span class="tag good">live</span><h3>AnewOne.Fun</h3><p>The memecoin launchpad we started with,
       now the fun side of the house: bonding curves in USDC, liquidity locked for good. <a href="fun/">Open the floor →</a></p></div>
   </div>
@@ -204,12 +205,23 @@
     of 0.15% (15 bps), shown in the quote; 90% of it goes to the site and 10% to Arc.</p>
 
   <h2 id="assets">Real-world assets</h2>
-  <p>This is what the site is becoming. Tokenized money-market and treasury funds and private-credit pools arrive on
-    <a href="https://centrifuge.io" target="_blank" rel="noopener">Centrifuge</a> rails; stocks come from licensed
-    issuers. In every case the issuer creates and legally stands behind the asset, runs eligibility and KYC, holds the
-    underlying and handles redemptions. A NEW ONE gives each asset a launch page on Arc, wallet access, USDC payments and
-    cross-chain onboarding. Some assets will be limited to eligible investors in some jurisdictions; the issuer decides
-    that, and the page says so.</p>
+  <p><a href="assets/">Assets</a> lists the tokenized funds that <a href="https://centrifuge.io" target="_blank" rel="noopener">Centrifuge</a>
+    brought to Arc on 1 October 2026: the Janus Henderson Treasury Fund (JTRSY, US Treasury bills), the Janus Henderson
+    AAA CLO Fund (JAAA) and the NYLIM US High Yield Bond Fund (HYB), all issued by Anemoy Capital SPC Limited, a BVI
+    professional fund. Each card reads the share price from the vault contract on Arc and the fund size and trailing
+    30-day yield from Centrifuge's indexer, and names the manager, the fees, the minimum, the liquidity terms and the
+    ratings from the issuer's factsheet, with a link to the executive summary.</p>
+  <p>These funds are for non-US professional investors, and the issuer decides who qualifies: it runs KYC and marks the
+    wallet as a member of the fund on Arc, after which the share tokens accept transfers to it. Until then the page says
+    the wallet is not whitelisted and sends you to the issuer; nothing on this site can skip that step. A whitelisted
+    wallet places a deposit request in USDC on Arc from the page (the vault router's <code>requestDeposit</code>), the
+    issuer fills orders on its dealing schedule, and the shares are then claimed from the same page. Redemptions work the
+    same way in reverse. Every request carries a message to the fund's hub on Ethereum, and that delivery fee, paid in
+    USDC on Arc with the transaction, is shown in the quote before you sign. A NEW ONE takes no fee on these funds and
+    never custodies anything: USDC goes from your wallet to the fund's escrow, shares come back to your wallet.</p>
+  <p>Stocks from licensed issuers are next. In every case the issuer creates and legally stands behind the asset, runs
+    eligibility and KYC, holds the underlying and handles redemptions; we build the page, the wallet access and the USDC
+    settlement.</p>
 
   <h2 id="fun">AnewOne.Fun</h2>
   <p>The launchpad lives on at <a href="fun/">anewone.xyz/fun</a>, unchanged: a free, permissionless place to launch a

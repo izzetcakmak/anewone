@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  (function () {
+    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "light"); }
+    catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+  })();
+</script>
+<title>Assets · Tokenized funds on Arc | A NEW ONE</title>
+<link rel="canonical" href="https://anewone.xyz/assets/">
+<meta name="description" content="Tokenized funds from Janus Henderson and New York Life Investment Management, issued by Anemoy on Centrifuge and live on Arc: JTRSY, JAAA and HYB. Live NAV, yield, terms and eligibility; deposits in USDC for whitelisted wallets. A NEW ONE is the interface, never the issuer.">
+<meta property="og:title" content="Assets · Tokenized funds on Arc">
+<meta property="og:description" content="JTRSY, JAAA and HYB on Arc through Centrifuge: live NAV, terms and eligibility in one place.">
+<meta property="og:url" content="https://anewone.xyz/assets/">
+<meta property="og:image" content="https://anewone.xyz/brand/logo-1024.png">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* The floor's theme system, verbatim: one accent, neutral everything else. */
+  :root {
+    --accent-rgb: 0,184,119; --green-rgb: 0,165,104; --red-rgb: 224,51,79; --gold-rgb: 200,138,0;
+    --accent: rgb(var(--accent-rgb)); --green: rgb(var(--green-rgb)); --red: rgb(var(--red-rgb)); --gold: rgb(var(--gold-rgb));
+    --r: 20px; --r-md: 14px; --r-sm: 10px; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  :root, :root[data-theme="light"] {
+    --bg: #f4f4f5; --bg-2: #ffffff; --card: #ececee; --bg-rgb: 244,244,245; --ink-rgb: 16,16,24;
+    --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16);
+    --text: #111116; --dim: #5f5f6d; --faint: #8b8b98; --accent-soft: #e8f9f1; --accent-ink: #ffffff;
+    --shadow: 0 1px 2px rgba(16,16,24,.06);
+  }
+  :root[data-theme="dim"], :root[data-theme="dark"] {
+    --bg: #0d0d10; --bg-2: #151519; --card: #1b1b20; --bg-rgb: 13,13,16; --ink-rgb: 255,255,255;
+    --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16);
+    --text: #f2f2f5; --dim: #a0a0ae; --faint: #6e6e7c; --accent-rgb: 62,230,160; --green-rgb: 62,230,160; --red-rgb: 255,84,112; --gold-rgb: 255,194,77;
+    --accent-soft: rgba(62,230,160,.10); --accent-ink: #04140d; --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 Inter, system-ui, sans-serif; min-height: 100vh; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  button { font: inherit; cursor: pointer; }
+
+  .topbar { position: sticky; top: 0; z-index: 200; background: rgba(var(--bg-rgb),.78); backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid var(--border); }
+  .topbar-inner { max-width: 1160px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 10px; }
+  .tb-brand { display: flex; align-items: center; gap: 12px; }
+  .tb-brand:hover { text-decoration: none; }
+  .tb-brand img { width: 40px; height: 40px; border-radius: 11px; }
+  .tb-brand span { font: 700 20px 'Space Grotesk', sans-serif; letter-spacing: .8px; color: var(--text); white-space: nowrap; }
+  .tb-nav { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .tbx { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; color: var(--text); font: 500 13px var(--mono); background: var(--bg-2); white-space: nowrap; }
+  .tbx:hover { text-decoration: none; border-color: var(--accent); }
+  .tbx.net { color: var(--accent); border-color: rgba(var(--accent-rgb),.4); }
+  .tbx.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+  .tbx.theme .i-sun, .tbx.theme .i-moon { width: 16px; height: 16px; }
+  :root[data-theme="light"] .i-sun { display: none; }
+  :root:not([data-theme="light"]) .i-moon { display: none; }
+  @media (max-width: 600px) {
+    .tb-brand span, .tbx .lbl { display: none; }
+    .topbar-inner { padding: 10px 14px; gap: 8px; }
+    .tb-nav { gap: 8px; }
+    .tbx { height: 42px; min-width: 42px; padding: 0 12px; font-size: 16px; }
+    .tbx.net, .tbx.primary { font-size: 13px; padding: 0 14px; }
+    .tbx.theme .i-sun, .tbx.theme .i-moon { width: 20px; height: 20px; }
+  }
+
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
+  .hero { padding: 48px 0 28px; }
+  .eyebrow { font: 700 11px var(--mono); letter-spacing: .2em; color: var(--accent); text-transform: uppercase; }
+  h1 { font: 700 clamp(30px, 4.5vw, 46px)/1.08 'Space Grotesk', sans-serif; margin: 12px 0 12px; letter-spacing: -.02em; }
+  .lead { color: var(--dim); font-size: 16px; max-width: 760px; margin: 0; }
+  .lead b { color: var(--text); }
+
+  /* who can invest: said once, above the cards, in plain words */
+  .elig { display: flex; align-items: flex-start; gap: 14px; background: var(--bg-2); border: 1px solid var(--border-2); border-radius: var(--r); padding: 16px 20px; margin: 20px 0 22px; color: var(--dim); font-size: 14px; }
+  .elig .ico { font-size: 22px; line-height: 1; }
+  .elig b { color: var(--text); }
+  .elig a { text-decoration: underline; }
+
+  .filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 14px; }
+  .count { margin-left: auto; color: var(--faint); font: 500 12px var(--mono); }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 960px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
+  .fund { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; }
+  .fund .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .fund h3 { margin: 0; font: 600 16px 'Space Grotesk', sans-serif; line-height: 1.25; }
+  .fund .by { color: var(--dim); font-size: 12px; margin-top: 3px; }
+  .tag { font: 700 10px var(--mono); letter-spacing: .12em; padding: 4px 8px; border-radius: 6px; background: var(--card); color: var(--dim); white-space: nowrap; }
+  .tag.usdc { color: var(--accent); background: var(--accent-soft); }
+  .tag.warn { color: var(--gold); white-space: normal; }
+  .tag.ok { color: var(--green); background: rgba(var(--green-rgb),.12); white-space: normal; }
+  .apy { font: 700 32px var(--mono); line-height: 1; }
+  .apy small { font: 600 11px var(--mono); letter-spacing: .12em; color: var(--faint); margin-left: 6px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .stats div { font: 600 13px var(--mono); }
+  .stats span { display: block; font: 500 10px var(--mono); letter-spacing: .12em; color: var(--faint); text-transform: uppercase; margin-top: 2px; }
+  .facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 12px; color: var(--dim); margin: 0; }
+  .facts dt { font: 500 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); padding-top: 2px; }
+  .facts dd { margin: 0; color: var(--text); }
+  .fund .links { display: flex; gap: 12px; flex-wrap: wrap; font: 500 12px var(--mono); }
+  .pos { font: 500 12px var(--mono); color: var(--accent); background: var(--accent-soft); border-radius: var(--r-sm); padding: 8px 10px; display: none; line-height: 1.6; }
+  .pos.show { display: block; }
+  .fund .btn { margin-top: auto; padding: 11px; border: 1px solid var(--border-2); border-radius: var(--r-sm); background: var(--card); color: var(--text); font-weight: 600; text-align: center; }
+  .fund .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .fund .btn:hover { text-decoration: none; }
+  .fund .btn:disabled { opacity: .5; cursor: default; }
+  .empty { grid-column: 1 / -1; color: var(--dim); text-align: center; padding: 40px 0; }
+
+  h2.sec { font: 600 20px 'Space Grotesk', sans-serif; margin: 36px 0 12px; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 800px) { .steps { grid-template-columns: 1fr; } }
+  .step { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 20px; color: var(--dim); font-size: 13px; }
+  .step b { display: block; color: var(--text); font: 600 15px 'Space Grotesk', sans-serif; margin-bottom: 6px; }
+  .step .n { font: 700 11px var(--mono); letter-spacing: .2em; color: var(--accent); }
+
+  .legal { margin: 40px 0 56px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--faint); font-size: 12px; max-width: 860px; }
+  .legal a { color: var(--dim); text-decoration: underline; }
+
+  /* the order sheet */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 300; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .overlay.open { display: flex; }
+  .sheet { width: 100%; max-width: 420px; background: var(--bg-2); border: 1px solid var(--border-2); border-radius: var(--r); padding: 22px; max-height: 94vh; overflow: auto; }
+  .sheet h2 { margin: 0 0 4px; font: 600 18px 'Space Grotesk', sans-serif; }
+  .sheet .sub { color: var(--dim); font-size: 12px; margin: 0 0 16px; }
+  .tabs { display: flex; gap: 4px; background: var(--card); border-radius: var(--r-sm); padding: 4px; margin-bottom: 14px; }
+  .tabs button { flex: 1; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--dim); font-weight: 600; }
+  .tabs button.on { background: var(--bg-2); color: var(--text); box-shadow: var(--shadow); }
+  .amt { display: flex; align-items: center; border: 1px solid var(--border-2); border-radius: var(--r-sm); padding: 6px 6px 6px 14px; background: var(--bg); }
+  .amt input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font: 600 22px var(--mono); outline: none; }
+  .amt .unit { font: 600 12px var(--mono); color: var(--dim); padding: 0 8px; }
+  .amt button { padding: 6px 10px; border: 1px solid var(--border-2); border-radius: 7px; background: var(--bg-2); color: var(--dim); font: 600 11px var(--mono); }
+  .amt[hidden] { display: none; }
+  .bal { display: flex; justify-content: space-between; color: var(--faint); font: 500 12px var(--mono); margin: 8px 2px 16px; }
+  .quote { background: var(--card); border-radius: var(--r-sm); padding: 10px 12px; margin: -6px 0 14px; font: 500 12px var(--mono); color: var(--dim); display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; }
+  .quote b { color: var(--text); text-align: right; }
+  .quote[hidden] { display: none; }
+  .sheet .go { width: 100%; padding: 13px; border: 0; border-radius: var(--r-sm); background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 15px; }
+  .sheet .go:disabled { opacity: .5; cursor: default; }
+  .sheet .close { width: 100%; margin-top: 8px; padding: 10px; border: 0; background: transparent; color: var(--dim); }
+  .status { min-height: 20px; margin-top: 12px; font: 500 12px var(--mono); color: var(--dim); word-break: break-word; }
+  .status.err { color: var(--red); }
+  .status.ok { color: var(--green); }
+  .claimrow { background: var(--card); border-radius: var(--r-sm); padding: 12px 14px; margin-bottom: 14px; font: 500 13px var(--mono); color: var(--dim); line-height: 1.8; }
+  .claimrow b { color: var(--text); }
+
+  .ack { margin: 0 0 16px; padding-left: 18px; color: var(--dim); font-size: 13px; line-height: 1.5; }
+  .ack li { margin: 6px 0; }
+  .ack b { color: var(--text); }
+  .ack a { text-decoration: underline; }
+  .wrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; margin-top: 8px; border: 1px solid var(--border-2); border-radius: var(--r-sm); background: var(--bg); color: var(--text); font-weight: 600; text-align: left; }
+  .wrow:hover { border-color: var(--accent); }
+  .wrow img { width: 24px; height: 24px; border-radius: 6px; }
+  .wrow small { color: var(--dim); font-weight: 500; }
+  .wdivider { display: flex; align-items: center; gap: 10px; color: var(--faint); font: 500 11px var(--mono); margin: 14px 0 6px; }
+  .wdivider::before, .wdivider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+  .hint { color: var(--dim); font-size: 12px; margin-top: 10px; }
+  .hint a { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../brand/logo.svg" alt=""><span>A NEW ONE</span></a>
+    <nav class="tb-nav">
+      <a class="tbx" href="/">← <span class="lbl">Home</span></a>
+      <a class="tbx" href="../earn/" title="USDC vaults and loans on Morpho">💵 <span class="lbl">Earn &amp; Borrow</span></a>
+      <a class="tbx" href="../bridge/" title="Bring USDC aboard from any chain">🌉 <span class="lbl">Swap &amp; Bridge</span></a>
+      <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark">
+        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+        <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg>
+      </button>
+      <span class="tbx net" id="netPill">…</span>
+      <button type="button" class="tbx primary" id="connectBtn">Connect</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <div class="eyebrow">Assets · Centrifuge on Arc · settled in USDC</div>
+    <h1>Institutional funds,<br>live on Arc.</h1>
+    <p class="lead">Three tokenized funds from <b>Janus Henderson</b> and <b>New York Life Investment Management</b>, issued by Anemoy Capital on <b>Centrifuge</b> and live on Arc since 1 October 2026. Each card reads its price and yield from the chain and the issuer's own reporting; a whitelisted wallet places its order from here, in USDC. <b>A NEW ONE is the interface, not the issuer.</b></p>
+  </div>
+
+  <div class="elig">
+    <span class="ico">🪪</span>
+    <div><b>Who can invest.</b> These are BVI professional funds for <b>non-US professional investors</b>. The issuer runs KYC and whitelists the wallet; until it does, the share tokens refuse every transfer to you, and the Deposit button here stays off. Minimums are 500,000 USD for JTRSY and JAAA, 100,000 USDC for HYB. Onboarding happens with the issuer, on <a href="https://app.centrifuge.io" target="_blank" rel="noopener">Centrifuge</a>; we never see your documents.</div>
+  </div>
+
+  <div class="filters"><span class="count" id="count">loading funds from Arc…</span></div>
+  <div class="grid" id="grid"><div class="empty">Loading funds from Arc…</div></div>
+
+  <h2 class="sec">How an order works</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1 · ELIGIBILITY</span><b>The issuer whitelists you</b>Anemoy checks who you are and marks your wallet as a member of the fund on Arc. The card shows "whitelisted" the moment that lands; nothing on this site can skip it.</div>
+    <div class="step"><span class="n">2 · DEPOSIT</span><b>Request, then claim</b>You send USDC on Arc with a deposit request. The fund's hub on Ethereum approves orders daily and sets the price; your shares then wait in the vault until you claim them, from here or from Centrifuge.</div>
+    <div class="step"><span class="n">3 · REDEEM</span><b>The same, in reverse</b>A redeem request locks your shares; once the issuer processes it, USDC waits for you to claim. Each request carries a message to Ethereum, and that message fee, paid in USDC on Arc, shows in the quote before you sign.</div>
+  </div>
+
+  <p class="legal">Fund data is read from the Arc chain and from Centrifuge's indexer and the issuer's published factsheets; yields are the issuer's trailing 30-day figures, variable, and no promise of future returns. These funds are offered by Anemoy Capital SPC Limited, a BVI fund licensed by the BVI Financial Services Commission, to non-US professional investors only, under the fund's own documents, which prevail over anything shown here. A NEW ONE takes no fee on these funds, does not custody anything, does not issue any asset, does not run eligibility checks and does not give advice. Nothing here is an offer. Some jurisdictions restrict these products. <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></p>
+</main>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2 id="shName">Fund</h2>
+    <p class="sub" id="shSub"></p>
+    <div class="tabs"><button id="tabDep" class="on">Deposit</button><button id="tabRed">Redeem</button><button id="tabClaim">Claim</button></div>
+    <div class="claimrow" id="claimRow" hidden></div>
+    <div class="amt" id="amtRow"><input id="amt" inputmode="decimal" placeholder="0.00" autocomplete="off"><span class="unit" id="unit">USDC</span><button id="maxBtn">MAX</button></div>
+    <div class="bal"><span id="balL">Wallet: …</span><span id="balR">Shares: …</span></div>
+    <div class="quote" id="quote" hidden></div>
+    <button class="go" id="goBtn">Deposit</button>
+    <div class="status" id="status"></div>
+    <button class="close" id="closeBtn">Close</button>
+  </div>
+</div>
+
+<div class="overlay" id="ackModal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2>Before you start</h2>
+    <p class="sub">One signature, once per wallet. It costs nothing and moves nothing; it only records that you accept the terms.</p>
+    <ul class="ack">
+      <li>A NEW ONE is a <b>non-custodial interface</b>: it never holds your funds or keys, never issues an asset and never gives advice.</li>
+      <li>The funds are issued and run by third parties. <b>Yields are variable</b>, orders settle on the issuer's schedule, and you can lose what you put in.</li>
+      <li>Fees are shown before you sign: none to us on these funds; the issuer's fees are in the fund documents.</li>
+      <li>You are 18 or older, act for yourself, meet the issuer's eligibility rules, and are responsible for your own taxes and local rules.</li>
+      <li>You accept the <a href="../terms.html" target="_blank" rel="noopener">Terms of Use</a> and the <a href="../privacy.html" target="_blank" rel="noopener">Privacy Notice</a>.</li>
+    </ul>
+    <button class="go" id="ackSign">Sign to accept</button>
+    <div class="status" id="ackStatus"></div>
+    <button class="close" id="ackClose">Not now</button>
+  </div>
+</div>
+
+<div class="overlay" id="acctModal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2>Your wallet</h2>
+    <p class="sub" id="acctAddr" style="font-family:var(--mono);word-break:break-all"></p>
+    <p class="sub" id="acctKind"></p>
+    <button class="wrow" id="acctSwitch" type="button"><span style="font-size:20px">⇄</span><span>Switch wallet <small>· connect a different one</small></span></button>
+    <button class="wrow" id="acctDisconnect" type="button" style="color:var(--red)"><span style="font-size:20px">⏏</span><span>Disconnect <small>· ends the session, also in the wallet app</small></span></button>
+    <button class="close" id="acctClose">Close</button>
+  </div>
+</div>
+
+<div class="overlay" id="walletModal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2>Connect</h2>
+    <p class="sub">Same doors as the floor: your sign-in wallet, a browser wallet, or a wallet app.</p>
+    <button class="wrow" id="gmailBtn" type="button"><span style="font-size:20px">@</span><span>Continue with Email or Social <small>· Google, X, Apple…</small></span></button>
+    <div class="wdivider" id="wOr"><span>or a wallet of your own</span></div>
+    <div id="walletList"></div>
+    <button class="wrow" id="wcBtn" type="button"><span style="font-size:20px">🔗</span><span>WalletConnect <small>· Rabby, Trust, any wallet app</small></span></button>
+    <button class="close" id="walletX">Close</button>
+  </div>
+</div>
+
+<script src="../config.js"></script>
+<script src="../vendor/ethers.umd.min.js"></script>
+<script type="module">
+  const cfg = window.ANEWONE_CONFIG;
+  const net = cfg.mainnet && cfg.mainnet.live ? "mainnet" : "testnet";
+  const arcCfg = cfg[net];
+  const $ = (id) => document.getElementById(id);
+  $("netPill").textContent = net === "mainnet" ? "● Arc mainnet" : "● Arc testnet";
+
+  $("themeSw").onclick = () => {
+    const t = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+    try { localStorage.setItem("anewone_theme", t); } catch {}
+  };
+
+  // ---- the funds: Centrifuge's deployment on Arc (centrifugeId 14), read 1 Oct 2026 from the
+  // chain and from centrifuge/sdk's KNOWN_DEPLOYMENTS. The hub of all three pools is on
+  // Ethereum (centrifugeId 1): a request made here travels there as a message, and the
+  // message fee is paid in USDC on Arc. Factsheet facts come from the pools' IPFS metadata.
+  const CFG = {
+    hubId: 1, arcId: 14,
+    usdc: "0x3600000000000000000000000000000000000000",
+    vaultRouter: "0xF684014771C01e50B8B526968B3a1e33acDA63f6",
+    gasService: "0xbEbef21D686a957decECCe6a58455fA0F16754Be",
+    multiAdapter: "0x35C837F0A54B715a23D193E1476BFC9BC30073BE",
+    indexer: "https://api.centrifuge.io",
+    ipfs: "https://centrifuge.mypinata.cloud/ipfs/",
+    app: "https://app.centrifuge.io/pool/",
+  };
+  const FUNDS = [
+    { key: "JTRSY", name: "Janus Henderson Treasury Fund", poolId: "281474976710662", tokenId: "0x00010000000000060000000000000001",
+      share: "0xC18e6f730896971a79D748E8deA61067A9Bc6040", vault: "0x12774f79be1a24dbea8f20ae0b38c2667b672bb1", dec: 6,
+      cls: "Public credit · US Treasury bills", manager: "Janus Henderson Investors", minUsd: 500000, min: "500,000 USD",
+      liquidity: "Daily · T+0 / T+1", fee: "0.25% management", inception: "Dec 2023", risk: "Low",
+      ratings: "Moody's Aa-bf · S&P AAA+f/S1+ · Particula AA+", summary: "bafybeicdzle2bgqekmvnfqcxjhimnzlfrg7mkfvngxtmfvjzldmtoubneq" },
+    { key: "JAAA", name: "Janus Henderson AAA CLO Fund", poolId: "281474976710663", tokenId: "0x00010000000000070000000000000001",
+      share: "0xAD48F183E586e92A591A610397ebf534609DF797", vault: "0x2dc7a732f9acf50a024445536e89c0670b80e5c4", dec: 6,
+      cls: "Public credit · AAA-rated CLOs", manager: "Janus Henderson Investors", minUsd: 500000, min: "500,000 USD",
+      liquidity: "Daily · T+0 / T+1", fee: "0.50% management", inception: "Jul 2025", risk: "Low to moderate",
+      ratings: "Particula AAA", summary: "bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le" },
+    { key: "HYB", name: "NYLIM US High Yield Bond Fund", poolId: "281474976710671", tokenId: "0x000100000000000f0000000000000001",
+      share: "0x4827C7ecce4f07ADfe44A97165f06A199e7d2505", vault: "0xcf0c41d1bf0ae06e11bbff62deabd4b7595aa9ba", dec: 18,
+      cls: "Corporate bonds · US high yield", manager: "New York Life Investment Management (MacKay Shields)", minUsd: 100000, min: "100,000 USDC",
+      liquidity: "Daily dealing · T+3 to T+5 settlement", fee: "0% wrapper · 0.55% underlying fund", inception: "Jun 2026", risk: "Moderate to high",
+      ratings: "Not rated", summary: null, unlisted: true },
+  ];
+  const ERC20 = ["function balanceOf(address) view returns (uint256)", "function allowance(address,address) view returns (uint256)", "function approve(address,uint256) returns (bool)", "function totalSupply() view returns (uint256)"];
+  // ERC-7540 async vault, Centrifuge flavour: maxMint is the claimable shares of a fulfilled
+  // deposit, maxWithdraw the claimable USDC of a fulfilled redemption
+  const VAULT = ["function pricePerShare() view returns (uint256)", "function priceLastUpdated() view returns (uint64)",
+    "function isPermissioned(address) view returns (bool)", "function isOperator(address,address) view returns (bool)",
+    "function pendingDepositRequest(uint256,address) view returns (uint256)", "function pendingRedeemRequest(uint256,address) view returns (uint256)",
+    "function maxMint(address) view returns (uint256)", "function maxWithdraw(address) view returns (uint256)",
+    "function claimableCancelDepositRequest(uint256,address) view returns (uint256)"];
+  const ROUTER = ["function multicall(bytes[]) payable", "function enable(address) payable",
+    "function requestDeposit(address,uint256,address,address) payable", "function requestRedeem(address,uint256,address,address) payable",
+    "function claimDeposit(address,address,address) payable", "function claimRedeem(address,address,address) payable",
+    "function isEnabled(address,address) view returns (bool)"];
+  const GAS = ["function messageOverallGasLimit(uint16,bytes) view returns (uint128)"];
+  const ADAPTER = ["function estimate(uint16,bytes,uint256) view returns (uint256)"];
+  const routerIface = new ethers.Interface(ROUTER);
+
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const fmt = (n, d = 2) => Number(n).toLocaleString("en-US", { maximumFractionDigits: d });
+  const money = (n) => (n == null ? "—" : n >= 1e9 ? "$" + fmt(n / 1e9, 2) + "B" : n >= 1e6 ? "$" + fmt(n / 1e6, 1) + "M" : n >= 1e3 ? "$" + fmt(n / 1e3, 1) + "K" : "$" + fmt(n, 2));
+  const pct = (x) => (x == null ? "—" : fmt(x * 100, 2) + "%");
+  const explorer = (path) => (arcCfg.explorer ? `${arcCfg.explorer.replace(/\/$/, "")}/${path}` : "");
+
+  // ---- reads through the site's RPC pool, the Earn page's way: a 429 or a host Brave blocks
+  // moves to the next endpoint, and the site's relay comes last
+  const READ_URLS = [arcCfg.rpc, ...(arcCfg.rpcs || []).map((r) => (typeof r === "string" ? r : r.hosts && r.hosts.includes(location.hostname) ? r.url : null))].filter((u, i, a) => u && a.indexOf(u) === i);
+  const readProviders = new Map();
+  const readProvider = (u = READ_URLS[0]) => {
+    let p = readProviders.get(u);
+    if (!p) { const r = new ethers.FetchRequest(u); r.timeout = 5000; p = new ethers.JsonRpcProvider(r, Number(arcCfg.chainId), { staticNetwork: true }); readProviders.set(u, p); }
+    return p;
+  };
+  async function viaPool(fn) {
+    let last = null;
+    for (const u of READ_URLS) {
+      try { return await fn(readProvider(u)); }
+      catch (e) { last = e; if (e && e.code === "CALL_EXCEPTION") throw e; }
+    }
+    throw last || new Error("no RPC answered");
+  }
+  async function rawRpc(method, params) { return viaPool((p) => p.send(method, params || [])); }
+
+  // ---- the indexer: Centrifuge's own, open to browsers. Global issuance and the trailing
+  // 30-day yield come from here; the price and the Arc supply are read from the chain.
+  async function gql(query) {
+    const r = await fetch(CFG.indexer, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query }), signal: AbortSignal.timeout(12000) });
+    const j = await r.json();
+    if (j.errors) throw new Error(j.errors[0].message);
+    return j.data;
+  }
+
+  let live = {};   // key -> { price, priceAt, arcSupply, issuance, aum, apy }
+  async function loadFunds() {
+    try {
+      await Promise.all(FUNDS.map(async (f) => {
+        const [price, priceAt, supply] = await viaPool(async (p) => {
+          const v = new ethers.Contract(f.vault, VAULT, p), s = new ethers.Contract(f.share, ERC20, p);
+          return Promise.all([v.pricePerShare(), v.priceLastUpdated(), s.totalSupply()]);
+        });
+        live[f.key] = { price: Number(ethers.formatUnits(price, 6)), priceAt: Number(priceAt) * 1000, arcSupply: Number(ethers.formatUnits(supply, f.dec)) };
+      }));
+    } catch (e) { console.warn("chain reads", e); }
+    render();
+    try {
+      const ids = FUNDS.map((f) => `"${f.tokenId}"`).join(",");
+      const d = await gql(`{ tokens(where:{id_in:[${ids}]}){ items { id totalIssuance tokenPrice } } ` +
+        FUNDS.map((f, i) => `s${i}: tokenSnapshots(where:{id:"${f.tokenId}"}, orderBy:"timestamp", orderDirection:"desc", limit:1){ items { yield30d365 timestamp } }`).join(" ") + " }");
+      FUNDS.forEach((f, i) => {
+        const t = (d.tokens.items || []).find((x) => x.id === f.tokenId);
+        const l = live[f.key] || (live[f.key] = {});
+        if (t) {
+          const issuance = Number(ethers.formatUnits(BigInt(t.totalIssuance || 0), f.dec));
+          const px = Number(ethers.formatUnits(BigInt(t.tokenPrice || 0), 18));
+          l.issuance = issuance; l.aum = issuance * px; if (!l.price && px) l.price = px;
+        }
+        const s = d["s" + i] && d["s" + i].items && d["s" + i].items[0];
+        // the indexer's yields are 27-decimal fixed point (3.39% arrives as 0.0339e27)
+        if (s && s.yield30d365) l.apy = Number(ethers.formatUnits(BigInt(s.yield30d365), 27));
+      });
+    } catch (e) { console.warn("indexer", e); }
+    render();
+  }
+
+  // ---- cards ----
+  let positions = {};  // key -> { allowed, shares, pendingDep, claimShares, pendingRed, claimAssets }
+  function render() {
+    $("count").textContent = `${FUNDS.length} funds · Centrifuge on Arc`;
+    $("grid").innerHTML = FUNDS.map((f, i) => {
+      const l = live[f.key] || {}, p = positions[f.key];
+      const stale = l.priceAt && Date.now() - l.priceAt > 3 * 86400e3;
+      const summary = f.summary ? `<a href="${CFG.ipfs}${f.summary}" target="_blank" rel="noopener">Executive summary ↗</a>` : "";
+      const posLines = p ? [
+        p.shares > 0 ? `Shares: ${fmt(p.shares, 4)} ${f.key}${l.price ? " ≈ " + money(p.shares * l.price) : ""}` : "",
+        p.pendingDep > 0 ? `Pending deposit: ${fmt(p.pendingDep, 2)} USDC` : "",
+        p.claimShares > 0 ? `Claimable: ${fmt(p.claimShares, 4)} ${f.key}` : "",
+        p.pendingRed > 0 ? `Pending redeem: ${fmt(p.pendingRed, 4)} ${f.key}` : "",
+        p.claimAssets > 0 ? `Claimable: ${fmt(p.claimAssets, 2)} USDC` : "",
+      ].filter(Boolean) : [];
+      let action;
+      if (!account) action = `<button class="btn primary" data-open="${i}">Connect to invest</button>`;
+      else if (!p) action = `<button class="btn" disabled>Checking your wallet…</button>`;
+      else if (p.allowed) action = `<button class="btn primary" data-open="${i}">${p.claimShares > 0 || p.claimAssets > 0 ? "Claim" : "Deposit USDC"}</button>`;
+      else action = `<a class="btn" href="${CFG.app}${f.poolId}" target="_blank" rel="noopener" title="The issuer runs eligibility and KYC on Centrifuge; once your wallet is a member, this card lets you deposit">Onboard with the issuer ↗</a>`;
+      return `<div class="fund">
+        <div class="head"><div><h3>${esc(f.name)}</h3><div class="by">${esc(f.key)} · ${esc(f.cls)}</div></div><span class="tag usdc">USDC</span></div>
+        <div class="apy"${l.apy < 0 ? ' style="color:var(--red)"' : ""}>${pct(l.apy)}<small>30D · ANNUALIZED</small></div>
+        <div class="stats">
+          <div>${l.price ? fmt(l.price, 4) : "—"}<span>NAV / share</span></div>
+          <div>${money(l.aum)}<span>Fund size</span></div>
+          <div>${l.arcSupply != null ? fmt(l.arcSupply, 2) : "—"}<span>On Arc</span></div>
+        </div>
+        ${stale ? `<span class="tag warn">price last set ${new Date(l.priceAt).toLocaleDateString("en-GB")}</span>` : ""}
+        ${f.unlisted ? `<span class="tag warn">Not yet listed on Centrifuge's own app: the issuer has it open for direct subscriptions only.</span>` : ""}
+        ${p ? (p.allowed ? `<span class="tag ok">✓ Your wallet is whitelisted for this fund</span>` : `<span class="tag warn">Your wallet is not whitelisted for this fund yet; the issuer decides that, not us.</span>`) : ""}
+        <dl class="facts">
+          <dt>Manager</dt><dd>${esc(f.manager)}</dd>
+          <dt>Issuer</dt><dd>Anemoy Capital SPC Ltd · BVI professional fund</dd>
+          <dt>Minimum</dt><dd>${esc(f.min)}</dd>
+          <dt>Liquidity</dt><dd>${esc(f.liquidity)}</dd>
+          <dt>Fees</dt><dd>${esc(f.fee)}</dd>
+          <dt>Ratings</dt><dd>${esc(f.ratings)}</dd>
+          <dt>Since</dt><dd>${esc(f.inception)} · risk ${esc(f.risk.toLowerCase())}</dd>
+        </dl>
+        <div class="links">${summary}<a href="${CFG.app}${f.poolId}" target="_blank" rel="noopener">On Centrifuge ↗</a>${explorer("token/" + f.share) ? `<a href="${esc(explorer("token/" + f.share))}" target="_blank" rel="noopener">Token on Arc ↗</a>` : ""}</div>
+        <div class="pos ${posLines.length ? "show" : ""}">${posLines.map(esc).join("<br>")}</div>
+        ${action}
+      </div>`;
+    }).join("");
+  }
+  $("grid").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-open]");
+    if (!b) return;
+    if (!account) return openPicker();
+    openSheet(FUNDS[Number(b.dataset.open)]);
+  });
+
+  // ---- wallet: the floor's three doors, on one EIP-1193 path (the Earn page's code) ----
+  let account = null, active = null, activeKind = null;
+  const wallet = () => active;
+  async function ensureArc() {
+    const have = BigInt(await wallet().request({ method: "eth_chainId" }));
+    if (have === BigInt(arcCfg.chainId)) return;
+    try { await wallet().request({ method: "wallet_switchEthereumChain", params: [{ chainId: arcCfg.chainIdHex }] }); }
+    catch (e) {
+      if (e && (e.code === 4902 || /unrecognized|not added/i.test(e.message || ""))) {
+        await wallet().request({ method: "wallet_addEthereumChain", params: [{
+          chainId: arcCfg.chainIdHex, chainName: NET_NAME,
+          nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 }, rpcUrls: [arcCfg.rpc],
+          blockExplorerUrls: arcCfg.explorer ? [arcCfg.explorer] : [] }] });
+      } else throw e;
+    }
+  }
+  const LAST_KEY = "anewone_last_wallet";
+  const discovered = new Map();
+  window.addEventListener("eip6963:announceProvider", (ev) => {
+    const d = ev.detail; if (d?.info?.rdns && d?.provider) discovered.set(d.info.rdns, d);
+  });
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  const walletChoices = () => {
+    const l = [...discovered.values()];
+    if (!l.length && window.ethereum) l.push({ info: { rdns: "legacy", name: "Browser wallet" }, provider: window.ethereum });
+    return l;
+  };
+  const W3A = (cfg.web3auth || {})[net] || {};
+  const WC_ID = (cfg.walletConnect || {}).projectId || "";
+  const NET_NAME = net === "mainnet" ? "Arc" : "Arc Testnet";
+  let w3a = null, wcProvider = null;
+  async function loadWeb3Auth() {
+    if (w3a) return w3a;
+    const { Web3Auth, CHAIN_NAMESPACES, WEB3AUTH_NETWORK, EthereumPrivateKeyProvider } = await import("../vendor/web3auth.esm.js");
+    let rpcTarget = arcCfg.rpc;
+    try {
+      const brave = !!(navigator.brave && await navigator.brave.isBrave());
+      const relay = (arcCfg.rpcs || []).find((r) => r && typeof r === "object" && r.hosts && r.hosts.includes(location.hostname));
+      if (brave && relay) rpcTarget = relay.url;
+    } catch {}
+    const privateKeyProvider = new EthereumPrivateKeyProvider({ config: { chainConfig: {
+      chainNamespace: CHAIN_NAMESPACES.EIP155, chainId: arcCfg.chainIdHex, rpcTarget, displayName: NET_NAME,
+      ticker: "USDC", tickerName: "USD Coin", blockExplorerUrl: arcCfg.explorer || "" } } });
+    const netKey = (W3A.network || "sapphire_devnet").toUpperCase();
+    w3a = new Web3Auth({ clientId: W3A.clientId, web3AuthNetwork: WEB3AUTH_NETWORK[netKey] || WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
+      privateKeyProvider, uiConfig: { uxMode: "redirect" } });
+    await w3a.initModal();
+    return w3a;
+  }
+  async function loadWalletConnect() {
+    if (wcProvider) return wcProvider;
+    const { EthereumProvider } = await import("../vendor/walletconnect.esm.js");
+    wcProvider = await EthereumProvider.init({
+      projectId: WC_ID, chains: [arcCfg.chainId], rpcMap: { [arcCfg.chainId]: arcCfg.rpc },
+      optionalMethods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_sign", "wallet_switchEthereumChain", "wallet_addEthereumChain"],
+      showQrModal: true, qrModalOptions: { themeMode: document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark" },
+      metadata: { name: "A NEW ONE", description: "Tokenized funds on Arc through Centrifuge.", url: "https://anewone.xyz", icons: ["https://anewone.xyz/apple-touch-icon.png"] },
+    });
+    return wcProvider;
+  }
+  // reads never go to the wallet app: only what needs a signature does
+  const WALLET_METHODS = new Set(["eth_requestAccounts", "eth_accounts", "eth_chainId", "eth_sendTransaction", "eth_signTransaction",
+    "eth_sign", "personal_sign", "eth_signTypedData", "eth_signTypedData_v3", "eth_signTypedData_v4",
+    "wallet_switchEthereumChain", "wallet_addEthereumChain", "wallet_watchAsset", "wallet_getPermissions", "wallet_requestPermissions"]);
+  const wcFacade = (p) => ({
+    request: (args) => (WALLET_METHODS.has(args.method) ? p.request(args) : rawRpc(args.method, args.params)),
+    get chainId() { return p.chainId; },
+    on: (ev, fn) => p.on(ev, fn), removeListener: (ev, fn) => p.removeListener(ev, fn),
+    disconnect: () => p.disconnect(), get session() { return p.session; },
+  });
+  const modal = $("walletModal");
+  function openPicker() {
+    $("gmailBtn").hidden = !W3A.clientId; $("wOr").hidden = !W3A.clientId;
+    $("wcBtn").hidden = !WC_ID;
+    const list = walletChoices();
+    $("walletList").innerHTML = list.map((d) => `<button class="wrow" data-rdns="${esc(d.info.rdns)}">${d.info.icon ? `<img src="${esc(d.info.icon)}" alt="">` : "🦊"}<span>${esc(d.info.name)}</span></button>`).join("")
+      || `<div class="hint">No browser wallet found. Install <a href="https://metamask.io" target="_blank" rel="noopener">MetaMask</a>, <a href="https://rabby.io" target="_blank" rel="noopener">Rabby</a> or <a href="https://www.okx.com/web3" target="_blank" rel="noopener">OKX</a>, or use one of the options above.</div>`;
+    $("walletList").querySelectorAll("[data-rdns]").forEach((b) => b.onclick = () => {
+      const d = list.find((x) => x.info.rdns === b.dataset.rdns);
+      if (d) use(d.provider, d.info.rdns).catch(fail);
+    });
+    modal.classList.add("open");
+  }
+  const fail = (e) => { modal.classList.remove("open"); alert(e.shortMessage || e.message || String(e)); };
+  $("walletX").onclick = () => modal.classList.remove("open");
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("open"); });
+  $("gmailBtn").onclick = async () => {
+    try {
+      $("gmailBtn").disabled = true;
+      const wa = await loadWeb3Auth();
+      try { localStorage.setItem(LAST_KEY, "google"); } catch {}
+      const p = await wa.connect();
+      if (p) await use(p, "google");
+    } catch (e) { try { localStorage.removeItem(LAST_KEY); } catch {} fail(e); }
+    finally { $("gmailBtn").disabled = false; }
+  };
+  const withTimeout = (pr, ms, what) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => rej(new Error(what + " took too long. Open your wallet app and try again.")), ms))]);
+  const wcLabel = $("wcBtn").querySelector("span:last-child");
+  $("wcBtn").onclick = async () => {
+    const orig = wcLabel.innerHTML;
+    $("wcBtn").disabled = true; wcLabel.textContent = "Opening WalletConnect…";
+    try {
+      const p = await withTimeout(loadWalletConnect(), 15000, "WalletConnect");
+      if (p.session) {
+        try { const a = await withTimeout(p.request({ method: "eth_accounts" }), 4000, "The old session"); if (!a || !a[0]) throw new Error("empty"); }
+        catch { try { await p.disconnect(); } catch {} }
+      }
+      if (!p.session) { wcLabel.textContent = "Approve in your wallet app…"; await p.connect(); }
+      await withTimeout(use(wcFacade(p), "walletconnect"), 20000, "Connecting");
+    } catch (e) { try { localStorage.removeItem(LAST_KEY); } catch {} fail(e); }
+    finally { $("wcBtn").disabled = false; wcLabel.innerHTML = orig; }
+  };
+
+  // ---- terms acknowledgment: the same record as Earn's, one signature per wallet; api/ack
+  // checks the prefix, the wallet line and the version line
+  const ACK_VERSION = "2026-09-30";
+  const ACK_KEY = "anewone_terms_ack";
+  function ackStore() { try { return JSON.parse(localStorage.getItem(ACK_KEY) || "{}"); } catch { return {}; } }
+  function hasAck() { const a = ackStore()[String(account).toLowerCase()]; return !!(a && a.version === ACK_VERSION && a.sig); }
+  function ackText() {
+    return `A NEW ONE (anewone.xyz) - Terms acknowledgment
+
+I have read and accept the Terms of Use (anewone.xyz/terms.html) and the Privacy Notice (anewone.xyz/privacy.html), version ${ACK_VERSION}.
+
+I understand that A NEW ONE is a non-custodial interface: it never holds my funds or keys, never issues any asset and never gives financial advice. Funds, vaults and markets are run by third parties; yields are variable, orders settle on the issuer's schedule, and I can lose what I put in. Fees are shown before I sign. I am 18 or older, I act for myself, I meet the issuer's eligibility rules, and I am responsible for my own taxes and local rules.
+
+Wallet: ${account}
+Time: ${new Date().toISOString()}`;
+  }
+  let ackResolve = null;
+  async function syncAck() {
+    if (!account) return;
+    const st = ackStore(), mine = st[String(account).toLowerCase()];
+    try {
+      if (mine && mine.version === ACK_VERSION && mine.sig && !mine.server) {
+        const j = await fetch("../api/ack", { method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ address: account, version: ACK_VERSION, text: mine.text, signature: mine.sig }) }).then((r) => r.json());
+        if (j && j.stored) { mine.server = j.at; localStorage.setItem(ACK_KEY, JSON.stringify(st)); }
+      } else if (!mine || mine.version !== ACK_VERSION) {
+        const j = await fetch("../api/ack?address=" + account).then((r) => r.json());
+        if (j && j.accepted && j.accepted.version === ACK_VERSION) { st[String(account).toLowerCase()] = { version: ACK_VERSION, sig: "server", server: j.accepted.at, at: Date.now() }; localStorage.setItem(ACK_KEY, JSON.stringify(st)); }
+      }
+    } catch {}
+  }
+  function ensureAck() {
+    if (!account || hasAck()) return Promise.resolve(true);
+    $("ackStatus").textContent = ""; $("ackStatus").className = "status";
+    $("ackModal").classList.add("open");
+    return new Promise((res) => { ackResolve = res; });
+  }
+  $("ackSign").onclick = async () => {
+    $("ackSign").disabled = true;
+    $("ackStatus").textContent = "Confirm the signature in your wallet…"; $("ackStatus").className = "status";
+    try {
+      const text = ackText();
+      const hex = "0x" + Array.from(new TextEncoder().encode(text)).map((b) => b.toString(16).padStart(2, "0")).join("");
+      const sig = await wallet().request({ method: "personal_sign", params: [hex, account] });
+      const st = ackStore(); st[String(account).toLowerCase()] = { version: ACK_VERSION, sig, text, at: Date.now() };
+      try { localStorage.setItem(ACK_KEY, JSON.stringify(st)); } catch {}
+      fetch("../api/ack", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ address: account, version: ACK_VERSION, text, signature: sig }) })
+        .then((r) => r.json()).then((j) => { if (j && j.stored) { st[String(account).toLowerCase()].server = j.at; try { localStorage.setItem(ACK_KEY, JSON.stringify(st)); } catch {} } }).catch(() => {});
+      $("ackModal").classList.remove("open");
+      if (ackResolve) { ackResolve(true); ackResolve = null; }
+    } catch (e) {
+      $("ackStatus").textContent = e.code === 4001 || /reject|denied/i.test(e.message || "") ? "Signature refused. You can read the terms and sign later." : (e.shortMessage || e.message || String(e));
+      $("ackStatus").className = "status err";
+    } finally { $("ackSign").disabled = false; }
+  };
+  $("ackClose").onclick = () => { $("ackModal").classList.remove("open"); if (ackResolve) { ackResolve(false); ackResolve = null; } };
+
+  async function use(provider, kind) {
+    active = provider; activeKind = kind;
+    const accts = await provider.request({ method: kind === "walletconnect" ? "eth_accounts" : "eth_requestAccounts" });
+    if (!accts || !accts[0]) throw new Error("No account");
+    if (kind !== "google" && kind !== "walletconnect") await ensureArc();
+    account = ethers.getAddress(accts[0]);
+    window.__anewoneWallet = { provider, account, kind };
+    try { localStorage.setItem(LAST_KEY, kind); } catch {}
+    $("connectBtn").textContent = account.slice(0, 6) + "…" + account.slice(-4);
+    modal.classList.remove("open");
+    provider.on && provider.on("accountsChanged", () => location.reload());
+    provider.on && provider.on("chainChanged", () => location.reload());
+    provider.on && provider.on("disconnect", () => location.reload());
+    render();
+    refreshPositions();
+    syncAck().then(ensureAck);
+  }
+  (async () => {
+    let last = null; try { last = localStorage.getItem(LAST_KEY); } catch {}
+    if (!last) return;
+    try {
+      if (last === "google" && W3A.clientId) {
+        const wa = await loadWeb3Auth();
+        if (wa.connected && wa.provider) await use(wa.provider, "google");
+      } else if (last === "walletconnect" && WC_ID) {
+        const p = await withTimeout(loadWalletConnect(), 15000, "WalletConnect");
+        if (p.session) await withTimeout(use(wcFacade(p), "walletconnect"), 20000, "Connecting");
+      } else {
+        await new Promise((r) => setTimeout(r, 300));
+        const d = walletChoices().find((x) => x.info.rdns === last);
+        if (d) { const a = await d.provider.request({ method: "eth_accounts" }); if (a && a[0]) await use(d.provider, last); }
+      }
+    } catch { try { localStorage.removeItem(LAST_KEY); } catch {} }
+  })();
+  $("connectBtn").onclick = () => { if (!account) return openPicker(); $("acctAddr").textContent = account; $("acctKind").textContent = { walletconnect: "Connected through WalletConnect", google: "Signed in with email or social (Web3Auth)" }[activeKind] || "Browser wallet"; $("acctModal").classList.add("open"); };
+  $("acctClose").onclick = () => $("acctModal").classList.remove("open");
+  $("acctModal").addEventListener("click", (e) => { if (e.target === $("acctModal")) $("acctModal").classList.remove("open"); });
+  async function disconnectWallet() {
+    try { localStorage.removeItem(LAST_KEY); } catch {}
+    try { if (activeKind === "walletconnect" && wcProvider) await withTimeout(wcProvider.disconnect(), 4000, "Disconnect"); } catch {}
+    try { if (activeKind === "google" && w3a) await withTimeout(w3a.logout(), 4000, "Sign-out"); } catch {}
+    try { window.__anewoneWallet = null; } catch {}
+  }
+  $("acctDisconnect").onclick = async () => { $("acctDisconnect").disabled = true; await disconnectWallet(); location.reload(); };
+  $("acctSwitch").onclick = async () => { $("acctSwitch").disabled = true; await disconnectWallet(); $("acctModal").classList.remove("open"); account = null; active = null; activeKind = null; $("connectBtn").textContent = "Connect"; positions = {}; render(); openPicker(); $("acctSwitch").disabled = false; };
+
+  // ---- the wallet's standing in each fund: whitelisted or not, shares, orders in flight ----
+  async function readPosition(f) {
+    return viaPool(async (p) => {
+      const v = new ethers.Contract(f.vault, VAULT, p), s = new ethers.Contract(f.share, ERC20, p);
+      const [allowed, shares, pendingDep, claimShares, pendingRed, claimAssets] = await Promise.all([
+        v.isPermissioned(account), s.balanceOf(account), v.pendingDepositRequest(0, account), v.maxMint(account), v.pendingRedeemRequest(0, account), v.maxWithdraw(account)]);
+      return { allowed, shares: Number(ethers.formatUnits(shares, f.dec)), pendingDep: Number(ethers.formatUnits(pendingDep, 6)),
+        claimShares: Number(ethers.formatUnits(claimShares, f.dec)), pendingRed: Number(ethers.formatUnits(pendingRed, f.dec)), claimAssets: Number(ethers.formatUnits(claimAssets, 6)) };
+    });
+  }
+  async function refreshPositions() {
+    if (!account) return;
+    await Promise.all(FUNDS.map(async (f) => { try { positions[f.key] = await readPosition(f); } catch (e) { console.warn("position", f.key, e); } }));
+    render();
+  }
+
+  // ---- the order sheet: deposit USDC, redeem shares, claim what the issuer has filled ----
+  let cur = null, mode = "deposit", usdcBal = 0n, feeWei = null;
+  const sheet = $("overlay");
+  function setStatus(t, cls) { const s = $("status"); s.textContent = t; s.className = "status " + (cls || ""); }
+  function openSheet(f) {
+    cur = f; feeWei = null;
+    const p = positions[f.key] || {};
+    $("shName").textContent = f.name;
+    $("shSub").textContent = `${f.key} · minimum ${f.min} · ${f.liquidity}`;
+    setMode(p.claimShares > 0 || p.claimAssets > 0 ? "claim" : "deposit");
+    $("amt").value = ""; setStatus("");
+    sheet.classList.add("open");
+    paintBalances();
+    quoteFee();
+  }
+  function setMode(m) {
+    mode = m;
+    $("tabDep").classList.toggle("on", m === "deposit"); $("tabRed").classList.toggle("on", m === "redeem"); $("tabClaim").classList.toggle("on", m === "claim");
+    const p = positions[cur.key] || {};
+    $("amtRow").hidden = m === "claim";
+    $("claimRow").hidden = m !== "claim";
+    $("unit").textContent = m === "redeem" ? cur.key : "USDC";
+    $("goBtn").textContent = m === "deposit" ? "Request deposit" : m === "redeem" ? "Request redemption" : "Claim";
+    if (m === "claim") {
+      const lines = [];
+      if (p.claimShares > 0) lines.push(`<b>${fmt(p.claimShares, 4)} ${esc(cur.key)}</b> filled and waiting for you`);
+      if (p.claimAssets > 0) lines.push(`<b>${fmt(p.claimAssets, 2)} USDC</b> from a redemption, waiting for you`);
+      if (p.pendingDep > 0) lines.push(`${fmt(p.pendingDep, 2)} USDC deposit pending with the issuer`);
+      if (p.pendingRed > 0) lines.push(`${fmt(p.pendingRed, 4)} ${esc(cur.key)} redemption pending with the issuer`);
+      $("claimRow").innerHTML = lines.join("<br>") || "Nothing to claim yet. Orders are filled by the issuer on its dealing schedule; come back after the next cutoff.";
+      $("goBtn").disabled = !(p.claimShares > 0 || p.claimAssets > 0);
+      $("quote").hidden = true;
+    } else { $("goBtn").disabled = false; paintQuote(); }
+    setStatus("");
+  }
+  $("tabDep").onclick = () => setMode("deposit"); $("tabRed").onclick = () => setMode("redeem"); $("tabClaim").onclick = () => setMode("claim");
+  async function paintBalances() {
+    const p = positions[cur.key] || {};
+    $("balL").textContent = "Wallet: …"; $("balR").textContent = p.shares != null ? `Shares: ${fmt(p.shares, 4)} ${cur.key}` : "Shares: …";
+    try { usdcBal = await viaPool((pr) => new ethers.Contract(CFG.usdc, ERC20, pr).balanceOf(account)); $("balL").textContent = `Wallet: ${fmt(ethers.formatUnits(usdcBal, 6), 2)} USDC`; }
+    catch { $("balL").textContent = "Wallet: —"; }
+  }
+  $("maxBtn").onclick = () => {
+    const p = positions[cur.key] || {};
+    $("amt").value = mode === "redeem" ? String(p.shares || 0) : ethers.formatUnits(usdcBal, 6);
+    paintQuote();
+  };
+  $("amt").addEventListener("input", paintQuote);
+  // The message fee: a request on Arc is carried to the pool's hub on Ethereum by Centrifuge's
+  // adapters, and the sender pays that delivery in USDC (Arc's gas) with the transaction. The
+  // SDK prices it the same way: the gas service's limit for an empty Request message of this
+  // pool, the multi-adapter's estimate for it, and half again as buffer; what the adapters do
+  // not use stays with the gateway as a credit for the next message. About 30 to 45 USDC on
+  // 1 Oct 2026, a real cost on a 500k minimum but not a hidden one.
+  async function quoteFee() {
+    try {
+      const payload = ethers.concat(["0x16", ethers.toBeHex(BigInt(cur.poolId), 8), new Uint8Array(241)]);
+      const est = await viaPool(async (p) => {
+        const gl = await new ethers.Contract(CFG.gasService, GAS, p).messageOverallGasLimit(CFG.hubId, payload);
+        return new ethers.Contract(CFG.multiAdapter, ADAPTER, p).estimate(CFG.hubId, payload, gl);
+      });
+      feeWei = est * 3n / 2n;
+    } catch (e) { console.warn("fee", e); feeWei = null; }
+    paintQuote();
+  }
+  function paintQuote() {
+    if (mode === "claim") return;
+    const q = $("quote"), l = live[cur.key] || {}, n = Number($("amt").value || 0);
+    const rows = [];
+    if (mode === "deposit") {
+      rows.push(["You send", `${fmt(n, 2)} USDC`]);
+      if (l.price && n > 0) rows.push(["Shares at today's NAV", `≈ ${fmt(n / l.price, 4)} ${cur.key}`]);
+      rows.push(["Issuer minimum", cur.min]);
+    } else {
+      rows.push(["You redeem", `${fmt(n, 4)} ${cur.key}`]);
+      if (l.price && n > 0) rows.push(["USDC at today's NAV", `≈ ${fmt(n * l.price, 2)} USDC`]);
+    }
+    rows.push(["Message fee to Ethereum", feeWei == null ? "…" : `≈ ${fmt(ethers.formatEther(feeWei), 2)} USDC`]);
+    rows.push(["Fee to A NEW ONE", "none"]);
+    q.innerHTML = rows.map(([k, v]) => `<span>${esc(k)}</span><b>${esc(v)}</b>`).join("");
+    q.hidden = false;
+  }
+  $("closeBtn").onclick = () => sheet.classList.remove("open");
+  sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.classList.remove("open"); });
+
+  const signer = async () => new ethers.BrowserProvider(wallet(), Number(arcCfg.chainId)).getSigner(account);
+  async function send(tx, what) {
+    const s = await signer();
+    const resp = await s.sendTransaction(tx);
+    setStatus(`${what} sent, waiting for Arc…`);
+    const rc = await viaPool((p) => p.waitForTransaction(resp.hash, 1, 120000));
+    if (!rc || rc.status !== 1) throw new Error(`${what} failed on chain`);
+    return resp.hash;
+  }
+  const trim = (s, d) => { const [a, b = ""] = String(s).trim().split("."); return b ? `${a}.${b.slice(0, d)}`.replace(/\.?0+$/, "") : a; };
+  $("goBtn").onclick = async () => {
+    if (!account) { sheet.classList.remove("open"); openPicker(); return; }
+    const p = positions[cur.key] || {};
+    if (!p.allowed) { setStatus("This wallet is not whitelisted for the fund; onboard with the issuer first.", "err"); return; }
+    if (!(await ensureAck())) { setStatus("Accept the terms to continue.", "err"); return; }
+    $("goBtn").disabled = true;
+    try {
+      if (activeKind !== "google") await ensureArc();
+      const router = new ethers.Contract(CFG.vaultRouter, ROUTER, await signer());
+      const enabled = await viaPool((pr) => new ethers.Contract(CFG.vaultRouter, ROUTER, pr).isEnabled(cur.vault, account));
+      const calls = enabled ? [] : [routerIface.encodeFunctionData("enable", [cur.vault])];
+      let hash, done;
+      if (mode === "claim") {
+        if (p.claimShares > 0) calls.push(routerIface.encodeFunctionData("claimDeposit", [cur.vault, account, account]));
+        if (p.claimAssets > 0) calls.push(routerIface.encodeFunctionData("claimRedeem", [cur.vault, account, account]));
+        setStatus("Confirm the claim in your wallet…");
+        hash = await send({ to: CFG.vaultRouter, data: routerIface.encodeFunctionData("multicall", [calls]) }, "Claim");
+        done = "Claimed. Shares and USDC are in your wallet.";
+      } else {
+        if (feeWei == null) await quoteFee();
+        if (feeWei == null) throw new Error("Could not price the message fee; try again in a moment.");
+        const n = Number($("amt").value || 0);
+        if (!(n > 0)) throw new Error("Enter an amount.");
+        if (mode === "deposit") {
+          if (n < cur.minUsd && !(p.shares > 0)) throw new Error(`The issuer's minimum initial subscription is ${cur.min}.`);
+          const amount = ethers.parseUnits(trim(n, 6), 6);
+          if (amount > usdcBal) throw new Error("Not enough USDC in the wallet.");
+          const allowance = await viaPool((pr) => new ethers.Contract(CFG.usdc, ERC20, pr).allowance(account, cur.vault));
+          if (allowance < amount) {
+            setStatus("Confirm the USDC approval in your wallet…");
+            const usdc = new ethers.Contract(CFG.usdc, ERC20, await signer());
+            const tx = await usdc.approve(cur.vault, amount);
+            setStatus("Approval sent, waiting for Arc…");
+            await viaPool((pr) => pr.waitForTransaction(tx.hash, 1, 120000));
+          }
+          calls.push(routerIface.encodeFunctionData("requestDeposit", [cur.vault, amount, account, account]));
+          setStatus("Confirm the deposit request in your wallet…");
+          hash = await send({ to: CFG.vaultRouter, data: routerIface.encodeFunctionData("multicall", [calls]), value: feeWei }, "Deposit request");
+          done = `Deposit request for ${fmt(n, 2)} USDC is on its way to the issuer. Shares appear under Claim once the order is filled.`;
+        } else {
+          const shares = ethers.parseUnits(trim(n, cur.dec), cur.dec);
+          if (!(p.shares > 0) || Number(trim(n, cur.dec)) > p.shares) throw new Error("Not that many shares in the wallet.");
+          calls.push(routerIface.encodeFunctionData("requestRedeem", [cur.vault, shares, account, account]));
+          setStatus("Confirm the redemption request in your wallet…");
+          hash = await send({ to: CFG.vaultRouter, data: routerIface.encodeFunctionData("multicall", [calls]), value: feeWei }, "Redemption request");
+          done = `Redemption request for ${fmt(n, 4)} ${cur.key} is on its way to the issuer. USDC appears under Claim once it is processed.`;
+        }
+      }
+      const url = explorer("tx/" + hash);
+      setStatus("", "ok");
+      $("status").innerHTML = `${esc(done)} ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">View transaction ↗</a>` : ""}`;
+      $("amt").value = "";
+      await refreshPositions(); paintBalances();
+      if (mode !== "claim") $("goBtn").disabled = false;
+      else setMode("claim");
+    } catch (e) {
+      const m = e.shortMessage || e.message || String(e);
+      setStatus(e.code === 4001 || /reject|denied/i.test(m) ? "Cancelled in the wallet." : m, "err");
+      $("goBtn").disabled = false;
+    }
+  };
+
+  if (net !== "mainnet") {
+    $("grid").innerHTML = `<div class="empty">Centrifuge's funds live on Arc mainnet only; this site is on Arc testnet right now.</div>`;
+    $("count").textContent = "";
+  } else loadFunds();
+</script>
+</body>
+</html>
