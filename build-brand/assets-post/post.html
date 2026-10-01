@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --mint: #3ee6a0; --mint-2: #00e57a; --bg: #0b0d0c; --text: #f2f5f3; --dim: #a7b0ab; --faint: #6d7772; --line: rgba(255,255,255,.06); }
+  html, body { margin: 0; width: 1600px; height: 900px; background: var(--bg); font-family: Inter, system-ui, sans-serif; color: var(--text); }
+  #page { position: relative; width: 1600px; height: 900px; overflow: hidden; box-sizing: border-box; padding: 64px 100px;
+    background:
+      radial-gradient(900px 520px at 85% 10%, rgba(62,230,160,.10), transparent 65%),
+      radial-gradient(700px 400px at 10% 100%, rgba(62,230,160,.06), transparent 65%),
+      linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100px 100px,
+      linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 100px 100px,
+      var(--bg); }
+  .top { display: flex; justify-content: space-between; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 16px; letter-spacing: 2px; }
+  .brand { display: flex; align-items: center; gap: 14px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 3px; }
+  .brand img { width: 36px; height: 36px; border-radius: 9px; }
+  .top .url { color: var(--mint); }
+  .eyebrow { margin-top: 70px; font-family: 'JetBrains Mono', monospace; font-size: 15px; letter-spacing: 4px; color: var(--mint); }
+  h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 92px; line-height: .98; letter-spacing: -3px; margin: 18px 0 0; }
+  h1 span { color: var(--mint); }
+  .sub { margin: 24px 0 0; font-size: 22px; color: var(--dim); max-width: 900px; line-height: 1.35; }
+  .sub b { color: var(--text); font-weight: 600; }
+  .cards { position: absolute; left: 100px; right: 100px; bottom: 64px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .card { background: rgba(21,25,23,.85); border: 1px solid rgba(255,255,255,.08); border-radius: 22px; padding: 24px 26px 22px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+  .card .t { display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 2.5px; color: var(--mint); }
+  .card .t i { font-style: normal; color: var(--faint); letter-spacing: 1px; }
+  .card h3 { margin: 10px 0 2px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.5px; line-height: 1.1; }
+  .card .by { font-size: 15px; color: var(--dim); }
+  .nums { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 20px; }
+  .nums b { display: block; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 24px; color: var(--text); }
+  .nums b.big { color: var(--mint); font-size: 30px; }
+  .nums span { display: block; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; color: var(--faint); margin-top: 4px; }
+  .foot { position: absolute; left: 100px; right: 100px; bottom: 318px; display: flex; gap: 28px; font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 2.5px; color: var(--dim); }
+  .foot i { font-style: normal; color: var(--mint); }
+</style></head><body>
+<div id="page">
+  <div class="top">
+    <div class="brand"><img src="../../docs/brand/logo.png" alt="">A NEW ONE</div>
+    <div class="url">anewone.xyz/assets</div>
+  </div>
+  <div class="eyebrow">ASSETS · CENTRIFUGE ON ARC · SETTLED IN USDC</div>
+  <h1>Institutional funds,<br>live on <span>Arc.</span></h1>
+  <p class="sub">Janus Henderson and New York Life IM funds on Centrifuge rails, read straight from the chain. <b>NAV, yield, fund size, the issuer's terms.</b> Whitelisted wallets place USDC orders from the page.</p>
+  <div class="foot"><span>READ FROM THE VAULT CONTRACT</span><i>■</i><span>ISSUER'S TERMS ON EVERY CARD</span><i>■</i><span>WE ARE THE INTERFACE, NOT THE ISSUER</span></div>
+  <div class="cards">
+    <div class="card"><div class="t">JTRSY <i>US TREASURY BILLS</i></div><h3>Janus Henderson Treasury Fund</h3><div class="by">Janus Henderson · Moody's Aa-bf · S&amp;P AAA+f</div>
+      <div class="nums"><div><b class="big">3.39%</b><span>30D APY</span></div><div><b>1.1177</b><span>NAV</span></div><div><b>$344M</b><span>FUND SIZE</span></div></div></div>
+    <div class="card"><div class="t">JAAA <i>AAA-RATED CLOs</i></div><h3>Janus Henderson AAA CLO Fund</h3><div class="by">Janus Henderson · Particula AAA</div>
+      <div class="nums"><div><b class="big">3.22%</b><span>30D APY</span></div><div><b>1.0503</b><span>NAV</span></div><div><b>$585M</b><span>FUND SIZE</span></div></div></div>
+    <div class="card"><div class="t">HYB <i>US HIGH YIELD BONDS</i></div><h3>NYLIM US High Yield Bond Fund</h3><div class="by">New York Life IM · MacKay Shields</div>
+      <div class="nums"><div><b class="big">NEW</b><span>SINCE JUN 2026</span></div><div><b>0.983</b><span>NAV</span></div><div><b>T+3</b><span>SETTLEMENT</span></div></div></div>
+  </div>
+</div>
+</body></html>
