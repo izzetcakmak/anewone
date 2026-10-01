@@ -209,6 +209,7 @@
     <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../brand/logo.svg" alt=""><span>A NEW ONE</span></a>
     <nav class="tb-nav">
       <a class="tbx" href="/">← <span class="lbl">Home</span></a>
+      <a class="tbx" href="../assets/" title="Tokenized funds on Arc through Centrifuge">🏦 <span class="lbl">Assets</span></a>
       <a class="tbx" href="../bridge/" title="Bring USDC aboard from any chain">🌉 <span class="lbl">Swap &amp; Bridge</span></a>
       <a class="tbx" href="../fun/">🎮 <span class="lbl">AnewOne.Fun</span></a>
       <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark">
@@ -226,7 +227,6 @@
     <div class="eyebrow">Earn &amp; Borrow · Morpho on Arc · settled in USDC</div>
     <h1>Put your USDC to work,<br>or borrow against what you hold.</h1>
     <p class="lead">Lending vaults on Arc, run by curators such as <b>Bitwise</b>, <b>Gauntlet</b> and <b>Steakhouse</b> on the Morpho protocol. You deposit, withdraw, borrow and repay from your own wallet; the money sits in the Morpho contracts, never with us. <b>A NEW ONE is the interface, not the issuer.</b> Vault data by Circle's Earn service.</p>
-      <a class="tbx" href="../assets/" title="Tokenized funds on Arc through Centrifuge">🏦 <span class="lbl">Assets</span></a>
   </div>
 
   <div class="views" role="tablist">
@@ -431,7 +431,7 @@
         <div class="apy">${pct(v.currentApy)}<small>APY</small></div>
         <div class="stats"><div>${money(v.totalDeposits)}<span>Deposits</span></div><div>${money(v.liquidity)}<span>Liquidity</span></div><div>${esc(fee)}<span>Vault fee</span></div></div>
         ${low ? `<span class="tag warn">⚠ ${esc(String(v.status).replace(/_/g, " "))}</span>` : ""}
-        ${uncurated ? `<span class="tag warn">⚠ not curated: no named curator or flagged by Circle. Anyone can deploy a vault with any name.</span>` : (v.riskSignals && v.riskSignals.circleSentinel ? `<span class="tag usdc">✓ Circle-guarded vault</span>` : "")}
+        ${uncurated ? `<span class="tag warn">⚠ not curated: no named curator or flagged by Circle. Anyone can deploy a vault with any name.</span>` : (v.circleGuarded ? `<span class="tag usdc">✓ Circle-guarded${v.asset === "USDC" ? " · deposit from Base" : ""}</span>` : "")}
         <div class="pos ${p && Number(p.currentBalance) > 0 ? "show" : ""}">You: ${p ? fmt(p.currentBalance, 2) + " " + esc(v.asset) : ""}</div>
         <button class="btn primary" data-open="${vaults.indexOf(v)}">Deposit ${esc(v.asset)}</button>
       </div>`;
@@ -523,10 +523,11 @@
   // Where a deposit can come from without leaving the page: Circle bridges USDC from these
   // chains into the vault on Arc (the wallet only signs an ERC-3009 authorization there, no
   // gas on the source). Public RPCs for the balance read and for the kit's own reads.
+  // On mainnet Circle's Earn bridge serves Base only (Ethereum and Arbitrum answer "not
+  // supported for EarnKit", 1 Oct 2026), and only into Circle-guarded vaults (the others
+  // answer "bridge prepare call failed").
   const SOURCES = net === "mainnet" ? [
     { key: "Base", name: "Base", chainId: 8453, hex: "0x2105", rpc: ["https://mainnet.base.org", "https://base-rpc.publicnode.com"], usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", explorer: "https://basescan.org" },
-    { key: "Ethereum", name: "Ethereum", chainId: 1, hex: "0x1", rpc: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"], usdc: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", explorer: "https://etherscan.io" },
-    { key: "Arbitrum", name: "Arbitrum", chainId: 42161, hex: "0xa4b1", rpc: ["https://arb1.arbitrum.io/rpc", "https://arbitrum-one-rpc.publicnode.com"], usdc: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", explorer: "https://arbiscan.io" },
   ] : [
     { key: "Base_Sepolia", name: "Base Sepolia", chainId: 84532, hex: "0x14a34", rpc: ["https://sepolia.base.org"], usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", explorer: "https://sepolia.basescan.org" },
     { key: "Ethereum_Sepolia", name: "Ethereum Sepolia", chainId: 11155111, hex: "0xaa36a7", rpc: ["https://ethereum-sepolia-rpc.publicnode.com"], usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", explorer: "https://sepolia.etherscan.io" },
@@ -762,8 +763,9 @@ Time: ${new Date().toISOString()}`;
   // which chain the deposit comes from: null is Arc itself; only USDC vaults can be fed from
   // another chain (the bridge carries USDC)
   let src = null, xqTimer = null, xquote = null;
+  const bridgeable = (v) => !!(v && v.asset === "USDC" && v.circleGuarded);
   function paintFrom() {
-    const can = mode === "deposit" && cur && cur.asset === "USDC";
+    const can = mode === "deposit" && bridgeable(cur);
     $("fromRow").hidden = !can;
     if (!can) { src = null; $("xq").hidden = true; return; }
     $("fromChips").innerHTML = [`<button data-src="" class="${src ? "" : "on"}">Arc</button>`]
@@ -799,7 +801,17 @@ Time: ${new Date().toISOString()}`;
       const rows = [["Route", `${src.name} → Arc, Circle CCTP (fast)`], ...fees, ["Arrives in vault", `${fmt(Math.max(0, Number(amount) - total), 6)} USDC`], ["Expected shares", q.expectedShares ? fmt(q.expectedShares.amount, 6) : "—"], ["Gas on " + src.name, "none, one signature"]];
       $("xq").innerHTML = rows.map(([a, b]) => `<span>${esc(a)}</span><b>${esc(b)}</b>`).join("");
       $("xq").hidden = false;
-    } catch (e) { setStatus(kitMod.getErrorMessage ? kitMod.getErrorMessage(e) : (e.message || String(e)), "err"); }
+    } catch (e) {
+      console.error("cross-chain quote", e);
+      const m = deepMsg(e);
+      setStatus(/bridge prepare/i.test(m) ? "Circle's bridge does not serve this vault from Base yet. Deposit from Arc, or pick a Circle-guarded vault." : m, "err");
+    }
+  }
+  // the kit wraps a service error in a KitError; the service's own words are in the cause
+  function deepMsg(e) {
+    const seen = []; let x = e;
+    for (let i = 0; i < 6 && x; i++) { const m = x.message || (x.error && x.error.message) || (x.body && (x.body.message || x.body.error)); if (m && !seen.includes(m)) seen.push(String(m)); x = x.cause || (x.cause && x.cause.error) || x.originalError || x.error || null; }
+    return seen.join(" · ").slice(0, 400) || String(e);
   }
   async function openSheet(v) {
     cur = v; mode = "deposit"; setMode();
