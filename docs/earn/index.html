@@ -54,10 +54,29 @@
   .tb-brand img { width: 40px; height: 40px; border-radius: 11px; }
   .tb-brand span { font: 700 20px 'Space Grotesk', sans-serif; letter-spacing: .8px; color: var(--text); white-space: nowrap; }
   .tb-nav { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-  .tbx { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; color: var(--text); font: 500 13px var(--mono); background: var(--bg-2); white-space: nowrap; }
-  .tbx:hover { text-decoration: none; border-color: var(--accent); }
-  .tbx.net { color: var(--accent); border-color: rgba(var(--accent-rgb),.4); }
-  .tbx.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+  /* The home page's glass, on the bar's pills, the Earn/Borrow switch and the filter chips: a
+     translucent green pane with a lit top edge and a faint halo, solid green under the hand and
+     when selected. */
+  .tbx, .views button, .chip { position: relative; color: var(--accent); border: 1px solid rgba(var(--accent-rgb), .45); border-radius: 999px;
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
+    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
+  .tbx::before, .views button::before, .chip::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
+  .tbx:hover, .views button:hover, .views button.on, .chip:hover, .chip.on { text-decoration: none; color: var(--accent-ink); text-shadow: none;
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
+  .tbx:hover, .views button:hover, .chip:hover { transform: translateY(-1px); }
+  :root[data-theme="light"] .tbx, :root[data-theme="light"] .views button, :root[data-theme="light"] .chip { text-shadow: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
+  /* the bar's pills are one size, as on the home page, 142px so the seven fit the 1160px bar;
+     the theme switch is the round one */
+  .tbx { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; width: 142px; padding: 0 10px;
+    font: 700 12px var(--mono); letter-spacing: .01em; white-space: nowrap; }
+  .tbx.theme { width: 40px; padding: 0; }
+  /* below the width the full row needs, the doors keep their icons alone */
+  @media (max-width: 1180px) { .tbx .lbl { display: none; } .tbx:not(.net):not(.primary) { width: 40px; padding: 0; } }
   .tbx.theme .i-sun, .tbx.theme .i-moon { width: 16px; height: 16px; }
   :root[data-theme="light"] .i-sun { display: none; }
   :root:not([data-theme="light"]) .i-moon { display: none; }
@@ -67,7 +86,7 @@
     .tb-brand span, .tbx .lbl { display: none; }
     .topbar-inner { padding: 10px 14px; gap: 8px; }
     .tb-nav { gap: 8px; }
-    .tbx { height: 42px; min-width: 42px; padding: 0 12px; font-size: 16px; }
+    .tbx { height: 42px; min-width: 42px; width: auto; padding: 0 12px; font-size: 16px; }
     .tbx.net, .tbx.primary { font-size: 13px; padding: 0 14px; }
     .tbx.theme .i-sun, .tbx.theme .i-moon { width: 20px; height: 20px; }
   }
@@ -80,14 +99,13 @@
   .lead b { color: var(--text); }
 
   /* the two windows: Earn (lend USDC) and Borrow (USDC against collateral) */
-  .views { display: flex; gap: 6px; background: var(--card); border-radius: 999px; padding: 5px; width: max-content; max-width: 100%; margin: 4px 0 8px; }
-  .views button { padding: 10px 22px; border: 0; border-radius: 999px; background: transparent; color: var(--dim); font: 600 14px Inter, sans-serif; }
-  .views button.on { background: var(--bg-2); color: var(--text); box-shadow: var(--shadow); }
-  @media (max-width: 600px) { .views { width: 100%; } .views button { flex: 1; } }
+  /* the page's two main doors, so they are the biggest glass on it, the open one lit */
+  .views { display: flex; gap: 10px; width: max-content; max-width: 100%; margin: 8px 0 10px; }
+  .views button { height: 52px; min-width: 180px; padding: 0 32px; font: 700 18px 'Space Grotesk', sans-serif; letter-spacing: .01em; }
+  @media (max-width: 600px) { .views { width: 100%; } .views button { flex: 1; min-width: 0; } }
   .view[hidden] { display: none; }
   .filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 24px 0 14px; }
-  .chip { padding: 7px 14px; border: 1px solid var(--border-2); border-radius: 999px; background: var(--bg-2); color: var(--dim); font: 500 12px var(--mono); }
-  .chip.on { background: var(--accent-soft); color: var(--accent); border-color: rgba(var(--accent-rgb),.5); }
+  .chip { padding: 7px 14px; font: 500 12px var(--mono); }
   .count { margin-left: auto; color: var(--faint); font: 500 12px var(--mono); }
 
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
