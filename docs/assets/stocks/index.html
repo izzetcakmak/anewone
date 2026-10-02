@@ -9,7 +9,7 @@
     catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
   })();
 </script>
-<title>Stocks · Tokenized US stocks and ETFs on Arc | A NEW ONE</title>
+<title>RWA · Tokenized US stocks and ETFs on Arc | A NEW ONE</title>
 <link rel="canonical" href="https://anewone.xyz/assets/stocks/">
 <meta name="description" content="Tokenized US stocks and ETFs from xStocks, issued by Backed Assets (JE) Ltd, a Kraken company: Tesla, Nvidia, Apple, S&P 500 and over a thousand more, each backed 1:1 by the share. Live reference prices, proof of reserves and trading hours; trading in USDC on Arc the moment the tokens land there. A NEW ONE is the interface, never the issuer.">
 <meta property="og:title" content="Stocks · Tokenized US stocks and ETFs on Arc">
@@ -68,6 +68,24 @@
   :root[data-theme="light"] .tbx { text-shadow: none;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
   .tbx.theme { width: 40px; padding: 0; }
+  /* RWA's two doors, Stocks / ETF and Funds, as Earn and Borrow are on DeFi: the biggest glass on
+     the page, the open one lit. Each is its own page, so they are links. */
+  .views { display: flex; gap: 10px; width: max-content; max-width: 100%; margin: 8px 0 18px; }
+  .views a { position: relative; display: inline-flex; align-items: center; justify-content: center; height: 52px; min-width: 180px; padding: 0 32px;
+    font: 700 18px 'Space Grotesk', sans-serif; letter-spacing: .01em; white-space: nowrap; border-radius: 999px; color: var(--accent); text-decoration: none;
+    border: 1px solid rgba(var(--accent-rgb), .45); background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
+    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
+  .views a::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
+  .views a:hover, .views a.on { color: var(--accent-ink); text-shadow: none; text-decoration: none;
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
+  .views a:hover { transform: translateY(-1px); }
+  :root[data-theme="light"] .views a { text-shadow: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
+  @media (max-width: 600px) { .views { width: 100%; } .views a { flex: 1; min-width: 0; padding: 0 12px; } }
   @media (max-width: 1180px) { .tbx .lbl { display: none; } .tbx:not(.net):not(.primary) { width: 40px; padding: 0; } }
   .tbx.theme .i-sun, .tbx.theme .i-moon { width: 16px; height: 16px; }
   :root[data-theme="light"] .i-sun { display: none; }
@@ -198,8 +216,7 @@
     <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../../brand/logo.svg" alt=""><span>A NEW ONE</span></a>
     <nav class="tb-nav">
       <a class="tbx" href="/">← <span class="lbl">Home</span></a>
-      <a class="tbx" href="../" title="Tokenized funds on Arc through Centrifuge">🏦 <span class="lbl">Funds</span></a>
-      <a class="tbx" href="../../earn/" title="USDC vaults and loans on Morpho">💵 <span class="lbl">Earn &amp; Borrow</span></a>
+      <a class="tbx" href="../../earn/" title="Earn and Borrow: USDC vaults and loans on Morpho">💵 <span class="lbl">DeFi</span></a>
       <a class="tbx" href="../../bridge/" title="Bring USDC aboard from any chain">🌉 <span class="lbl">Swap &amp; Bridge</span></a>
       <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark">
         <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
@@ -213,10 +230,15 @@
 
 <main class="wrap">
   <div class="hero">
-    <div class="eyebrow">Assets · Stocks · xStocks on Arc · settled in USDC</div>
+    <div class="eyebrow">RWA · Stocks / ETF · xStocks on Arc · settled in USDC</div>
     <h1>US stocks and ETFs,<br>on Arc.</h1>
     <p class="lead">Over a thousand <b>xStocks</b>: tokens that each track one share of a US stock or ETF, held 1:1 with regulated custodians and issued by <b>Backed Assets (JE) Ltd</b>, a Kraken company. Every card reads the issuer's live reference price, proof of reserves and market hours. On Arc they trade in <b>USDC, around the clock</b>, from your own wallet. <b>A NEW ONE is the interface, not the issuer.</b></p>
   </div>
+
+  <nav class="views" aria-label="RWA">
+    <a class="on" href="./" aria-current="page">Stocks / ETF</a>
+    <a href="../">Funds</a>
+  </nav>
 
   <div class="elig" id="arcState">
     <span class="ico">🛰️</span>
