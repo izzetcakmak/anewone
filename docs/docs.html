@@ -6,11 +6,8 @@
 <script>
   // Same key as the main page, so a visitor's theme carries across the site.
   (function () {
-    try {
-      var t = localStorage.getItem("anewone_theme");
-      if (!t) t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", t);
-    } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "dark"); }
+    catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   })();
 </script>
 <title>A NEW ONE Docs · Real-world assets on Arc | anewone.xyz</title>
@@ -21,161 +18,75 @@
 <meta name="theme-color" content="#07080b">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --accent-rgb: 62,230,160;
-    --accent2-rgb: 139,123,255;
-    --cyan-rgb: 56,214,255;
-    --pink-rgb: 255,106,193;
-    --gold-rgb: 255,194,77;
-    --green-rgb: 47,209,138;
-    --red-rgb: 255,84,112;
-    --accent: rgb(var(--accent-rgb));
-    --green: rgb(var(--green-rgb));
-    --red: rgb(var(--red-rgb));
-    --gold: rgb(var(--gold-rgb));
-    --grad: linear-gradient(100deg, rgb(var(--accent-rgb)), rgb(var(--cyan-rgb)) 38%,
-      rgb(var(--accent2-rgb)) 68%, rgb(var(--pink-rgb)));
-    --mono: 'JetBrains Mono', ui-monospace, monospace;
-  }
-  :root, :root[data-theme="dark"] {
-    --bg: #07080b; --bg-2: #0d0f14; --bg-rgb: 7,8,11; --ink-rgb: 255,255,255;
-    --text: #eaecf1; --dim: #98a1b2; --faint: #5c6472; --glow: .55;
-  }
-  :root[data-theme="dim"] {
-    --bg: #151a24; --bg-2: #1b2130; --bg-rgb: 21,26,36; --ink-rgb: 255,255,255;
-    --text: #e4e8f0; --dim: #9aa5ba; --faint: #67718a; --glow: .38;
-  }
-  :root[data-theme="light"] {
-    --bg: #fbfaff; --bg-2: #ffffff; --bg-rgb: 251,250,255; --ink-rgb: 22,20,38;
-    --text: #191833; --dim: #5b5a78; --faint: #8b8aa3; --glow: .22;
-    --accent-rgb: 0,178,116; --accent2-rgb: 108,86,255; --cyan-rgb: 0,160,214;
-    --pink-rgb: 226,60,163; --gold-rgb: 214,146,0; --green-rgb: 0,166,110; --red-rgb: 226,46,88;
-  }
-  :root {
-    --surface: rgba(var(--ink-rgb),0.026);
-    --border: rgba(var(--ink-rgb),0.08);
-    --border-2: rgba(var(--ink-rgb),0.14);
-  }
+  /* the ground under the shell: near-black (or paper in light), Inter, and the film grain of the home page */
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg); color: var(--text);
-    font-family: 'Inter', system-ui, sans-serif; line-height: 1.65;
-    background-image: radial-gradient(1200px 600px at 50% -200px, rgba(var(--accent-rgb),0.06), transparent 70%);
-  }
-  .wrap { max-width: 820px; margin: 0 auto; padding: 28px 20px 100px; }
-  .top { display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    padding: 14px 0 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap;
-    position: sticky; top: 0; z-index: 100; background: rgba(var(--bg-rgb),.82);
-    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
-  /* the crest and wordmark at the floor's exact sizes, breakpoint for breakpoint, so the brand
-     never changes size between pages: 44px and 22px, on a wide screen 32-39px and 18-22px growing
-     with it, and on a phone the crest alone at 42px */
-  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-  .brand img { width: 44px; height: 44px; border-radius: 11px; }
-  .brand b { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; color: var(--text);
-    letter-spacing: .8px; white-space: nowrap; }
-  @media (min-width: 901px) { .brand img { width: clamp(32px, 2.43vw, 39px); height: clamp(32px, 2.43vw, 39px); }
-    .brand b { font-size: clamp(18px, 1.2vw, 22px); } }
-  .toplinks { display: flex; gap: 10px; }
-  /* the header's two pills as on the home page and the app pages: glass, one size, and
-     Launch app, the way in, lit */
-  .toplinks .btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; box-sizing: border-box;
-    height: 40px; width: 142px; padding: 0 10px; border-radius: 999px; font: 700 12px var(--mono); letter-spacing: .01em;
-    white-space: nowrap; color: var(--accent); text-decoration: none;
-    border: 1px solid rgba(var(--accent-rgb), .45);
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
-    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
-    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
-  .toplinks .btn::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
-  .toplinks .btn:hover, .toplinks .btn.primary { text-decoration: none; color: #05120c; text-shadow: none;
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
-  .toplinks .btn:hover { transform: translateY(-1px); }
-  .toplinks .btn.primary:hover { filter: brightness(1.06); }
-  :root[data-theme="light"] .toplinks .btn { text-shadow: none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
-  h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(30px, 6vw, 44px);
-    letter-spacing: -.5px; margin: 40px 0 10px; }
-  .lede { color: var(--dim); font-size: 18px; max-width: 62ch; }
-  h2 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 23px; margin: 44px 0 12px;
-    padding-top: 12px; scroll-margin-top: 20px; }
-  h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 17px; margin: 24px 0 8px; color: var(--text); }
-  p { color: var(--dim); margin: 10px 0; }
-  p strong, li strong { color: var(--text); font-weight: 600; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  ul, ol { color: var(--dim); margin: 10px 0 10px 22px; }
-  li { margin: 7px 0; }
-  code { font-family: var(--mono); font-size: .88em; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 6px; padding: 2px 6px; color: var(--text); overflow-wrap: anywhere; }
-  .card { background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; margin: 16px 0; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 16px 0; }
-  .grid .card { margin: 0; }
-  .card h3 { margin-top: 0; }
-  .tag { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 3px 9px;
-    border-radius: 999px; margin-bottom: 8px; }
-  .tag.good { color: var(--green); background: rgba(var(--green-rgb),.1); border: 1px solid rgba(var(--green-rgb),.35); }
-  .tag.warn { color: var(--gold); background: rgba(var(--gold-rgb),.1); border: 1px solid rgba(var(--gold-rgb),.35); }
-  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
-  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
-  th { color: var(--faint); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
-  td { color: var(--dim); }
-  td.mono, .addr { font-family: var(--mono); font-size: 12.5px; color: var(--text); overflow-wrap: anywhere; }
-  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 8px; }
-  .toc a { font-size: 13px; color: var(--dim); border: 1px solid var(--border); border-radius: 999px; padding: 6px 13px; }
-  .toc a:hover { color: var(--accent); border-color: rgba(var(--accent-rgb),.4); text-decoration: none; }
-  .note { border-left: 3px solid var(--accent); background: rgba(var(--accent-rgb),.05); padding: 12px 16px;
-    border-radius: 0 10px 10px 0; margin: 16px 0; }
-  .note.warn { border-left-color: var(--gold); background: rgba(var(--gold-rgb),.05); }
-  .footer { margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--faint); font-size: 13px; }
-  .footer a { color: var(--dim); }
-  @media (max-width: 600px) { .brand img { width: 42px; height: 42px; } .brand b { display: none; } .toplinks .btn { width: auto; padding: 0 12px; } }
+  html { scroll-behavior: smooth; }
+  body { background: var(--nx-bg); color: var(--nx-ink); font: 400 16px/1.6 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 200; opacity: var(--nx-grain); mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .7 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+  /* a link inside the hero's lead reads as the lead, with a quiet underline */
+  .nx-lead a { color: inherit; text-decoration: underline; text-decoration-color: var(--nx-line2); text-underline-offset: 3px; }
+  .nx-lead a:hover { color: var(--nx-ink); text-decoration-color: var(--nx-mint); }
+  .nx-doc :is(h2, h3)[id] { scroll-margin-top: 110px; }
+  .nx-doc li { line-height: 1.72; }   /* the concept sets list items a touch tighter than paragraphs (1.78) */
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  /* the home bar at 360px and under: the shell's phone rule (min-width: 0) loses to its own .nx-btn:not(.fun) rule (104px),
+     which pushes the menu button 12px off a 320px screen; this puts the phone rule back */
+  @media (max-width: 360px) { .nx-nav .nx-nav-in .nx-actions .nx-btn:not(.fun) { min-width: 0; } }
+  .nx-foot .nx-foot-in .sp { flex: 1 1 100%; margin: 8px 0 0; max-width: 760px; line-height: 1.6; text-align: left; }   /* outranks the shell's right-aligned .sp */
+  /* the docs page */
+  /* the concept's hero is 660px (620px under 1180px) with the tabs resting on the arch's crown; the shell's 215px floor
+     under the copy would push this longer lead's hero 50px taller, so here the floor is lower (the hero still grows if it must) */
+  @media (min-width: 901px) { .nx-hero > .nx-hero-in { padding-bottom: 120px; } }
+  .nx-doc .cp { transition: background .2s, color .2s; }
+  .nx-doc .cp:hover { background: rgba(var(--nx-mint-rgb), .2); }
 </style>
+<link rel="stylesheet" href="shell.css">
 </head>
 <body>
-<div class="wrap">
-  <div class="top">
-    <a class="brand" href="/" aria-label="A NEW ONE, home">
-      <img src="brand/logo.svg" alt="">
-      <b>A NEW ONE</b>
-    </a>
-    <div class="toplinks">
-      <a class="btn" href="https://x.com/anewone_xyz" target="_blank" rel="noopener noreferrer">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.244 2H21.5l-7.5 8.57L23 22h-6.75l-5.28-6.9L4.9 22H1.64l8.02-9.17L1 2h6.92l4.77 6.31L18.244 2Zm-1.18 18h1.83L7.02 3.9H5.06l12 16.1Z"/></svg>
-        @anewone_xyz
-      </a>
-      <a class="btn primary" href="/">Launch app →</a>
-    </div>
+<header class="nx-nav" id="nxNav"><div class="nx-nav-in">
+  <a class="nx-brand" href="./" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
+  <nav class="nx-links" aria-label="Main"><a href="./#ask">Ask</a><a href="docs.html" class="on">Docs</a><a href="about.html">About</a><a href="./#trust">Trust</a><a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">GitHub</a></nav>
+  <div class="nx-actions">
+    <button type="button" class="nx-icon th" data-nx-theme aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
+    <a class="nx-btn" href="earn/" target="_blank" rel="noopener">DeFi <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+    <a class="nx-btn" href="assets/stocks/" target="_blank" rel="noopener">RWA <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+    <a class="nx-btn fun sep" href="fun/" target="_blank" rel="noopener">AnewOne.Fun <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+    <button type="button" class="nx-icon nx-burger" id="nxBurger" aria-label="Menu" aria-expanded="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
-
-  <h1>A NEW ONE Docs</h1>
-  <p class="lede">The launch and distribution front end for real-world assets on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a>,
-    Circle's stablecoin L1 where gas <em>is</em> USDC. Funds, credit and stocks from regulated issuers; USDC that earns
-    and USDC you can borrow, today. We are the interface, never the issuer.</p>
-
-  <div class="toc">
-    <a href="#vision">What we are</a>
-    <a href="#earn">Earn</a>
-    <a href="#borrow">Borrow</a>
-    <a href="#assets">Real-world assets</a>
-    <a href="#fun">AnewOne.Fun</a>
-    <a href="#what">The launchpad</a>
-    <a href="#curve">The curve</a>
-    <a href="#fees">Fees &amp; creator earnings</a>
-    <a href="#safety">Safety</a>
-    <a href="#launch">Launch a token</a>
-    <a href="#trade">Trade</a>
-    <a href="#wallets">Wallets &amp; funding</a>
-    <a href="#deckhand">Deckhand (AI assistant)</a>
-    <a href="#trust">Trust signals</a>
-    <a href="#faq">FAQ</a>
-    <a href="#addresses">Contracts</a>
+  <div class="nx-panel" id="nxPanel">
+    <a href="docs.html">Docs</a><a href="about.html">About</a><a href="./#trust">Trust</a><a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">GitHub</a>
+    <button class="pbtn" data-nx-theme type="button">Light / dark</button>
+    <a class="nx-btn fun" href="fun/" target="_blank" rel="noopener">AnewOne.Fun <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
   </div>
+</div></header>
 
+<section class="nx-hero">
+  <div class="nx-hero-in"><div class="nx-hero-t">
+    <div class="nx-eyebrow">Docs · How A NEW ONE works</div>
+    <h1 class="nx-h1">A NEW ONE<br><em>Docs</em></h1>
+    <p class="nx-lead">The launch and distribution front end for real-world assets on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a>, Circle's stablecoin L1 where gas <em>is</em> USDC. Funds, credit and stocks from regulated issuers; USDC that earns and USDC you can borrow, today. We are the interface, never the issuer.</p>
+    <div class="nx-views"><a class="on" href="#vision">Start here</a><a href="#faq">FAQ</a><a href="#addresses">Contracts</a></div>
+  </div></div>
+  <aside class="nx-lcard rules" aria-label="Three rules"><div class="k"><i></i>THREE RULES · EVERYWHERE</div><div class="ln">Hold on every page</div>
+    <ul class="who"><li><span><b>We never custody.</b> Every deposit, loan and trade is signed by your wallet and lives in a public contract.</span></li>
+    <li><span><b>We never issue.</b> Assets come from regulated issuers or open protocols, never from us.</span></li>
+    <li><span><b>We never advise.</b> We show data and terms, and the choice is yours.</span></li></ul></aside>
+</section>
+
+<main class="nx-main"><div class="nx-wrap"><div class="nx-docwrap">
+<aside class="nx-toc" aria-label="On this page"><div class="tl">On this page</div>
+  <div class="tg"><span>Start here</span><a href="#vision">What we are</a></div>
+  <div class="tg"><span>DeFi</span><a href="#earn">Earn</a><a href="#borrow">Borrow</a></div>
+  <div class="tg"><span>RWA</span><a href="#assets">Real-world assets</a></div>
+  <div class="tg"><span>AnewOne.Fun</span><a href="#fun">AnewOne.Fun</a><a href="#what">The launchpad</a><a href="#curve">The bonding curve</a><a href="#fees">Fees &amp; creator earnings</a><a href="#safety">Safety by design</a><a href="#launch">Launch a token</a><a href="#trade">Trade</a></div>
+  <div class="tg"><span>Using the site</span><a href="#wallets">Wallets &amp; funding</a><a href="#deckhand">Deckhand</a><a href="#trust">Trust signals</a></div>
+  <div class="tg"><span>Reference</span><a href="#faq">FAQ</a><a href="#addresses">Contracts</a></div>
+</aside>
+<article class="nx-doc numbered">
   <h2 id="vision">What we are</h2>
   <p><strong>Vision.</strong> Real-world assets on Arc, for anyone with a wallet. Arc is the first L1 built for
     stablecoin finance: USDC pays the gas, finality is deterministic and the markets never close. A NEW ONE is the
@@ -187,13 +98,13 @@
     USDC settlement, bridging from other chains, and a page for every asset that shows who stands behind it,
     on what terms, with what on-chain data.</p>
   <div class="grid">
-    <div class="card"><span class="tag good">live</span><h3>Earn</h3><p>USDC and EURC into Morpho vaults on Arc, run by
+    <div class="card"><span class="tag good">live</span><h3>DeFi · Earn</h3><p>USDC and EURC into Morpho vaults on Arc, run by
       curators such as Bitwise, Gauntlet and Steakhouse. Your money stays in the vault contract. <a href="earn/">Open Earn →</a></p></div>
-    <div class="card"><span class="tag good">live</span><h3>Borrow</h3><p>USDC or EURC against cirBTC, ETH and tokenized
+    <div class="card"><span class="tag good">live</span><h3>DeFi · Borrow</h3><p>USDC or EURC against cirBTC, ETH and tokenized
       assets on Morpho markets, from your own wallet, with the health factor and liquidation price shown before you sign. <a href="earn/#borrow">Open Borrow →</a></p></div>
-    <div class="card"><span class="tag good">live</span><h3>Assets</h3><p>Tokenized funds from Janus Henderson and New York
+    <div class="card"><span class="tag good">live</span><h3>RWA</h3><p>Tokenized funds from Janus Henderson and New York
       Life Investment Management on Centrifuge rails, live on Arc: JTRSY, JAAA and HYB, each with its issuer, its terms and
-      its live price. <a href="assets/stocks/">Stocks</a> lists over a thousand xStocks with live prices and reserves; they trade here the moment Backed deploys on Arc. <a href="assets/">Open Assets →</a></p></div>
+      its live price. <a href="assets/stocks/">RWA · Stocks / ETF</a> lists over a thousand xStocks with live prices and reserves; they trade here the moment Backed deploys on Arc. <a href="assets/">Open RWA →</a></p></div>
     <div class="card"><span class="tag good">live</span><h3>AnewOne.Fun</h3><p>The memecoin launchpad we started with,
       now the fun side of the house: bonding curves in USDC, liquidity locked for good. <a href="fun/">Open the floor →</a></p></div>
   </div>
@@ -218,7 +129,7 @@
     of 0.15% (15 bps), shown in the quote; 90% of it goes to the site and 10% to Arc.</p>
 
   <h2 id="assets">Real-world assets</h2>
-  <p><a href="assets/">Assets</a> lists the tokenized funds that <a href="https://centrifuge.io" target="_blank" rel="noopener">Centrifuge</a>
+  <p><a href="assets/">RWA · Funds</a> lists the tokenized funds that <a href="https://centrifuge.io" target="_blank" rel="noopener">Centrifuge</a>
     brought to Arc on 1 October 2026: the Janus Henderson Treasury Fund (JTRSY, US Treasury bills), the Janus Henderson
     AAA CLO Fund (JAAA) and the NYLIM US High Yield Bond Fund (HYB), all issued by Anemoy Capital SPC Limited, a BVI
     professional fund. Each card reads the share price from the vault contract on Arc and the fund size and trailing
@@ -286,11 +197,11 @@
 
   <h2 id="fees">Fees &amp; creator earnings</h2>
   <p>Every trade pays a flat <strong>1.5% fee</strong>:</p>
-  <table>
+  <div class="tw"><table>
     <tr><th>Slice</th><th>Goes to</th><th>Notes</th></tr>
     <tr><td>0.5%</td><td>Token creator</td><td>Collects in a pot; claimable within a <strong>7-day window</strong> from the moment the pot starts accruing</td></tr>
     <tr><td>1%</td><td>Platform</td><td>Split evenly between the platform owners as it accrues; each owner withdraws only their own share. Also receives creator pots left unclaimed past the window</td></tr>
-  </table>
+  </table></div>
   <p>How the window works: the 7 days start when your pot goes from empty to non-empty, and every fee you earn
     while the pot is open joins it under the same deadline. Claiming empties the pot, and the next fee starts a
     new pot with a fresh 7 days. If a pot is not claimed in time, <strong>only that pot</strong> goes to the
@@ -375,44 +286,34 @@
   </ul>
 
   <h2 id="faq">FAQ</h2>
-  <h3>Is it really rug-proof?</h3>
-  <p>"Rug-proof" means one specific thing here: <strong>the liquidity cannot be pulled.</strong> Curve reserves
+  <details class="qa" open><summary>Is it really rug-proof?</summary><p>"Rug-proof" means one specific thing here: <strong>the liquidity cannot be pulled.</strong> Curve reserves
     can only be traded against, and after graduation the Uniswap position sits in the platform contract, which has
     no function that withdraws it, so the classic "pull the LP" rug is impossible by construction. It does
     <strong>not</strong> mean the price cannot fall: a creator or a large holder can still sell everything they hold,
     on the curve or in the pool, and the price moves with it like on any market. The trust panel on each coin
-    surfaces exactly that (Dev holds % / Dev exits / top holders), so read it before you buy.</p>
-  <h3>What does it cost to launch?</h3>
-  <p>Nothing but gas. There's no listing fee.</p>
-  <h3>Why USDC for gas?</h3>
-  <p>Arc is Circle's stablecoin L1 where the native gas token is USDC. One stable asset covers fees and trades, with no second coin to acquire.</p>
-  <h3>Do I keep control of my Google wallet?</h3>
-  <p>Yes. It's a non-custodial embedded wallet; neither the platform nor the provider can move your funds. For a large or long-term stash, an injected wallet you fully control is still recommended.</p>
+    surfaces exactly that (Dev holds % / Dev exits / top holders), so read it before you buy.</p></details>
+  <details class="qa"><summary>What does it cost to launch?</summary><p>Nothing but gas. There's no listing fee.</p></details>
+  <details class="qa"><summary>Why USDC for gas?</summary><p>Arc is Circle's stablecoin L1 where the native gas token is USDC. One stable asset covers fees and trades, with no second coin to acquire.</p></details>
+  <details class="qa"><summary>Do I keep control of my Google wallet?</summary><p>Yes. It's a non-custodial embedded wallet; neither the platform nor the provider can move your funds. For a large or long-term stash, an injected wallet you fully control is still recommended.</p></details>
 
   <h2 id="addresses">Contracts</h2>
   <p>Live on Arc mainnet since 16 September 2026. The testnet build stays up for trying the platform without real money.</p>
-  <table>
+  <div class="tw"><table>
     <tr><th>Network</th><th>Contract</th><th>Address</th></tr>
-    <tr><td>Arc Mainnet</td><td>Platform</td><td class="mono"><a href="https://explorer.arc.io/address/0x3DDA5AD5E74c658aff3d082AFe404a71615B1bc5" target="_blank" rel="noopener">0x3DDA5AD5E74c658aff3d082AFe404a71615B1bc5</a></td></tr>
-    <tr><td>Arc Mainnet</td><td>$NOAH (first token)</td><td class="mono"><a href="https://explorer.arc.io/address/0x26Cc2b608Df6be8fF63C64C9464b2756cC5dc128" target="_blank" rel="noopener">0x26Cc2b608Df6be8fF63C64C9464b2756cC5dc128</a></td></tr>
-    <tr><td>Arc Testnet</td><td>Platform</td><td class="mono" id="a-platform">see anewone.xyz</td></tr>
-    <tr><td>Arc Testnet</td><td>$NOAH (first token)</td><td class="mono" id="a-noah">see anewone.xyz</td></tr>
-  </table>
+    <tr><td>Arc Mainnet</td><td>Platform</td><td class="mono"><span class="ad"><a href="https://explorer.arc.io/address/0x3DDA5AD5E74c658aff3d082AFe404a71615B1bc5" target="_blank" rel="noopener">0x3DDA5AD5E74c658aff3d082AFe404a71615B1bc5</a></span><button type="button" class="cp" title="Copy the address">Copy</button></td></tr>
+    <tr><td>Arc Mainnet</td><td>$NOAH (first token)</td><td class="mono"><span class="ad"><a href="https://explorer.arc.io/address/0x26Cc2b608Df6be8fF63C64C9464b2756cC5dc128" target="_blank" rel="noopener">0x26Cc2b608Df6be8fF63C64C9464b2756cC5dc128</a></span><button type="button" class="cp" title="Copy the address">Copy</button></td></tr>
+    <tr><td>Arc Testnet</td><td>Platform</td><td class="mono"><span class="ad" id="a-platform">see anewone.xyz</span><button type="button" class="cp" title="Copy the address">Copy</button></td></tr>
+    <tr><td>Arc Testnet</td><td>$NOAH (first token)</td><td class="mono"><span class="ad" id="a-noah">see anewone.xyz</span><button type="button" class="cp" title="Copy the address">Copy</button></td></tr>
+  </table></div>
   <p>Mainnet: chain ID <code>5042</code> · <a href="https://explorer.arc.io" target="_blank" rel="noopener">explorer.arc.io ↗</a> ·
     Testnet: chain ID <code>5042002</code> · RPC <code>https://rpc.testnet.arc.network</code> ·
     <a href="https://testnet.arcscan.app" target="_blank" rel="noopener">testnet explorer ↗</a></p>
 
-  <div class="footer">
-    Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a>.
-    Follow <a href="https://x.com/anewone_xyz" target="_blank" rel="noopener noreferrer">@anewone_xyz</a> ·
-    <a href="mailto:contact@anewone.xyz">contact@anewone.xyz</a> ·
-    <a href="about.html">About</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> ·
-    <a href="/">Launch app</a>
-    <br><br>Nothing here is financial advice or an offer. Yields are variable, loans can be liquidated and memecoins
-    are highly risky, so only commit what you can afford to lose. A NEW ONE never custodies funds, never issues an
-    asset and never chooses for you.
-  </div>
-</div>
+</article>
+</div></div></main>
+
+<footer class="nx-foot"><div class="nx-foot-in"><span>© 2026 A NEW ONE</span><a href="docs.html">Docs</a><a href="about.html">About</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="mailto:support@anewone.xyz">Contact</a><a href="https://www.arc.network" target="_blank" rel="noopener">Built on Arc</a><a href="https://x.com/anewone_xyz" target="_blank" rel="noopener noreferrer">@anewone_xyz</a><span class="sp">Nothing here is financial advice or an offer. Yields are variable, loans can be liquidated and memecoins are highly risky, so only commit what you can afford to lose. A NEW ONE never custodies funds, never issues an asset and never chooses for you.</span></div></footer>
+
 <script src="config.js"></script>
 <script>
   // Fill the testnet rows from the shared config so docs never drift. Pinned to the testnet
@@ -424,5 +325,59 @@
     if (c.noah) document.getElementById("a-noah").textContent = c.noah;
   } catch (e) {}
 </script>
+<script>
+  // The docs page: the contents follow the reading, and each Copy button copies what its address cell shows at that moment.
+  (function () {
+    "use strict";
+    var toc = document.querySelector(".nx-toc"), links = {}, current = "";
+    var heads = Array.prototype.slice.call(document.querySelectorAll(".nx-doc h2[id]"));
+    Array.prototype.forEach.call(document.querySelectorAll(".nx-toc a"), function (a) { links[a.getAttribute("href").slice(1)] = a; });
+    function mark(id) {
+      if (id === current || !links[id]) return;
+      current = id;
+      Object.keys(links).forEach(function (k) { links[k].classList.toggle("on", k === id); if (k === id) links[k].setAttribute("aria-current", "location"); else links[k].removeAttribute("aria-current"); });
+      // keep the lit entry in sight inside the list itself (it scrolls on a short screen, sideways on a phone), never the page
+      var t = toc.getBoundingClientRect(), r = links[id].getBoundingClientRect();
+      if (toc.scrollHeight > toc.clientHeight + 2 && (r.top < t.top || r.bottom > t.bottom)) toc.scrollTop += r.top - t.top - t.height / 3;
+      if (toc.scrollWidth > toc.clientWidth + 2 && (r.left < t.left || r.right > t.right)) toc.scrollLeft += r.left - t.left - 20;
+    }
+    function spy() {
+      var line = Math.max(130, innerHeight * 0.3), id = heads.length ? heads[0].id : "", de = document.documentElement;
+      for (var i = 0; i < heads.length; i++) { if (heads[i].getBoundingClientRect().top <= line) id = heads[i].id; else break; }
+      // at the very bottom the last short sections can never reach the line: light the last heading on screen
+      if (innerHeight + (window.pageYOffset || de.scrollTop) >= de.scrollHeight - 4) {
+        for (var j = heads.length - 1; j >= 0; j--) if (heads[j].getBoundingClientRect().top < innerHeight) { id = heads[j].id; break; }
+      }
+      mark(id);
+    }
+    var queued = false;
+    function later() { if (!queued) { queued = true; requestAnimationFrame(function () { queued = false; spy(); }); } }
+    addEventListener("scroll", later, { passive: true }); addEventListener("resize", later); spy();
+
+    function copy(text) {
+      if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+      return new Promise(function (ok, no) {
+        var ta = document.createElement("textarea"), done = false; ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+        document.body.appendChild(ta); ta.select();
+        try { done = document.execCommand("copy"); } catch (e) {}
+        document.body.removeChild(ta); if (done) ok(); else no(new Error("copy"));
+      });
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".nx-doc .cp"), function (b) {
+      var label = b.textContent, timer = 0;
+      function say(t) { b.textContent = t; clearTimeout(timer); timer = setTimeout(function () { b.textContent = label; }, 1400); }
+      b.addEventListener("click", function () {
+        var ad = b.parentNode.querySelector(".ad"), text = ad ? ad.textContent.trim() : "";   // read now: the testnet rows are filled after load
+        if (!text) return;
+        copy(text).then(function () { say("Copied"); }, function () {
+          // no clipboard here: select the address, so Ctrl+C or a long-press takes it
+          try { var rg = document.createRange(), sel = getSelection(); rg.selectNodeContents(ad); sel.removeAllRanges(); sel.addRange(rg); } catch (e) {}
+          say("Selected");
+        });
+      });
+    });
+  })();
+</script>
+<script src="shell.js"></script>
 </body>
 </html>

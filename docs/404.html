@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
-  // Theme before first paint, same rule as the floor.
+  // Theme before first paint, same rule as every page (dark unless the visitor chose light).
   (function () {
-    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "light"); }
-    catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "dark"); }
+    catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
     // A coin's share link (/t/0x…/) whose card is not published yet is not a dead end:
     // the floor itself opens the coin from #t=, so send the visitor straight there.
     var m = location.pathname.match(/^\/t\/(0x[0-9a-fA-F]{40})\/?$/);
@@ -21,71 +21,75 @@
 <meta name="theme-color" content="#07080b">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --accent-rgb: 0,184,119; --accent: rgb(var(--accent-rgb)); --mono: 'JetBrains Mono', ui-monospace, monospace; --r-md: 14px; --r-sm: 10px; }
-  :root, :root[data-theme="light"] { --bg: #f4f4f5; --surface: #ffffff; --surface-2: #ececee; --ink-rgb: 16,16,24; --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16); --text: #111116; --dim: #5f5f6d; --faint: #8b8b98; --accent-soft: #e8f9f1; }
-  :root[data-theme="dim"] { --bg: #17171c; --surface: #1d1d23; --surface-2: #232329; --ink-rgb: 255,255,255; --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16); --text: #eeeef2; --dim: #9a9aa8; --faint: #6d6d7b; --accent-rgb: 62,230,160; --accent-soft: rgba(62,230,160,.10); }
-  :root[data-theme="dark"] { --bg: #0d0d10; --surface: #151519; --surface-2: #1b1b20; --ink-rgb: 255,255,255; --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16); --text: #f2f2f5; --dim: #a0a0ae; --faint: #6e6e7c; --accent-rgb: 62,230,160; --accent-soft: rgba(62,230,160,.10); }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
-  body { background: var(--bg); color: var(--text); font: 15px/1.55 Inter, system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .topbar { border-bottom: 1px solid var(--border); }
-  .topbar-inner { max-width: 1160px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 10px; }
-  /* the crest and wordmark at the floor's exact sizes, breakpoint for breakpoint */
-  .tb-brand { display: flex; align-items: center; gap: 12px; }
-  .tb-brand:hover { text-decoration: none; }
-  .tb-brand img { width: 44px; height: 44px; border-radius: 11px; }
-  .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: .8px; color: var(--text); white-space: nowrap; }
-  @media (min-width: 901px) { .tb-brand img { width: clamp(32px, 2.43vw, 39px); height: clamp(32px, 2.43vw, 39px); }
-    .tb-brand span { font-size: clamp(18px, 1.2vw, 22px); } }
-  @media (max-width: 600px) { .tb-brand img { width: 42px; height: 42px; } .tb-brand span { display: none; } }
-  main { flex: 1; display: grid; place-items: center; padding: 40px 20px; }
-  .card { max-width: 560px; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px 28px; text-align: center; }
-  .code { font: 500 12px var(--mono); letter-spacing: 1.4px; color: var(--accent); text-transform: uppercase; }
-  h1 { font-family: 'Space Grotesk', sans-serif; font-size: 30px; letter-spacing: -.4px; margin: 8px 0 10px; line-height: 1.15; }
-  p { margin: 0 auto; color: var(--dim); max-width: 440px; }
-  .path { display: inline-block; margin-top: 12px; font: 12px var(--mono); color: var(--faint); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 22px; }
-  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: 14px; text-decoration: none; }
-  .btn.primary { background: var(--accent); color: #fff; }
-  .btn.primary:hover { text-decoration: none; filter: brightness(1.05); }
-  .btn.ghost { border: 1px solid var(--border-2); color: var(--text); background: var(--surface); font-family: var(--mono); font-size: 12.5px; letter-spacing: .5px; font-weight: 500; }
-  .btn.ghost:hover { text-decoration: none; border-color: rgba(var(--accent-rgb),.5); color: var(--accent); }
-  .boat { width: 88px; height: 70px; margin: 0 auto 6px; display: block; }
-  footer { text-align: center; padding: 18px; font-size: 12px; color: var(--faint); border-top: 1px solid var(--border); }
-  footer a { color: var(--dim); margin: 0 8px; }
+  /* the ground under the shell: near-black (or paper in light), Inter, and the film grain of the home page */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--nx-bg); color: var(--nx-ink); font: 400 16px/1.6 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 200; opacity: var(--nx-grain); mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .7 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+  /* a link inside the hero's lead reads as the lead, with a quiet underline */
+  .nx-lead a { color: inherit; text-decoration: underline; text-decoration-color: var(--nx-line2); text-underline-offset: 3px; }
+  .nx-lead a:hover { color: var(--nx-ink); text-decoration-color: var(--nx-mint); }
+  .nx-doc :is(h2, h3)[id] { scroll-margin-top: 110px; }
+  .nx-doc li { line-height: 1.72; }   /* the concept sets list items a touch tighter than paragraphs (1.78) */
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  /* the home bar at 360px and under: the shell's phone rule (min-width: 0) loses to its own .nx-btn:not(.fun) rule (104px),
+     which pushes the menu button 12px off a 320px screen; this puts the phone rule back */
+  @media (max-width: 360px) { .nx-nav .nx-nav-in .nx-actions .nx-btn:not(.fun) { min-width: 0; } }
+  /* the 404: the sky fills the screen; the address that missed; the ways back */
+  body { min-height: 100vh; display: flex; flex-direction: column; }
+  .nx-hero.lost { flex: 1 0 auto; }
+  .lost .nx-eyebrow svg { width: 22px; height: 18px; flex: none; }
+  .lost .path { display: inline-block; max-width: 100%; margin-top: 22px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.04);
+    font: 500 12.5px "JetBrains Mono", ui-monospace, monospace; color: var(--nx-mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
+  :root[data-theme="light"] .lost .path { background: rgba(255,255,255,.75); }
+  .lost .path:empty { display: none; }
+  .lost .acts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+  @media (max-width: 520px) { .lost .acts .nx-btn { flex: 1 1 auto; } }
 </style>
+<link rel="stylesheet" href="/shell.css">
 </head>
 <body>
-<nav class="topbar"><div class="topbar-inner">
-  <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="/brand/logo.svg" alt=""><span>A NEW ONE</span></a>
-</div></nav>
-<main>
-  <div class="card">
-    <svg class="boat" viewBox="0 0 60 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" style="color:var(--faint)">
-      <path d="M9 23 L30 8 L51 23 Z"/><path d="M18 23 H42 V32 H18 Z"/><path d="M5 32 H55 Q51 44 30 46 Q9 44 5 32 Z"/>
-      <path d="M2 40 q4 -3 8 0 t8 0 t8 0 t8 0 t8 0 t8 0 t8 0" stroke="var(--accent)"/>
-    </svg>
-    <div class="code">404 · not on this deck</div>
-    <h1>There is nothing at this address.</h1>
-    <p>The link may be old, mistyped, or for a coin whose page has not been written yet. The floor is one tap away.</p>
-    <span class="path" id="path"></span>
-    <div class="actions">
-      <a class="btn primary" href="/">Back to the floor →</a>
-      <a class="btn ghost" href="/bridge/">🌉 Swap &amp; Bridge</a>
-      <a class="btn ghost" href="/ark/">the ark</a>
-      <a class="btn ghost" href="/docs.html">📄 Docs</a>
-    </div>
+<header class="nx-nav" id="nxNav"><div class="nx-nav-in">
+  <a class="nx-brand" href="/" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
+  <nav class="nx-links" aria-label="Main"><a href="/#ask">Ask</a><a href="/docs.html">Docs</a><a href="/about.html">About</a><a href="/#trust">Trust</a><a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">GitHub</a></nav>
+  <div class="nx-actions">
+    <button type="button" class="nx-icon th" data-nx-theme aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
+    <a class="nx-btn" href="/earn/" target="_blank" rel="noopener">DeFi <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+    <a class="nx-btn" href="/assets/stocks/" target="_blank" rel="noopener">RWA <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+    <a class="nx-btn fun sep" href="/fun/" target="_blank" rel="noopener">AnewOne.Fun <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+    <button type="button" class="nx-icon nx-burger" id="nxBurger" aria-label="Menu" aria-expanded="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
-</main>
-<footer>
-  <a href="https://x.com/anewone_xyz" target="_blank" rel="noopener noreferrer">X</a><a href="mailto:support@anewone.xyz">support@anewone.xyz</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a>
-</footer>
+  <div class="nx-panel" id="nxPanel">
+    <a href="/docs.html">Docs</a><a href="/about.html">About</a><a href="/#trust">Trust</a><a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">GitHub</a>
+    <button class="pbtn" data-nx-theme type="button">Light / dark</button>
+    <a class="nx-btn fun" href="/fun/" target="_blank" rel="noopener">AnewOne.Fun <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  </div>
+</div></header>
+
+<section class="nx-hero slim lost">
+  <div class="nx-hero-in"><div class="nx-hero-t">
+    <div class="nx-eyebrow"><svg viewBox="0 0 60 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M9 23 L30 8 L51 23 Z"/><path d="M18 23 H42 V32 H18 Z"/><path d="M5 32 H55 Q51 44 30 46 Q9 44 5 32 Z"/><path d="M2 40 q4 -3 8 0 t8 0 t8 0 t8 0 t8 0 t8 0 t8 0"/></svg>404 · not on this deck</div>
+    <h1 class="nx-h1">There is nothing at <em>this address</em>.</h1>
+    <p class="nx-lead">The link may be old, mistyped, or for a coin whose page has not been written yet. The floor is one tap away.</p>
+    <span class="path" id="path"></span>
+    <div class="acts">
+      <a class="nx-btn lit" href="/">Back home →</a>
+      <a class="nx-btn fun" href="/fun/">AnewOne.Fun</a>
+      <a class="nx-btn" href="/bridge/">Swap &amp; Bridge</a>
+      <a class="nx-btn" href="/ark/">the ark</a>
+      <a class="nx-btn" href="/docs.html">Docs</a>
+    </div>
+  </div></div>
+</section>
+
+<footer class="nx-foot"><div class="nx-foot-in"><span>© 2026 A NEW ONE</span><a href="/docs.html">Docs</a><a href="/about.html">About</a><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="mailto:support@anewone.xyz">Contact</a><a href="https://www.arc.network" target="_blank" rel="noopener">Built on Arc</a><a href="https://x.com/anewone_xyz" target="_blank" rel="noopener noreferrer">@anewone_xyz</a><span class="sp">Nothing here is investment advice. The issuer is always a regulated entity.</span></div></footer>
 <script>
   document.getElementById("path").textContent = location.host + location.pathname + location.search;
 </script>
+<script src="/shell.js"></script>
 </body>
 </html>
