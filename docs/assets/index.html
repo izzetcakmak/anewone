@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
   (function () {
-    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "light"); }
-    catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "dark"); }
+    catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   })();
 </script>
 <title>RWA · Tokenized funds on Arc | A NEW ONE</title>
@@ -20,7 +20,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* The floor's theme system, verbatim: one accent, neutral everything else. */
   :root {
@@ -47,111 +47,62 @@
   a:hover { text-decoration: underline; }
   button { font: inherit; cursor: pointer; }
 
-  .topbar { position: sticky; top: 0; z-index: 200; background: rgba(var(--bg-rgb),.78); backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid var(--border); }
-  .topbar-inner { max-width: 1160px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 10px; }
-  .tb-brand { display: flex; align-items: center; gap: 12px; }
-  .tb-brand:hover { text-decoration: none; }
-  .tb-brand img { width: 40px; height: 40px; border-radius: 11px; }
-  .tb-brand span { font: 700 20px 'Space Grotesk', sans-serif; letter-spacing: .8px; color: var(--text); white-space: nowrap; }
-  .tb-nav { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-  /* The bar's pills as on the home page and Earn: a translucent green pane with a lit top edge and a
-     faint halo, solid green under the hand, one size; the theme switch is the round one. */
-  .tbx { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; width: 142px; padding: 0 10px;
-    font: 700 12px var(--mono); letter-spacing: .01em; white-space: nowrap; color: var(--accent); border: 1px solid rgba(var(--accent-rgb), .45); border-radius: 999px;
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
-    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
-    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
-  .tbx::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
-  .tbx:hover { text-decoration: none; color: var(--accent-ink); text-shadow: none; transform: translateY(-1px);
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
-  :root[data-theme="light"] .tbx { text-shadow: none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
-  .tbx.theme { width: 40px; padding: 0; }
-  /* RWA's two doors, Stocks / ETF and Funds, as Earn and Borrow are on DeFi: the biggest glass on
-     the page, the open one lit. Each is its own page, so they are links. */
-  .views { display: flex; gap: 10px; width: max-content; max-width: 100%; margin: 8px 0 18px; }
-  .views a { position: relative; display: inline-flex; align-items: center; justify-content: center; height: 52px; min-width: 180px; padding: 0 32px;
-    font: 700 18px 'Space Grotesk', sans-serif; letter-spacing: .01em; white-space: nowrap; border-radius: 999px; color: var(--accent); text-decoration: none;
-    border: 1px solid rgba(var(--accent-rgb), .45); background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
-    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
-    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
-  .views a::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
-  .views a:hover, .views a.on { color: var(--accent-ink); text-shadow: none; text-decoration: none;
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
-  .views a:hover { transform: translateY(-1px); }
-  :root[data-theme="light"] .views a { text-shadow: none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
-  @media (max-width: 600px) { .views { width: 100%; } .views a { flex: 1; min-width: 0; padding: 0 12px; } }
-  /* below 1181px the doors keep their icons alone, at the same width as on Earn */
-  @media (max-width: 1180px) { .tbx .lbl { display: none; } .tbx:not(.net):not(.primary) { width: 40px; padding: 0; } }
-  .tbx.theme .i-sun, .tbx.theme .i-moon { width: 16px; height: 16px; }
-  :root[data-theme="light"] .i-sun { display: none; }
-  :root:not([data-theme="light"]) .i-moon { display: none; }
-  @media (max-width: 600px) {
-    .tb-brand span, .tbx .lbl { display: none; }
-    .topbar-inner { padding: 10px 14px; gap: 8px; }
-    .tb-nav { gap: 8px; }
-    .tbx { height: 42px; min-width: 42px; width: auto; padding: 0 12px; font-size: 16px; }
-    .tbx.net, .tbx.primary { font-size: 13px; padding: 0 14px; }
-    .tbx.theme .i-sun, .tbx.theme .i-moon { width: 20px; height: 20px; }
-  }
+  /* ---- Arc Noir, page-local: what the shell does not carry yet ---- */
+  :root { --warn-ink: #ffc96b; }
+  :root[data-theme="light"] { --warn-ink: #946300; }   /* the shell's yellow is unreadable on white */
+  :root[data-theme="light"] .nx-bd.warn { color: var(--warn-ink); border-color: rgba(var(--gold-rgb), .45); background: rgba(var(--gold-rgb), .08); }
+  .nx-lcard.rules .ln { text-align: left; }
+  .nx-notice + .nx-strip { margin-top: 18px; }
 
-  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
-  .hero { padding: 48px 0 28px; }
-  .eyebrow { font: 700 11px var(--mono); letter-spacing: .2em; color: var(--accent); text-transform: uppercase; }
-  h1 { font: 700 clamp(30px, 4.5vw, 46px)/1.08 'Space Grotesk', sans-serif; margin: 12px 0 12px; letter-spacing: -.02em; }
-  .lead { color: var(--dim); font-size: 16px; max-width: 760px; margin: 0; }
-  .lead b { color: var(--text); }
+  .filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 34px 0 22px; }
+  .count { color: var(--faint); font: 500 12.5px var(--mono); letter-spacing: .04em; }
 
-  /* who can invest: said once, above the cards, in plain words */
-  .elig { display: flex; align-items: flex-start; gap: 14px; background: var(--bg-2); border: 1px solid var(--border-2); border-radius: var(--r); padding: 16px 20px; margin: 20px 0 22px; color: var(--dim); font-size: 14px; }
-  .elig .ico { font-size: 22px; line-height: 1; }
-  .elig b { color: var(--text); }
-  .elig a { text-decoration: underline; }
-
-  .filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 14px; }
-  .count { margin-left: auto; color: var(--faint); font: 500 12px var(--mono); }
-
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  @media (max-width: 960px) { .grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
-  .fund { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; }
-  .fund .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-  .fund h3 { margin: 0; font: 600 16px 'Space Grotesk', sans-serif; line-height: 1.25; }
-  .fund .by { color: var(--dim); font-size: 12px; margin-top: 3px; }
-  .tag { font: 700 10px var(--mono); letter-spacing: .12em; padding: 4px 8px; border-radius: 6px; background: var(--card); color: var(--dim); white-space: nowrap; }
-  .tag.usdc { color: var(--accent); background: var(--accent-soft); }
-  .tag.warn { color: var(--gold); white-space: normal; }
-  .tag.ok { color: var(--green); background: rgba(var(--green-rgb),.12); white-space: normal; }
-  .apy { font: 700 32px var(--mono); line-height: 1; }
-  .apy small { font: 600 11px var(--mono); letter-spacing: .12em; color: var(--faint); margin-left: 6px; }
-  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-  .stats div { font: 600 13px var(--mono); }
-  .stats span { display: block; font: 500 10px var(--mono); letter-spacing: .12em; color: var(--faint); text-transform: uppercase; margin-top: 2px; }
-  .facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 12px; color: var(--dim); margin: 0; }
-  .facts dt { font: 500 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); padding-top: 2px; }
-  .facts dd { margin: 0; color: var(--text); }
-  .fund .links { display: flex; gap: 12px; flex-wrap: wrap; font: 500 12px var(--mono); }
-  .pos { font: 500 12px var(--mono); color: var(--accent); background: var(--accent-soft); border-radius: var(--r-sm); padding: 8px 10px; display: none; line-height: 1.6; }
+  /* the fund cards: glass, the yield and the NAV the big numbers, the facts a ruled table, the notes under it */
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+  @media (max-width: 1180px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .fund { position: relative; display: flex; flex-direction: column; gap: 20px; min-width: 0; padding: 28px; border-radius: 26px;
+    background: var(--nx-card); border: 1px solid var(--nx-line2); box-shadow: 0 24px 60px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
+    transition: transform .3s cubic-bezier(.2,.8,.2,1), border-color .3s, box-shadow .3s; }
+  :root[data-theme="light"] .fund { box-shadow: 0 24px 60px rgba(10,20,17,.08), inset 0 1px 0 #fff; }
+  .fund:hover { transform: translateY(-5px); border-color: rgba(var(--accent-rgb), .5); }
+  .fund .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .fund h3 { margin: 0; font: 600 21px/1.2 'Space Grotesk', sans-serif; letter-spacing: -.02em; }
+  .fund .by { margin-top: 6px; font: 500 12px/1.5 var(--mono); letter-spacing: .02em; color: var(--faint); }
+  .tag { flex: none; padding: 6px 11px; border-radius: 999px; font: 700 11px var(--mono); letter-spacing: .08em; white-space: nowrap; color: var(--dim); border: 1px solid var(--nx-line2); }
+  .tag.usdc { color: var(--accent); background: rgba(var(--accent-rgb), .1); border-color: rgba(var(--accent-rgb), .35); }
+  .tag.warn, .tag.ok { padding: 12px 14px; border-radius: 14px; font: 400 13px/1.45 Inter, sans-serif; letter-spacing: 0; white-space: normal; }
+  .tag.warn { color: var(--warn-ink); border-color: rgba(var(--gold-rgb), .35); background: rgba(var(--gold-rgb), .07); }
+  .tag.ok { color: var(--accent); border-color: rgba(var(--accent-rgb), .35); background: rgba(var(--accent-rgb), .08); }
+  .tw { display: flex; flex-wrap: wrap; gap: 14px 26px; align-items: flex-end; }
+  .apy { font: 500 40px/1 'Space Grotesk', sans-serif; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+  .apy small { display: block; margin-top: 7px; font: 500 10.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .facts { display: grid; grid-template-columns: auto minmax(0, 1fr); margin: 0; border-top: 1px solid var(--nx-line); font-size: 13.5px; line-height: 1.45; }
+  .facts dt, .facts dd { padding: 11px 0; border-bottom: 1px solid var(--nx-line); }
+  .facts dt { padding: 14px 16px 11px 0; font: 500 10.5px var(--mono); letter-spacing: .13em; text-transform: uppercase; color: var(--faint); }
+  .facts dd { margin: 0; text-align: right; color: var(--text); }
+  .fund .links { display: flex; gap: 6px 18px; flex-wrap: wrap; font: 500 12px var(--mono); }
+  .pos { display: none; padding: 10px 14px; border-radius: 14px; font: 500 12px/1.6 var(--mono); color: var(--accent); background: rgba(var(--accent-rgb), .08); border: 1px solid rgba(var(--accent-rgb), .3); }
   .pos.show { display: block; }
-  .fund .btn { margin-top: auto; padding: 11px; border: 1px solid var(--border-2); border-radius: var(--r-sm); background: var(--card); color: var(--text); font-weight: 600; text-align: center; }
-  .fund .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  .fund .btn:hover { text-decoration: none; }
+  .fund .btn { margin-top: auto; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 50px; padding: 0 16px; border-radius: 999px;
+    font: 700 13.5px var(--mono); letter-spacing: .02em; text-align: center; color: var(--accent); cursor: pointer;
+    border: 1px solid rgba(var(--accent-rgb), .45); background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 18px rgba(var(--accent-rgb), .14); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
+  .fund .btn.primary, .fund .btn:hover:not(:disabled) { color: var(--accent-ink); text-decoration: none;
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .98), rgba(var(--accent-rgb), .82)); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 10px 30px rgba(var(--accent-rgb), .38); }
+  .fund .btn:hover:not(:disabled) { transform: translateY(-1px); }
   .fund .btn:disabled { opacity: .5; cursor: default; }
   .empty { grid-column: 1 / -1; color: var(--dim); text-align: center; padding: 40px 0; }
+  @media (max-width: 520px) { .fund { padding: 22px; } .apy { font-size: 34px; } }
 
-  h2.sec { font: 600 20px 'Space Grotesk', sans-serif; margin: 36px 0 12px; }
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  @media (max-width: 800px) { .steps { grid-template-columns: 1fr; } }
-  .step { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 20px; color: var(--dim); font-size: 13px; }
-  .step b { display: block; color: var(--text); font: 600 15px 'Space Grotesk', sans-serif; margin-bottom: 6px; }
-  .step .n { font: 700 11px var(--mono); letter-spacing: .2em; color: var(--accent); }
+  /* how an order works: the same glass, quieter */
+  h2.sec { margin: 64px 0 18px; font: 600 clamp(24px, 2.6vw, 30px)/1.15 'Space Grotesk', sans-serif; letter-spacing: -.025em; }
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  @media (max-width: 800px) { .steps { grid-template-columns: minmax(0, 1fr); } }
+  .step { padding: 24px 26px; border-radius: 24px; background: var(--nx-card); border: 1px solid var(--nx-line2); box-shadow: inset 0 1px 0 rgba(255,255,255,.07); color: var(--dim); font-size: 14px; line-height: 1.6; }
+  :root[data-theme="light"] .step { box-shadow: 0 14px 40px rgba(10,20,17,.05), inset 0 1px 0 #fff; }
+  .step b { display: block; margin: 10px 0 8px; color: var(--text); font: 600 18px/1.25 'Space Grotesk', sans-serif; letter-spacing: -.015em; }
+  .step .n { font: 500 11px var(--mono); letter-spacing: .18em; color: var(--accent); }
 
   .legal { margin: 40px 0 56px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--faint); font-size: 12px; max-width: 860px; }
   .legal a { color: var(--dim); text-decoration: underline; }
@@ -196,41 +147,39 @@
   .hint { color: var(--dim); font-size: 12px; margin-top: 10px; }
   .hint a { text-decoration: underline; }
 </style>
+<link rel="stylesheet" href="../shell.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="topbar-inner">
-    <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../brand/logo.svg" alt=""><span>A NEW ONE</span></a>
-    <nav class="tb-nav">
-      <a class="tbx" href="/">← <span class="lbl">Home</span></a>
-      <a class="tbx" href="../earn/" title="Earn and Borrow: USDC vaults and loans on Morpho">💵 <span class="lbl">DeFi</span></a>
-      <a class="tbx" href="../bridge/" title="Bring USDC aboard from any chain">🌉 <span class="lbl">Swap &amp; Bridge</span></a>
-      <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark">
-        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
-        <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg>
-      </button>
-      <span class="tbx net" id="netPill">…</span>
-      <button type="button" class="tbx primary" id="connectBtn">Connect</button>
+<header class="nx-bar" id="nxBar"><div class="nx-bar-in">
+  <a class="nx-brand" href="../" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
+  <nav class="nx-seg" aria-label="Apps"><a href="../earn/">DeFi</a><a href="../assets/stocks/" class="on">RWA</a><a href="../fun/" class="f">Fun</a></nav>
+  <div class="nx-actions">
+    <button type="button" class="nx-icon" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
+    <span class="nx-pill" id="netPill" hidden>…</span>
+    <button type="button" class="nx-btn lit" id="connectBtn">Connect</button>
+  </div>
+</div></header>
+
+<section class="nx-hero">
+  <div class="nx-hero-in"><div class="nx-hero-t">
+    <div class="nx-eyebrow">RWA · Funds · Centrifuge on Arc</div>
+    <h1 class="nx-h1">Institutional funds,<br><em>live on Arc.</em></h1>
+    <p class="nx-lead">Three tokenized funds from <b>Janus Henderson</b> and <b>New York Life Investment Management</b>, issued by Anemoy Capital on Centrifuge. Each card reads its price and yield from the chain.</p>
+    <nav class="nx-views" aria-label="RWA">
+      <a href="../assets/stocks/">Stocks / ETF</a>
+      <a class="on" href="../assets/" aria-current="page">Funds</a>
     </nav>
-  </div>
-</header>
+  </div></div>
+  <aside class="nx-lcard rules" aria-label="Who can invest"><div class="k"><i></i>3 FUNDS · LIVE ON ARC</div><div class="ln">Who can invest</div><ul class="who"><li>Non-US professional investors</li><li>Issuer-run KYC, your wallet whitelisted</li><li>Minimums from 100,000 USDC</li><li>Orders placed in USDC from here</li></ul></aside>
+</section>
 
-<main class="wrap">
-  <div class="hero">
-    <div class="eyebrow">RWA · Funds · Centrifuge on Arc · settled in USDC</div>
-    <h1>Institutional funds,<br>live on Arc.</h1>
-    <p class="lead">Three tokenized funds from <b>Janus Henderson</b> and <b>New York Life Investment Management</b>, issued by Anemoy Capital on <b>Centrifuge</b> and live on Arc since 1 October 2026. Each card reads its price and yield from the chain and the issuer's own reporting; a whitelisted wallet places its order from here, in USDC. <b>A NEW ONE is the interface, not the issuer.</b></p>
-  </div>
-
-  <nav class="views" aria-label="RWA">
-    <a href="stocks/">Stocks / ETF</a>
-    <a class="on" href="./" aria-current="page">Funds</a>
-  </nav>
-
-  <div class="elig">
-    <span class="ico">🪪</span>
+<main class="nx-main"><div class="nx-wrap">
+  <div class="nx-notice ok">
+    <span class="ni">🪪</span>
     <div><b>Who can invest.</b> These are BVI professional funds for <b>non-US professional investors</b>. The issuer runs KYC and whitelists the wallet; until it does, the share tokens refuse every transfer to you, and the Deposit button here stays off. Minimums are 500,000 USD for JTRSY and JAAA, 100,000 USDC for HYB. Onboarding happens with the issuer, on <a href="https://app.centrifuge.io" target="_blank" rel="noopener">Centrifuge</a>; we never see your documents.</div>
   </div>
+  <div class="nx-strip"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17c0-5 4-9 9-9s9 4 9 9"/><path d="M3 17h18M7.5 17v-4M12 17V8M16.5 17v-4"/></svg></span><div><b>Need USDC on Arc?</b><span class="t">Orders are placed in USDC. Bring it from Base, Ethereum, Arbitrum and more with Swap &amp; Bridge, or buy it with a card.</span></div>
+    <div class="acts"><a class="nx-btn lit" href="../bridge/" target="_blank" rel="noopener">Swap &amp; Bridge <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a><a class="nx-btn" href="../bridge/?way=card" target="_blank" rel="noopener">Buy with card</a></div></div>
 
   <div class="filters"><span class="count" id="count">loading funds from Arc…</span></div>
   <div class="grid" id="grid"><div class="empty">Loading funds from Arc…</div></div>
@@ -243,7 +192,8 @@
   </div>
 
   <p class="legal">Fund data is read from the Arc chain and from Centrifuge's indexer and the issuer's published factsheets; yields are the issuer's trailing 30-day figures, variable, and no promise of future returns. These funds are offered by Anemoy Capital SPC Limited, a BVI fund licensed by the BVI Financial Services Commission, to non-US professional investors only, under the fund's own documents, which prevail over anything shown here. A NEW ONE takes no fee on these funds, does not custody anything, does not issue any asset, does not run eligibility checks and does not give advice. Nothing here is an offer. Some jurisdictions restrict these products. <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></p>
-</main>
+</div></main>
+<footer class="nx-foot"><div class="nx-foot-in"><span>© 2026 A NEW ONE</span><a href="../docs.html">Docs</a><a href="../about.html">About</a><a href="../terms.html">Terms</a><a href="../privacy.html">Privacy</a><a href="mailto:support@anewone.xyz">Contact</a><span class="sp">Nothing here is investment advice. The issuer is always a regulated entity.</span></div></footer>
 
 <div class="overlay" id="overlay" role="dialog" aria-modal="true">
   <div class="sheet">
@@ -308,6 +258,7 @@
   const arcCfg = cfg[net];
   const $ = (id) => document.getElementById(id);
   $("netPill").textContent = net === "mainnet" ? "● Arc mainnet" : "● Arc testnet";
+  $("netPill").hidden = net === "mainnet";   // the label is a warning, not a badge: it appears only off mainnet
 
   $("themeSw").onclick = () => {
     const t = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
@@ -450,16 +401,13 @@
       else action = `<a class="btn" href="${CFG.app}${f.poolId}" target="_blank" rel="noopener" title="The issuer runs eligibility and KYC on Centrifuge; once your wallet is a member, this card lets you deposit">Onboard with the issuer ↗</a>`;
       return `<div class="fund">
         <div class="head"><div><h3>${esc(f.name)}</h3><div class="by">${esc(f.key)} · ${esc(f.cls)}</div></div><span class="tag usdc">USDC</span></div>
-        <div class="apy"${l.apy < 0 ? ' style="color:var(--red)"' : ""}>${pct(l.apy)}<small>30D · ANNUALIZED</small></div>
-        <div class="stats">
-          <div>${l.price ? fmt(l.price, 4) : "—"}<span>NAV / share</span></div>
-          <div>${money(l.aum)}<span>Fund size</span></div>
-          <div>${l.arcSupply != null ? fmt(l.arcSupply, 2) : "—"}<span>On Arc</span></div>
+        <div class="tw">
+          <div class="apy"${l.apy < 0 ? ' style="color:var(--red)"' : ""}>${pct(l.apy)}<small>30D · ANNUALIZED</small></div>
+          <div class="apy">${l.price ? fmt(l.price, 4) : "—"}<small>NAV / share</small></div>
         </div>
-        ${stale ? `<span class="tag warn">price last set ${new Date(l.priceAt).toLocaleDateString("en-GB")}</span>` : ""}
-        ${f.unlisted ? `<span class="tag warn">Not yet listed on Centrifuge's own app: the issuer has it open for direct subscriptions only.</span>` : ""}
-        ${p ? (p.allowed ? `<span class="tag ok">✓ Your wallet is whitelisted for this fund</span>` : `<span class="tag warn">Your wallet is not whitelisted for this fund yet; the issuer decides that, not us.</span>`) : ""}
         <dl class="facts">
+          <dt>Fund size</dt><dd>${money(l.aum)}</dd>
+          <dt>On Arc</dt><dd>${l.arcSupply != null ? fmt(l.arcSupply, 2) : "—"}</dd>
           <dt>Manager</dt><dd>${esc(f.manager)}</dd>
           <dt>Issuer</dt><dd>Anemoy Capital SPC Ltd · BVI professional fund</dd>
           <dt>Minimum</dt><dd>${esc(f.min)}</dd>
@@ -468,6 +416,9 @@
           <dt>Ratings</dt><dd>${esc(f.ratings)}</dd>
           <dt>Since</dt><dd>${esc(f.inception)} · risk ${esc(f.risk.toLowerCase())}</dd>
         </dl>
+        ${stale ? `<span class="tag warn">price last set ${new Date(l.priceAt).toLocaleDateString("en-GB")}</span>` : ""}
+        ${f.unlisted ? `<span class="tag warn">Not yet listed on Centrifuge's own app: the issuer has it open for direct subscriptions only.</span>` : ""}
+        ${p ? (p.allowed ? `<span class="tag ok">✓ Your wallet is whitelisted for this fund</span>` : `<span class="tag warn">Your wallet is not whitelisted for this fund yet; the issuer decides that, not us.</span>`) : ""}
         <div class="links">${summary}<a href="${CFG.app}${f.poolId}" target="_blank" rel="noopener">On Centrifuge ↗</a>${explorer("token/" + f.share) ? `<a href="${esc(explorer("token/" + f.share))}" target="_blank" rel="noopener">Token on Arc ↗</a>` : ""}</div>
         <div class="pos ${posLines.length ? "show" : ""}">${posLines.map(esc).join("<br>")}</div>
         ${action}
@@ -876,5 +827,6 @@ Time: ${new Date().toISOString()}`;
     $("count").textContent = "";
   } else loadFunds();
 </script>
+<script src="../shell.js"></script>
 </body>
 </html>

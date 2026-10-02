@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
-  // Same rule as the floor: applied before first paint, no stored choice means light.
+  // Applied before first paint; no stored choice means dark, the shell's default.
   (function () {
-    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "light"); }
-    catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "dark"); }
+    catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   })();
 </script>
 <title>Swap &amp; Bridge · Bring funds aboard from any chain | A NEW ONE</title>
@@ -25,7 +25,7 @@
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* The floor's theme system, verbatim: one accent, neutral everything else. */
   :root {
@@ -57,51 +57,13 @@
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
 
-  /* ---- topbar, same recipe as the floor ---- */
-  .topbar { position: sticky; top: 0; z-index: 200; background: rgba(var(--bg-rgb),.78);
-    -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid var(--border); }
-  .topbar-inner { max-width: 1160px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 10px; }
-  /* the crest and wordmark at the floor's exact sizes, breakpoint for breakpoint, so the brand
-     never changes size between pages: 44px and 22px, on a wide screen 32-39px and 18-22px growing
-     with it, and on a phone the crest alone at 42px */
-  .tb-brand { display: flex; align-items: center; gap: 12px; }
-  .tb-brand:hover { text-decoration: none; }
-  .tb-brand img { width: 44px; height: 44px; border-radius: 11px; }
-  .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: .8px; color: var(--text); white-space: nowrap; }
-  @media (min-width: 901px) { .tb-brand img { width: clamp(32px, 2.43vw, 39px); height: clamp(32px, 2.43vw, 39px); }
-    .tb-brand span { font-size: clamp(18px, 1.2vw, 22px); } }
-  @media (max-width: 600px) { .tb-brand img { width: 42px; height: 42px; } .tb-brand span { display: none; } }
-  .tb-link { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-family: var(--mono); font-size: 12.5px; letter-spacing: .6px;
-    color: var(--text); padding: 9px 14px; border-radius: 999px; border: 1px solid rgba(var(--accent-rgb),.28); background: rgba(var(--accent-rgb),.07); transition: background .2s, border-color .2s, color .2s; }
-  .tb-link:hover { text-decoration: none; background: rgba(var(--accent-rgb),.14); border-color: rgba(var(--accent-rgb),.5); color: var(--accent); }
-  .tb-link-quiet { border-color: var(--border-2); background: transparent; color: var(--dim); }
-  .tb-link-quiet:hover { color: var(--text); border-color: var(--border-2); }
-  .tb-spacer { flex: 1; }
-  .theme-sw { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; border: 1px solid var(--border-2); background: var(--surface); }
-  .theme-sw button { all: unset; cursor: pointer; display: grid; place-items: center; width: 30px; height: 26px; border-radius: 999px; color: var(--faint); transition: color .18s, background .18s; }
-  .theme-sw button:hover { color: var(--text); }
-  .theme-sw button[aria-pressed="true"] { color: var(--bg); background: var(--grad); }
-  .theme-sw svg { width: 15px; height: 15px; display: block; }
-  @media (max-width: 640px) { .tb-link span.lbl { display: none; } .topbar-inner { padding: 8px 12px; gap: 8px; } }
-
   /* ---- page ---- */
-  .wrap { max-width: 1160px; margin: 0 auto; padding: 28px 20px 60px; }
-  .hero { display: flex; flex-direction: column; gap: 6px; margin-bottom: 22px; }
-  .kicker { font-family: var(--mono); font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--accent); }
-  h1 { font-family: 'Space Grotesk', sans-serif; font-size: 34px; letter-spacing: -.5px; margin: 0; line-height: 1.1; }
-  h1 small { font-size: 16px; color: var(--dim); font-weight: 500; letter-spacing: 0; display: block; margin-top: 6px; font-family: Inter, sans-serif; }
-  .lede { color: var(--dim); max-width: 640px; margin: 4px 0 0; font-size: 15px; }
   .grid { display: grid; grid-template-columns: minmax(0, 460px) minmax(0, 1fr); gap: 28px; align-items: start; }
   @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
   .side { display: grid; gap: 14px; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 16px; box-shadow: var(--shadow); }
   .card h3 { margin: 0 0 8px; font-size: 14px; font-family: 'Space Grotesk', sans-serif; letter-spacing: .2px; }
   .card p { margin: 0; color: var(--dim); font-size: 13px; }
-  .steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: s; }
-  .steps li { display: flex; gap: 12px; align-items: flex-start; font-size: 13px; color: var(--dim); }
-  .steps li b { color: var(--text); font-weight: 600; display: block; }
-  .steps li:before { counter-increment: s; content: counter(s); flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
-    font: 600 12px var(--mono); color: var(--accent); background: var(--accent-soft); border: 1px solid rgba(var(--accent-rgb),.25); }
   .field { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; color: var(--text); font: inherit; outline: none; appearance: none; -webkit-appearance: none; }
   .sel { position: relative; }
   .sel:after { content: ""; position: absolute; right: 12px; top: 50%; width: 7px; height: 7px; border-right: 1.5px solid var(--dim); border-bottom: 1.5px solid var(--dim); transform: translateY(-70%) rotate(45deg); pointer-events: none; }
@@ -114,9 +76,6 @@
   .pill { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--mono); padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--dim); }
   .pill.test { color: var(--gold); }
   .chains { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  /* embedded in Earn's swap sheet: the swap card alone, nothing to leave the page for */
-  body.embed .topbar, body.embed .hero, body.embed .tabs, body.embed #pAdd, body.embed #pSend, body.embed footer { display: none !important; }
-  body.embed main { padding-top: 4px; }
   .nowallet { background: var(--surface); border: 1px dashed var(--border-2); border-radius: var(--r-md); padding: 18px; color: var(--dim); font-size: 13px; }
   .nowallet b { color: var(--text); }
   .nowallet .wcbtn { display: block; width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: var(--r-sm); background: var(--grad); color: var(--bg); font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; }
@@ -190,49 +149,9 @@
   .send .amt button:hover { color: var(--text); }
   .send .btn { width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: var(--r-sm); background: var(--grad); color: var(--bg); font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; }
   .send .btn:disabled { opacity: .55; cursor: default; }
-  footer { max-width: 1160px; margin: 0 auto; padding: 20px; color: var(--faint); font-size: 12px; border-top: 1px solid var(--border); }
-  footer a { color: var(--dim); margin-right: 14px; }
-
-  /* The bar's pills as on the home page, Earn and Assets: a translucent green pane with a lit top
-     edge and a faint halo, solid green under the hand, one size; the theme switch is the round one.
-     (The network pill keeps its ::before for the dot.) */
-  .tb-nav2 { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-  .tbx { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
-    height: 40px; width: 142px; padding: 0 10px; border-radius: 999px; font: 700 12px var(--mono); letter-spacing: .01em;
-    line-height: 1; white-space: nowrap; color: var(--accent); text-decoration: none;
-    border: 1px solid rgba(var(--accent-rgb), .45);
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
-    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
-    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
-  .tbx:not(.net)::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
-  a.tbx:hover, button.tbx:hover { transform: translateY(-1px); text-decoration: none; color: #04120b; text-shadow: none;
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
-  :root[data-theme="light"] .tbx { text-shadow: none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
-  button.tbx { cursor: pointer; }
-  .tbx.theme { width: 40px; padding: 0; }
-  .tbx.theme svg { width: 16px; height: 16px; }
-  .tbx.theme .i-moon, :root[data-theme="dark"] .tbx.theme .i-sun, :root[data-theme="dim"] .tbx.theme .i-sun { display: none; }
-  :root[data-theme="dark"] .tbx.theme .i-moon, :root[data-theme="dim"] .tbx.theme .i-moon { display: block; }
-  .tbx.net::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
-  .tbx.net.test { color: var(--gold, #d69200); }
-  /* below 1181px the doors keep their icons alone, round, as on Earn and Assets */
-  @media (max-width: 1180px) { .tbx .lbl { display: none; } .tbx:not(.net) { width: 40px; padding: 0; } }
-  @media (max-width: 640px) { .tb-nav2 { gap: 5px; } .tbx { height: 36px; font-size: 11.5px; }
-    .tbx:not(.net) { width: 36px; } .tbx.net { width: auto; padding: 0 10px; } }
-  /* the narrowest phones: smaller circles and gaps, so the five still fit 320px */
-  @media (max-width: 360px) { .topbar-inner { padding-left: 10px; padding-right: 10px; } .tb-nav2 { gap: 4px; }
-    .tbx:not(.net) { width: 32px; height: 32px; } .tbx.net { height: 32px; padding: 0 8px; font-size: 11px; } }
 
   /* ---- one workflow column */
   .flow { max-width: 560px; margin: 0 auto; }
-  .flow.below { margin-top: 22px; display: grid; gap: 10px; }
-  .tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px; border: 1px solid var(--border-2); background: var(--surface); margin-bottom: 16px; }
-  .tabs button { all: unset; flex: 1; text-align: center; cursor: pointer; padding: 10px 12px; border-radius: 999px; font-weight: 600; font-size: 14px; color: var(--dim); }
-  .tabs button.on { background: var(--text); color: var(--bg); }
   .seg2 { display: flex; gap: 6px; margin-bottom: 12px; }
   .seg2 button { all: unset; cursor: pointer; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border-2); font-size: 13px; color: var(--dim); }
   .seg2 button.on { color: var(--text); border-color: rgba(var(--accent-rgb),.5); background: rgba(var(--accent-rgb),.08); }
@@ -252,161 +171,384 @@
   .arrive-h { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .6px; }
   .arrive label { display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer; }
   .coin-pick { margin-top: 12px; }
-  .send-head .pill { display: none; }
-  details.adv-box, details.more { border: 1px solid var(--border); background: var(--surface); }
+  details.adv-box { border: 1px solid var(--border); background: var(--surface); }
   details.adv-box { margin: 12px 0 0; padding: 0 12px; border-radius: 10px; }
-  details.more { padding: 0 16px; border-radius: 14px; }
-  details.adv-box > summary, details.more > summary { cursor: pointer; padding: 12px 0; font-weight: 600; font-size: 13.5px; list-style: none; }
-  details.adv-box > summary::-webkit-details-marker, details.more > summary::-webkit-details-marker { display: none; }
-  details.more > summary { font-size: 14.5px; }
-  details.adv-box > summary::after, details.more > summary::after { content: " \25BE"; color: var(--dim); }
-  details.adv-box[open] > summary::after, details.more[open] > summary::after { content: " \25B4"; }
-  details.more[open] { padding-bottom: 14px; }
+  details.adv-box > summary { cursor: pointer; padding: 12px 0; font-weight: 600; font-size: 13.5px; list-style: none; }
+  details.adv-box > summary::-webkit-details-marker { display: none; }
+  details.adv-box > summary::after { content: " \25BE"; color: var(--dim); }
+  details.adv-box[open] > summary::after { content: " \25B4"; }
+
+  /* ===== Arc Noir: the product card sits in the hero, the panels wear the card, glass cards below ===== */
+  /* the panels and Circle's kit read --surface / --surface-2, which the shell does not remap */
+  :root, :root[data-theme="dark"], :root[data-theme="dim"] { --surface: #0c1210; --surface-2: rgba(255,255,255,.045); --shadow-lg: 0 40px 100px rgba(0,0,0,.6); }
+  :root[data-theme="light"] { --surface: #ffffff; --surface-2: rgba(10,20,17,.035); --shadow-lg: 0 30px 70px rgba(10,20,17,.16); }
+  /* several rules below give a display to elements the script hides with the attribute */
+  [hidden] { display: none !important; }
+  #netPill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  #netPill.test { color: var(--gold); border-color: rgba(var(--gold-rgb), .45); }
+
+  /* the hero holds the card in its flow (not on top of it), so whatever the card grows into
+     (a quote, the steps of a transfer, Circle's checkout) is never cut off by the hero's edge */
+  .nx-hero.bx-hero { min-height: 790px; }
+  .bx-hero .nx-hero-in { display: grid; grid-template-columns: minmax(0, 1fr) 480px; column-gap: 48px; align-items: start; padding-bottom: 100px; }
+  .tcard { position: relative; z-index: 6; min-width: 0; margin: -12px 0 0; padding: 22px 24px 24px; border-radius: 30px; color: var(--nx-ink);
+    background: var(--nx-card), rgba(var(--bg-rgb), .55); border: 1px solid var(--nx-line2); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    box-shadow: 0 36px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.1); }
+  :root[data-theme="light"] .tcard { box-shadow: 0 30px 70px rgba(10,20,17,.14), inset 0 1px 0 #fff; }
+  @media (max-width: 1180px) {
+    .nx-hero.bx-hero { min-height: 0; }
+    .bx-hero .nx-hero-in { grid-template-columns: minmax(0, 1fr); padding-bottom: 240px; }
+    .tcard { width: 100%; max-width: 520px; margin: 36px auto 0; }
+  }
+  @media (max-width: 520px) { .tcard { padding: 18px 16px 20px; border-radius: 26px; } }
+  /* three tabs on the narrowest phones */
+  @media (max-width: 400px) { .tabs.nx-views { gap: 8px; } .tabs.nx-views button { padding: 0 6px; font-size: 15px; } }
+  @media (max-width: 340px) { .tabs.nx-views button { font-size: 14px; } }
+
+  /* inside the card the panels lose their own card chrome: the card is the surface */
+  .tcard .card { background: none; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
+  .tcard .send-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .tcard .send-head h3 { margin: 0; font: 600 22px/1.2 'Space Grotesk', sans-serif; letter-spacing: -.02em; color: var(--nx-ink); }
+  .tcard .send-head .pill { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 12px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid rgba(var(--nx-mint-rgb), .4); background: rgba(var(--nx-mint-rgb), .08); color: var(--nx-mint); font: 700 11px var(--mono); letter-spacing: .06em; }
+  .tcard .send-head .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+  .tcard .send-head .pill.test { color: var(--gold); border-color: rgba(var(--gold-rgb), .45); background: rgba(var(--gold-rgb), .08); }
+  .tcard .card p { margin: -4px 0 14px; font-size: 14px; line-height: 1.5; color: var(--nx-mute); }
+  .hint { margin-top: 8px; font-size: 12.5px; line-height: 1.5; color: var(--nx-faint); }
+  .hint.good { color: var(--nx-mint); }
+  .hint a, .coin-link a { color: var(--nx-mint); text-decoration: underline; text-underline-offset: 3px; }
+
+  /* the two ways in */
+  .seg2 { flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .seg2 button { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; height: 38px; padding: 0 16px; border-radius: 999px;
+    border: 1px solid var(--nx-line2); color: var(--nx-mute); font: 700 12px var(--mono); transition: background .2s, color .2s, border-color .2s; }
+  .seg2 button:hover { color: var(--nx-ink); }
+  .seg2 button.on { color: var(--nx-mint); border-color: rgba(var(--nx-mint-rgb), .5); background: rgba(var(--nx-mint-rgb), .1); }
+  .seg2 button:focus-visible, .adv-toggle:focus-visible { outline: 2px solid var(--nx-mint); outline-offset: 2px; }
+
+  /* "From another chain": Circle's kit and the page's own pieces in one column. The kit's box steps
+     aside (display: contents) so the arrival choice can sit above its button, as in the design */
+  #wayChain { display: flex; flex-direction: column; }
+  #bridge.abk { display: contents; }
+  #advToggle { order: 1; }
+  #wayChain .arrive { order: 2; }
+  #coinPick { order: 3; }
+  #bridge .abk-btn, #bridge .abk-note, #bridge .abk-err, #bridge .abk-ok, #bridge .abk-steps, #bridge .abk-pend, #solhint { order: 4; }
+  #coinLink { order: 5; }
+  /* the kit, in the card's clothes: labels in mono capitals, the amount big, one lit button */
+  #bridge .abk-head { display: none; }
+  #bridge .abk-label { margin-bottom: 7px; font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--nx-faint); }
+  #bridge .abk-label b { font-weight: 500; letter-spacing: .02em; text-transform: none; color: var(--nx-mute); }
+  #bridge .abk-field { height: 46px; padding: 0 40px 0 16px; border-radius: 14px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.04); color: var(--nx-ink); font: 500 14.5px Inter, system-ui, sans-serif; }
+  #bridge .abk-field:focus { border-color: rgba(var(--nx-mint-rgb), .6); }
+  #bridge .abk-sel:after, .sel:after { right: 17px; border-color: var(--nx-mute); }
+  #bridge .abk-amount { gap: 8px; padding: 10px 10px 10px 16px; border-radius: 20px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.035); transition: border-color .2s; }
+  #bridge .abk-amount:focus-within { border-color: rgba(var(--nx-mint-rgb), .5); }
+  #bridge .abk-amount input { padding: 2px 0; font: 500 34px/1.15 'Space Grotesk', sans-serif; letter-spacing: -.03em; color: var(--nx-ink); }
+  #bridge .abk-amount input::placeholder { color: var(--nx-faint); }
+  #bridge .abk-amount .abk-tok { flex: none; border: 1px solid var(--nx-line2); border-radius: 999px; background: rgba(255,255,255,.06); }
+  #bridge .abk-amount .abk-tok select { height: 42px; max-width: 130px; padding: 0 30px 0 16px; font: 600 15px 'Space Grotesk', sans-serif; color: var(--nx-ink); }
+  #bridge .abk-amount .abk-tok:after { right: 14px; }
+  #bridge .abk-amount button { margin: 0; }
+  #bridge .abk-mini { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid rgba(var(--nx-mint-rgb), .4); background: rgba(var(--nx-mint-rgb), .08);
+    color: var(--nx-mint); font: 700 10.5px var(--mono); letter-spacing: .04em; text-decoration: none; }
+  #bridge .abk-mini:hover { color: var(--nx-mint); background: rgba(var(--nx-mint-rgb), .18); }
+  #bridge .abk-seg { gap: 4px; padding: 4px; border-radius: 999px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.03); }
+  #bridge .abk-seg button { border-radius: 999px; padding: 7px 10px; color: var(--nx-mute); }
+  #bridge .abk-seg button.on { color: var(--nx-ink); background: rgba(var(--nx-mint-rgb), .12); box-shadow: inset 0 0 0 1px rgba(var(--nx-mint-rgb), .45); }
+  #bridge .abk-fees { margin-top: 12px; padding: 14px 16px; row-gap: 6px; border-radius: 20px; border: 1px solid rgba(var(--nx-mint-rgb), .28); background: rgba(var(--nx-mint-rgb), .05); color: var(--nx-mute); }
+  #bridge .abk-fees .v, #bridge .abk-fees .tot { color: var(--nx-ink); }
+  #bridge .abk-note { margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: var(--nx-faint); }
+  #bridge .abk-err { margin-top: 12px; padding: 10px 14px; border-radius: 14px; border: 1px solid rgba(var(--red-rgb), .35); background: rgba(var(--red-rgb), .08); }
+  #bridge .abk-ok { margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(var(--nx-mint-rgb), .35); background: rgba(var(--nx-mint-rgb), .08); color: var(--nx-ink); }
+  #bridge .abk-steps, #bridge .abk-pend { border-top-color: var(--nx-line); }
+  #bridge .abk-step.done .d { color: var(--nx-on-mint); }
+  :root[data-theme="light"] #bridge .abk-field, :root[data-theme="light"] .field { background: rgba(10,20,17,.03); }
+  :root[data-theme="light"] #bridge .abk-amount, :root[data-theme="light"] .sw-box, :root[data-theme="light"] .cardbuy { background: rgba(10,20,17,.025); }
+  :root[data-theme="light"] #bridge .abk-amount .abk-tok, :root[data-theme="light"] .sw-tok:not(.empty), :root[data-theme="light"] .chains .cc { background: #fff; }
+
+  /* every main action in the card: one wide lit pill */
+  .tcard .btn, .nowallet .wcbtn, #bridge .abk-btn { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 54px; margin-top: 18px; padding: 0 18px;
+    border: 1px solid rgba(var(--nx-mint-rgb), .3); border-radius: 999px; cursor: pointer; text-decoration: none; text-align: center;
+    font: 700 14px var(--mono); letter-spacing: .02em; color: var(--nx-on-mint); background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .98), rgba(var(--nx-mint-rgb), .82));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 10px 30px rgba(var(--nx-mint-rgb), .3); transition: box-shadow .2s, transform .15s, opacity .2s; }
+  .tcard .btn:hover:not(:disabled), .nowallet .wcbtn:hover:not(:disabled), #bridge .abk-btn:hover:not(:disabled) { transform: translateY(-1px); text-decoration: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 14px 36px rgba(var(--nx-mint-rgb), .42); }
+  .tcard .btn:disabled, .nowallet .wcbtn:disabled, #bridge .abk-btn:disabled { opacity: .5; cursor: default; transform: none; }
+  .tcard .btn:focus-visible, .nowallet .wcbtn:focus-visible, #bridge .abk-btn:focus-visible { outline: 2px solid var(--nx-ink); outline-offset: 3px; }
+
+  /* no wallet in this browser, the advanced switch, "when it arrives", the coin to buy */
+  .nowallet { padding: 18px; border-radius: 20px; border: 1px dashed var(--nx-line2); background: rgba(255,255,255,.03); color: var(--nx-mute); font-size: 14px; line-height: 1.55; }
+  .nowallet b { color: var(--nx-ink); }
+  .adv-toggle { align-self: flex-start; margin: 12px 2px 0; padding: 4px 0; border-radius: 6px; font: 600 13px Inter, system-ui, sans-serif; color: var(--nx-mute); }
+  .adv-toggle:hover { color: var(--nx-ink); }
+  #wayChain .arrive { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 18px; }
+  .arrive-h { width: 100%; font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--nx-faint); }
+  .arrive label { display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 18px 0 14px; border-radius: 999px; border: 1px solid var(--nx-line2); cursor: pointer;
+    font: 600 14px 'Space Grotesk', sans-serif; color: var(--nx-mute); transition: background .2s, border-color .2s, color .2s; }
+  .arrive label:hover { color: var(--nx-ink); }
+  .arrive label:has(input:checked) { color: var(--nx-ink); border-color: rgba(var(--nx-mint-rgb), .5); background: rgba(var(--nx-mint-rgb), .08); }
+  .arrive input { appearance: none; -webkit-appearance: none; flex: none; width: 16px; height: 16px; margin: 0; border-radius: 50%; border: 1.5px solid var(--nx-faint); background: transparent; cursor: pointer; }
+  .arrive input:checked { border-color: var(--nx-mint); background: radial-gradient(var(--nx-mint) 0 42%, transparent 47%); }
+  .arrive input:focus-visible { outline: 2px solid var(--nx-mint); outline-offset: 3px; }
+  .coin-pick { margin-top: 14px; }
+  .coin-pick .or { margin: 14px 0 10px; }
+  .coin-link { margin-top: 12px; font: 600 13px Inter, system-ui, sans-serif; }
+  .field { height: 46px; padding: 0 16px; border-radius: 14px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.04); color: var(--nx-ink); font: 400 14.5px Inter, system-ui, sans-serif; transition: border-color .2s; }
+  .field:focus { border-color: rgba(var(--nx-mint-rgb), .6); }
+  .field::placeholder { color: var(--nx-faint); }
+  .field.mono { font: 500 12.5px var(--mono); }
+  select.field { padding-right: 40px; cursor: pointer; }
+  select.field option { background: var(--surface); color: var(--nx-ink); }
+
+  /* Buy with card */
+  .cardbuy { display: flex; gap: 14px; padding: 18px; border-radius: 20px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.035); }
+  .cardbuy .ci { flex: none; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 22px; background: rgba(var(--nx-mint-rgb), .12); border: 1px solid rgba(var(--nx-mint-rgb), .3); }
+  .tcard .cardbuy .send-head { margin: 0; }
+  .tcard .cardbuy .send-head h3 { font-size: 17px; }
+  .tcard .cardbuy .send-head .pill { display: none; }
+  .tcard .cardbuy p { margin: 5px 0 0; font-size: 14px; }
+  .onramp-wrap { border-radius: 20px; border-color: var(--nx-line2); }
+
+  /* Swap: two stacked boxes and a round flip */
+  .sw-box { padding: 14px 16px 12px; border-radius: 20px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.035); transition: border-color .2s; }
+  .sw-box:focus-within { border-color: rgba(var(--nx-mint-rgb), .5); }
+  .sw-lbl { margin-bottom: 0; font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--nx-faint); }
+  .sw-lbl span:last-child { letter-spacing: .02em; text-transform: none; color: var(--nx-mute); }
+  .sw-row { gap: 12px; margin-top: 8px; }
+  .sw-row input { padding: 0; font: 500 34px/1.2 'Space Grotesk', sans-serif; letter-spacing: -.03em; color: var(--nx-ink); }
+  .sw-row input::placeholder { color: var(--nx-faint); }
+  .sw-tok { height: 44px; gap: 8px; padding: 0 14px 0 16px; border-radius: 999px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.06); color: var(--nx-ink); font: 600 15px 'Space Grotesk', sans-serif; }
+  .sw-tok:hover { border-color: rgba(var(--nx-mint-rgb), .5); }
+  .sw-tok::after { color: var(--nx-mute); }
+  .sw-tok.empty { color: var(--nx-on-mint); border-color: transparent; background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .98), rgba(var(--nx-mint-rgb), .8)); }
+  .sw-tok.empty::after { color: var(--nx-on-mint); }
+  .sw-sub { min-height: 26px; margin-top: 8px; font: 400 12.5px Inter, system-ui, sans-serif; color: var(--nx-faint); }
+  .sw-max { height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid rgba(var(--nx-mint-rgb), .4); background: rgba(var(--nx-mint-rgb), .08); color: var(--nx-mint); font: 700 10.5px var(--mono); letter-spacing: .04em; }
+  .sw-max:hover { background: rgba(var(--nx-mint-rgb), .18); }
+  .sw-flipwrap { height: auto; margin: -11px 0; z-index: 2; }
+  .sw-flip { position: relative; top: auto; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--nx-line2); background: var(--nx-bg2); color: var(--nx-mint); font-size: 16px; }
+  .sw-flip:hover { color: var(--nx-ink); border-color: rgba(var(--nx-mint-rgb), .5); }
+  .sw-details { margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--nx-line); font-size: 12.5px; color: var(--nx-mute); }
+  .sw-details b { color: var(--nx-ink); }
+  details.adv-box { margin-top: 12px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--nx-line); background: transparent; }
+  details.adv-box > summary { padding: 12px 0; font: 600 13.5px Inter, system-ui, sans-serif; color: var(--nx-mute); }
+  details.adv-box > summary:hover { color: var(--nx-ink); }
+  .sw-slip { gap: 10px; margin-top: 0; padding-bottom: 12px; font-size: 13px; color: var(--nx-mute); }
+  .sw-slip .ctf { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .sw-slip .ctf button { height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--nx-line2); background: transparent; color: var(--nx-mute); font: 700 12px var(--mono); }
+  .sw-slip .ctf button.on { color: var(--nx-mint); border-color: rgba(var(--nx-mint-rgb), .5); background: rgba(var(--nx-mint-rgb), .1); }
+  .sw-slip input { width: 84px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--nx-line2); background: transparent; color: var(--nx-ink); font: 500 12.5px Inter, system-ui, sans-serif; outline: none; }
+  .sw-slip input:focus { border-color: rgba(var(--nx-mint-rgb), .6); }
+
+  /* Send */
+  .send .lbl { margin: 14px 0 7px; font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--nx-faint); }
+  .send .lbl span:last-child { letter-spacing: .02em; text-transform: none; color: var(--nx-mute); }
+  .send .amt { gap: 10px; align-items: center; }
+  .send .amt button { height: 46px; padding: 0 16px; border-radius: 14px; border: 1px solid rgba(var(--nx-mint-rgb), .4); background: rgba(var(--nx-mint-rgb), .08); color: var(--nx-mint); font: 700 10.5px var(--mono); letter-spacing: .04em; }
+  .send .amt button:hover { color: var(--nx-mint); background: rgba(var(--nx-mint-rgb), .18); }
+
+  /* the token picker, a glass sheet over the page */
+  .sw-modal { background: rgba(var(--bg-rgb), .72); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .sw-sheet { max-width: 440px; gap: 12px; padding: 20px; border-radius: 26px; border: 1px solid var(--nx-line2); color: var(--nx-ink);
+    background: linear-gradient(180deg, rgba(18,26,23,.98), rgba(10,16,14,.98)); box-shadow: 0 40px 100px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.08); }
+  :root[data-theme="light"] .sw-sheet { background: #fff; box-shadow: 0 30px 70px rgba(10,20,17,.18); }
+  .sw-ph b { font: 600 18px 'Space Grotesk', sans-serif; letter-spacing: -.015em; }
+  .sw-ph .modal-x { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--nx-line2); color: var(--nx-mute); }
+  .sw-ph .modal-x:hover { color: var(--nx-ink); }
+  .sw-sheet > :not(.sw-list) { flex: none; }   /* the sheet is a capped column: only the list gives way */
+  .sw-list { scrollbar-width: thin; scrollbar-color: var(--nx-line2) transparent; }
+  .sw-it { padding: 10px 12px; border-radius: 14px; }
+  .sw-it:hover { background: rgba(var(--nx-mint-rgb), .08); }
+  .sw-it .av { width: 34px; height: 34px; border-color: var(--nx-line2); background: rgba(255,255,255,.06); }
+  .sw-it .tag { color: var(--nx-mint); border-color: rgba(var(--nx-mint-rgb), .35); background: rgba(var(--nx-mint-rgb), .08); }
+
+  /* below the hero: how it works, the chains and the fees, in the shell's glass cards */
+  .bx-h { margin: 6px 0 22px; }
+  .bx-card h2.nx-eyebrow { margin: 0; }
+  .bx-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+  .bx-card { position: relative; display: flex; flex-direction: column; min-width: 0; border-radius: 26px; border: 1px solid var(--nx-line2); background: var(--nx-card);
+    box-shadow: 0 24px 60px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08); transition: transform .3s cubic-bezier(.2,.8,.2,1), border-color .3s; }
+  :root[data-theme="light"] .bx-card { box-shadow: 0 24px 60px rgba(10,20,17,.08), inset 0 1px 0 #fff; }
+  .bx-card:hover { transform: translateY(-5px); border-color: rgba(var(--nx-mint-rgb), .5); }
+  .bx-st { gap: 12px; padding: 26px 26px 28px; }
+  .bx-st .n { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font: 700 14px var(--mono); color: var(--nx-on-mint); background: linear-gradient(180deg, var(--nx-ice), var(--nx-mint)); }
+  .bx-st b { font: 600 21px/1.25 'Space Grotesk', sans-serif; letter-spacing: -.02em; color: var(--nx-ink); }
+  .bx-st p { margin: 0; font-size: 15.5px; line-height: 1.6; color: var(--nx-mute); }
+  .bx-pair { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 22px; margin-top: 22px; }
+  .bx-info { padding: 28px 30px; }
+  .bx-info > p { margin: 16px 0 0; font-size: 15px; line-height: 1.65; color: var(--nx-mute); }
+  .chains { gap: 10px; margin-top: 18px; }
+  .chains .cc { display: inline-flex; align-items: center; gap: 9px; height: 40px; padding: 0 16px 0 8px; border-radius: 999px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.04); color: var(--nx-ink); font: 600 14px 'Space Grotesk', sans-serif; }
+  .chains .cc i { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 700 11px var(--mono); font-style: normal; color: var(--nx-on-mint); background: linear-gradient(180deg, var(--nx-ice), var(--nx-mint)); }
+  .fees { display: grid; margin: 16px 0 0; border-top: 1px solid var(--nx-line); }
+  .fees div { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--nx-line); }
+  .fees dt { padding-top: 3px; font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--nx-faint); }
+  .fees dd { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--nx-ink); }
+  @media (max-width: 1180px) { .bx-pair { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 900px) { .bx-steps { grid-template-columns: minmax(0, 1fr); } .bx-st { padding: 22px; } }
+  @media (max-width: 520px) { .fees div { grid-template-columns: minmax(0, 1fr); gap: 4px; } .bx-info { padding: 24px 22px; } .sw-row input, #bridge .abk-amount input { font-size: 28px; } }
+  /* the narrowest phones: the token pill gives the amount room */
+  @media (max-width: 380px) { #bridge .abk-amount { padding-left: 14px; } #bridge .abk-amount .abk-tok select { max-width: 96px; padding: 0 24px 0 12px; font-size: 14px; } #bridge .abk-amount .abk-tok:after { right: 10px; } }
+
+  /* embedded in Earn's swap sheet: the swap card alone, nothing to leave the page for */
+  body.embed .nx-bar, body.embed .nx-hero-t, body.embed .nx-stars, body.embed .nx-arch, body.embed .tabs, body.embed #pAdd, body.embed #pSend, body.embed .nx-main, body.embed .nx-foot { display: none !important; }
+  body.embed #pSwap { display: block !important; }
+  body.embed .nx-hero { min-height: 0; overflow: visible; background: none; }
+  body.embed .bx-hero .nx-hero-in { display: block; max-width: none; padding: 4px 0 0; }
+  :root body.embed .tcard { width: auto; max-width: none; margin: 0; padding: 14px 16px 20px; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 </style>
+<link rel="stylesheet" href="../shell.css">
 </head>
 <body>
-<nav class="topbar">
-  <div class="topbar-inner">
-    <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../brand/logo.svg" alt=""><span>A NEW ONE</span></a>
-    <div class="tb-nav2">
-      <a class="tbx" href="/">← <span class="lbl">Home</span></a>
-      <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
-      <span class="tbx net" id="netPill">…</span>
+<script>if (/[?&]embed=1(&|$)/.test(location.search)) document.body.classList.add("embed");</script>
+<header class="nx-bar" id="nxBar"><div class="nx-bar-in">
+  <a class="nx-brand" href="../" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
+  <nav class="nx-seg" aria-label="Apps"><a href="../earn/">DeFi</a><a href="../assets/stocks/">RWA</a><a href="../fun/" class="f">Fun</a></nav>
+  <div class="nx-actions">
+    <button type="button" class="nx-icon" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
+    <span class="nx-pill" id="netPill" hidden>…</span>
+  </div>
+</div></header>
+
+<section class="nx-hero bx-hero">
+  <div class="nx-hero-in">
+    <div class="nx-hero-t">
+      <div class="nx-eyebrow">Tools · Swap &amp; Bridge · Circle CCTP + LI.FI</div>
+      <h1 class="nx-h1">Bring funds aboard<br><em>from any chain.</em></h1>
+      <p class="nx-lead">Pay with ETH, SOL, USDC or <b>almost anything</b>. It lands on Arc as USDC, <b>no gas needed there</b>, and can buy a coin on the floor in the same trip.</p>
+      <!-- One workflow at a time: the three tabs drive the panels in the card. Add funds has two ways
+           in (another chain, or a card), and only asks which coin to buy once "Buy a coin" is
+           picked; everything technical sits under Advanced settings or below the hero. -->
+      <div class="tabs nx-views" role="tablist" aria-label="What do you want to do">
+        <button type="button" role="tab" class="on" data-tab="add" aria-selected="true" aria-controls="pAdd">Add funds</button>
+        <button type="button" role="tab" data-tab="swap" aria-selected="false" aria-controls="pSwap">Swap</button>
+        <button type="button" role="tab" data-tab="send" aria-selected="false" aria-controls="pSend">Send</button>
+      </div>
+    </div>
+    <div class="flow tcard" id="tcard">
+      <section class="panel" id="pAdd" role="tabpanel" aria-label="Add funds">
+        <div class="send-head"><h3>Add funds</h3><span class="pill" id="addNet">…</span></div>
+        <div class="seg2" id="addSeg">
+          <button type="button" class="on" data-way="chain">From another chain</button>
+          <button type="button" data-way="card" id="waySeg" hidden>Buy with card</button>
+        </div>
+        <div id="wayChain">
+          <div id="bridge"></div>
+          <!-- a phone browser has no Solana wallet to discover: Phantom and Solflare each have a
+               browser of their own, and this page opens inside it with the wallet attached -->
+          <div id="solhint" class="nowallet" hidden>
+            <b>No Solana wallet in this browser.</b> On a phone, open this page inside your wallet app's browser and pay from there.
+            <a class="wcbtn" id="solPhantom" href="#" rel="noopener noreferrer">👻 Open in Phantom</a>
+            <a class="wcbtn" id="solSolflare" href="#" rel="noopener noreferrer">🔥 Open in Solflare</a>
+          </div>
+          <div id="nowallet" class="nowallet" hidden>
+            <b>No wallet found in this browser.</b> Connect a wallet app over WalletConnect, install a browser wallet such as MetaMask, Rabby or Coinbase Wallet,
+            or open this page inside your wallet app's browser. Google sign-in wallets from the floor cannot bridge from here yet.
+            <button type="button" class="wcbtn" id="wcConnect">🔗 Connect a wallet app · WalletConnect</button>
+          </div>
+          <button type="button" class="adv-toggle" id="advToggle" aria-expanded="false">Advanced settings ▾</button>
+          <div class="arrive">
+            <div class="arrive-h">When it arrives</div>
+            <label><input type="radio" name="arrive" value="keep" checked> Keep as USDC</label>
+            <label><input type="radio" name="arrive" value="buy"> Buy a coin</label>
+          </div>
+          <div class="card coin-pick" id="coinPick" hidden>
+          <div class="sel"><select class="field" id="buy"><option value="">just bring USDC aboard</option></select></div>
+          <div class="hint" id="buyHint">Ranking the floor by FDV…</div>
+          <div class="or"><span>or paste a coin's contract address</span></div>
+          <input class="field mono" id="ca" placeholder="0x… any A NEW ONE coin, wherever you found it" spellcheck="false" autocomplete="off">
+          <div class="hint" id="caHint"></div>
+          </div>
+          <div class="coin-link" id="coinLink" hidden></div>
+        </div>
+        <div id="wayCard" hidden>
+        <div class="card onramp" id="onrampCard" hidden>
+          <div class="cardbuy"><span class="ci" aria-hidden="true">💳</span><div>
+            <div class="send-head"><h3>Buy USDC with card</h3><span class="pill" id="onrampNet">…</span></div>
+            <p>Card, Apple Pay or Google Pay, through Circle. The USDC lands in your connected wallet on Arc; no other chain involved.</p></div></div>
+          <button type="button" class="btn" id="onrampGo">💳 Buy USDC with card</button>
+          <div class="hint" id="onrampHint"></div>
+          <div class="onramp-wrap" id="onrampWrap"></div>
+        </div>
+        </div>
+      </section>
+
+      <section class="panel" id="pSwap" role="tabpanel" aria-label="Swap" hidden>
+        <div class="card swap" id="swapCard">
+          <div class="send-head"><h3>Swap on Arc</h3><span class="pill" id="swNet">…</span></div>
+          <p>Any token on Arc for any other. Routes by LI.FI; A NEW ONE coins trade on their own curve.</p>
+          <div class="sw-box">
+            <div class="sw-lbl"><span>Sell</span><span id="swFromBal"></span></div>
+            <div class="sw-row"><input id="swAmt" inputmode="decimal" placeholder="0" autocomplete="off"><button type="button" class="sw-tok" id="swFromBtn">USDC</button></div>
+            <div class="sw-sub"><span id="swFromUsd"></span><button type="button" class="sw-max" id="swMax">MAX</button></div>
+          </div>
+          <div class="sw-flipwrap"><button type="button" class="sw-flip" id="swFlip" title="Switch direction" aria-label="Switch direction">↓</button></div>
+          <div class="sw-box">
+            <div class="sw-lbl"><span>Buy</span><span id="swToBal"></span></div>
+            <div class="sw-row"><input id="swOut" readonly placeholder="0"><button type="button" class="sw-tok empty" id="swToBtn">Select token</button></div>
+            <div class="sw-sub"><span id="swToUsd"></span><span id="swRoute"></span></div>
+          </div>
+          <div class="sw-details" id="swDetails" hidden></div>
+          <details class="adv-box"><summary>Advanced settings</summary>
+          <div class="sw-slip"><span>Max slippage</span>
+            <div class="ctf" id="swSlipBtns"><button type="button" data-s="1">1%</button><button type="button" data-s="3" class="on">3%</button><button type="button" data-s="5">5%</button><button type="button" data-s="10">10%</button>
+            <input id="swSlipCustom" inputmode="decimal" placeholder="custom"></div></div>
+          </details>
+          <button type="button" class="btn" id="swGo" disabled>Connect wallet</button>
+          <div class="hint" id="swHint"></div>
+        </div>
+      </section>
+
+      <section class="panel" id="pSend" role="tabpanel" aria-label="Send" hidden>
+        <div class="card send" id="sendCard">
+          <div class="send-head"><h3>Send on Arc</h3><span class="pill" id="sendNet">…</span></div>
+          <p>Move USDC or any token on Arc to another wallet. One signature; gas is paid in USDC.</p>
+          <div class="lbl"><span>Token</span><span id="sendBal"></span></div>
+          <div class="sel"><select class="field" id="sendTok"><option value="native">USDC · Arc's own money</option></select></div>
+          <div class="lbl"><span>To</span><span></span></div>
+          <input class="field mono" id="sendTo" placeholder="0x… recipient on Arc" spellcheck="false" autocomplete="off">
+          <div class="lbl"><span>Amount</span><span id="sendSym"></span></div>
+          <div class="amt"><input class="field" id="sendAmt" inputmode="decimal" placeholder="0.00" autocomplete="off"><button type="button" id="sendMax">MAX</button></div>
+          <button type="button" class="btn" id="sendGo" disabled>Connect wallet</button>
+          <div class="hint" id="sendHint"></div>
+        </div>
+      </section>
     </div>
   </div>
-</nav>
-
-<main class="wrap">
-  <div class="hero">
-    <div class="kicker">🌉 Swap &amp; Bridge</div>
-    <h1>Bring funds aboard from any chain.<small>Pay with ETH, SOL, USDC or almost anything. It lands on Arc as USDC, no gas needed there, and can buy a coin on the floor in the same trip.</small></h1>
+</section>
+<div class="sw-modal" id="swPicker" hidden>
+  <div class="sw-sheet">
+    <div class="sw-ph"><b>Select a token</b><button type="button" class="modal-x" id="swPickX" aria-label="Close">✕</button></div>
+    <input class="field mono" id="swSearch" placeholder="Search a name, or paste any Arc token address" spellcheck="false" autocomplete="off">
+    <div class="hint" id="swSearchHint"></div>
+    <div class="sw-list" id="swList"></div>
   </div>
+</div>
 
-  <!-- One workflow at a time: three tabs over one centred column. Add funds has two ways
-       in (another chain, or a card), and only asks which coin to buy once "Buy a coin" is
-       picked; everything technical sits under Advanced settings or below the form. -->
-  <div class="flow">
-    <div class="tabs" role="tablist" aria-label="What do you want to do">
-      <button type="button" role="tab" class="on" data-tab="add" aria-selected="true">Add funds</button>
-      <button type="button" role="tab" data-tab="swap" aria-selected="false">Swap</button>
-      <button type="button" role="tab" data-tab="send" aria-selected="false">Send</button>
-    </div>
-
-    <section class="panel" id="pAdd">
-      <div class="seg2" id="addSeg">
-        <button type="button" class="on" data-way="chain">From another chain</button>
-        <button type="button" data-way="card" id="waySeg" hidden>Buy with card</button>
-      </div>
-      <div id="wayChain">
-        <div id="bridge"></div>
-        <!-- a phone browser has no Solana wallet to discover: Phantom and Solflare each have a
-             browser of their own, and this page opens inside it with the wallet attached -->
-        <div id="solhint" class="nowallet" hidden>
-          <b>No Solana wallet in this browser.</b> On a phone, open this page inside your wallet app's browser and pay from there.
-          <a class="wcbtn" id="solPhantom" href="#" rel="noopener noreferrer">👻 Open in Phantom</a>
-          <a class="wcbtn" id="solSolflare" href="#" rel="noopener noreferrer">🔥 Open in Solflare</a>
-        </div>
-        <div id="nowallet" class="nowallet" hidden>
-          <b>No wallet found in this browser.</b> Connect a wallet app over WalletConnect, install a browser wallet such as MetaMask, Rabby or Coinbase Wallet,
-          or open this page inside your wallet app's browser. Google sign-in wallets from the floor cannot bridge from here yet.
-          <button type="button" class="wcbtn" id="wcConnect">🔗 Connect a wallet app · WalletConnect</button>
-        </div>
-        <button type="button" class="adv-toggle" id="advToggle" aria-expanded="false">Advanced settings ▾</button>
-        <div class="arrive">
-          <div class="arrive-h">When it arrives</div>
-          <label><input type="radio" name="arrive" value="keep" checked> Keep as USDC</label>
-          <label><input type="radio" name="arrive" value="buy"> Buy a coin</label>
-        </div>
-        <div class="card coin-pick" id="coinPick" hidden>
-        <div class="sel"><select class="field" id="buy"><option value="">just bring USDC aboard</option></select></div>
-        <div class="hint" id="buyHint">Ranking the floor by FDV…</div>
-        <div class="or"><span>or paste a coin's contract address</span></div>
-        <input class="field mono" id="ca" placeholder="0x… any A NEW ONE coin, wherever you found it" spellcheck="false" autocomplete="off">
-        <div class="hint" id="caHint"></div>
-        </div>
-        <div class="coin-link" id="coinLink" hidden></div>
-      </div>
-      <div id="wayCard" hidden>
-      <div class="card onramp" id="onrampCard" hidden>
-        <div class="send-head"><h3>Buy USDC with card</h3><span class="pill" id="onrampNet">…</span></div>
-        <p>Card, Apple Pay or Google Pay, through Circle. The USDC lands in your connected wallet on Arc; no other chain involved.</p>
-        <button type="button" class="btn" id="onrampGo">💳 Buy USDC with card</button>
-        <div class="hint" id="onrampHint"></div>
-        <div class="onramp-wrap" id="onrampWrap"></div>
-      </div>
-      </div>
+<main class="nx-main"><div class="nx-wrap">
+  <h2 class="nx-eyebrow bx-h">How it works</h2>
+  <ol class="bx-steps">
+    <li class="bx-card bx-st"><span class="n" aria-hidden="true">1</span><b>Pick a chain and what you pay with.</b><p>USDC goes straight to the bridge. Anything else is swapped into USDC first by LI.FI, on the chain you are on.</p></li>
+    <li class="bx-card bx-st"><span class="n" aria-hidden="true">2</span><b>One bridge signature.</b><p>Circle's CCTP burns the USDC and its Forwarding Service mints it on Arc for you. You never need gas on Arc.</p></li>
+    <li class="bx-card bx-st"><span class="n" aria-hidden="true">3</span><b>Buy on the floor.</b><p>If you picked a coin, the bridged USDC buys it on its bonding curve as soon as it lands; one more signature, on Arc.</p></li>
+  </ol>
+  <div class="bx-pair">
+    <section class="bx-card bx-info"><h2 class="nx-eyebrow">Supported chains</h2>
+      <div class="chains" id="chainPills"></div>
+      <p>Fast transfers arrive in about 20 seconds where Circle offers them. From Solana, SOL or any Solana token becomes USDC on Arc in one LI.FI route, signed in Phantom, Solflare or Backpack; the USDC lands at your Arc address (Phantom carries one, or type it in).</p>
     </section>
-
-    <section class="panel" id="pSwap" hidden>
-      <div class="card swap" id="swapCard">
-        <div class="send-head"><h3>Swap on Arc</h3><span class="pill" id="swNet">…</span></div>
-        <p>Any token on Arc for any other. Routes by LI.FI; A NEW ONE coins trade on their own curve.</p>
-        <div class="sw-box">
-          <div class="sw-lbl"><span>Sell</span><span id="swFromBal"></span></div>
-          <div class="sw-row"><input id="swAmt" inputmode="decimal" placeholder="0" autocomplete="off"><button type="button" class="sw-tok" id="swFromBtn">USDC</button></div>
-          <div class="sw-sub"><span id="swFromUsd"></span><button type="button" class="sw-max" id="swMax">MAX</button></div>
-        </div>
-        <div class="sw-flipwrap"><button type="button" class="sw-flip" id="swFlip" title="Switch direction" aria-label="Switch direction">↓</button></div>
-        <div class="sw-box">
-          <div class="sw-lbl"><span>Buy</span><span id="swToBal"></span></div>
-          <div class="sw-row"><input id="swOut" readonly placeholder="0"><button type="button" class="sw-tok empty" id="swToBtn">Select token</button></div>
-          <div class="sw-sub"><span id="swToUsd"></span><span id="swRoute"></span></div>
-        </div>
-        <div class="sw-details" id="swDetails" hidden></div>
-        <details class="adv-box"><summary>Advanced settings</summary>
-        <div class="sw-slip"><span>Max slippage</span>
-          <div class="ctf" id="swSlipBtns"><button type="button" data-s="1">1%</button><button type="button" data-s="3" class="on">3%</button><button type="button" data-s="5">5%</button><button type="button" data-s="10">10%</button>
-          <input id="swSlipCustom" inputmode="decimal" placeholder="custom"></div></div>
-        </details>
-        <button type="button" class="btn" id="swGo" disabled>Connect wallet</button>
-        <div class="hint" id="swHint"></div>
-      </div>
+    <section class="bx-card bx-info"><h2 class="nx-eyebrow">Fees</h2>
+      <dl class="fees">
+        <div><dt>Circle</dt><dd>A few basis points on fast transfers (none on standard), plus about 0.02 USDC to mint on Arc for you.</dd></div>
+        <div><dt>LI.FI swaps</dt><dd>The pool's price and a fixed fee of a cent or two.</dd></div>
+        <div><dt>A NEW ONE</dt><dd>On mainnet, 0.25% of a non-USDC payment goes to the floor, shown as its own line.</dd></div>
+      </dl>
+      <p>The quote shows everything before you sign, and the amount bridged after a swap is what actually arrived in your wallet, not an estimate.</p>
     </section>
-
-    <section class="panel" id="pSend" hidden>
-      <div class="card send" id="sendCard">
-        <div class="send-head"><h3>Send on Arc</h3><span class="pill" id="sendNet">…</span></div>
-        <p>Move USDC or any token on Arc to another wallet. One signature; gas is paid in USDC.</p>
-        <div class="lbl"><span>Token</span><span id="sendBal"></span></div>
-        <div class="sel"><select class="field" id="sendTok"><option value="native">USDC · Arc's own money</option></select></div>
-        <div class="lbl"><span>To</span><span></span></div>
-        <input class="field mono" id="sendTo" placeholder="0x… recipient on Arc" spellcheck="false" autocomplete="off">
-        <div class="lbl"><span>Amount</span><span id="sendSym"></span></div>
-        <div class="amt"><input class="field" id="sendAmt" inputmode="decimal" placeholder="0.00" autocomplete="off"><button type="button" id="sendMax">MAX</button></div>
-        <button type="button" class="btn" id="sendGo" disabled>Connect wallet</button>
-        <div class="hint" id="sendHint"></div>
-      </div>
-    </section>
-      <div class="sw-modal" id="swPicker" hidden>
-        <div class="sw-sheet">
-          <div class="sw-ph"><b>Select a token</b><button type="button" class="modal-x" id="swPickX" aria-label="Close">✕</button></div>
-          <input class="field mono" id="swSearch" placeholder="Search a name, or paste any Arc token address" spellcheck="false" autocomplete="off">
-          <div class="hint" id="swSearchHint"></div>
-          <div class="sw-list" id="swList"></div>
-        </div>
-      </div>
   </div>
-
-  <div class="flow below">
-    <details class="more"><summary>How it works</summary>
-        <ol class="steps">
-          <li><div><b>Pick a chain and what you pay with.</b> USDC goes straight to the bridge. Anything else is swapped into USDC first by LI.FI, on the chain you are on.</div></li>
-          <li><div><b>One bridge signature.</b> Circle's CCTP burns the USDC and its Forwarding Service mints it on Arc for you. You never need gas on Arc.</div></li>
-          <li><div><b>Buy on the floor.</b> If you picked a coin, the bridged USDC buys it on its bonding curve as soon as it lands; one more signature, on Arc.</div></li>
-        </ol>
-    </details>
-    <details class="more"><summary>Supported chains</summary>
-        <p>Base, Ethereum, Arbitrum, OP Mainnet, Polygon, Avalanche, Unichain, Linea, World Chain, Sonic, Monad, Sei, HyperEVM, Ink, and Solana. Fast transfers arrive in about 20 seconds where Circle offers them. From Solana, SOL or any Solana token becomes USDC on Arc in one LI.FI route, signed in Phantom, Solflare or Backpack; the USDC lands at your Arc address (Phantom carries one, or type it in).</p>
-        <div class="chains" id="chainPills"></div>
-    </details>
-    <details class="more"><summary>Fees</summary>
-        <p>Circle takes a few basis points on fast transfers (none on standard) plus about 0.02 USDC to mint on Arc for you. LI.FI swaps carry the pool's price and a fixed fee of a cent or two; on mainnet 0.25% of a non-USDC payment goes to the floor, shown as its own line. The quote shows everything before you sign, and the amount bridged after a swap is what actually arrived in your wallet, not an estimate.</p>
-    </details>
-  </div>
-</main>
-<footer>
-  <a href="/">A NEW ONE</a><a href="../docs.html">Docs</a><a href="../privacy.html">Privacy</a><a href="../terms.html">Terms</a>
-</footer>
+</div></main>
+<footer class="nx-foot"><div class="nx-foot-in"><span>© 2026 A NEW ONE</span><a href="../docs.html">Docs</a><a href="../about.html">About</a><a href="../terms.html">Terms</a><a href="../privacy.html">Privacy</a><a href="mailto:support@anewone.xyz">Contact</a><span class="sp">Every transfer is signed in your own wallet. Nothing here is investment advice.</span></div></footer>
 
 <script src="../vendor/ethers.umd.min.js"></script>
 <script src="../config.js"></script>
@@ -483,8 +625,14 @@
   const pill = document.getElementById("netPill");
   pill.textContent = net === "mainnet" ? "ARC MAINNET" : "ARC TESTNET";
   pill.classList.toggle("test", net !== "mainnet");
+  pill.hidden = net === "mainnet";   // the bar's label is a warning, not a badge: it appears only off mainnet
+  const addNet = document.getElementById("addNet");
+  addNet.textContent = pill.textContent; addNet.classList.toggle("test", net !== "mainnet");
   const pills = document.getElementById("chainPills");
-  for (const c of ArcBridgeKit.SOURCES[net]) pills.append(Object.assign(document.createElement("span"), { className: "pill", textContent: c.name }));
+  for (const c of ArcBridgeKit.SOURCES[net]) {
+    const s = Object.assign(document.createElement("span"), { className: "pill cc" }), i = document.createElement("i");
+    i.textContent = c.name[0]; i.setAttribute("aria-hidden", "true"); s.append(i, c.name); pills.append(s);
+  }
 
   // ---- the platform: open curves for the "then buy" menu
   const PLATFORM_ABI = [
@@ -1594,5 +1742,6 @@ let onrampCfg = null, onrampKit = null, onrampWidget = null, onrampBusy = false;
   })();
 })();
 </script>
+<script src="../shell.js"></script>
 </body>
 </html>

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-nx-nodeck>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
-  // Same rule as the floor: applied before first paint, no stored choice means light.
+  // Applied before first paint; no stored choice means dark, the shell's default.
   (function () {
-    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "light"); }
-    catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "dark"); }
+    catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   })();
 </script>
 <title>Deckhand · The AI assistant that remembers you | A NEW ONE</title>
@@ -26,7 +26,7 @@
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* The floor's theme system, verbatim: one accent, neutral everything else. */
   :root {
@@ -58,39 +58,7 @@
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
 
-  /* ---- topbar, same recipe as the floor ---- */
-  .topbar { position: sticky; top: 0; z-index: 200; background: rgba(var(--bg-rgb),.78);
-    -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid var(--border); }
-  .topbar-inner { max-width: 1160px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 10px; }
-  /* the crest and wordmark at the floor's exact sizes, breakpoint for breakpoint, so the brand
-     never changes size between pages: 44px and 22px, on a wide screen 32-39px and 18-22px growing
-     with it, and on a phone the crest alone at 42px */
-  .tb-brand { display: flex; align-items: center; gap: 12px; }
-  .tb-brand:hover { text-decoration: none; }
-  .tb-brand img { width: 44px; height: 44px; border-radius: 11px; }
-  .tb-brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: .8px; color: var(--text); white-space: nowrap; }
-  @media (min-width: 901px) { .tb-brand img { width: clamp(32px, 2.43vw, 39px); height: clamp(32px, 2.43vw, 39px); }
-    .tb-brand span { font-size: clamp(18px, 1.2vw, 22px); } }
-  @media (max-width: 600px) { .tb-brand img { width: 42px; height: 42px; } .tb-brand span { display: none; } }
-  .tb-link { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-family: var(--mono); font-size: 12.5px; letter-spacing: .6px;
-    color: var(--text); padding: 9px 14px; border-radius: 999px; border: 1px solid rgba(var(--accent-rgb),.28); background: rgba(var(--accent-rgb),.07); transition: background .2s, border-color .2s, color .2s; }
-  .tb-link:hover { text-decoration: none; background: rgba(var(--accent-rgb),.14); border-color: rgba(var(--accent-rgb),.5); color: var(--accent); }
-  .tb-link-quiet { border-color: var(--border-2); background: transparent; color: var(--dim); }
-  .tb-link-quiet:hover { color: var(--text); border-color: var(--border-2); }
-  .tb-spacer { flex: 1; }
-  .theme-sw { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; border: 1px solid var(--border-2); background: var(--surface); }
-  .theme-sw button { all: unset; cursor: pointer; display: grid; place-items: center; width: 30px; height: 26px; border-radius: 999px; color: var(--faint); transition: color .18s, background .18s; }
-  .theme-sw button:hover { color: var(--text); }
-  .theme-sw button[aria-pressed="true"] { color: var(--bg); background: var(--grad); }
-  .theme-sw svg { width: 15px; height: 15px; display: block; }
-  @media (max-width: 640px) { .tb-link span.lbl { display: none; } .topbar-inner { padding: 8px 12px; gap: 8px; } }
-
   /* ---- page ---- */
-  .wrap { max-width: 1160px; margin: 0 auto; padding: 24px 20px 60px; }
-  .hero { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
-  .kicker { font-family: var(--mono); font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--accent); }
-  h1 { font-family: 'Space Grotesk', sans-serif; font-size: 32px; letter-spacing: -.5px; margin: 0; line-height: 1.1; }
-  h1 small { font-size: 15px; color: var(--dim); font-weight: 500; letter-spacing: 0; display: block; margin-top: 6px; font-family: Inter, sans-serif; max-width: 720px; }
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 16px; box-shadow: var(--shadow); }
@@ -144,70 +112,137 @@
   .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 12px; color: var(--dim); margin-top: 8px; }
   .kv b { color: var(--text); font-weight: 500; }
   .kv .mono { overflow-wrap: anywhere; }
-  footer { max-width: 1160px; margin: 0 auto; padding: 20px; color: var(--faint); font-size: 12px; border-top: 1px solid var(--border); }
-  footer a { color: var(--dim); margin-right: 14px; }
 
-  /* The bar's pills as on the home page, Earn and Assets: a translucent green pane with a lit top
-     edge and a faint halo, solid green under the hand, one size; the theme switch is the round one.
-     (The network pill keeps its ::before for the dot.) */
-  .tb-nav2 { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-  .tbx { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
-    height: 40px; width: 142px; padding: 0 10px; border-radius: 999px; font: 700 12px var(--mono); letter-spacing: .01em;
-    line-height: 1; white-space: nowrap; color: var(--accent); text-decoration: none;
-    border: 1px solid rgba(var(--accent-rgb), .45);
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
-    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
-    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
-  .tbx:not(.net)::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
-  a.tbx:hover, button.tbx:hover { transform: translateY(-1px); text-decoration: none; color: #04120b; text-shadow: none;
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
-  :root[data-theme="light"] .tbx { text-shadow: none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
-  button.tbx { cursor: pointer; }
-  .tbx.theme { width: 40px; padding: 0; }
-  .tbx.theme svg { width: 16px; height: 16px; }
-  /* the floor's own drawing of the ark, at the size it has there (1.6x the text) */
-  .tbx .ark-ico { width: 1.6em; height: 1.6em; display: block; flex: none; }
-  .tbx.theme .i-moon, :root[data-theme="dark"] .tbx.theme .i-sun, :root[data-theme="dim"] .tbx.theme .i-sun { display: none; }
-  :root[data-theme="dark"] .tbx.theme .i-moon, :root[data-theme="dim"] .tbx.theme .i-moon { display: block; }
-  .tbx.net::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
-  .tbx.net.test { color: var(--gold, #d69200); }
-  /* below 1181px the doors keep their icons alone, round, as on Earn and Assets */
-  @media (max-width: 1180px) { .tbx .lbl { display: none; } .tbx:not(.net) { width: 40px; padding: 0; } }
-  @media (max-width: 640px) { .tb-nav2 { gap: 5px; } .tbx { height: 36px; font-size: 11.5px; }
-    .tbx:not(.net) { width: 36px; } .tbx.net { width: auto; padding: 0 10px; } }
-  /* the narrowest phones: smaller circles and gaps, so the five still fit 320px */
-  @media (max-width: 360px) { .topbar-inner { padding-left: 10px; padding-right: 10px; } .tb-nav2 { gap: 4px; }
-    .tbx:not(.net) { width: 32px; height: 32px; } .tbx.net { height: 32px; padding: 0 8px; font-size: 11px; } }
+  /* ===== Arc Noir: the big chat beside the memory column, in the shell's glass ===== */
+  /* the page's pills and fields read --surface / --surface-2, which the shell does not remap */
+  :root, :root[data-theme="dark"], :root[data-theme="dim"] { --surface: #0c1210; --surface-2: rgba(255,255,255,.045); }
+  :root[data-theme="light"] { --surface: #ffffff; --surface-2: rgba(10,20,17,.035); }
+  [hidden] { display: none !important; }
+  #netPill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  #netPill.test { color: var(--gold); border-color: rgba(var(--gold-rgb), .45); }
+  #chat, #hood { scroll-margin-top: 104px; }
+
+  /* the hero's live card: the deck hand himself */
+  .nx-lcard.dkcard .pic { width: 104px; height: 104px; margin-top: 12px; border-radius: 24px; }
+  .nx-lcard.dkcard .ln { margin-top: 12px; }
+
+  /* the chat and the memory column */
+  .grid { grid-template-columns: minmax(0, 1fr) 400px; gap: 26px; }
+  @media (max-width: 1000px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .card { padding: 22px 24px; border-radius: 26px; border: 1px solid var(--nx-line2); background: var(--nx-card); color: var(--nx-ink);
+    box-shadow: 0 24px 60px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08); }
+  :root[data-theme="light"] .card { box-shadow: 0 24px 60px rgba(10,20,17,.08), inset 0 1px 0 #fff; }
+  .card h3 { justify-content: space-between; gap: 10px; margin: 0 0 12px; font: 600 18px/1.3 'Space Grotesk', sans-serif; letter-spacing: -.015em; color: var(--nx-ink); }
+  .card p { font-size: 14.5px; line-height: 1.55; color: var(--nx-mute); }
+  .side { gap: 18px; position: static; }
+  .pill { height: 26px; padding: 0 11px; font: 700 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--nx-faint); border-color: var(--nx-line2); background: transparent; }
+  .pill.on { color: var(--nx-mint); border-color: rgba(var(--nx-mint-rgb), .45); background: rgba(var(--nx-mint-rgb), .08); }
+  .pill.off { color: var(--gold); border-color: rgba(var(--gold-rgb), .4); background: rgba(var(--gold-rgb), .06); }
+  #memPill.off { color: var(--nx-faint); border-color: var(--nx-line2); background: transparent; }
+
+  /* buttons: the shell's glass pill; "Connect wallet & turn memory on" is the lit one */
+  .btn { position: relative; height: 44px; padding: 0 20px; border-radius: 999px; font: 700 12.5px var(--mono); letter-spacing: .02em; color: var(--nx-mint);
+    border: 1px solid rgba(var(--nx-mint-rgb), .45); background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .22), rgba(var(--nx-mint-rgb), .08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 18px rgba(var(--nx-mint-rgb), .14); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
+  :root[data-theme="light"] .btn:not(.ghost) { box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 6px 18px rgba(var(--nx-mint-rgb), .18); }
+  .btn:hover:not([disabled]), #connect { filter: none; color: var(--nx-on-mint); background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .98), rgba(var(--nx-mint-rgb), .82));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 10px 30px rgba(var(--nx-mint-rgb), .35); }
+  .btn:hover:not([disabled]) { transform: translateY(-1px); }
+  .btn:focus-visible, .chip:focus-visible { outline: 2px solid var(--nx-mint); outline-offset: 3px; }
+  #connect { width: 100%; height: auto; min-height: 50px; padding: 12px 18px; font-size: 13px; line-height: 1.3; white-space: normal; text-align: center; }
+  .btn.sm { height: 38px; padding: 0 14px; font-size: 11.5px; }
+  .btn.ghost { color: var(--nx-mute); border-color: var(--nx-line2); background: transparent; box-shadow: none; }
+  .btn.ghost:hover:not([disabled]) { color: var(--nx-ink); background: rgba(var(--ink-rgb), .06); box-shadow: none; }
+
+  /* the chat: a header, the thread, the suggested questions, a round composer */
+  .card.chat { min-height: 0; height: auto; max-height: none; padding: 0; border-radius: 30px; }
+  .chat-h { display: flex; align-items: center; gap: 14px; padding: 20px 26px; border-bottom: 1px solid var(--nx-line); }
+  .chat-h img { width: 44px; height: 44px; border-radius: 12px; flex: none; }
+  .chat-h b { display: block; font: 600 17px 'Space Grotesk', sans-serif; color: var(--nx-ink); }
+  .chat-h span { display: block; font: 400 12.5px/1.4 Inter, system-ui, sans-serif; color: var(--nx-mute); }
+  .chat-h .st { margin-left: auto; flex: none; display: flex; align-items: center; gap: 8px; font: 500 11px var(--mono); letter-spacing: .14em; color: var(--nx-mint); }
+  .chat-h .st i { width: 7px; height: 7px; border-radius: 50%; background: var(--nx-mint); box-shadow: 0 0 8px var(--nx-mint); animation: nxpl 1.8s infinite; }
+  .log { flex: none; min-height: 460px; max-height: 560px; padding: 26px; gap: 12px; scrollbar-width: thin; scrollbar-color: var(--nx-line2) transparent; }
+  .msg { max-width: 84%; padding: 13px 16px; border-radius: 18px; font: 400 16px/1.55 Inter, system-ui, sans-serif; }
+  .msg.user { font-weight: 500; color: var(--nx-on-mint); background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .96), rgba(var(--nx-mint-rgb), .8)); border-radius: 18px 6px 18px 18px; }
+  .msg.bot { color: var(--nx-ink); background: rgba(255,255,255,.06); border: 1px solid var(--nx-line); border-radius: 6px 18px 18px 18px; }
+  :root[data-theme="light"] .msg.bot { background: rgba(10,20,17,.04); }
+  .msg.sys { padding: 4px 8px; font-size: 12.5px; color: var(--nx-faint); }
+  .msg .meta { gap: 6px; margin-top: 10px; }
+  .msg .meta .pill { height: 22px; padding: 0 9px; font: 500 10.5px var(--mono); letter-spacing: .02em; text-transform: none; }
+  .typing { padding: 4px 6px; font-size: 12.5px; color: var(--nx-faint); }
+  .typing i { background: var(--nx-mute); }
+  .chips { gap: 8px; padding: 2px 26px 18px; }
+  .chip { padding: 8px 13px; border-radius: 999px; border: 1px solid rgba(var(--nx-mint-rgb), .4); background: rgba(var(--nx-mint-rgb), .07); color: var(--nx-mint);
+    font: 500 12.5px var(--mono); text-align: left; transition: background .2s, transform .15s; }
+  .chip:hover { color: var(--nx-mint); border-color: rgba(var(--nx-mint-rgb), .4); background: rgba(var(--nx-mint-rgb), .2); transform: translateY(-1px); }
+  .composer { align-items: center; gap: 10px; padding: 14px 16px 12px; border-top: 1px solid var(--nx-line); background: transparent; }
+  .composer textarea { height: 50px; min-height: 50px; max-height: 140px; padding: 14px 20px; border-radius: 25px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.04);
+    color: var(--nx-ink); font: 400 15px/1.4 Inter, system-ui, sans-serif; transition: border-color .2s; }
+  :root[data-theme="light"] .composer textarea { background: rgba(10,20,17,.03); }
+  .composer textarea::placeholder { color: var(--nx-faint); }
+  .composer textarea:focus { border-color: rgba(var(--nx-mint-rgb), .6); }
+  .composer #send { flex: none; width: 50px; height: 50px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; color: var(--nx-on-mint);
+    background: var(--nx-mint); box-shadow: 0 8px 22px rgba(var(--nx-mint-rgb), .35); }
+  .composer #send svg { width: 20px; height: 20px; }
+  .composer #send[disabled] { opacity: .5; }
+  .chat-n { padding: 0 26px 18px; font: 400 12px/1.5 Inter, system-ui, sans-serif; color: var(--nx-faint); }
+  .chat-n a { color: var(--nx-mint); text-decoration: underline; text-underline-offset: 3px; }
+
+  /* memory: what was recalled, what was saved, what runs it */
+  .mem { gap: 8px; margin-top: 0; }
+  .mem-item { padding: 10px 14px; border-radius: 14px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.035); color: var(--nx-ink); font-size: 13.5px; line-height: 1.5; }
+  :root[data-theme="light"] .mem-item { background: rgba(10,20,17,.025); }
+  .mem-item small { color: var(--nx-faint); }
+  .mem-item.new { border-color: rgba(var(--nx-mint-rgb), .45); background: rgba(var(--nx-mint-rgb), .08); }
+  .empty { padding: 14px 16px; border-radius: 14px; border: 1px dashed var(--nx-line2); color: var(--nx-faint); font-size: 14px; font-style: normal; }
+  .kv { grid-template-columns: 92px minmax(0, 1fr); gap: 12px 14px; margin-top: 0; font-size: 13.5px; line-height: 1.45; color: var(--nx-mute); }
+  .kv span { padding-top: 3px; font: 500 10.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--nx-faint); }
+  .kv b { font-weight: 500; color: var(--nx-ink); }
+  .kv b.mono { font: 500 12.5px var(--mono); color: var(--nx-mute); }
+  .kv a { color: var(--nx-mint); }
+  .hint { margin-top: 12px; font-size: 12.5px; line-height: 1.55; color: var(--nx-faint); }
+  .hint:empty { display: none; }
+  .addr { color: var(--nx-ink); }
+  @media (max-width: 520px) {
+    .card { padding: 20px; }
+    .log { min-height: 380px; padding: 18px; }
+    .chat-h, .chips, .chat-n { padding-left: 18px; padding-right: 18px; }
+    .msg { max-width: 92%; }
+  }
+  @media (max-width: 420px) { .chat-h .st { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .chat-h .st i, .typing i { animation: none; } .chip:hover, .btn:hover:not([disabled]) { transform: none; } }
+  /* the hero's two links on the narrowest phones */
+  @media (max-width: 360px) { .nx-hero .nx-views a { padding: 0 6px; font-size: 14px; } }
 </style>
+<link rel="stylesheet" href="../shell.css">
 </head>
 <body>
-
-<nav class="topbar">
-  <div class="topbar-inner">
-    <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../brand/logo.svg" alt=""><span>A NEW ONE</span></a>
-    <div class="tb-nav2">
-      <a class="tbx" href="/">← <span class="lbl">Home</span></a>
-      <a class="tbx" href="../ark/" target="_blank"><svg class="ark-ico" viewBox="0 0 60 48" fill="none" stroke="#12080E" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M9 23 L30 8 L51 23 Z" fill="#E08A86"/><path d="M18 23 H42 V32 H18 Z" fill="#F8D49B"/><path d="M5 32 H55 Q51 44 30 46 Q9 44 5 32 Z" fill="#C9925E"/></svg> <span class="lbl">Ark</span></a>
-      <a class="tbx" href="../bridge/">🌉 <span class="lbl">Swap &amp; Bridge</span></a>
-      <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
-      <span class="tbx net" id="netPill">…</span>
-    </div>
+<header class="nx-bar" id="nxBar"><div class="nx-bar-in">
+  <a class="nx-brand" href="../" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
+  <nav class="nx-seg" aria-label="Apps"><a href="../earn/">DeFi</a><a href="../assets/stocks/">RWA</a><a href="../fun/" class="f">Fun</a></nav>
+  <div class="nx-actions">
+    <button type="button" class="nx-icon" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
+    <span class="nx-pill" id="netPill" hidden>…</span>
   </div>
-</nav>
+</div></header>
 
-<main class="wrap">
-  <div class="hero">
-    <div class="kicker"><img src="deckhand.svg" alt="" width="18" height="18" style="vertical-align:-4px;border-radius:5px;margin-right:4px">Deckhand · memory on Walrus</div>
-    <h1>The chat that remembers you.<small>Ask about any coin on the floor. Sign in with your wallet once and the deck hand keeps what you tell it, encrypted on Walrus, so the next visit, on any device, starts where you left off. The coins stay on Arc; only the memory lives on Walrus.</small></h1>
-  </div>
+<section class="nx-hero">
+  <div class="nx-hero-in"><div class="nx-hero-t">
+    <div class="nx-eyebrow"><img src="deckhand.svg" alt="">Deckhand · memory on Walrus</div>
+    <h1 class="nx-h1">The chat that<br><em>remembers you.</em></h1>
+    <p class="nx-lead">Ask about any coin on the floor. Sign in with your wallet once and the deck hand keeps what you tell it, <b>encrypted on Walrus</b>, so the next visit, on any device, starts where you left off. The coins stay on Arc; only the memory lives on Walrus.</p>
+    <div class="nx-views"><a class="on" href="#chat">Start chatting</a><a href="#hood">How memory works</a></div>
+  </div></div>
+  <aside class="nx-lcard dkcard" aria-label="What the deck hand reads"><div class="k"><i></i>Deckhand · online</div><img class="pic" src="deckhand.svg" alt=""><div class="ln">Reads the live floor</div>
+    <ul class="who"><li>Every coin: price, USDC raised, progress</li><li>Stamped with the Arc block it read</li><li>Explains launching, trading and bridging</li><li>Cannot trade, sign or move funds</li></ul></aside>
+</section>
 
+<main class="nx-main"><div class="nx-wrap">
   <div class="grid">
-    <section class="card chat" aria-label="Chat">
-      <div class="log" id="log"></div>
+    <section class="card chat" id="chat" aria-label="Chat">
+      <div class="chat-h"><img src="deckhand.svg" alt=""><div><b>Deckhand</b><span>AI assistant · reads the live floor · memory on Walrus</span></div><div class="st"><i></i>ONLINE</div></div>
+      <div class="log" id="log" aria-live="polite"></div>
       <div class="chips" id="chips">
         <button class="chip" type="button">Which coin is closest to graduation?</button>
         <button class="chip" type="button">What is NOAH's price right now?</button>
@@ -215,10 +250,10 @@
         <button class="chip" type="button">What do you remember about me?</button>
       </div>
       <form class="composer" id="form">
-        <textarea id="input" rows="1" placeholder="Ask the deck hand…" maxlength="1500" autocomplete="off"></textarea>
-        <button class="btn" id="send" type="submit">Send</button>
+        <textarea id="input" rows="1" placeholder="Ask the deck hand…" maxlength="1500" autocomplete="off" aria-label="Your question"></textarea>
+        <button class="btn" id="send" type="submit" title="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg><span class="nx-vh">Send</span></button>
       </form>
-      <div class="hint" style="margin-top:8px;font-size:11.5px;color:var(--faint)">Deckhand is an interface to public on-chain data. It is not financial or investment advice, it can be wrong, and it never tells you what to buy or sell. Memecoins are highly risky; do your own research. <a href="../terms.html#deckhand">Terms</a></div>
+      <div class="chat-n">Deckhand is an interface to public on-chain data. It is not financial or investment advice, it can be wrong, and it never tells you what to buy or sell. Memecoins are highly risky; do your own research. <a href="../terms.html#deckhand">Terms</a></div>
     </section>
 
     <aside class="side">
@@ -252,7 +287,7 @@
         <div class="hint">Each fact is embedded, Seal-encrypted and uploaded to Walrus as its own blob. That takes about a minute, so a fact saved now shows up in recall on your next question, not this one.</div>
       </div>
 
-      <div class="card">
+      <div class="card" id="hood">
         <h3>Under the hood</h3>
         <div class="kv" id="info">
           <span>Memory</span><b>Walrus Memory (MemWal), mainnet</b>
@@ -265,11 +300,8 @@
       </div>
     </aside>
   </div>
-</main>
-
-<footer>
-  <a href="/">A NEW ONE</a><a href="../docs.html">Docs</a><a href="../ark/" target="_blank">The ark</a><a href="../privacy.html">Privacy</a><a href="../terms.html">Terms</a>
-</footer>
+</div></main>
+<footer class="nx-foot"><div class="nx-foot-in"><span>© 2026 A NEW ONE</span><a href="../docs.html">Docs</a><a href="../about.html">About</a><a href="../terms.html">Terms</a><a href="../privacy.html">Privacy</a><a href="mailto:support@anewone.xyz">Contact</a><span class="sp">AI answers can be wrong. Nothing here is investment advice.</span></div></footer>
 
 <script src="../vendor/ethers.umd.min.js"></script>
 <script src="../config.js"></script>
@@ -294,6 +326,8 @@
   });
   const pill = $("netPill");
   pill.textContent = net === "mainnet" ? "ARC MAINNET" : "ARC TESTNET";
+  pill.hidden = net === "mainnet";   // the label is a warning, not a badge: it appears only off mainnet
+  pill.classList.toggle("test", net !== "mainnet");
 
   // ---- sign-in: one Sign-In with Ethereum message (EIP-4361), traded at /api/auth for a
   // session token good for a day; the signature itself is the credential only when the
@@ -420,5 +454,6 @@
   }).catch(() => {});
 })();
 </script>
+<script src="../shell.js"></script>
 </body>
 </html>

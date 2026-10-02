@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
   (function () {
-    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "light"); }
-    catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "dark"); }
+    catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   })();
 </script>
 <title>RWA · Tokenized US stocks and ETFs on Arc | A NEW ONE</title>
@@ -20,7 +20,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="../../apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* The floor's theme system, verbatim: one accent, neutral everything else. */
   :root {
@@ -47,123 +47,95 @@
   a:hover { text-decoration: underline; }
   button { font: inherit; cursor: pointer; }
 
-  .topbar { position: sticky; top: 0; z-index: 200; background: rgba(var(--bg-rgb),.78); backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid var(--border); }
-  .topbar-inner { max-width: 1160px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 10px; }
-  .tb-brand { display: flex; align-items: center; gap: 12px; }
-  .tb-brand:hover { text-decoration: none; }
-  .tb-brand img { width: 40px; height: 40px; border-radius: 11px; }
-  .tb-brand span { font: 700 20px 'Space Grotesk', sans-serif; letter-spacing: .8px; color: var(--text); white-space: nowrap; }
-  .tb-nav { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-  .tbx { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; width: 142px; padding: 0 10px;
-    font: 700 12px var(--mono); letter-spacing: .01em; white-space: nowrap; color: var(--accent); border: 1px solid rgba(var(--accent-rgb), .45); border-radius: 999px;
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
-    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
-    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
-  .tbx::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
-  .tbx:hover { text-decoration: none; color: var(--accent-ink); text-shadow: none; transform: translateY(-1px);
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
-  :root[data-theme="light"] .tbx { text-shadow: none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
-  .tbx.theme { width: 40px; padding: 0; }
-  /* RWA's two doors, Stocks / ETF and Funds, as Earn and Borrow are on DeFi: the biggest glass on
-     the page, the open one lit. Each is its own page, so they are links. */
-  .views { display: flex; gap: 10px; width: max-content; max-width: 100%; margin: 8px 0 18px; }
-  .views a { position: relative; display: inline-flex; align-items: center; justify-content: center; height: 52px; min-width: 180px; padding: 0 32px;
-    font: 700 18px 'Space Grotesk', sans-serif; letter-spacing: .01em; white-space: nowrap; border-radius: 999px; color: var(--accent); text-decoration: none;
-    border: 1px solid rgba(var(--accent-rgb), .45); background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
-    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
-    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
-  .views a::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
-  .views a:hover, .views a.on { color: var(--accent-ink); text-shadow: none; text-decoration: none;
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
-  .views a:hover { transform: translateY(-1px); }
-  :root[data-theme="light"] .views a { text-shadow: none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
-  @media (max-width: 600px) { .views { width: 100%; } .views a { flex: 1; min-width: 0; padding: 0 12px; } }
-  @media (max-width: 1180px) { .tbx .lbl { display: none; } .tbx:not(.net):not(.primary) { width: 40px; padding: 0; } }
-  .tbx.theme .i-sun, .tbx.theme .i-moon { width: 16px; height: 16px; }
-  :root[data-theme="light"] .i-sun { display: none; }
-  :root:not([data-theme="light"]) .i-moon { display: none; }
-  @media (max-width: 600px) {
-    .tb-brand span, .tbx .lbl { display: none; }
-    .topbar-inner { padding: 10px 14px; gap: 8px; }
-    .tb-nav { gap: 8px; }
-    .tbx { height: 42px; min-width: 42px; width: auto; padding: 0 12px; font-size: 16px; }
-    .tbx.net, .tbx.primary { font-size: 13px; padding: 0 14px; }
-    .tbx.theme .i-sun, .tbx.theme .i-moon { width: 20px; height: 20px; }
-  }
+  /* ---- Arc Noir, page-local: what the shell does not carry yet ---- */
+  :root { --warn-ink: #ffc96b; }
+  :root[data-theme="light"] { --warn-ink: #946300; }   /* the shell's yellow is unreadable on white */
+  :root[data-theme="light"] .nx-bd.warn { color: var(--warn-ink); border-color: rgba(var(--gold-rgb), .45); background: rgba(var(--gold-rgb), .08); }
+  .nx-notice + .nx-strip { margin-top: 18px; }
 
-  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
-  .hero { padding: 48px 0 28px; }
-  .eyebrow { font: 700 11px var(--mono); letter-spacing: .2em; color: var(--accent); text-transform: uppercase; }
-  h1 { font: 700 clamp(30px, 4.5vw, 46px)/1.08 'Space Grotesk', sans-serif; margin: 12px 0 12px; letter-spacing: -.02em; }
-  .lead { color: var(--dim); font-size: 16px; max-width: 760px; margin: 0; }
-  .lead b { color: var(--text); }
+  /* the search and the filter chips */
+  .filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 34px 0 22px; }
+  .search { flex: 0 1 320px; min-width: 0; display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 18px; border-radius: 999px;
+    border: 1px solid var(--nx-line2); background: rgba(255,255,255,.04); color: var(--faint); transition: border-color .2s; }
+  :root[data-theme="light"] .search { background: rgba(255,255,255,.75); }
+  .search:focus-within { border-color: rgba(var(--accent-rgb), .6); }
+  .search input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font: 400 14px Inter, sans-serif; outline: none; }
+  .search input::placeholder { color: var(--faint); }
+  .chip { position: relative; display: inline-flex; align-items: center; height: 42px; padding: 0 20px; border-radius: 999px; font: 700 12.5px var(--mono); color: var(--accent);
+    border: 1px solid rgba(var(--accent-rgb), .4); background: linear-gradient(180deg, rgba(var(--accent-rgb), .18), rgba(var(--accent-rgb), .06));
+    transition: background .2s, color .2s, transform .15s, box-shadow .2s; }
+  .chip:hover { transform: translateY(-1px); }
+  .chip.on { color: var(--accent-ink); background: linear-gradient(180deg, rgba(var(--accent-rgb), .98), rgba(var(--accent-rgb), .82)); box-shadow: 0 8px 24px rgba(var(--accent-rgb), .3); }
+  .chip[hidden] { display: none; }
+  .count { margin-left: auto; color: var(--faint); font: 500 12.5px var(--mono); letter-spacing: .04em; }
+  @media (max-width: 900px) { .search { flex: 1 1 100%; } .count { margin-left: 0; width: 100%; } }
 
-  /* where the tokens stand on Arc, said once above the cards */
-  .elig { display: flex; align-items: flex-start; gap: 14px; background: var(--bg-2); border: 1px solid var(--border-2); border-radius: var(--r); padding: 16px 20px; margin: 20px 0 22px; color: var(--dim); font-size: 14px; }
-  .elig .ico { font-size: 22px; line-height: 1; }
-  .elig b { color: var(--text); }
-  .elig a { text-decoration: underline; }
-  .elig.live { border-color: rgba(var(--green-rgb),.5); background: rgba(var(--green-rgb),.06); }
-
-  .filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 14px; }
-  .search { flex: 1 1 220px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-2); border-radius: 999px; padding: 0 14px; height: 38px; background: var(--bg-2); }
-  .search input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font: 500 14px Inter, sans-serif; outline: none; }
-  .chip { height: 34px; padding: 0 14px; border: 1px solid var(--border-2); border-radius: 999px; background: var(--bg-2); color: var(--dim); font: 600 12px var(--mono); }
-  .chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
-  .count { margin-left: auto; color: var(--faint); font: 500 12px var(--mono); }
-
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  @media (max-width: 960px) { .grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
-  .stock { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; }
-  .stock .head { display: flex; align-items: center; gap: 12px; }
-  .stock .logo { width: 40px; height: 40px; border-radius: 10px; background: var(--card); object-fit: cover; flex: none; display: grid; place-items: center; font: 700 12px var(--mono); color: var(--dim); overflow: hidden; }
+  /* the stock cards: a glass ticket each, the symbol lit, the reference price the big number */
+  .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+  @media (max-width: 1180px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 760px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 520px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .stock { position: relative; display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 22px; border-radius: 26px;
+    background: var(--nx-card); border: 1px solid var(--nx-line2); box-shadow: 0 24px 60px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
+    transition: transform .3s cubic-bezier(.2,.8,.2,1), border-color .3s, box-shadow .3s; }
+  :root[data-theme="light"] .stock { box-shadow: 0 24px 60px rgba(10,20,17,.08), inset 0 1px 0 #fff; }
+  .stock:hover { transform: translateY(-5px); border-color: rgba(var(--accent-rgb), .5); }
+  .stock .head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .stock .logo { flex: none; width: 32px; height: 32px; border-radius: 10px; overflow: hidden; display: grid; place-items: center; background: var(--card); font: 700 10px var(--mono); color: var(--dim); }
+  .stock .logo:empty { display: none; }
   .stock .logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .stock h3 { margin: 0; font: 600 16px 'Space Grotesk', sans-serif; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .stock .by { color: var(--dim); font: 500 12px var(--mono); margin-top: 2px; }
-  .stock .head > div { min-width: 0; flex: 1; }
-  .tag { font: 700 10px var(--mono); letter-spacing: .12em; padding: 4px 8px; border-radius: 6px; background: var(--card); color: var(--dim); white-space: nowrap; }
-  .tag.usdc { color: var(--accent); background: var(--accent-soft); }
-  .tag.warn { color: var(--gold); white-space: normal; }
-  .tag.ok { color: var(--green); background: rgba(var(--green-rgb),.12); white-space: normal; }
-  .tag.bad { color: var(--red); background: rgba(var(--red-rgb),.1); white-space: normal; }
-  .price { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  .price .v { font: 700 30px var(--mono); line-height: 1; }
+  .sym { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 7px 12px; border-radius: 10px; font: 700 12.5px var(--mono); color: var(--nx-on-mint); background: linear-gradient(180deg, var(--nx-ice), var(--nx-mint)); }
+  .ex { flex: none; margin-left: auto; font: 500 11px var(--mono); letter-spacing: .1em; color: var(--faint); }
+  .stock .nm { min-width: 0; }
+  .stock h3 { margin: 2px 0 0; font: 600 22px/1.15 'Space Grotesk', sans-serif; letter-spacing: -.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stock .by { margin-top: 6px; font: 500 12px var(--mono); color: var(--faint); }
+  .price { margin-top: 4px; }
+  .price .v { display: block; font: 500 34px/1 'Space Grotesk', sans-serif; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
   .price .v.loading { color: var(--faint); }
-  .price small { font: 600 11px var(--mono); letter-spacing: .12em; color: var(--faint); }
-  .hours { display: inline-flex; align-items: center; gap: 6px; font: 500 12px var(--mono); color: var(--dim); }
-  .hours .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
-  .hours.market .dot { background: var(--green); box-shadow: 0 0 0 3px rgba(var(--green-rgb),.18); }
-  .hours.extended .dot, .hours.overnight .dot { background: var(--gold); }
-  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .stats div { font: 600 13px var(--mono); }
-  .stats span { display: block; font: 500 10px var(--mono); letter-spacing: .12em; color: var(--faint); text-transform: uppercase; margin-top: 2px; }
-  .stock .links { display: flex; gap: 12px; flex-wrap: wrap; font: 500 12px var(--mono); }
-  .pos { font: 500 12px var(--mono); color: var(--accent); background: var(--accent-soft); border-radius: var(--r-sm); padding: 8px 10px; line-height: 1.6; }
-  .stock .btn { margin-top: auto; padding: 11px; border: 1px solid var(--border-2); border-radius: var(--r-sm); background: var(--card); color: var(--text); font-weight: 600; text-align: center; }
-  .stock .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  .stock .btn:hover { text-decoration: none; }
+  .price small { display: block; margin-top: 8px; font: 500 10px var(--mono); letter-spacing: .12em; color: var(--faint); }
+  .hours { display: flex; align-items: center; gap: 8px; min-height: 18px; font: 500 12px var(--mono); color: var(--dim); }
+  .hours .dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+  .hours.market .dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .hours.extended .dot, .hours.overnight .dot { background: rgb(var(--gold-rgb)); box-shadow: 0 0 8px rgba(var(--gold-rgb), .6); }
+  .hours.bad .dot { background: var(--red); box-shadow: 0 0 8px rgba(var(--red-rgb), .6); }
+  .stock .stats { display: grid; border-top: 1px solid var(--nx-line); }
+  .stock .stats div { display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: baseline; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--nx-line); font: 500 12.5px var(--mono); color: var(--dim); }
+  .stock .stats span { font: 500 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .tag { align-self: flex-start; padding: 6px 12px; border-radius: 999px; font: 500 11.5px var(--mono); letter-spacing: .02em; color: var(--dim); border: 1px solid var(--nx-line2); }
+  .tag.na { color: var(--warn-ink); border-color: rgba(var(--gold-rgb), .4); background: rgba(var(--gold-rgb), .08); }
+  .tag.ok { color: var(--accent); border-color: rgba(var(--accent-rgb), .4); background: rgba(var(--accent-rgb), .08); }
+  .stock .links { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 500 12px var(--mono); }
+  .pos { padding: 9px 12px; border-radius: 14px; font: 500 12px/1.6 var(--mono); color: var(--accent); background: rgba(var(--accent-rgb), .08); border: 1px solid rgba(var(--accent-rgb), .3); }
+  .stock .btn { margin-top: auto; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 46px; padding: 0 14px; border-radius: 999px;
+    font: 700 13px var(--mono); letter-spacing: .02em; text-align: center; color: var(--accent); cursor: pointer;
+    border: 1px solid rgba(var(--accent-rgb), .45); background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 18px rgba(var(--accent-rgb), .14); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
+  .stock .btn.primary, .stock .btn:hover:not(:disabled) { color: var(--accent-ink); text-decoration: none;
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .98), rgba(var(--accent-rgb), .82)); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 10px 30px rgba(var(--accent-rgb), .38); }
+  .stock .btn:hover:not(:disabled) { transform: translateY(-1px); }
   .stock .btn:disabled { opacity: .5; cursor: default; }
+  /* until there is a trade to make, the action (where it trades today, the token on Arc, checking Arc) is the links' second line, as in the concept */
+  .stock .btn:not(.primary) { margin-top: -6px; align-self: flex-start; width: auto; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
+    font: 500 12px var(--mono); letter-spacing: 0; text-align: left; }
+  .stock a.btn:not(.primary):hover { color: var(--accent); background: none; box-shadow: none; transform: none; text-decoration: underline; }
+  .stock .btn:not(.primary):disabled { opacity: 1; color: var(--faint); }
   .empty { grid-column: 1 / -1; color: var(--dim); text-align: center; padding: 40px 0; }
-  .more { display: block; margin: 18px auto 0; padding: 11px 22px; border: 1px solid var(--border-2); border-radius: 999px; background: var(--bg-2); color: var(--text); font-weight: 600; }
+  .more { display: flex; align-items: center; justify-content: center; margin: 30px auto 0; height: 48px; padding: 0 28px; border-radius: 999px; font: 700 13px var(--mono); letter-spacing: .02em; color: var(--accent);
+    border: 1px solid rgba(var(--accent-rgb), .45); background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 18px rgba(var(--accent-rgb), .14); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
+  .more:hover { color: var(--accent-ink); transform: translateY(-1px); background: linear-gradient(180deg, rgba(var(--accent-rgb), .98), rgba(var(--accent-rgb), .82)); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 10px 30px rgba(var(--accent-rgb), .38); }
   .more[hidden] { display: none; }
+  @media (max-width: 520px) { .stock { padding: 20px; } }
 
-  h2.sec { font: 600 20px 'Space Grotesk', sans-serif; margin: 36px 0 12px; }
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  @media (max-width: 800px) { .steps { grid-template-columns: 1fr; } }
-  .step { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 20px; color: var(--dim); font-size: 13px; }
-  .step b { display: block; color: var(--text); font: 600 15px 'Space Grotesk', sans-serif; margin-bottom: 6px; }
-  .step .n { font: 700 11px var(--mono); letter-spacing: .2em; color: var(--accent); }
-  .issuers { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  @media (max-width: 800px) { .issuers { grid-template-columns: 1fr; } }
+  /* how a stock token works, and the issuers: the same glass, quieter */
+  h2.sec { margin: 64px 0 18px; font: 600 clamp(24px, 2.6vw, 30px)/1.15 'Space Grotesk', sans-serif; letter-spacing: -.025em; }
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .issuers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  @media (max-width: 800px) { .steps, .issuers { grid-template-columns: minmax(0, 1fr); } }
+  .step { padding: 24px 26px; border-radius: 24px; background: var(--nx-card); border: 1px solid var(--nx-line2); box-shadow: inset 0 1px 0 rgba(255,255,255,.07); color: var(--dim); font-size: 14px; line-height: 1.6; }
+  :root[data-theme="light"] .step { box-shadow: 0 14px 40px rgba(10,20,17,.05), inset 0 1px 0 #fff; }
+  .step b { display: block; margin: 10px 0 8px; color: var(--text); font: 600 18px/1.25 'Space Grotesk', sans-serif; letter-spacing: -.015em; }
+  .step .n { font: 500 11px var(--mono); letter-spacing: .18em; color: var(--accent); }
 
   .legal { margin: 40px 0 56px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--faint); font-size: 12px; max-width: 860px; }
   .legal a { color: var(--dim); text-decoration: underline; }
@@ -209,41 +181,39 @@
   .hint { color: var(--dim); font-size: 12px; margin-top: 10px; }
   .hint a { text-decoration: underline; }
 </style>
+<link rel="stylesheet" href="../../shell.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="topbar-inner">
-    <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../../brand/logo.svg" alt=""><span>A NEW ONE</span></a>
-    <nav class="tb-nav">
-      <a class="tbx" href="/">← <span class="lbl">Home</span></a>
-      <a class="tbx" href="../../earn/" title="Earn and Borrow: USDC vaults and loans on Morpho">💵 <span class="lbl">DeFi</span></a>
-      <a class="tbx" href="../../bridge/" title="Bring USDC aboard from any chain">🌉 <span class="lbl">Swap &amp; Bridge</span></a>
-      <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark">
-        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
-        <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg>
-      </button>
-      <span class="tbx net" id="netPill">…</span>
-      <button type="button" class="tbx primary" id="connectBtn">Connect</button>
+<header class="nx-bar" id="nxBar"><div class="nx-bar-in">
+  <a class="nx-brand" href="../../" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
+  <nav class="nx-seg" aria-label="Apps"><a href="../../earn/">DeFi</a><a href="../../assets/stocks/" class="on">RWA</a><a href="../../fun/" class="f">Fun</a></nav>
+  <div class="nx-actions">
+    <button type="button" class="nx-icon" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
+    <span class="nx-pill" id="netPill" hidden>…</span>
+    <button type="button" class="nx-btn lit" id="connectBtn">Connect</button>
+  </div>
+</div></header>
+
+<section class="nx-hero">
+  <div class="nx-hero-in"><div class="nx-hero-t">
+    <div class="nx-eyebrow">RWA · Stocks / ETF · xStocks on Arc</div>
+    <h1 class="nx-h1">US stocks and ETFs,<br><em>on Arc.</em></h1>
+    <p class="nx-lead">Over a thousand <b>xStocks</b>, each tracking one share of a US stock or ETF, issued by Backed, a Kraken company. On Arc they <span data-xs-verb>will trade</span> in USDC, from your own wallet.</p>
+    <nav class="nx-views" aria-label="RWA">
+      <a class="on" href="../../assets/stocks/" aria-current="page">Stocks / ETF</a>
+      <a href="../../assets/">Funds</a>
     </nav>
-  </div>
-</header>
+  </div></div>
+  <aside class="nx-lcard" aria-label="The xStocks catalog"><div class="k"><i class="soon" id="xsDot"></i>CATALOG · ISSUER FEED</div><div class="big" id="xsCount">1,000+</div><div class="ld2">xStocks in the issuer's catalog, with live reference prices and proofs of reserves.</div><div class="row"><span class="nx-bd warn" id="xsArcBadge">NOT ON ARC YET</span><span class="nx-bd">Backed Assets (JE) Ltd</span></div></aside>
+</section>
 
-<main class="wrap">
-  <div class="hero">
-    <div class="eyebrow">RWA · Stocks / ETF · xStocks on Arc · settled in USDC</div>
-    <h1>US stocks and ETFs,<br>on Arc.</h1>
-    <p class="lead">Over a thousand <b>xStocks</b>: tokens that each track one share of a US stock or ETF, held 1:1 with regulated custodians and issued by <b>Backed Assets (JE) Ltd</b>, a Kraken company. Every card reads the issuer's live reference price, proof of reserves and market hours. On Arc they trade in <b>USDC, around the clock</b>, from your own wallet. <b>A NEW ONE is the interface, not the issuer.</b></p>
-  </div>
-
-  <nav class="views" aria-label="RWA">
-    <a class="on" href="./" aria-current="page">Stocks / ETF</a>
-    <a href="../">Funds</a>
-  </nav>
-
-  <div class="elig" id="arcState">
-    <span class="ico">🛰️</span>
+<main class="nx-main"><div class="nx-wrap">
+  <div class="nx-notice" id="arcState">
+    <span class="ni">🛰️</span>
     <div><b>Checking Arc…</b> Reading the issuer's deployments and the Arc chain for the stock tokens.</div>
   </div>
+  <div class="nx-strip"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17c0-5 4-9 9-9s9 4 9 9"/><path d="M3 17h18M7.5 17v-4M12 17V8M16.5 17v-4"/></svg></span><div><b>Need USDC on Arc?</b><span class="t">Stocks <span data-xs-verb>will trade</span> in USDC on Arc. Bring USDC from Base, Ethereum, Arbitrum and more with Swap &amp; Bridge, or buy it with a card.</span></div>
+    <div class="acts"><a class="nx-btn lit" href="../../bridge/" target="_blank" rel="noopener">Swap &amp; Bridge <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a><a class="nx-btn" href="../../bridge/?way=card" target="_blank" rel="noopener">Buy with card</a></div></div>
 
   <div class="filters">
     <label class="search"><span aria-hidden="true">🔎</span><input id="q" placeholder="Search a company, ticker or ETF…" autocomplete="off"></label>
@@ -271,7 +241,8 @@
   </div>
 
   <p class="legal">Prices, hours and reserves are read from the issuer's public API and the Arc chain; the reference price is Backed's quote for the underlying and is indicative, not a price you will get in a pool. xStocks are tracker certificates issued by Backed Assets (JE) Limited, a Jersey company registered with the Jersey Financial Services Commission, under a base prospectus approved by the Liechtenstein FMA; they give economic exposure to a share, not the share itself or its voting rights, and their documents at <a href="https://assets.backed.fi/legal-documentation" target="_blank" rel="noopener">assets.backed.fi</a> prevail over anything shown here. They are not offered to US persons. A NEW ONE does not issue, custody, broker or advise; trades on Arc happen in third-party pools you choose to use, at a price you see before you sign, and you can lose what you put in. Nothing here is an offer. Some jurisdictions restrict these products. <a href="../../terms.html">Terms</a> · <a href="../../privacy.html">Privacy</a></p>
-</main>
+</div></main>
+<footer class="nx-foot"><div class="nx-foot-in"><span>© 2026 A NEW ONE</span><a href="../../docs.html">Docs</a><a href="../../about.html">About</a><a href="../../terms.html">Terms</a><a href="../../privacy.html">Privacy</a><a href="mailto:support@anewone.xyz">Contact</a><span class="sp">Nothing here is investment advice. The issuer is always a regulated entity.</span></div></footer>
 
 <div class="overlay" id="overlay" role="dialog" aria-modal="true">
   <div class="sheet">
@@ -336,6 +307,7 @@
   const arcCfg = cfg[net];
   const $ = (id) => document.getElementById(id);
   $("netPill").textContent = net === "mainnet" ? "● Arc mainnet" : "● Arc testnet";
+  $("netPill").hidden = net === "mainnet";   // the label is a warning, not a badge: it appears only off mainnet
 
   $("themeSw").onclick = () => {
     const t = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
@@ -395,6 +367,7 @@
     if (!r.ok || !Array.isArray(j.assets)) throw new Error(j.error || "catalog unavailable");
     ASSETS = j.assets; catalogAt = j.at; stale = !!j.stale;
     byKey = new Map(ASSETS.map((a) => [a.s, a]));
+    if (ASSETS.length) $("xsCount").textContent = fmt(ASSETS.length, 0);   // the hero card: the catalog's real size
     // local preview only: ?arcmock=0x… pretends TSLAx lives at an address that does have code on
     // Arc, so the live card and banner can be seen before Backed deploys
     const mock = location.hostname === "localhost" && new URLSearchParams(location.search).get("arcmock");
@@ -463,14 +436,19 @@
   }
   function paintArcState(announced) {
     const el = $("arcState");
+    // the hero card and the words over the cards follow the chain too
+    const bd = $("xsArcBadge");
+    bd.textContent = arcLive ? "LIVE ON ARC" : "NOT ON ARC YET"; bd.className = "nx-bd " + (arcLive ? "ok" : "warn");
+    $("xsDot").classList.toggle("soon", !arcLive);
+    document.querySelectorAll("[data-xs-verb]").forEach((n) => (n.textContent = arcLive ? "trade" : "will trade"));
     const q = document.querySelector('[data-f="arc"]');
     if (arcLive) {
-      el.classList.add("live");
-      el.innerHTML = `<span class="ico">🟢</span><div><b>xStocks are on Arc.</b> The tokens have landed at their usual addresses and the cards below read the Arc pools live: a card with a pool price trades here in USDC, from your wallet, at any hour. A card without one is waiting for its first pool. ${announced ? "" : "Backed has not yet listed Arc in its catalog, so this comes from the chain itself."}</div>`;
+      el.classList.add("live", "ok");
+      el.innerHTML = `<span class="ni">🟢</span><div><b>xStocks are on Arc.</b> The tokens have landed at their usual addresses and the cards below read the Arc pools live: a card with a pool price trades here in USDC, from your wallet, at any hour. A card without one is waiting for its first pool. ${announced ? "" : "Backed has not yet listed Arc in its catalog, so this comes from the chain itself."}</div>`;
       q.hidden = false;
       $("xsArcWord").textContent = "Arc live";
     } else {
-      el.innerHTML = `<span class="ico">🛰️</span><div><b>Not on Arc yet.</b> Backed has deployed xStocks on twelve networks and Circle names it among the issuers coming to Arc; this page checks the chain at the tokens' known addresses every minute and switches on the moment they land. Until then the cards show the issuer's live prices and reserves, and each links to where the token trades today. <a href="../">The funds already on Arc are here.</a></div>`;
+      el.innerHTML = `<span class="ni">🛰️</span><div><b>Not on Arc yet.</b> Backed has deployed xStocks on twelve networks and Circle names it among the issuers coming to Arc; this page checks the chain at the tokens' known addresses every minute and switches on the moment they land. Until then the cards show the issuer's live prices and reserves, and each links to where the token trades today. <a href="../">The funds already on Arc are here.</a></div>`;
     }
   }
 
@@ -498,7 +476,7 @@
     const diff = live && live.price && px ? (live.price / px - 1) * 100 : null;
     let action, arcTag = "";
     if (live === false || (arcLive === false && !live)) {
-      arcTag = `<span class="tag">NOT ON ARC YET</span>`;
+      arcTag = `<span class="tag na">NOT ON ARC YET</span>`;
       action = `<a class="btn" href="https://xstocks.com/products" target="_blank" rel="noopener" title="Where the token trades today, on the issuer's site">Where it trades today ↗</a>`;
     } else if (!live) {
       action = `<button class="btn" disabled>Checking Arc…</button>`;
@@ -510,7 +488,8 @@
       action = account ? `<button class="btn primary" data-open="${esc(a.s)}">Buy with USDC</button>` : `<button class="btn primary" data-open="${esc(a.s)}">Connect to trade</button>`;
     }
     return `<div class="stock" data-s="${esc(a.s)}">
-      <div class="head"><span class="logo">${a.logo ? `<img src="${LOGO(a.s)}" alt="" loading="lazy" onerror="this.remove()">` : esc((a.u || a.s).slice(0, 4))}</span><div><h3 title="${esc(a.n)}">${esc(a.n)}</h3><div class="by">${esc(a.s)} · ${esc(a.u || "")}${a.x ? " · " + esc(a.x) : ""}</div></div><span class="tag usdc">USDC</span></div>
+      <div class="head"><span class="logo">${a.logo ? `<img src="${LOGO(a.s)}" alt="" loading="lazy" onerror="this.remove()">` : esc((a.u || a.s).slice(0, 4))}</span><span class="sym">${esc(a.s)}</span>${a.x ? `<span class="ex">${esc(a.x)}</span>` : ""}</div>
+      <div class="nm"><h3 title="${esc(a.n)}">${esc(a.n)}</h3><div class="by">${esc(a.u || a.s)} · USDC</div></div>
       <div class="price"><span class="v ${px == null ? "loading" : ""}">${px == null ? "…" : usd(px)}</span><small>REFERENCE · USD</small></div>
       <div class="hours ${hcls}"><span class="dot"></span>${esc(htxt)}</div>
       <div class="stats">
@@ -963,5 +942,6 @@ Time: ${new Date().toISOString()}`;
     setInterval(() => { const page = visible().slice(0, shown); loadPrices(page.map((a) => a.s)).then(() => patchPrices(page)); }, 60000);
   })();
 </script>
+<script src="../../shell.js"></script>
 </body>
 </html>

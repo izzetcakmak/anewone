@@ -9,9 +9,10 @@
   // No stored choice means "follow the OS", which most people never change.
   (function () {
     try {
-      var t = localStorage.getItem("anewone_theme") || "light";
+      var t = localStorage.getItem("anewone_theme") || "dark";
       document.documentElement.setAttribute("data-theme", t);
-    } catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+    } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+    document.documentElement.setAttribute("data-app", "fun");
   })();
 </script>
 <title>AnewOne.Fun · Insert Coin. Launch a New One. | anewone.xyz</title>
@@ -27,7 +28,7 @@
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ============================ THEME SYSTEM ============================
      Light is the default; dim and dark are opt-in. The palette is deliberately
@@ -1391,12 +1392,152 @@
     .spot-chart { margin-top: 0; }
     .spot-cta { margin-top: 0; }
   }
+
+  /* ===================== Arc Noir: the floor in the shell =====================
+     Everything above is the floor's own; this block, the last in the sheet, dresses it in the
+     shell's colours and shapes (the tokens come from shell.css, which loads after this sheet).
+     The page's markup keeps every id its script reads; the left rail stays in the DOM but is not shown. */
+  html body { background: var(--nx-bg); background-image: none; padding-bottom: 0; }
+  html .shell { display: block; }
+  html .rail-left { display: none; }
+  html .fun-wrap { padding-top: 0; }
+  #comingSoon { display: none; }
+
+  /* the three numbers and the fee, in one glass band under the hero */
+  .fstats { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--nx-line2); border-radius: 26px; background: var(--nx-card); overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+  .fstats > div { padding: 26px 28px; border-right: 1px solid var(--nx-line); }
+  .fstats > div:last-child { border-right: 0; }
+  .fstats b { display: block; font: 500 44px/1 'Space Grotesk', sans-serif; letter-spacing: -.04em; color: var(--nx-ink); font-variant-numeric: tabular-nums; }
+  .fstats span { display: block; margin-top: 10px; font: 500 11px Inter, sans-serif; letter-spacing: .15em; color: var(--nx-faint); text-transform: uppercase; }
+  .fun-strip { margin-top: 18px; }
+
+  /* the live ticker: a band between the hero and the floor, the runs as the page's script lays them */
+  html .tickerbar { position: relative; top: auto; z-index: 3; height: 58px; border-top: 1px solid var(--nx-line); border-bottom: 1px solid var(--nx-line); background: rgba(255,255,255,.02);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  :root[data-theme="light"] .tickerbar { background: rgba(255,255,255,.55); }
+  html .tickerbar-inner { max-width: 1240px; padding: 0 28px; gap: 18px; }
+  .tk-lead { font: 700 11.5px 'JetBrains Mono', monospace; letter-spacing: .16em; color: var(--nx-mint); }
+  .tk-lead i { background: var(--nx-mint); box-shadow: 0 0 8px var(--nx-mint); }
+  .tk-track { font: 500 13px 'JetBrains Mono', monospace; color: var(--nx-mute); }
+  .tk-item b { color: var(--nx-ink); font-weight: 700; }
+  .tk-item .up { color: var(--nx-up, var(--green)); font-weight: 700; } .tk-item .dn { color: var(--nx-dn, var(--red)); font-weight: 700; }
+
+  /* the spotlight is the hero's live card; the script still fills it and shows it with display:flex */
+  #spotlight.nx-lcard { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 0; padding: 22px 24px; margin-top: 0; cursor: pointer; overflow: hidden; border-radius: 28px; background: var(--nx-card); border: 1px solid var(--nx-line2); }
+  #spotlight.nx-lcard:hover { border-color: rgba(var(--nx-mint-rgb), .5); transform: none; }
+  #spotlight .spot-badge { position: static; display: flex; align-items: center; gap: 9px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .16em; color: var(--nx-mint); text-transform: uppercase; background: none; border: 0; padding: 0; }
+  #spotlight .spot-head { margin-top: 14px; gap: 14px; min-width: 0; }
+  #spotlight .spot-img, #spotlight .spot-ph { width: 62px; height: 62px; border-radius: 16px; border: 1px solid var(--nx-line2); font-size: 26px; }
+  #spotlight .spot-sym { font: 600 28px/1 'Space Grotesk', sans-serif; letter-spacing: -.03em; color: var(--nx-ink); }
+  #spotlight .spot-name { margin-top: 5px; font-size: 14px; color: var(--nx-mute); }
+  #spotlight .spot-desc { display: none; }
+  #spotlight .spot-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 10px; margin-top: 18px; }
+  #spotlight .spot-stats .ss b { margin-top: 3px; font: 500 19px 'Space Grotesk', sans-serif; letter-spacing: -.02em; white-space: nowrap; color: var(--nx-ink); }
+  #spotlight .spot-stats .ss span { order: -1; font: 500 10px 'JetBrains Mono', monospace; letter-spacing: .14em; color: var(--nx-faint); }
+  #spotlight .spot-stats .ss { display: flex; flex-direction: column; }
+  #spotlight .spot-stats .up b { color: var(--nx-up, var(--green)); } #spotlight .spot-stats .down b { color: var(--nx-dn, var(--red)); }
+  #spotlight .spot-chart { flex: none; min-width: 0; margin-top: 14px; }
+  #spotlight .spot-chart svg { height: 72px; }
+  #spotlight .spot-cta { margin-top: 14px; }
+  #spotlight .spot-cta button { width: 100%; height: 48px; border-radius: 999px; font: 700 13px 'JetBrains Mono', monospace; letter-spacing: .02em; color: var(--nx-on-mint); border: 1px solid rgba(var(--nx-mint-rgb), .3);
+    background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .98), rgba(var(--nx-mint-rgb), .82)); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 10px 30px rgba(var(--nx-mint-rgb), .38); }
+
+  /* the toolbar: glass pills, one height */
+  .toolbar { margin: 44px 0 20px; gap: 10px; }
+  .sorts { padding: 5px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.04); }
+  :root[data-theme="light"] .sorts { background: rgba(255,255,255,.6); }
+  .toolbar .sorts button { height: 34px; padding: 0 16px; font: 700 12px 'JetBrains Mono', monospace; color: var(--nx-mute); border-radius: 999px; }
+  .toolbar .sorts button:hover { background: transparent; color: var(--nx-ink); border-color: transparent; }
+  .toolbar .sorts button.on { color: var(--nx-on-mint); background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .98), rgba(var(--nx-mint-rgb), .82)); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 6px 20px rgba(var(--nx-mint-rgb), .3); }
+  .searchwrap input { height: 44px; border-radius: 999px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.04); font: 400 14px Inter, sans-serif; }
+  #watchToggle, #filterToggle { height: 44px; padding: 0 18px; border-radius: 999px; font: 700 12px 'JetBrains Mono', monospace; color: var(--nx-mint); border: 1px solid rgba(var(--nx-mint-rgb), .45);
+    background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .22), rgba(var(--nx-mint-rgb), .08)); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 18px rgba(var(--nx-mint-rgb), .14); }
+  #watchToggle:hover, #filterToggle:hover, #watchToggle.on, #filterToggle.on { color: var(--nx-on-mint); border-color: rgba(var(--nx-mint-rgb), .3);
+    background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .98), rgba(var(--nx-mint-rgb), .82)); }
+
+  /* the coin cards: the artwork edge to edge, glass under it */
+  @media (min-width: 641px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px; }
+  .cab { border-radius: 26px; border: 1px solid var(--nx-line2); background: var(--nx-card); box-shadow: 0 24px 60px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
+    transition: transform .3s cubic-bezier(.2,.8,.2,1), border-color .3s, box-shadow .3s; }
+  :root[data-theme="light"] .cab { box-shadow: 0 24px 60px rgba(10,20,17,.08), inset 0 1px 0 #fff; }
+  .cab:hover { transform: translateY(-5px); border-color: rgba(var(--nx-mint-rgb), .5); background: var(--nx-card); box-shadow: 0 24px 60px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08); }
+  .cab .cart { aspect-ratio: auto; height: 172px; background: linear-gradient(135deg, rgba(var(--nx-mint-rgb), .2), rgba(var(--nx-mint-rgb), .04)); border-bottom: 1px solid var(--nx-line); }
+  .cab .cart::after { content: ""; position: absolute; inset: auto 0 0 0; height: 70px; background: linear-gradient(transparent, rgba(5,8,7,.78)); pointer-events: none; z-index: 1; }
+  .cab .cimg.ph { background: transparent; color: rgba(var(--nx-mint-rgb), .55); font-size: 64px; }
+  .cab .cbadge { top: 12px; left: 12px; padding: 5px 11px; font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: .06em; border: 1px solid rgba(255,255,255,.28); background: rgba(8,12,11,.55); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .cab .cbadge.is-grad { background: var(--nx-mint); color: var(--nx-on-mint); border-color: transparent; }
+  .cab .star { top: 12px; right: 12px; width: 36px; height: 36px; font-size: 16px; border: 1px solid rgba(255,255,255,.3); background: rgba(8,12,11,.5); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .cab .cprog { z-index: 2; left: 12px; bottom: 14px; padding: 5px 11px; font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: .06em; border: 1px solid rgba(255,255,255,.28); background: rgba(8,12,11,.55); }
+  .cab .cbar { z-index: 2; background: rgba(255,255,255,.14); }
+  .cab .cbar i { background: linear-gradient(90deg, var(--nx-mint), var(--nx-ice)); box-shadow: 0 0 12px rgba(var(--nx-mint-rgb), .8); }
+  .cab .cbody { padding: 18px 20px; }
+  .cab .csym { font: 700 22px/1 'Space Grotesk', sans-serif; letter-spacing: -.02em; }
+  .cab .cname { margin-top: 5px; font-size: 13.5px; color: var(--nx-mute); }
+  .cab .cstat { margin-top: 14px; gap: 10px; }
+  .cab .cstat span { font: 500 10px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--nx-faint); }
+  .cab .cstat.two b { margin-top: 3px; font: 500 21px 'Space Grotesk', sans-serif; letter-spacing: -.025em; }
+  .cab .cstat.three { margin-top: 14px; padding-top: 12px; }
+  .cab .cstat.three b { font: 500 14.5px 'Space Grotesk', sans-serif; }
+  .cab .cstat b.up { color: var(--nx-up, var(--green)); } .cab .cstat b.down { color: var(--nx-dn, var(--red)); }
+  .cab .cchart { height: 46px; margin-top: 14px; }
+  .cab .cfoot { margin-top: 12px; font: 500 11.5px 'JetBrains Mono', monospace; }
+  }
+  @media (max-width: 640px) {
+    /* the compact list keeps the floor's own layout; it only takes the glass */
+    .cab { border-radius: 18px; border: 1px solid var(--nx-line2); background: var(--nx-card); box-shadow: none; }
+    .cab:hover { transform: none; border-color: rgba(var(--nx-mint-rgb), .5); background: var(--nx-card); box-shadow: none; }
+    .cab .cstat.two b, .cab .cstat.three b { font-family: 'Space Grotesk', sans-serif; }
+    .cab .cstat b.up { color: var(--nx-up, var(--green)); } .cab .cstat b.down { color: var(--nx-dn, var(--red)); }
+    .toolbar .sorts { width: 100%; }
+    .toolbar .sorts button { flex: 1; padding: 0 4px; font-size: 11px; justify-content: center; }
+  }
+
+  /* who trades the most and who is up the most: two glass boards under the floor */
+  html #leaders { position: static; max-height: none; overflow: visible; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 34px; background: none; border: 0; box-shadow: none; border-radius: 0; }
+  #leaders .board { border-radius: 26px; border: 1px solid var(--nx-line2); background: var(--nx-card); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); padding: 14px 10px 14px; min-width: 0; }
+  #leaders .rail-h { padding: 12px 16px 8px; } #leaders .rail-h h3 { font: 600 22px 'Space Grotesk', sans-serif; letter-spacing: -.02em; }
+  #leaders .rail-count { font: 700 11px 'JetBrains Mono', monospace; letter-spacing: .08em; color: var(--nx-mint); background: rgba(var(--nx-mint-rgb), .1); border: 1px solid rgba(var(--nx-mint-rgb), .35); padding: 5px 11px; }
+  #leaders .rail-h-second { border-top: 0; margin-top: 0; }
+  #leaders .bprow { padding: 11px 16px; border-top: 1px solid var(--nx-line); }
+  #leaders .bprow .w { font: 500 13.5px 'JetBrains Mono', monospace; color: var(--nx-mute); }
+  #leaders .bprow .acts, #leaders .bprow .pnl { font: 700 13.5px 'JetBrains Mono', monospace; }
+  #leaders .rail-more { width: calc(100% - 32px); margin: 14px 16px 6px; height: 46px; border-radius: 999px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.03); font: 700 12.5px 'JetBrains Mono', monospace; color: var(--nx-mute); }
+  #leaders .rail-more:hover { color: var(--nx-ink); border-color: rgba(var(--nx-mint-rgb), .5); }
+  #leaders .rail-foot { grid-column: 1 / -1; border: 0; padding: 0 6px; font-size: 12.5px; }
+  @media (max-width: 900px) { html #leaders { display: block; margin-top: 26px; } #leaders .board + .board, #leaders .rail-foot { margin-top: 18px; } #leaders .rail-foot { display: block; padding: 0 8px; } }
+
+  /* three steps, under the floor */
+  .fun-how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 56px; }
+  .fun-how > div { padding: 6px 4px 0; border-top: 1px solid var(--nx-line2); }
+  .fun-how .n { display: block; margin: 20px 0 14px; font: 500 12px 'JetBrains Mono', monospace; letter-spacing: .2em; color: var(--nx-mint); }
+  .fun-how b { display: block; font: 600 24px/1.15 'Space Grotesk', sans-serif; letter-spacing: -.02em; color: var(--nx-ink); }
+  .fun-how p { margin-top: 12px; font-size: 15.5px; line-height: 1.6; color: var(--nx-mute); max-width: 340px; }
+  @media (max-width: 900px) { .fun-how { grid-template-columns: 1fr; gap: 6px; } .fstats > div { padding: 22px 22px; } }
+  @media (max-width: 760px) { .fstats { grid-template-columns: 1fr; } .fstats > div { border-right: 0; border-bottom: 1px solid var(--nx-line); } .fstats > div:last-child { border-bottom: 0; } }
+  @media (max-width: 520px) { .fstats b { font-size: 34px; } }
+
+  /* the hero: the spotlight at the right of a wide screen, under the text on a narrow one
+     (the script shows it with an inline display:flex, which beats the shell's display:none) */
+  @media (max-width: 1180px) {
+    .nx-hero.fun { padding-bottom: 215px; }
+    .nx-hero.fun .nx-hero-in { padding-bottom: 28px; }
+    #spotlight.nx-lcard { position: relative; top: auto; right: auto; width: auto; max-width: 520px; margin: 0 28px; }
+  }
+  @media (max-width: 640px) { #spotlight.nx-lcard { margin: 0 20px; } .toolbar { margin-top: 32px; } }
+  /* the wallet menu hangs off the bar */
+  #walletMenu { border-radius: 16px; background: var(--nx-bg2); border-color: var(--nx-line2); box-shadow: 0 30px 70px rgba(0,0,0,.5); }
+  #walletWrap .nx-btn { min-width: 0; }
+  /* the coin's own page and the dialogs keep the floor's layout; only the surfaces change */
+  .modal { border-radius: 26px; border-color: var(--nx-line2); background: var(--nx-bg2); }
+  .modal-bg { background: rgba(2,4,3,.72); }
 </style>
+<link rel="stylesheet" href="shell.css">
 </head>
 <body>
 <!-- Announcement strip: the countdown lives here now, so the first thing a
      visitor reads is the deadline, and the hero can get on with the product. -->
-<div class="strip" id="comingSoon">
+<div class="strip" id="comingSoon" style="display:none">
   <span class="s-txt">A NEW ONE goes live on Arc mainnet in</span>
   <span class="s-short">Mainnet in</span>
   <span class="s-clock" id="cdClock" aria-live="polite">
@@ -1405,44 +1546,15 @@
   <span class="s-sep">·</span>
   <span class="s-hi">the first memecoin on Arc launches here</span>
 </div>
-<nav class="topbar">
-  <div class="topbar-inner">
-    <a class="tb-brand" href="/" aria-label="A NEW ONE, home">
-      <!-- the vector crest: mark.png is 96px and goes soft at this size on a 2x screen -->
-      <img src="brand/logo.svg" alt="">
-      <span>A NEW ONE</span>
-    </a>
-    <!-- One wrapper for everything that folds away on a phone. It is display:contents
-         on a wide screen, so these stay direct flex children of the bar and the
-         desktop layout is untouched; on a narrow one it becomes the dropdown. -->
-    <div class="tb-nav" id="navMenu">
-    <!-- no title attribute: the browser's own tooltip would fight the bubble -->
-    <a class="tb-ark" id="arkTab" href="ark/" target="_blank"
-       aria-label="The ark, the story behind A NEW ONE">
-      <!-- The door should look like the room behind it: the same near-black
-           outline and the same paintbox as the ark, not a grey outline icon. -->
-      <svg viewBox="0 0 60 48" fill="none" stroke="#12080E" stroke-width="3.6"
-           stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
-        <path d="M9 23 L30 8 L51 23 Z" fill="#E08A86"/>
-        <path d="M18 23 H42 V32 H18 Z" fill="#F8D49B"/>
-        <path d="M5 32 H55 Q51 44 30 46 Q9 44 5 32 Z" fill="#C9925E"/>
-      </svg>
-      <span>Ark</span>
-      <span class="ark-tip">If you're curious about our story, <b>CLICK</b></span>
-    </a>
-    <!-- The gangway is how you board: funds from any chain arrive on Arc as USDC and can
-         buy a coin on the floor in the same trip. Same shape as the Boarding Pass link. -->
-    <a class="tb-link" href="bridge/" aria-label="Swap &amp; Bridge" title="Swap &amp; Bridge: bring ETH, USDC or almost anything aboard from any chain, then buy on the floor"><span aria-hidden="true">🌉</span><span class="tb-lbl">Swap &amp; Bridge</span></a>
-    <a class="tb-link" href="chat/" aria-label="Deckhand" title="Deckhand, the AI assistant: ask about any coin; it remembers you, memory on Walrus"><img class="tb-ico" src="chat/deckhand.svg" alt=""><span class="tb-lbl">Deckhand</span></a>
-    <!-- one light/dark toggle; the old dim theme is still honoured if a visitor had picked it -->
-    <button type="button" class="tb-theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark">
-      <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
-      <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg>
-    </button>
-    <span id="balChip" class="badge" hidden title="Your USDC on Arc. Pays gas and trades"></span>
-    </div>
+<header class="nx-bar" id="nxBar"><div class="nx-bar-in">
+  <a class="nx-brand" href="./" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
+  <nav class="nx-seg" aria-label="Apps"><a href="earn/">DeFi</a><a href="assets/stocks/">RWA</a><a href="fun/" class="f on">Fun</a></nav>
+  <div class="nx-actions">
+    <button type="button" class="nx-icon" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
+    <span id="balChip" class="nx-pill" hidden title="Your USDC on Arc. Pays gas and trades"></span>
+    <button id="createBtn" class="nx-btn lit" type="button">+ Create<span class="x"> Coin</span></button>
     <span id="walletWrap" style="position:relative;display:inline-block">
-      <button id="connectBtn">Connect</button>
+      <button id="connectBtn" class="nx-btn" type="button">Connect</button>
       <div id="walletMenu" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-2);border:1px solid var(--border-2);border-radius:12px;z-index:50;min-width:184px;box-shadow:var(--shadow);overflow:hidden">
         <!-- A wallet made by signing in with Google has an address the owner has
              never seen, and the button only ever shows six characters of it. Without
@@ -1456,25 +1568,26 @@
         <button id="disconnectBtn" style="display:block;width:100%;box-shadow:none;border:none;border-radius:0;text-align:left;background:transparent;color:var(--red)">Disconnect</button>
       </div>
     </span>
-    <button id="createBtn" class="alt">+ Create Coin</button>
-    <button class="tb-menu" id="navBtn" type="button" aria-expanded="false"
-            aria-controls="navMenu" aria-label="Menu">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-           stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-    </button>
   </div>
-</nav>
-<!-- The live trade flow, pinned right under the header so it is the first thing that moves.
-     A real marquee: two identical runs slide left at a constant speed, the copy takes over
-     as the first leaves, so it never stops and never jumps. -->
+</div></header>
+
+<section class="nx-hero fun">
+  <div class="nx-hero-in"><div class="nx-hero-t">
+    <div class="nx-eyebrow">AnewOne.Fun · Memecoins on Arc</div>
+    <h1 class="nx-h1">Insert coin.<br><em>Launch a new one.</em></h1>
+    <p class="nx-lead">Bonding curves priced in <b>USDC</b>, not in a volatile gas token. <b>Nothing to pull</b>: at graduation the curve moves into a Uniswap v3 pool whose liquidity is locked for good, and 0.5% of every trade goes straight to the creator.</p>
+    <div class="nx-views"><a class="on" href="#floor">Explore the floor</a><a href="docs.html#what">How it works</a></div>
+  </div></div>
+  <div id="spotlight" class="spot nx-lcard" style="display:none"></div>
+</section>
 <div class="tickerbar" id="tickerBar" style="display:none">
-  <div class="tickerbar-inner">
-    <span class="tk-lead"><i></i>LIVE</span>
-    <div class="tk-track" id="feed"></div>
-  </div>
+<div class="tickerbar-inner">
+<span class="tk-lead"><i></i>LIVE</span>
+<div class="tk-track" id="feed"></div>
+</div>
 </div>
 
-<div class="wrap">
+<main class="nx-main"><div class="nx-wrap fun-wrap">
   <div id="rpcStatus" class="rpcstatus" style="display:none"></div>
   <!-- Shown when the connected wallet's own Arc RPC does not answer (MetaMask ships Arc on
        its own RPC and ignores the one a site offers). The wallet, not the site, has to be
@@ -1501,24 +1614,13 @@
   </aside>
 
   <div class="col-main">
-<section class="hero">
-  <canvas id="heroFx" aria-hidden="true"></canvas>
-  <div class="hero-inner">
-    <h1>Insert coin.<span class="l2">Launch a new one.</span></h1>
-    <p class="hero-sub">Bonding curves priced in <b>USDC</b>, not in a volatile gas token.
-      <b>Nothing to pull</b>: at graduation the curve moves into a Uniswap v3 pool whose
-      liquidity is locked for good, and 0.5% of every trade goes straight to the creator.</p>
-    <div class="hero-row">
-      <a class="hbtn primary" href="/fun/#floor">Explore the floor →</a>
-      <div class="hero-stats">
-        <div class="hstat"><b id="statCount">–</b><span>Tokens live</span></div>
-        <div class="hstat"><b id="statFee">1.5%</b><span id="statFeeSplit">Fee · ⅓ to creators</span></div>
-        <div class="hstat"><b id="statGrad">–</b><span>Graduation</span></div>
-      </div>
-    </div>
+<div class="fstats">
+    <div><b id="statCount">–</b><span>Tokens live</span></div>
+    <div><b id="statFee">1.5%</b><span id="statFeeSplit">Fee · ⅓ to creators</span></div>
+    <div><b id="statGrad">–</b><span>Graduation</span></div>
   </div>
-</section>
-  <div id="spotlight" class="spot" style="display:none"></div>
+  <div class="nx-strip fun-strip"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17c0-5 4-9 9-9s9 4 9 9"/><path d="M3 17h18M7.5 17v-4M12 17V8M16.5 17v-4"/></svg></span><div><b>Need USDC on Arc?</b><span class="t">Coins trade in USDC on Arc. Bring it from Base, Ethereum, Arbitrum and more with Swap &amp; Bridge, or buy it with a card.</span></div>
+    <div class="acts"><a class="nx-btn lit" href="bridge/" target="_blank" rel="noopener">Swap &amp; Bridge <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a><a class="nx-btn" href="bridge/?way=card" target="_blank" rel="noopener">Buy with card</a></div></div>
 
   <!-- the guarantees used to be repeated here as chips; they live in the docs now -->
 
@@ -1594,15 +1696,25 @@
        are computed here from the same ledger that powers holder counts: USDC out of sells,
        plus what is still held at today's curve price, minus USDC into buys. -->
   <aside class="rail rail-right" id="leaders">
+    <section class="board">
     <div class="rail-h"><h3>Most active</h3><span class="rail-count" id="activeCount">top 10</span></div>
     <div id="activeList" class="rail-list rail-list-open"></div>
     <button class="rail-more" id="activeMore" type="button" hidden>Show more</button>
+    </section>
+    <section class="board">
     <div class="rail-h rail-h-second"><h3>Top earners</h3><span class="rail-count" id="earnCount">top 10</span></div>
     <div id="earnList" class="rail-list rail-list-open"></div>
     <button class="rail-more" id="earnMore" type="button" hidden>Show more</button>
+    </section>
     <div class="rail-foot">Earnings = sells + what is still held at today's curve price − buys. Wallet-to-wallet transfers are not seen. Team wallets are left out.</div>
   </aside>
   </div><!-- /shell -->
+
+  <div class="fun-how">
+    <div><span class="n">01</span><b>Launch</b><p>Anyone can create a coin for free; you pay only network gas. Metadata is stored on-chain, so an image or a link can't be swapped out from under holders.</p></div>
+    <div><span class="n">02</span><b>Trade on a USDC curve</b><p>Every coin trades at once on its own bonding curve, priced in USDC. A flat 1.5% fee: 0.5% to the creator, 1% to the platform.</p></div>
+    <div><span class="n">03</span><b>Graduate at 5,000 USDC</b><p>The curve moves into a Uniswap v3 pool. The position stays inside the contract, which has no function that can withdraw it: nothing to pull.</p></div>
+  </div>
 
   <div id="feeBar" class="feepanel" style="display:none">
     <div class="feepanel-title">YOUR FEES</div>
@@ -1646,11 +1758,11 @@
       </div>
     </div>
     <div class="foot-meta">
-      <span><span class="arc-pill">⚡ Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a></span> · gas is USDC · rug-proof: reserves locked, pool liquidity locked for good. · <a href="about.html">About</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></span>
+      <span><span class="arc-pill">⚡ Built on <a href="https://www.arc.network" target="_blank" rel="noopener">Arc</a></span> · gas is USDC · rug-proof: reserves locked, pool liquidity locked for good. · <a href="docs.html">Docs</a> · <a href="about.html">About</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="ark/" target="_blank" rel="noopener">The ark</a> · memecoins are highly risky: only commit what you can afford to lose.</span>
       <span id="footPlatformLine" style="display:none">Platform: <span id="footPlatform">–</span></span>
     </div>
   </footer>
-</div>
+</div></main>
 
 <!-- create modal -->
 <div id="createModal" class="modal-bg">
@@ -5809,5 +5921,6 @@ setInterval(liveTail, 15_000);
 // last, so every UI hook it touches is already wired
 restoreWallet();
 </script>
+<script src="shell.js"></script>
 </body>
 </html>

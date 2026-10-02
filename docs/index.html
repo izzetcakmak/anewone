@@ -22,234 +22,428 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shell.css">
 <style>
-  :root {
-    --bg: #0a0d0c; --bg-2: #111615; --line: #1f2826; --text: #e9efed; --muted: #8b9a96;
-    --accent: #3ee8a3; --accent-ink: #04140d;
-  }
-  :root[data-theme="light"] {
-    --bg: #f6f8f7; --bg-2: #ffffff; --line: #dde5e2; --text: #0c1412; --muted: #5a6b66;
-    --accent: #00b877; --accent-ink: #ffffff;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 Inter, system-ui, sans-serif; }
-  a { color: inherit; text-decoration: none; }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
-  header { border-bottom: 1px solid var(--line); }
-  .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 72px; position: relative; }
-  .brand { display: flex; align-items: center; gap: 12px; font: 700 20px "Space Grotesk", sans-serif; letter-spacing: .02em; white-space: nowrap; }
-  .brand img { width: 40px; height: 40px; border-radius: 10px; }
-  nav { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
-  /* every pill one height, so the row reads as one row on a phone */
-  /* The doors: the same green, but as glass. A translucent green pane with a lit top edge,
-     a faint green halo, and the solid green only when the hand is on it. */
-  :root { --accent-rgb: 62,232,163; }
-  :root[data-theme="light"] { --accent-rgb: 0,184,119; }
-  .pill { position: relative; display: inline-flex; align-items: center; justify-content: center; height: 40px; width: 148px; padding: 0 12px;
-    font: 700 14px "JetBrains Mono", monospace; letter-spacing: .01em; color: var(--accent); white-space: nowrap; border-radius: 999px;
-    background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
-    border: 1px solid rgba(var(--accent-rgb), .45);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
-    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
-    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35);
-    transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
-  .pill::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
-  .pill:hover { background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8)); color: var(--accent-ink); text-shadow: none; text-decoration: none; transform: translateY(-1px);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
-  :root[data-theme="light"] .pill { box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); text-shadow: none; }
-  /* the two doors, Earn and AnewOne.Fun: same green, same width, side by side on a phone */
-  .pill.fun { }
-  .hide-sm { display: inline-flex; }
-  .hero { padding: 96px 0 72px; text-align: center; }
-  .eyebrow { font: 700 12px "JetBrains Mono", monospace; letter-spacing: .2em; color: var(--accent); text-transform: uppercase; }
-  h1 { font: 700 clamp(38px, 6vw, 68px)/1.05 "Space Grotesk", sans-serif; margin: 18px auto 20px; max-width: 900px; letter-spacing: -.02em; }
-  .lead { color: var(--muted); font-size: 19px; max-width: 700px; margin: 0 auto 36px; }
-  .lead b { color: var(--text); }
-  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-  .btn { font: 600 16px Inter, sans-serif; padding: 15px 26px; border-radius: 12px; border: 1px solid var(--line); }
-  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  section { padding: 64px 0; border-top: 1px solid var(--line); }
-  h2 { font: 700 32px/1.15 "Space Grotesk", sans-serif; margin: 0 0 12px; }
-  .sub { color: var(--muted); margin: 0 0 36px; max-width: 680px; }
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 18px; padding: 26px; }
-  .card h3 { font: 600 20px "Space Grotesk", sans-serif; margin: 10px 0 8px; }
-  .card p { color: var(--muted); margin: 0; font-size: 15px; }
-  .tag { font: 700 11px "JetBrains Mono", monospace; letter-spacing: .14em; color: var(--accent); }
-  .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .roles ul { margin: 12px 0 0; padding-left: 18px; color: var(--muted); font-size: 15px; }
-  .roles li { margin: 6px 0; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: center; }
-  .stats b { display: block; font: 700 30px "JetBrains Mono", monospace; }
-  .stats span { font: 600 11px "JetBrains Mono", monospace; letter-spacing: .16em; color: var(--muted); text-transform: uppercase; }
-  .funbox { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
-  .pillwrap { position: relative; display: inline-flex; }
-  .note { position: absolute; top: calc(100% + 12px); left: 50%; transform: translate(-50%, -6px); opacity: 0; pointer-events: none; transition: .2s; z-index: 60;
-    width: max-content; max-width: 280px; padding: 10px 14px; border-radius: 12px; font: 500 13px Inter, sans-serif; line-height: 1.4; text-align: center;
-    background: var(--bg-2); color: var(--text); border: 1px solid rgba(var(--accent-rgb), .6); box-shadow: 0 10px 30px rgba(0,0,0,.4), 0 0 0 1px rgba(var(--accent-rgb), .08); }
-  .note b { color: var(--accent); }
-  .note::before { content: ""; position: absolute; left: 50%; top: -7px; width: 12px; height: 12px; transform: translateX(-50%) rotate(45deg); background: var(--bg-2); border-left: 1px solid rgba(var(--accent-rgb), .6); border-top: 1px solid rgba(var(--accent-rgb), .6); }
-  .note.show { opacity: 1; transform: translate(-50%, 0); }
-  .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: var(--bg-2); color: var(--text); border: 1px solid var(--accent); border-radius: 12px; padding: 12px 18px; font: 500 14px Inter, sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,.35); transition: .25s; z-index: 50; max-width: calc(100% - 32px); text-align: center; }
-  .toast.show { opacity: 1; transform: translate(-50%, 0); }
-  footer { padding: 32px 0 48px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); }
-  footer .links { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; }
-  /* the phone menu: the three pills the bar has no room for there, under a menu button */
-  .menu-btn, .menu { display: none; }
-  .menu { position: absolute; top: calc(100% + 6px); right: 16px; z-index: 70; width: 230px; flex-direction: column; gap: 8px;
-    padding: 10px; border-radius: 16px; background: var(--bg-2); border: 1px solid rgba(var(--accent-rgb), .35); box-shadow: 0 16px 40px rgba(0,0,0,.45); }
-  .menu .pill { width: 100%; }
-  .menu .pillwrap { display: flex; flex-direction: column; }
-  .menu .note { position: relative; top: auto; left: auto; transform: none; width: auto; max-width: none; margin-top: 10px; display: none; opacity: 1; }
-  .menu .note.show { display: block; transform: none; }
-  /* the five pills need about 990px; below that the bar keeps Earn and AnewOne.Fun and the rest
-     goes under the menu button (it ran off the screen at 801-990px, an upright iPad included) */
-  @media (max-width: 1000px) {
-    .hide-sm { display: none; }
-    .bar { height: 64px; gap: 8px; }
-    .brand { font-size: 17px; gap: 8px; }
-    .brand img { width: 34px; height: 34px; }
-    .pill { height: 34px; padding: 0 12px; font-size: 12px; }
-    .pill.fun { min-width: 0; flex: 1 1 0; max-width: 148px; }
-    /* min-width: without it the nav kept the pills' desktop width and ran off a phone's screen */
-    nav { flex: 1; min-width: 0; justify-content: flex-end; }
-    .menu-btn { display: inline-flex; flex: none; width: 34px; padding: 0; }
-    .menu:not([hidden]) { display: flex; }
-  }
-  @media (max-width: 800px) {
-    .grid, .roles, .stats { grid-template-columns: 1fr; }
-    .hero { padding: 64px 0 48px; }
-  }
-  /* a narrow phone: the crest alone, so Earn, AnewOne.Fun and the menu keep their room */
-  @media (max-width: 480px) { .brand span { display: none; } }
-  @media (max-width: 380px) { .pill { padding: 0 8px; } }
-  @media (max-width: 340px) { nav { gap: 6px; } .pill { font-size: 11px; padding: 0 6px; } }
+:root{--bg2:var(--nx-bg2);--ink:var(--nx-ink);--mute:var(--nx-mute);--faint:var(--nx-faint);--line:var(--nx-line);--line2:var(--nx-line2);
+  --mint:var(--nx-mint);--mint-rgb:var(--nx-mint-rgb);--ice:var(--nx-ice);--ink-on-mint:var(--nx-on-mint);--fun:var(--nx-fun);--fun2:var(--nx-fun2);--fun-rgb:var(--nx-fun-rgb);
+  --card:var(--nx-card);--sky:var(--nx-sky);--glow:var(--nx-glow);--grain:var(--nx-grain);--key-a:var(--nx-key-a);--key-b:var(--nx-key-b)}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--nx-bg);color:var(--ink);font:400 16px/1.6 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:200;opacity:var(--grain);mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .7 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px}
+/* hero */
+.hero{position:relative;height:900px;overflow:hidden;background:var(--sky)}
+.stars{position:absolute;inset:0;width:100%;height:100%}
+.stars circle{fill:var(--ink);opacity:var(--o);animation:tw 5s ease-in-out infinite}
+html[data-theme="light"] .stars{display:none}
+@keyframes tw{50%{opacity:calc(var(--o)*.35)}}
+.halo{position:absolute;left:50%;bottom:0;width:1500px;height:560px;transform:translateX(-50%);background:radial-gradient(closest-side,rgba(var(--mint-rgb),calc(.24*var(--glow))),transparent);pointer-events:none}
+.arch{position:absolute;left:50%;bottom:0;width:2600px;height:340px;transform:translateX(-50%)}
+.stone{fill:url(#stoneG);fill-opacity:var(--o);stroke:var(--stone-line,rgba(255,255,255,.13));stroke-width:.8}
+html[data-theme="light"] .stone{--stone-line:rgba(10,20,17,.13)}
+.tick line,.tick{stroke:var(--mint);stroke-width:1.1}
+.comet{fill:none;stroke-linecap:round;stroke-dasharray:110 4400;animation:run 7s linear infinite}
+@keyframes run{from{stroke-dashoffset:0}to{stroke-dashoffset:-4500}}
+.hero-copy{position:relative;z-index:5;padding-top:100px;text-align:center}
+.pill-live{display:inline-flex;align-items:center;gap:10px;height:34px;padding:0 16px 0 14px;border-radius:999px;font:500 12px "JetBrains Mono",monospace;letter-spacing:.06em;color:var(--mute);
+  border:1px solid var(--line2);background:rgba(255,255,255,.04);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+html[data-theme="light"] .pill-live{background:rgba(255,255,255,.7)}
+.pill-live i{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 10px var(--mint);animation:pl 1.8s infinite}
+@keyframes pl{50%{opacity:.35}}
+.pill-live b{color:var(--ink);font-weight:500}
+h1{font:500 clamp(46px,6.7vw,98px)/.99 "Space Grotesk",sans-serif;letter-spacing:-.04em;margin:26px auto 0;max-width:1100px;
+  text-wrap:balance;background:linear-gradient(180deg,var(--ink) 55%,color-mix(in srgb,var(--ink) 72%,transparent));-webkit-background-clip:text;background-clip:text;color:transparent}
+h1 em{font:italic 400 1.1em/.9 "Instrument Serif",serif;letter-spacing:-.02em;padding-right:.04em;background:linear-gradient(180deg,var(--ice),var(--mint));-webkit-background-clip:text;background-clip:text;color:transparent}
+h1.v-b{font-size:clamp(44px,6.3vw,92px)}
+h1.v-c{font-size:clamp(40px,5.3vw,78px);line-height:1.02;max-width:900px}
+.hero.v-c{height:960px}
+.sub{max-width:700px;margin:22px auto 0;font-size:19px;line-height:1.55;color:var(--mute);text-wrap:balance}
+.sub b{color:var(--ink);font-weight:500}
+.ctas{display:flex;gap:14px;justify-content:center;margin-top:30px}
+.funlink{display:inline-flex;align-items:center;gap:10px;height:46px;margin-top:20px;padding:0 22px;border-radius:999px;font:500 14px "JetBrains Mono",monospace;letter-spacing:.02em;color:var(--ink);
+  border:1px solid rgba(var(--fun-rgb),.55);background:linear-gradient(180deg,rgba(var(--fun-rgb),.2),rgba(var(--fun-rgb),.07));box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 8px 26px rgba(var(--fun-rgb),.2);transition:background .2s,color .2s,box-shadow .2s,transform .15s}
+.funlink svg{color:var(--fun)}
+.funlink:hover{transform:translateY(-1px);color:#2a0614;background:linear-gradient(180deg,rgba(var(--fun-rgb),.96),rgba(var(--fun-rgb),.78));box-shadow:0 12px 34px rgba(var(--fun-rgb),.42)}
+.funlink:hover svg,.funlink:hover u{color:inherit}
+.funlink u{text-decoration:none;color:var(--fun);font-weight:700}
+.float{position:absolute;z-index:4;width:290px;padding:16px 18px;border-radius:20px;background:var(--card);border:1px solid var(--line2);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  box-shadow:0 20px 50px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.1);text-align:left}
+html[data-theme="light"] .float{box-shadow:0 20px 50px rgba(10,20,17,.1),inset 0 1px 0 #fff}
+.float.l{left:calc(50% - 660px);top:586px;transform:perspective(900px) rotateY(14deg) rotate(-3deg)}
+.float.r{left:calc(50% + 370px);top:586px;transform:perspective(900px) rotateY(-14deg) rotate(3deg)}
+.float .k{font:500 10.5px "JetBrains Mono",monospace;letter-spacing:.14em;color:var(--mint);display:flex;align-items:center;gap:8px}
+.float .k i{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px var(--mint)}
+.float .n{font:600 17px "Space Grotesk",sans-serif;margin-top:8px}
+.float .d{font-size:12px;color:var(--mute);line-height:1.35}
+.float .m{display:flex;align-items:baseline;gap:8px;margin-top:10px}
+.float .m b{font:500 28px "Space Grotesk",sans-serif;letter-spacing:-.02em}
+.float .m span{font:500 11px "JetBrains Mono",monospace;color:var(--mute)}
+
+/* proof band */
+.proof{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(var(--bg2),var(--bg))}
+.proof .wrap{display:grid;grid-template-columns:repeat(6,1fr)}
+.pc{padding:32px 22px;border-left:1px solid var(--line)}
+.pc:first-child{border-left:0;padding-left:0}
+.pc small{display:flex;align-items:center;gap:8px;font:500 11.5px "JetBrains Mono",monospace;letter-spacing:.15em;color:var(--mute);white-space:nowrap}
+.pc small i{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px var(--mint);animation:pl 1.8s infinite}
+.pc b{display:block;margin-top:10px;font:500 34px "Space Grotesk",sans-serif;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pc em{display:block;margin-top:2px;font-style:normal;font:400 14px/1.35 Inter,sans-serif;color:var(--mute);text-wrap:balance}
+.pc small i.soon{background:#ffc96b;box-shadow:0 0 8px #ffc96b}
+
+section.s{padding:132px 0 0;position:relative}
+.eyebrow{display:flex;align-items:center;gap:14px;font:500 12px "JetBrains Mono",monospace;letter-spacing:.2em;color:var(--mint);text-transform:uppercase}
+.eyebrow::after{content:"";height:1px;width:64px;background:linear-gradient(90deg,var(--mint),transparent);opacity:.6}
+h2{font:500 clamp(34px,4.6vw,62px)/1.04 "Space Grotesk",sans-serif;letter-spacing:-.035em;margin-top:18px;max-width:880px}
+h2 em{font:italic 400 1.1em/.9 "Instrument Serif",serif;color:var(--mint)}
+.lede{margin-top:20px;max-width:640px;font-size:18px;color:var(--mute);text-wrap:pretty}
+
+/* the three doors */
+.doors{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:64px;align-items:stretch}
+.door{position:relative;display:flex;flex-direction:column;border-radius:188px 188px 30px 30px;background:var(--card);border:1px solid var(--line2);overflow:hidden;
+  box-shadow:0 40px 80px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.1);transition:transform .35s cubic-bezier(.2,.8,.2,1),border-color .3s}
+html[data-theme="light"] .door{box-shadow:0 30px 70px rgba(10,20,17,.1),inset 0 1px 0 #fff}
+.door::before{content:"";position:absolute;left:0;right:0;top:0;height:330px;pointer-events:none;background:radial-gradient(240px 230px at 50% 0,rgba(var(--mint-rgb),.24),transparent 75%)}
+.door.fun::before{background:radial-gradient(240px 230px at 50% 0,rgba(var(--fun-rgb),.24),transparent 75%)}
+.door:hover{transform:translateY(-8px);border-color:rgba(var(--mint-rgb),.55)}
+.door.fun:hover{border-color:rgba(var(--fun-rgb),.55)}
+.door-pic{position:relative;height:226px;display:grid;place-items:end center;padding-bottom:6px}
+.pic{width:262px;height:auto;overflow:visible}
+.pic .dial line{stroke:var(--mint);stroke-opacity:.42;stroke-width:1.2}
+.pic .grid line{stroke:var(--line2);stroke-dasharray:2 5}
+.g-num{font:600 38px "Space Grotesk",sans-serif;fill:var(--ink);letter-spacing:-.02em}.g-num.sm{font-size:30px}
+.g-cap{font:500 8.5px "JetBrains Mono",monospace;letter-spacing:.16em;fill:var(--mute)}
+.door-body{padding:6px 32px 12px;flex:1}
+.kicker{font:500 11px "JetBrains Mono",monospace;letter-spacing:.2em;color:var(--mint)}
+.door.fun .kicker{color:var(--fun)}
+.door h3{font:600 31px/1.1 "Space Grotesk",sans-serif;letter-spacing:-.025em;margin-top:10px}
+.door p{margin-top:12px;font-size:15px;line-height:1.55;color:var(--mute)}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px;list-style:none}
+.chips li{font:500 11px "JetBrains Mono",monospace;letter-spacing:.03em;color:var(--mute);padding:6px 11px;border-radius:999px;border:1px solid var(--line2);background:rgba(255,255,255,.03)}
+.status{display:flex;align-items:center;gap:8px;margin-top:16px;font:500 11.5px "JetBrains Mono",monospace;color:var(--mute)}
+.status i{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px var(--mint)}
+.status i.soon{background:#ffc96b;box-shadow:0 0 8px #ffc96b}
+.door.fun .status i{background:var(--fun);box-shadow:0 0 8px var(--fun)}
+.door-cta{padding:0 26px 28px}
+.door-cta .nx-btn{width:100%;height:52px;font-size:13px}
+.hint{margin-top:26px;text-align:center;font:400 13.5px Inter,sans-serif;color:var(--faint)}
+
+/* arc */
+.two{display:grid;grid-template-columns:1fr 1.15fr;gap:72px;align-items:center}
+.ribbon{position:relative;height:196px;border-radius:26px;border:1px solid var(--line2);background:var(--card);overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.ribbon::before,.ribbon::after{content:"";position:absolute;top:0;bottom:0;width:90px;z-index:2;pointer-events:none}
+.ribbon::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}.ribbon::after{right:0;background:linear-gradient(270deg,var(--bg),transparent)}
+.rtrack{position:absolute;top:36px;right:22px;display:flex;gap:12px}
+.blk{width:132px;height:96px;flex:none;border-radius:16px;border:1px solid var(--line2);background:rgba(255,255,255,.03);padding:14px 14px 0;position:relative}
+.blk b{display:block;font:500 12px "JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+.blk i{display:flex;align-items:center;gap:6px;margin-top:20px;font:500 10px "JetBrains Mono",monospace;font-style:normal;letter-spacing:.14em;color:var(--mint)}
+.blk i::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px var(--mint)}
+.blk.pend{border-style:dashed;border-color:rgba(var(--mint-rgb),.5)}.blk.pend i{color:var(--mute)}.blk.pend i::before{background:var(--mute);box-shadow:none;animation:pl 1s infinite}
+.rcap{position:absolute;left:24px;right:24px;bottom:18px;display:flex;justify-content:space-between;font:500 10.5px "JetBrains Mono",monospace;letter-spacing:.14em;color:var(--faint);z-index:3}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);margin-top:64px;border-top:1px solid var(--line)}
+.kpi{padding:34px 0 0}.kpi+.kpi{padding-left:34px;border-left:1px solid var(--line)}
+.kpi b{display:block;font:400 clamp(44px,5.4vw,78px)/1 "Space Grotesk",sans-serif;letter-spacing:-.05em;background:linear-gradient(180deg,var(--ink),color-mix(in srgb,var(--ink) 40%,transparent));-webkit-background-clip:text;background-clip:text;color:transparent}
+.kpi span{display:block;margin-top:14px;font:500 11.5px "JetBrains Mono",monospace;letter-spacing:.16em;color:var(--mute)}
+
+/* who does what */
+.flow{display:grid;grid-template-columns:1fr 64px 1fr 64px 1fr;align-items:stretch;margin-top:60px}
+.flow .link{align-self:center}
+.node{padding:26px 26px 28px;border-radius:24px;border:1px solid var(--line2);background:var(--card);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.node.mid{border-color:rgba(var(--mint-rgb),.5);box-shadow:0 0 70px rgba(var(--mint-rgb),.18),inset 0 1px 0 rgba(255,255,255,.1)}
+.node small{font:500 10.5px "JetBrains Mono",monospace;letter-spacing:.18em;color:var(--mint)}
+.node b{display:block;margin-top:8px;font:600 22px "Space Grotesk",sans-serif;letter-spacing:-.02em}
+.node p{margin-top:6px;font-size:14px;color:var(--mute);line-height:1.5}
+.link{height:2px;background:linear-gradient(90deg,transparent,var(--mint),transparent);background-size:200% 100%;animation:flowx 2.4s linear infinite;opacity:.8}
+@keyframes flowx{to{background-position:-200% 0}}
+.iface{margin-top:16px;display:flex;align-items:center;justify-content:center;gap:14px;height:64px;border-radius:20px;border:1px dashed rgba(var(--mint-rgb),.5);background:rgba(var(--mint-rgb),.06);font:500 13px "JetBrains Mono",monospace;letter-spacing:.06em;color:var(--mute)}
+.iface .nx-crest{width:22px;height:22px;color:var(--mint);filter:none}.iface b{color:var(--ink);font-weight:700}
+.nevers{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:30px}
+.never{padding:28px;border-radius:22px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.04),transparent)}
+.never svg{color:var(--mint)}
+.never b{display:block;margin-top:18px;font:600 20px "Space Grotesk",sans-serif;letter-spacing:-.015em}
+.never p{margin-top:8px;font-size:14.5px;color:var(--mute);line-height:1.55}
+
+/* integrations and the issuer band */
+.integ{margin-top:112px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:40px 0;text-align:center}
+.integ small{font:500 11px "JetBrains Mono",monospace;letter-spacing:.2em;color:var(--faint)}
+.names{display:flex;justify-content:center;flex-wrap:wrap;gap:14px 56px;margin-top:22px;font:600 22px "Space Grotesk",sans-serif;letter-spacing:-.01em;color:color-mix(in srgb,var(--ink) 62%,transparent)}
+.integ p{margin-top:20px;font:400 12px Inter,sans-serif;color:var(--faint)}
+.band{position:relative;overflow:hidden;margin-top:110px;border-radius:34px;border:1px solid var(--line2);padding:68px 64px;background:var(--card);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+.band::after{content:"";position:absolute;right:-90px;bottom:-250px;width:620px;height:620px;border-radius:50%;border:1px solid rgba(var(--mint-rgb),.35);box-shadow:0 0 0 38px rgba(var(--mint-rgb),.05),0 0 0 76px rgba(var(--mint-rgb),.035),inset 0 0 90px rgba(var(--mint-rgb),.14)}
+.band h2{font-size:clamp(32px,4vw,52px);max-width:640px;position:relative;z-index:1}
+.band p{position:relative;z-index:1;margin-top:16px;max-width:560px;color:var(--mute);font-size:17px}
+.band .row{position:relative;z-index:1;display:flex;gap:12px;margin-top:30px}
+
+/* footer */
+footer{margin-top:120px;border-top:1px solid var(--line);padding:64px 0 44px}
+.fgrid{display:grid;grid-template-columns:1.4fr repeat(5,1fr);gap:32px}
+.fgrid h4{font:500 11px "JetBrains Mono",monospace;letter-spacing:.2em;color:var(--faint);margin-bottom:16px}
+.fgrid a{display:block;padding:5px 0;font-size:14.5px;color:var(--mute);transition:color .2s}.fgrid a:hover{color:var(--ink)}
+.fbrand p{margin-top:16px;max-width:290px;font-size:14px;color:var(--mute)}
+.legal{margin-top:54px;padding-top:26px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint);line-height:1.6;max-width:880px}
+.legal span{display:block;margin-top:10px}
+
+.ticks{list-style:none;margin-top:28px;display:grid;gap:13px}
+.ticks li{display:flex;gap:12px;align-items:center;font:500 13px "JetBrains Mono",monospace;color:var(--mute);letter-spacing:.02em}
+.ticks li::before{content:"";flex:none;width:20px;height:20px;border-radius:50%;border:1px solid rgba(var(--mint-rgb),.5);
+  background:rgba(var(--mint-rgb),.12) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233ee8a3' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12.5l4.5 4.5L19 7'/></svg>") center/12px no-repeat}
+/* phones */
+@media (max-width:1180px){
+  .proof .wrap{grid-template-columns:repeat(3,1fr)}.pc{border-top:1px solid var(--line)}.pc:nth-child(-n+3){border-top:0}.pc:nth-child(3n+1){border-left:0;padding-left:0}}
+@media (max-width:640px){.proof .wrap{grid-template-columns:repeat(2,minmax(0,1fr))}.pc:nth-child(-n+3){border-top:1px solid var(--line)}.pc:nth-child(-n+2){border-top:0}
+  .pc:nth-child(3n+1){border-left:1px solid var(--line);padding-left:22px}.pc:nth-child(odd){border-left:0;padding-left:0}.pc{padding:24px 16px}.pc small{letter-spacing:.1em;font-size:10.5px}}
+@media (max-width:980px){
+  .float{display:none}
+  .doors{grid-template-columns:1fr;max-width:420px;margin-left:auto;margin-right:auto}
+  .two{grid-template-columns:1fr;gap:40px}
+  .flow{grid-template-columns:1fr;gap:10px}.link{height:34px;width:2px;margin:0 auto;background:linear-gradient(180deg,transparent,var(--mint),transparent)}
+  .nevers{grid-template-columns:1fr}
+  .kpis{grid-template-columns:1fr}.kpi+.kpi{padding-left:0;border-left:0;border-top:1px solid var(--line);margin-top:26px}
+  .band{padding:40px 28px}.band::after{opacity:.5}
+  .fgrid{grid-template-columns:1fr 1fr}.fbrand{grid-column:1/-1}
+}
+@media (max-width:640px){
+  .hero{height:830px}
+  .hero-copy.wrap{padding-top:104px}
+  h1.v-b,h1.v-c{font-size:clamp(33px,9.4vw,46px)}.hero.v-c{height:900px}
+  h1{font-size:clamp(33px,9.4vw,46px)}
+  .arch{transform:translateX(-50%) scale(.7);transform-origin:50% 100%}
+  .sub{font-size:16.5px;padding:0 4px}
+  .ctas{flex-direction:column;align-items:stretch;padding:0 6px}
+  .nx-btn.big{width:100%}
+  .wrap{padding:0 20px}
+  section.s{padding-top:96px}
+  .pc b{font-size:27px}
+  .funlink{font-size:13px;padding:0 16px;height:44px}
+  .band .row{flex-direction:column}
+}
+@media (max-width:360px){.pc b{font-size:20px}.pc small{letter-spacing:.06em}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
-<body>
-<header>
-  <div class="wrap bar">
-    <a class="brand" href="/" aria-label="A NEW ONE, home"><img src="brand/logo.png" alt=""><span>A NEW ONE</span></a>
-    <nav>
-      <a class="pill fun" href="earn/" title="Earn and Borrow: USDC vaults and loans on Morpho">DeFi</a>
-      <a class="pill hide-sm" href="assets/stocks/" title="Tokenized stocks, ETFs and funds on Arc">RWA</a>
-      <a class="pill fun" href="fun/" title="The memecoin launchpad: bonding curves in USDC">AnewOne.Fun →</a>
-      <a class="pill hide-sm" href="#how">How it works</a>
-      <a class="pill hide-sm" href="docs.html">Docs</a>
-      <button class="pill menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-      </button>
-    </nav>
-    <div class="menu" id="menu" hidden>
-      <a class="pill" href="assets/stocks/">RWA</a>
-      <a class="pill" href="#how">How it works</a>
-      <a class="pill" href="docs.html">Docs</a>
+<body id="top">
+
+<header class="nx-nav" id="nxNav"><div class="nx-nav-in">
+  <a class="nx-brand" href="#top" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
+  <nav class="nx-links" aria-label="Main"><a href="#ask">Ask</a><a href="docs.html">Docs</a><a href="about.html">About</a><a href="#trust">Trust</a><a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">GitHub</a></nav>
+  <div class="nx-actions">
+    <button type="button" class="nx-icon th" data-nx-theme aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
+    <a class="nx-btn" href="earn/" target="_blank" rel="noopener">DeFi <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+    <a class="nx-btn" href="assets/stocks/" target="_blank" rel="noopener">RWA <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+    <a class="nx-btn fun sep" href="fun/" target="_blank" rel="noopener">AnewOne.Fun <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+    <button type="button" class="nx-icon nx-burger" id="nxBurger" aria-label="Menu" aria-expanded="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </div>
+  <div class="nx-panel" id="nxPanel">
+    <a href="docs.html">Docs</a><a href="about.html">About</a><a href="#trust">Trust</a><a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">GitHub</a>
+    <button class="pbtn" data-nx-theme type="button">Light / dark</button>
+    <a class="nx-btn fun" href="fun/" target="_blank" rel="noopener">AnewOne.Fun <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  </div>
+</div></header>
+
+<section class="hero v-c">
+  <svg class="stars" viewBox="0 0 1440 700" preserveAspectRatio="xMidYMin slice" aria-hidden="true"><circle cx="427.4" cy="110.8" r="1.22" style="--o:0.42;animation-delay:3.3s"/><circle cx="830.4" cy="544.4" r="0.56" style="--o:0.77;animation-delay:4.9s"/><circle cx="554.0" cy="73.5" r="0.48" style="--o:0.77;animation-delay:3.0s"/><circle cx="757.6" cy="166.2" r="0.95" style="--o:0.69;animation-delay:0.5s"/><circle cx="927.5" cy="77.8" r="0.89" style="--o:0.62;animation-delay:5.9s"/><circle cx="616.6" cy="276.1" r="0.79" style="--o:0.21;animation-delay:4.4s"/><circle cx="604.0" cy="478.2" r="0.73" style="--o:0.57;animation-delay:2.1s"/><circle cx="1213.1" cy="116.2" r="0.53" style="--o:0.62;animation-delay:3.7s"/><circle cx="180.7" cy="218.7" r="0.82" style="--o:0.84;animation-delay:5.1s"/><circle cx="907.0" cy="242.7" r="1.41" style="--o:0.59;animation-delay:2.6s"/><circle cx="443.3" cy="306.6" r="0.41" style="--o:0.80;animation-delay:1.8s"/><circle cx="587.7" cy="102.1" r="0.49" style="--o:0.70;animation-delay:3.3s"/><circle cx="740.3" cy="95.0" r="1.02" style="--o:0.62;animation-delay:5.3s"/><circle cx="1384.4" cy="362.2" r="1.06" style="--o:0.58;animation-delay:2.9s"/><circle cx="136.0" cy="399.5" r="1.12" style="--o:0.88;animation-delay:4.3s"/><circle cx="194.5" cy="107.3" r="1.11" style="--o:0.86;animation-delay:2.1s"/><circle cx="1332.7" cy="222.8" r="1.24" style="--o:0.64;animation-delay:0.4s"/><circle cx="412.8" cy="408.2" r="0.94" style="--o:0.62;animation-delay:1.4s"/><circle cx="1034.1" cy="189.0" r="0.50" style="--o:0.57;animation-delay:2.3s"/><circle cx="260.7" cy="521.8" r="1.43" style="--o:0.71;animation-delay:0.0s"/><circle cx="623.5" cy="548.2" r="1.03" style="--o:0.67;animation-delay:3.8s"/><circle cx="1.2" cy="294.9" r="0.94" style="--o:0.29;animation-delay:4.8s"/><circle cx="91.7" cy="89.0" r="1.50" style="--o:0.61;animation-delay:4.2s"/><circle cx="1202.1" cy="602.8" r="1.48" style="--o:0.22;animation-delay:1.0s"/><circle cx="858.4" cy="233.4" r="0.86" style="--o:0.55;animation-delay:0.3s"/><circle cx="87.7" cy="273.9" r="0.70" style="--o:0.47;animation-delay:4.4s"/><circle cx="595.9" cy="201.5" r="1.05" style="--o:0.44;animation-delay:5.9s"/><circle cx="427.5" cy="263.5" r="0.67" style="--o:0.66;animation-delay:1.9s"/><circle cx="809.9" cy="393.7" r="0.40" style="--o:0.27;animation-delay:1.0s"/><circle cx="1183.7" cy="106.6" r="1.30" style="--o:0.32;animation-delay:3.8s"/><circle cx="1188.8" cy="462.8" r="1.29" style="--o:0.25;animation-delay:0.5s"/><circle cx="1071.5" cy="140.1" r="0.52" style="--o:0.42;animation-delay:0.6s"/><circle cx="1272.2" cy="390.5" r="1.19" style="--o:0.58;animation-delay:4.5s"/><circle cx="1017.6" cy="227.0" r="1.24" style="--o:0.34;animation-delay:1.2s"/><circle cx="199.6" cy="381.0" r="0.41" style="--o:0.57;animation-delay:5.8s"/><circle cx="1246.7" cy="310.0" r="1.36" style="--o:0.22;animation-delay:3.2s"/><circle cx="1106.4" cy="157.5" r="1.48" style="--o:0.28;animation-delay:5.3s"/><circle cx="680.2" cy="609.6" r="1.49" style="--o:0.45;animation-delay:2.8s"/><circle cx="627.4" cy="93.5" r="0.61" style="--o:0.25;animation-delay:0.5s"/><circle cx="1349.3" cy="330.0" r="1.03" style="--o:0.34;animation-delay:5.6s"/><circle cx="111.3" cy="536.9" r="0.70" style="--o:0.22;animation-delay:2.7s"/><circle cx="549.4" cy="108.3" r="0.81" style="--o:0.27;animation-delay:5.4s"/><circle cx="833.7" cy="272.9" r="1.49" style="--o:0.42;animation-delay:3.4s"/><circle cx="782.8" cy="160.4" r="0.95" style="--o:0.84;animation-delay:1.8s"/><circle cx="683.4" cy="240.4" r="0.54" style="--o:0.35;animation-delay:3.8s"/><circle cx="30.1" cy="91.3" r="1.22" style="--o:0.29;animation-delay:1.3s"/><circle cx="622.0" cy="495.9" r="1.06" style="--o:0.60;animation-delay:4.1s"/><circle cx="544.1" cy="476.9" r="1.41" style="--o:0.41;animation-delay:4.3s"/><circle cx="122.1" cy="104.9" r="0.98" style="--o:0.66;animation-delay:0.6s"/><circle cx="1325.1" cy="597.3" r="0.55" style="--o:0.81;animation-delay:2.3s"/><circle cx="1024.9" cy="343.4" r="1.26" style="--o:0.86;animation-delay:2.7s"/><circle cx="323.7" cy="192.0" r="1.19" style="--o:0.67;animation-delay:0.3s"/><circle cx="1033.9" cy="101.7" r="0.87" style="--o:0.71;animation-delay:2.6s"/><circle cx="1366.8" cy="464.4" r="0.53" style="--o:0.25;animation-delay:1.0s"/><circle cx="23.9" cy="622.8" r="0.68" style="--o:0.64;animation-delay:1.8s"/><circle cx="465.2" cy="445.8" r="1.23" style="--o:0.61;animation-delay:5.8s"/><circle cx="795.3" cy="515.2" r="1.00" style="--o:0.45;animation-delay:1.7s"/><circle cx="1296.0" cy="93.8" r="1.00" style="--o:0.49;animation-delay:4.0s"/><circle cx="761.1" cy="128.7" r="1.14" style="--o:0.38;animation-delay:1.8s"/><circle cx="141.4" cy="577.2" r="0.84" style="--o:0.25;animation-delay:3.4s"/><circle cx="645.9" cy="133.2" r="0.47" style="--o:0.22;animation-delay:2.3s"/><circle cx="1314.8" cy="247.0" r="1.40" style="--o:0.42;animation-delay:2.1s"/><circle cx="877.1" cy="70.6" r="0.81" style="--o:0.57;animation-delay:4.8s"/><circle cx="1019.7" cy="382.2" r="1.45" style="--o:0.62;animation-delay:1.0s"/><circle cx="128.3" cy="104.4" r="0.64" style="--o:0.78;animation-delay:0.9s"/><circle cx="188.3" cy="83.3" r="1.32" style="--o:0.70;animation-delay:0.1s"/><circle cx="533.3" cy="71.3" r="0.65" style="--o:0.74;animation-delay:2.8s"/><circle cx="7.2" cy="77.6" r="0.43" style="--o:0.44;animation-delay:3.0s"/><circle cx="23.3" cy="561.7" r="1.40" style="--o:0.35;animation-delay:2.1s"/><circle cx="162.6" cy="114.5" r="0.44" style="--o:0.47;animation-delay:4.5s"/><circle cx="1112.5" cy="233.6" r="1.34" style="--o:0.51;animation-delay:1.9s"/><circle cx="893.3" cy="400.5" r="1.13" style="--o:0.46;animation-delay:4.2s"/><circle cx="667.6" cy="239.3" r="0.86" style="--o:0.86;animation-delay:1.8s"/><circle cx="914.5" cy="83.2" r="1.10" style="--o:0.27;animation-delay:3.8s"/><circle cx="319.8" cy="514.0" r="1.20" style="--o:0.32;animation-delay:5.8s"/><circle cx="594.7" cy="211.9" r="0.63" style="--o:0.19;animation-delay:5.3s"/><circle cx="191.3" cy="306.6" r="1.34" style="--o:0.80;animation-delay:0.9s"/><circle cx="1304.8" cy="236.1" r="1.01" style="--o:0.43;animation-delay:2.1s"/><circle cx="138.0" cy="74.1" r="0.69" style="--o:0.22;animation-delay:1.8s"/><circle cx="879.3" cy="275.7" r="0.67" style="--o:0.55;animation-delay:3.8s"/><circle cx="1093.3" cy="613.0" r="0.61" style="--o:0.49;animation-delay:0.7s"/><circle cx="1007.9" cy="188.4" r="0.57" style="--o:0.63;animation-delay:1.6s"/><circle cx="233.2" cy="404.6" r="0.62" style="--o:0.35;animation-delay:1.4s"/><circle cx="17.6" cy="90.9" r="0.46" style="--o:0.41;animation-delay:3.1s"/><circle cx="469.0" cy="644.8" r="1.19" style="--o:0.68;animation-delay:1.7s"/><circle cx="963.7" cy="248.0" r="1.38" style="--o:0.45;animation-delay:4.6s"/><circle cx="250.2" cy="152.2" r="1.43" style="--o:0.38;animation-delay:0.4s"/><circle cx="1244.5" cy="562.2" r="0.68" style="--o:0.18;animation-delay:0.9s"/><circle cx="704.1" cy="76.6" r="1.14" style="--o:0.67;animation-delay:4.0s"/><circle cx="756.6" cy="137.6" r="1.42" style="--o:0.86;animation-delay:3.9s"/></svg>
+  <div class="halo"></div>
+  <svg class="arch" viewBox="0 0 2600 340" aria-hidden="true">
+    <defs>
+      <radialGradient id="stoneG" cx="1300" cy="1600" r="1500" gradientUnits="userSpaceOnUse">
+        <stop offset="0.940" stop-color="var(--mint)" stop-opacity=".02"/><stop offset=".975" stop-color="var(--mint)" stop-opacity=".30"/><stop offset="1" stop-color="var(--ice)" stop-opacity=".9"/>
+      </radialGradient>
+      <linearGradient id="edgeG" gradientUnits="userSpaceOnUse" x1="330" x2="2270">
+        <stop offset="0" stop-color="var(--mint)" stop-opacity="0"/><stop offset=".3" stop-color="var(--mint)" stop-opacity=".7"/><stop offset=".5" stop-color="var(--ice)"/><stop offset=".7" stop-color="var(--mint)" stop-opacity=".7"/><stop offset="1" stop-color="var(--mint)" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="keyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--key-a)"/><stop offset="1" stop-color="var(--key-b)"/></linearGradient>
+      <filter id="b8" x="-5%" y="-50%" width="110%" height="200%"><feGaussianBlur stdDeviation="8"/></filter>
+      <filter id="b36" x="-5%" y="-100%" width="110%" height="300%"><feGaussianBlur stdDeviation="36"/></filter>
+      <filter id="bk" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="14"/></filter>
+    </defs>
+    <path d="M334.5 449.4A1502 1502 0 0 1 2265.5 449.4" fill="none" stroke="var(--mint)" stroke-width="60" opacity="calc(.5*var(--glow))" style="opacity:calc(.42*var(--glow))" filter="url(#b36)"/>
+    <path d="M334.5 449.4A1502 1502 0 0 1 2265.5 449.4" fill="none" stroke="url(#edgeG)" stroke-width="14" style="opacity:calc(.7*var(--glow))" filter="url(#b8)"/>
+    <path d="M1344.5 100.7A1500 1500 0 0 1 1402.0 103.5L1395.9 193.3A1410 1410 0 0 0 1341.8 190.6Z" class="stone" style="--o:0.99"/><path d="M1407.2 103.8A1500 1500 0 0 1 1464.6 109.1L1454.7 198.5A1410 1410 0 0 0 1400.8 193.6Z" class="stone" style="--o:0.97"/><path d="M1469.8 109.6A1500 1500 0 0 1 1526.9 117.3L1513.3 206.2A1410 1410 0 0 0 1459.6 199.1Z" class="stone" style="--o:0.94"/><path d="M1532.1 118.1A1500 1500 0 0 1 1588.8 128.1L1571.5 216.4A1410 1410 0 0 0 1518.1 207.0Z" class="stone" style="--o:0.90"/><path d="M1593.9 129.1A1500 1500 0 0 1 1650.2 141.4L1629.2 229.0A1410 1410 0 0 0 1576.3 217.3Z" class="stone" style="--o:0.87"/><path d="M1655.3 142.7A1500 1500 0 0 1 1710.9 157.4L1686.3 243.9A1410 1410 0 0 0 1633.9 230.1Z" class="stone" style="--o:0.78"/><path d="M1716.0 158.8A1500 1500 0 0 1 1771.0 175.9L1742.7 261.3A1410 1410 0 0 0 1691.0 245.3Z" class="stone" style="--o:0.68"/><path d="M1776.0 177.5A1500 1500 0 0 1 1830.2 196.8L1798.4 281.0A1410 1410 0 0 0 1747.4 262.9Z" class="stone" style="--o:0.66"/><path d="M1835.1 198.7A1500 1500 0 0 1 1888.5 220.3L1853.2 303.1A1410 1410 0 0 0 1803.0 282.8Z" class="stone" style="--o:0.61"/><path d="M1893.3 222.3A1500 1500 0 0 1 1945.8 246.1L1907.0 327.4A1410 1410 0 0 0 1857.7 305.0Z" class="stone" style="--o:0.54"/><path d="M1950.5 248.4A1500 1500 0 0 1 2001.9 274.4L1959.8 353.9A1410 1410 0 0 0 1911.5 329.5Z" class="stone" style="--o:0.50"/><path d="M2006.5 276.8A1500 1500 0 0 1 2056.8 304.9L2011.4 382.6A1410 1410 0 0 0 1964.1 356.2Z" class="stone" style="--o:0.49"/><path d="M2061.3 307.6A1500 1500 0 0 1 2110.4 337.7L2061.7 413.5A1410 1410 0 0 0 2015.6 385.1Z" class="stone" style="--o:0.42"/><path d="M2114.8 340.6A1500 1500 0 0 1 2162.5 372.8L2110.8 446.4A1410 1410 0 0 0 2065.9 416.1Z" class="stone" style="--o:0.41"/><path d="M2166.8 375.8A1500 1500 0 0 1 2213.1 410.0L2158.4 481.4A1410 1410 0 0 0 2114.8 449.2Z" class="stone" style="--o:0.39"/><path d="M2217.3 413.2A1500 1500 0 0 1 2262.2 449.3L2204.4 518.3A1410 1410 0 0 0 2162.3 484.4Z" class="stone" style="--o:0.32"/><path d="M2266.2 452.6A1500 1500 0 0 1 2309.5 490.6L2248.9 557.1A1410 1410 0 0 0 2208.2 521.5Z" class="stone" style="--o:0.30"/><path d="M1198.0 103.5A1500 1500 0 0 1 1255.5 100.7L1258.2 190.6A1410 1410 0 0 0 1204.1 193.3Z" class="stone" style="--o:0.97"/><path d="M1135.4 109.1A1500 1500 0 0 1 1192.8 103.8L1199.2 193.6A1410 1410 0 0 0 1145.3 198.5Z" class="stone" style="--o:0.96"/><path d="M1073.1 117.3A1500 1500 0 0 1 1130.2 109.6L1140.4 199.1A1410 1410 0 0 0 1086.7 206.2Z" class="stone" style="--o:0.92"/><path d="M1011.2 128.1A1500 1500 0 0 1 1067.9 118.1L1081.9 207.0A1410 1410 0 0 0 1028.5 216.4Z" class="stone" style="--o:0.90"/><path d="M949.8 141.4A1500 1500 0 0 1 1006.1 129.1L1023.7 217.3A1410 1410 0 0 0 970.8 229.0Z" class="stone" style="--o:0.80"/><path d="M889.1 157.4A1500 1500 0 0 1 944.7 142.7L966.1 230.1A1410 1410 0 0 0 913.7 243.9Z" class="stone" style="--o:0.79"/><path d="M829.0 175.9A1500 1500 0 0 1 884.0 158.8L909.0 245.3A1410 1410 0 0 0 857.3 261.3Z" class="stone" style="--o:0.73"/><path d="M769.8 196.8A1500 1500 0 0 1 824.0 177.5L852.6 262.9A1410 1410 0 0 0 801.6 281.0Z" class="stone" style="--o:0.65"/><path d="M711.5 220.3A1500 1500 0 0 1 764.9 198.7L797.0 282.8A1410 1410 0 0 0 746.8 303.1Z" class="stone" style="--o:0.64"/><path d="M654.2 246.1A1500 1500 0 0 1 706.7 222.3L742.3 305.0A1410 1410 0 0 0 693.0 327.4Z" class="stone" style="--o:0.58"/><path d="M598.1 274.4A1500 1500 0 0 1 649.5 248.4L688.5 329.5A1410 1410 0 0 0 640.2 353.9Z" class="stone" style="--o:0.53"/><path d="M543.2 304.9A1500 1500 0 0 1 593.5 276.8L635.9 356.2A1410 1410 0 0 0 588.6 382.6Z" class="stone" style="--o:0.44"/><path d="M489.6 337.7A1500 1500 0 0 1 538.7 307.6L584.4 385.1A1410 1410 0 0 0 538.3 413.5Z" class="stone" style="--o:0.44"/><path d="M437.5 372.8A1500 1500 0 0 1 485.2 340.6L534.1 416.1A1410 1410 0 0 0 489.2 446.4Z" class="stone" style="--o:0.37"/><path d="M386.9 410.0A1500 1500 0 0 1 433.2 375.8L485.2 449.2A1410 1410 0 0 0 441.6 481.4Z" class="stone" style="--o:0.33"/><path d="M337.8 449.3A1500 1500 0 0 1 382.7 413.2L437.7 484.4A1410 1410 0 0 0 395.6 518.3Z" class="stone" style="--o:0.38"/><path d="M290.5 490.6A1500 1500 0 0 1 333.8 452.6L391.8 521.5A1410 1410 0 0 0 351.1 557.1Z" class="stone" style="--o:0.38"/>
+    <path d="M335.8 450.9A1500 1500 0 0 1 2264.2 450.9" fill="none" stroke="url(#edgeG)" stroke-width="1.8"/>
+    <path d="M393.7 519.9A1410 1410 0 0 1 2206.3 519.9" fill="none" stroke="url(#edgeG)" stroke-width="1" opacity=".5"/>
+    <g class="tick"><line x1="347.2" y1="423.4" x2="337.1" y2="411.0" stroke-opacity="0.00"/><line x1="359.6" y1="413.5" x2="355.2" y2="408.0" stroke-opacity="0.00"/><line x1="372.1" y1="403.7" x2="367.8" y2="398.2" stroke-opacity="0.01"/><line x1="384.6" y1="394.1" x2="380.4" y2="388.5" stroke-opacity="0.01"/><line x1="397.3" y1="384.5" x2="393.1" y2="378.9" stroke-opacity="0.01"/><line x1="410.1" y1="375.1" x2="400.7" y2="362.2" stroke-opacity="0.03"/><line x1="423.0" y1="365.9" x2="418.9" y2="360.2" stroke-opacity="0.02"/><line x1="435.9" y1="356.8" x2="431.9" y2="351.0" stroke-opacity="0.03"/><line x1="449.0" y1="347.8" x2="445.1" y2="342.0" stroke-opacity="0.03"/><line x1="462.2" y1="339.0" x2="458.3" y2="333.1" stroke-opacity="0.03"/><line x1="475.4" y1="330.3" x2="466.7" y2="316.8" stroke-opacity="0.07"/><line x1="488.8" y1="321.7" x2="485.0" y2="315.8" stroke-opacity="0.04"/><line x1="502.2" y1="313.3" x2="498.5" y2="307.3" stroke-opacity="0.05"/><line x1="515.7" y1="305.0" x2="512.1" y2="299.0" stroke-opacity="0.05"/><line x1="529.3" y1="296.8" x2="525.7" y2="290.8" stroke-opacity="0.06"/><line x1="543.0" y1="288.8" x2="535.0" y2="275.0" stroke-opacity="0.11"/><line x1="556.8" y1="281.0" x2="553.3" y2="274.9" stroke-opacity="0.07"/><line x1="570.6" y1="273.3" x2="567.3" y2="267.1" stroke-opacity="0.07"/><line x1="584.6" y1="265.7" x2="581.3" y2="259.5" stroke-opacity="0.08"/><line x1="598.6" y1="258.3" x2="595.3" y2="252.1" stroke-opacity="0.08"/><line x1="612.7" y1="251.0" x2="605.4" y2="236.8" stroke-opacity="0.15"/><line x1="626.8" y1="243.9" x2="623.7" y2="237.6" stroke-opacity="0.09"/><line x1="641.1" y1="236.9" x2="638.0" y2="230.6" stroke-opacity="0.10"/><line x1="655.4" y1="230.1" x2="652.4" y2="223.8" stroke-opacity="0.10"/><line x1="669.8" y1="223.4" x2="666.8" y2="217.1" stroke-opacity="0.11"/><line x1="684.2" y1="216.9" x2="677.7" y2="202.3" stroke-opacity="0.20"/><line x1="698.7" y1="210.5" x2="695.9" y2="204.1" stroke-opacity="0.12"/><line x1="713.3" y1="204.3" x2="710.6" y2="197.8" stroke-opacity="0.12"/><line x1="727.9" y1="198.2" x2="725.3" y2="191.8" stroke-opacity="0.13"/><line x1="742.7" y1="192.3" x2="740.1" y2="185.8" stroke-opacity="0.13"/><line x1="757.4" y1="186.6" x2="751.7" y2="171.6" stroke-opacity="0.25"/><line x1="772.3" y1="181.0" x2="769.8" y2="174.4" stroke-opacity="0.15"/><line x1="787.2" y1="175.5" x2="784.8" y2="168.9" stroke-opacity="0.15"/><line x1="802.1" y1="170.2" x2="799.8" y2="163.6" stroke-opacity="0.16"/><line x1="817.1" y1="165.1" x2="814.9" y2="158.4" stroke-opacity="0.16"/><line x1="832.1" y1="160.1" x2="827.2" y2="144.9" stroke-opacity="0.29"/><line x1="847.3" y1="155.3" x2="845.2" y2="148.6" stroke-opacity="0.17"/><line x1="862.4" y1="150.6" x2="860.4" y2="143.9" stroke-opacity="0.18"/><line x1="877.6" y1="146.1" x2="875.7" y2="139.4" stroke-opacity="0.18"/><line x1="892.9" y1="141.8" x2="891.0" y2="135.0" stroke-opacity="0.19"/><line x1="908.1" y1="137.6" x2="904.0" y2="122.1" stroke-opacity="0.34"/><line x1="923.5" y1="133.6" x2="921.7" y2="126.8" stroke-opacity="0.20"/><line x1="938.9" y1="129.7" x2="937.2" y2="122.9" stroke-opacity="0.21"/><line x1="954.3" y1="126.0" x2="952.7" y2="119.2" stroke-opacity="0.21"/><line x1="969.7" y1="122.5" x2="968.2" y2="115.6" stroke-opacity="0.22"/><line x1="985.2" y1="119.1" x2="981.9" y2="103.4" stroke-opacity="0.39"/><line x1="1000.7" y1="115.9" x2="999.4" y2="109.0" stroke-opacity="0.23"/><line x1="1016.3" y1="112.8" x2="1015.0" y2="105.9" stroke-opacity="0.23"/><line x1="1031.9" y1="109.9" x2="1030.7" y2="103.0" stroke-opacity="0.24"/><line x1="1047.5" y1="107.2" x2="1046.3" y2="100.3" stroke-opacity="0.25"/><line x1="1063.2" y1="104.6" x2="1060.7" y2="88.8" stroke-opacity="0.44"/><line x1="1078.8" y1="102.2" x2="1077.8" y2="95.3" stroke-opacity="0.26"/><line x1="1094.5" y1="100.0" x2="1093.6" y2="93.1" stroke-opacity="0.26"/><line x1="1110.2" y1="97.9" x2="1109.4" y2="91.0" stroke-opacity="0.27"/><line x1="1126.0" y1="96.0" x2="1125.2" y2="89.1" stroke-opacity="0.27"/><line x1="1141.7" y1="94.3" x2="1140.1" y2="78.4" stroke-opacity="0.50"/><line x1="1157.5" y1="92.7" x2="1156.9" y2="85.8" stroke-opacity="0.29"/><line x1="1173.3" y1="91.3" x2="1172.7" y2="84.3" stroke-opacity="0.29"/><line x1="1189.1" y1="90.1" x2="1188.6" y2="83.1" stroke-opacity="0.30"/><line x1="1204.9" y1="89.0" x2="1204.5" y2="82.0" stroke-opacity="0.30"/><line x1="1220.8" y1="88.1" x2="1219.9" y2="72.1" stroke-opacity="0.55"/><line x1="1236.6" y1="87.3" x2="1236.3" y2="80.3" stroke-opacity="0.32"/><line x1="1252.4" y1="86.7" x2="1252.2" y2="79.8" stroke-opacity="0.32"/><line x1="1268.3" y1="86.3" x2="1268.1" y2="79.3" stroke-opacity="0.33"/><line x1="1284.1" y1="86.1" x2="1284.1" y2="79.1" stroke-opacity="0.33"/><line x1="1300.0" y1="86.0" x2="1300.0" y2="70.0" stroke-opacity="0.60"/><line x1="1315.9" y1="86.1" x2="1315.9" y2="79.1" stroke-opacity="0.33"/><line x1="1331.7" y1="86.3" x2="1331.9" y2="79.3" stroke-opacity="0.33"/><line x1="1347.6" y1="86.7" x2="1347.8" y2="79.8" stroke-opacity="0.32"/><line x1="1363.4" y1="87.3" x2="1363.7" y2="80.3" stroke-opacity="0.32"/><line x1="1379.2" y1="88.1" x2="1380.1" y2="72.1" stroke-opacity="0.55"/><line x1="1395.1" y1="89.0" x2="1395.5" y2="82.0" stroke-opacity="0.30"/><line x1="1410.9" y1="90.1" x2="1411.4" y2="83.1" stroke-opacity="0.30"/><line x1="1426.7" y1="91.3" x2="1427.3" y2="84.3" stroke-opacity="0.29"/><line x1="1442.5" y1="92.7" x2="1443.1" y2="85.8" stroke-opacity="0.29"/><line x1="1458.3" y1="94.3" x2="1459.9" y2="78.4" stroke-opacity="0.50"/><line x1="1474.0" y1="96.0" x2="1474.8" y2="89.1" stroke-opacity="0.27"/><line x1="1489.8" y1="97.9" x2="1490.6" y2="91.0" stroke-opacity="0.27"/><line x1="1505.5" y1="100.0" x2="1506.4" y2="93.1" stroke-opacity="0.26"/><line x1="1521.2" y1="102.2" x2="1522.2" y2="95.3" stroke-opacity="0.26"/><line x1="1536.8" y1="104.6" x2="1539.3" y2="88.8" stroke-opacity="0.44"/><line x1="1552.5" y1="107.2" x2="1553.7" y2="100.3" stroke-opacity="0.25"/><line x1="1568.1" y1="109.9" x2="1569.3" y2="103.0" stroke-opacity="0.24"/><line x1="1583.7" y1="112.8" x2="1585.0" y2="105.9" stroke-opacity="0.23"/><line x1="1599.3" y1="115.9" x2="1600.6" y2="109.0" stroke-opacity="0.23"/><line x1="1614.8" y1="119.1" x2="1618.1" y2="103.4" stroke-opacity="0.39"/><line x1="1630.3" y1="122.5" x2="1631.8" y2="115.6" stroke-opacity="0.22"/><line x1="1645.7" y1="126.0" x2="1647.3" y2="119.2" stroke-opacity="0.21"/><line x1="1661.1" y1="129.7" x2="1662.8" y2="122.9" stroke-opacity="0.21"/><line x1="1676.5" y1="133.6" x2="1678.3" y2="126.8" stroke-opacity="0.20"/><line x1="1691.9" y1="137.6" x2="1696.0" y2="122.1" stroke-opacity="0.34"/><line x1="1707.1" y1="141.8" x2="1709.0" y2="135.0" stroke-opacity="0.19"/><line x1="1722.4" y1="146.1" x2="1724.3" y2="139.4" stroke-opacity="0.18"/><line x1="1737.6" y1="150.6" x2="1739.6" y2="143.9" stroke-opacity="0.18"/><line x1="1752.7" y1="155.3" x2="1754.8" y2="148.6" stroke-opacity="0.17"/><line x1="1767.9" y1="160.1" x2="1772.8" y2="144.9" stroke-opacity="0.29"/><line x1="1782.9" y1="165.1" x2="1785.1" y2="158.4" stroke-opacity="0.16"/><line x1="1797.9" y1="170.2" x2="1800.2" y2="163.6" stroke-opacity="0.16"/><line x1="1812.8" y1="175.5" x2="1815.2" y2="168.9" stroke-opacity="0.15"/><line x1="1827.7" y1="181.0" x2="1830.2" y2="174.4" stroke-opacity="0.15"/><line x1="1842.6" y1="186.6" x2="1848.3" y2="171.6" stroke-opacity="0.25"/><line x1="1857.3" y1="192.3" x2="1859.9" y2="185.8" stroke-opacity="0.13"/><line x1="1872.1" y1="198.2" x2="1874.7" y2="191.8" stroke-opacity="0.13"/><line x1="1886.7" y1="204.3" x2="1889.4" y2="197.8" stroke-opacity="0.12"/><line x1="1901.3" y1="210.5" x2="1904.1" y2="204.1" stroke-opacity="0.12"/><line x1="1915.8" y1="216.9" x2="1922.3" y2="202.3" stroke-opacity="0.20"/><line x1="1930.2" y1="223.4" x2="1933.2" y2="217.1" stroke-opacity="0.11"/><line x1="1944.6" y1="230.1" x2="1947.6" y2="223.8" stroke-opacity="0.10"/><line x1="1958.9" y1="236.9" x2="1962.0" y2="230.6" stroke-opacity="0.10"/><line x1="1973.2" y1="243.9" x2="1976.3" y2="237.6" stroke-opacity="0.09"/><line x1="1987.3" y1="251.0" x2="1994.6" y2="236.8" stroke-opacity="0.15"/><line x1="2001.4" y1="258.3" x2="2004.7" y2="252.1" stroke-opacity="0.08"/><line x1="2015.4" y1="265.7" x2="2018.7" y2="259.5" stroke-opacity="0.08"/><line x1="2029.4" y1="273.3" x2="2032.7" y2="267.1" stroke-opacity="0.07"/><line x1="2043.2" y1="281.0" x2="2046.7" y2="274.9" stroke-opacity="0.07"/><line x1="2057.0" y1="288.8" x2="2065.0" y2="275.0" stroke-opacity="0.11"/><line x1="2070.7" y1="296.8" x2="2074.3" y2="290.8" stroke-opacity="0.06"/><line x1="2084.3" y1="305.0" x2="2087.9" y2="299.0" stroke-opacity="0.05"/><line x1="2097.8" y1="313.3" x2="2101.5" y2="307.3" stroke-opacity="0.05"/><line x1="2111.2" y1="321.7" x2="2115.0" y2="315.8" stroke-opacity="0.04"/><line x1="2124.6" y1="330.3" x2="2133.3" y2="316.8" stroke-opacity="0.07"/><line x1="2137.8" y1="339.0" x2="2141.7" y2="333.1" stroke-opacity="0.03"/><line x1="2151.0" y1="347.8" x2="2154.9" y2="342.0" stroke-opacity="0.03"/><line x1="2164.1" y1="356.8" x2="2168.1" y2="351.0" stroke-opacity="0.03"/><line x1="2177.0" y1="365.9" x2="2181.1" y2="360.2" stroke-opacity="0.02"/><line x1="2189.9" y1="375.1" x2="2199.3" y2="362.2" stroke-opacity="0.03"/><line x1="2202.7" y1="384.5" x2="2206.9" y2="378.9" stroke-opacity="0.01"/><line x1="2215.4" y1="394.1" x2="2219.6" y2="388.5" stroke-opacity="0.01"/><line x1="2227.9" y1="403.7" x2="2232.2" y2="398.2" stroke-opacity="0.01"/><line x1="2240.4" y1="413.5" x2="2244.8" y2="408.0" stroke-opacity="0.00"/><line x1="2252.8" y1="423.4" x2="2262.9" y2="411.0" stroke-opacity="0.00"/></g>
+    <path class="comet" d="M313.9 465.7A1503 1503 0 0 1 2286.1 465.7" stroke="var(--ice)" stroke-width="2.4" style="animation-delay:-1.2s"/>
+    <path class="comet" d="M313.9 465.7A1503 1503 0 0 1 2286.1 465.7" stroke="var(--mint)" stroke-width="2" style="animation-delay:-4.6s;animation-duration:9s"/>
+    <path d="M1261.7 87.5A1513 1513 0 0 1 1338.3 87.5L1335.5 198.4A1402 1402 0 0 0 1264.5 198.4Z" fill="var(--mint)" opacity=".55" filter="url(#bk)"/>
+    <path d="M1261.7 87.5A1513 1513 0 0 1 1338.3 87.5L1335.5 198.4A1402 1402 0 0 0 1264.5 198.4Z" fill="url(#keyG)" stroke="#fff" stroke-opacity=".55" stroke-width="1"/>
+    <g transform="translate(1270.0 113.1) scale(0.6)"><path fill="#04140d" fill-opacity=".92" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></g>
+  </svg>
+
+  <div class="hero-copy wrap">
+    <div class="pill-live"><i></i><b>Live on Arc mainnet</b> · settled in USDC</div>
+    <h1 class="v-c">Real assets.<br><em>Settled in USDC.</em><br>Held by you.</h1>
+    <p class="sub">Tokenized funds and stocks from regulated issuers, plus curated USDC lending. All settled on Arc, all in your own wallet. <b>A&nbsp;NEW&nbsp;ONE is the interface, never the issuer.</b></p>
+    <div class="ctas"><a class="nx-btn lit big" href="earn/" target="_blank" rel="noopener">Explore DeFi <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a><a class="nx-btn big" href="assets/stocks/" target="_blank" rel="noopener">Explore RWA <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div>
+    <a class="funlink" href="fun/" target="_blank" rel="noopener">Looking for memecoins? <u>AnewOne.Fun</u> <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  </div>
+
+  <aside class="float l"><div class="k"><i></i>RWA · FUND · LIVE</div><div class="n">JTRSY</div><div class="d">Janus Henderson Treasury Fund</div><div class="m" id="fyM" hidden><b id="fyV">…</b><span>30D ANNUALIZED</span></div></aside>
+  <aside class="float r"><div class="k"><i></i>DEFI · EARN</div><div class="n">Curated vaults</div><div class="d">Morpho on Arc · USDC and EURC</div><div class="m"><span>BITWISE · GAUNTLET · STEAKHOUSE</span></div></aside>
+</section>
+
+<div class="proof"><div class="wrap">
+  <div class="pc"><small><i></i>ARC BLOCK</small><b id="nxBlock">Arc mainnet</b><em>read from the chain</em></div>
+  <div class="pc"><small>FINALITY</small><b>&lt; 1 s</b><em>deterministic</em></div>
+  <div class="pc"><small>GAS</small><b>USDC</b><em>no volatile token</em></div>
+  <div class="pc"><small><i></i>TOKENIZED FUNDS</small><b>3</b><em>live on Arc</em></div>
+  <div class="pc"><small><i class="soon"></i>STOCKS / ETF</small><b>1,000+</b><em>xStocks · arriving on Arc</em></div>
+  <div class="pc"><small><i></i>DEFI</small><b>Morpho</b><em>curated vaults · Earn &amp; Borrow</em></div>
+</div></div>
+
+<section class="s" id="doors"><div class="wrap">
+  <div class="eyebrow">01 · Choose your door</div>
+  <h2>Three doors onto <em>Arc</em>.</h2>
+  <p class="lede">Each opens its own app with its own rules. Browse everything without connecting a wallet; connect only when you decide to act.</p>
+  <div class="doors">
+    <article class="door"><div class="door-pic">
+<svg viewBox="0 0 260 160" class="pic" aria-hidden="true">
+  <defs><linearGradient id="gv" x1="0" x2="1"><stop offset="0" stop-color="var(--mint)" stop-opacity=".25"/><stop offset="1" stop-color="var(--ice)"/></linearGradient>
+  <filter id="gb"><feGaussianBlur stdDeviation="5"/></filter></defs>
+  <g class="dial"><line x1="234.0" y1="134.0" x2="243.0" y2="134.0"/><line x1="232.7" y1="117.7" x2="237.7" y2="116.9"/><line x1="228.9" y1="101.9" x2="233.7" y2="100.3"/><line x1="222.7" y1="86.8" x2="227.1" y2="84.5"/><line x1="214.1" y1="72.9" x2="218.2" y2="69.9"/><line x1="203.5" y1="60.5" x2="209.9" y2="54.1"/><line x1="191.1" y1="49.9" x2="194.1" y2="45.8"/><line x1="177.2" y1="41.3" x2="179.5" y2="36.9"/><line x1="162.1" y1="35.1" x2="163.7" y2="30.3"/><line x1="146.3" y1="31.3" x2="147.1" y2="26.3"/><line x1="130.0" y1="30.0" x2="130.0" y2="21.0"/><line x1="113.7" y1="31.3" x2="112.9" y2="26.3"/><line x1="97.9" y1="35.1" x2="96.3" y2="30.3"/><line x1="82.8" y1="41.3" x2="80.5" y2="36.9"/><line x1="68.9" y1="49.9" x2="65.9" y2="45.8"/><line x1="56.5" y1="60.5" x2="50.1" y2="54.1"/><line x1="45.9" y1="72.9" x2="41.8" y2="69.9"/><line x1="37.3" y1="86.8" x2="32.9" y2="84.5"/><line x1="31.1" y1="101.9" x2="26.3" y2="100.3"/><line x1="27.3" y1="117.7" x2="22.3" y2="116.9"/><line x1="26.0" y1="134.0" x2="17.0" y2="134.0"/></g>
+  <path d="M34 134A96 96 0 0 1 226 134" fill="none" stroke="var(--line2)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M34 134A96 96 0 0 1 144.7 39.1" fill="none" stroke="url(#gv)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M34 134A96 96 0 0 1 144.7 39.1" fill="none" stroke="var(--mint)" stroke-width="12" stroke-linecap="round" opacity=".45" filter="url(#gb)"/>
+  <circle cx="144.7" cy="39.1" r="6" fill="var(--ice)"/><circle cx="144.7" cy="39.1" r="13" fill="none" stroke="var(--mint)" stroke-opacity=".5"/>
+  <text x="130" y="118" text-anchor="middle" class="g-num">USDC</text>
+  <text x="130" y="140" text-anchor="middle" class="g-cap">YIELD · MORPHO VAULTS</text>
+</svg></div>
+      <div class="door-body"><div class="kicker">01 · DEFI</div><h3>Earn &amp; Borrow</h3>
+        <p>Curated Morpho vaults on Arc. Deposit, withdraw, borrow and repay from your own wallet; the money stays in the vault contract.</p>
+        <ul class="chips"><li>Morpho</li><li>USDC · EURC</li><li>Non-custodial</li></ul>
+        <div class="status"><i></i>Live · curated vaults</div></div>
+      <div class="door-cta"><a class="nx-btn lit" href="earn/" target="_blank" rel="noopener">Open DeFi <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div></article>
+    <article class="door"><div class="door-pic">
+<svg viewBox="0 0 260 160" class="pic" aria-hidden="true">
+  <defs><linearGradient id="cf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--mint)" stop-opacity=".34"/><stop offset="1" stop-color="var(--mint)" stop-opacity="0"/></linearGradient>
+  <filter id="cb"><feGaussianBlur stdDeviation="4"/></filter></defs>
+  <g class="grid"><line x1="14" x2="246" y1="96" y2="96"/><line x1="14" x2="246" y1="118" y2="118"/></g>
+  <path d="M14 126C44 122 66 118 92 112S140 104 164 92 206 66 236 46V140H14Z" fill="url(#cf)"/>
+  <path d="M14 126C44 122 66 118 92 112S140 104 164 92 206 66 236 46" fill="none" stroke="var(--ice)" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M14 126C44 122 66 118 92 112S140 104 164 92 206 66 236 46" fill="none" stroke="var(--mint)" stroke-width="9" stroke-linecap="round" opacity=".35" filter="url(#cb)"/>
+  <circle cx="236" cy="46" r="5" fill="var(--ice)"/><circle cx="236" cy="46" r="12" fill="none" stroke="var(--mint)" stroke-opacity=".5"/>
+  <text x="130" y="50" text-anchor="middle" class="g-num sm">NAV</text>
+  <text x="130" y="68" text-anchor="middle" class="g-cap">FUND SHARE PRICE</text>
+</svg></div>
+      <div class="door-body"><div class="kicker">02 · RWA</div><h3>Stocks / ETF &amp; Funds</h3>
+        <p>Tokenized funds from Janus Henderson and New York Life Investment Management, and over a thousand xStocks, with live prices and the issuer's terms in plain words.</p>
+        <ul class="chips"><li>Centrifuge</li><li>xStocks</li><li>Issuer-run KYC</li></ul>
+        <div class="status"><i></i>Funds live</div><div class="status" style="margin-top:6px"><i class="soon"></i>Stocks arrive with xStocks on Arc</div></div>
+      <div class="door-cta"><a class="nx-btn lit" href="assets/stocks/" target="_blank" rel="noopener">Open RWA <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div></article>
+    <article class="door fun"><div class="door-pic">
+<svg viewBox="0 0 260 160" class="pic fun" aria-hidden="true">
+  <defs><linearGradient id="fc" x1="0" x2="1"><stop offset="0" stop-color="var(--fun)" stop-opacity=".3"/><stop offset="1" stop-color="var(--fun2)"/></linearGradient>
+  <filter id="fb"><feGaussianBlur stdDeviation="4"/></filter></defs>
+  <line x1="36" x2="224" y1="54" y2="54" stroke="var(--fun2)" stroke-opacity=".55" stroke-dasharray="3 5"/>
+  <text x="130" y="44" text-anchor="middle" class="g-cap">GRADUATES AT 5,000 USDC</text>
+  <path d="M20 140C92 139 150 130 192 104S230 66 238 60" fill="none" stroke="url(#fc)" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M20 140C92 139 150 130 192 104S230 66 238 60" fill="none" stroke="var(--fun)" stroke-width="9" opacity=".3" stroke-linecap="round" filter="url(#fb)"/>
+  <circle cx="192" cy="104" r="5.5" fill="var(--fun2)"/><circle cx="192" cy="104" r="13" fill="none" stroke="var(--fun)" stroke-opacity=".55"/>
+  <g class="confetti"><rect x="214" y="84" width="7" height="3" rx="1" transform="rotate(30 214 70)" fill="var(--fun)"/><rect x="228" y="98" width="6" height="3" rx="1" transform="rotate(-40 226 84)" fill="#ffd36e"/><rect x="206" y="74" width="5" height="3" rx="1" transform="rotate(70 204 60)" fill="var(--fun2)"/><rect x="238" y="78" width="6" height="3" rx="1" transform="rotate(10 236 62)" fill="#fff"/><rect x="170" y="84" width="6" height="3" rx="1" transform="rotate(-20 170 70)" fill="#ffd36e"/></g>
+</svg></div>
+      <div class="door-body"><div class="kicker">THE FUN SIDE</div><h3>AnewOne.Fun</h3>
+        <p>The memecoin launchpad. Bonding curves priced in USDC, with liquidity locked for good the day a coin graduates. Its own app, its own risks.</p>
+        <ul class="chips"><li>1.5% fee</li><li>Locked liquidity</li><li>Separate app</li></ul>
+        <div class="status"><i></i>Live</div></div>
+      <div class="door-cta"><a class="nx-btn fun" href="fun/" target="_blank" rel="noopener">Enter AnewOne.Fun <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div></article>
+  </div>
+  <p class="hint">Swap &amp; Bridge brings funds from any chain · Deckhand, the AI assistant, answers questions about every door.</p>
+</div></section>
+
+<section class="s" id="ask"><div class="wrap">
+  <div class="two">
+    <div>
+      <div class="eyebrow">02 · Ask anything</div>
+      <h2>Curious about something? <em>Ask the Deckhand.</em></h2>
+      <p class="lede">Funds, vaults, fees, how bridging works. Ask in plain words and get a plain answer, whenever you like.</p>
+      <ul class="ticks"><li>No wallet needed</li><li>Knows every door: DeFi, RWA and AnewOne.Fun</li><li>Never gives investment advice</li></ul>
+    </div>
+    
+<div id="chatInline" data-nx-chat></div>
+  </div>
+</div></section>
+
+<section class="s" id="arc"><div class="wrap">
+  <div class="two">
+    <div>
+      <div class="eyebrow">03 · The settlement layer</div>
+      <h2>Built for the way money <em>actually</em> moves.</h2>
+      <p class="lede">Arc is Circle's stablecoin-native Layer 1: USDC pays the gas, fees stay predictable and finality is deterministic in under a second. The qualities an institution asks for before it puts a real asset onchain.</p>
+    </div>
+    <div class="ribbon" aria-hidden="true">
+      <div class="rtrack" id="nxRibbon"><div class="blk"><b>#</b><i>FINAL</i></div><div class="blk"><b>#</b><i>FINAL</i></div><div class="blk"><b>#</b><i>FINAL</i></div><div class="blk"><b>#</b><i>FINAL</i></div><div class="blk"><b>#</b><i>FINAL</i></div><div class="blk"><b>#</b><i>FINAL</i></div><div class="blk"><b>#</b><i>FINAL</i></div><div class="blk pend"><b>#</b><i>SEALING</i></div></div>
+      <div class="rcap"><span>BLOCK · ~0.5 S</span><span>FINAL IN &lt; 1 S</span></div>
     </div>
   </div>
-</header>
+  <div class="kpis"><div class="kpi"><b>USDC</b><span>GAS &amp; SETTLEMENT</span></div><div class="kpi"><b>&lt; 1 s</b><span>DETERMINISTIC FINALITY</span></div><div class="kpi"><b>24/7</b><span>ALWAYS-OPEN MARKETS</span></div></div>
+</div></section>
 
-<main>
-  <div class="wrap hero">
-    <div class="eyebrow">Real-world assets · on Arc · settled in USDC</div>
-    <h1>Real assets.<br>Launched on A New One.</h1>
-    <p class="lead">A NEW ONE is the <b>launch and distribution front end</b> for tokenized real-world assets on Arc: funds and private credit on <b>Centrifuge</b> rails, stocks from <b>licensed issuers</b>. The issuer is always a regulated entity. <b>We never issue anything ourselves.</b></p>
-    <div class="cta">
-      <a class="btn primary" href="assets/">Explore the assets →</a>
-      <a class="btn" href="mailto:support@anewone.xyz?subject=Issuer%20listing">List as an issuer</a>
-    </div>
+<section class="s" id="trust"><div class="wrap">
+  <div class="eyebrow">04 · Who does what</div>
+  <h2>A clean line between the issuer and <em>the interface</em>.</h2>
+  <div class="flow">
+    <div class="node"><small>THE ISSUER</small><b>A regulated entity</b><p>Creates and stands behind the asset. Runs KYC, holds the underlying, handles redemptions.</p></div>
+    <div class="link"></div>
+    <div class="node mid"><small>ARC</small><b>Settled in USDC</b><p>One balance for gas and trades. Final in under a second.</p></div>
+    <div class="link"></div>
+    <div class="node"><small>YOU</small><b>Your own wallet</b><p>Assets and vault positions stay yours, never in our hands.</p></div>
+  </div>
+  <div class="iface"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span><b>A NEW ONE</b> · the launch &amp; distribution interface in between</span></div>
+  <div class="nevers">
+    <div class="never"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/><path d="M3.5 3.5 20.5 20.5"/></svg><b>We never custody</b><p>Your assets sit in your wallet or in the issuer's own contracts. We hold nothing.</p></div>
+    <div class="never"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.5L19 8v12.5H7z"/><path d="M14 3.5V8.5h5"/><path d="M10 13h6M10 16.5h4"/><path d="M3.5 3.5 20.5 20.5"/></svg><b>We never issue</b><p>Every asset has a regulated issuer. We list and distribute; they create and redeem.</p></div>
+    <div class="never"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5.5h15v10h-7l-4.5 4v-4h-3.5z"/><path d="M3.5 3.5 20.5 20.5"/></svg><b>We never advise</b><p>Prices, yields and terms are shown as the issuer publishes them. No recommendations.</p></div>
   </div>
 
-  <section id="assets">
-    <div class="wrap">
-      <h2>What comes aboard</h2>
-      <p class="sub">Assets that already exist in the regulated world, brought onto Arc's stablecoin-native rails so they settle in USDC, around the clock.</p>
-      <div class="grid">
-        <div class="card"><div class="tag">FUNDS · LIVE ON ARC</div><h3>Tokenized funds</h3><p>Janus Henderson's treasury fund (JTRSY) and AAA CLO fund (JAAA), issued by Anemoy through Centrifuge, live on Arc since 1 October 2026. Live NAV and yield, terms and eligibility on <a href="assets/">the Assets page</a>.</p></div>
-        <div class="card"><div class="tag">CREDIT · LIVE ON ARC</div><h3>Credit funds</h3><p>New York Life Investment Management's US high-yield bond fund (HYB) on the same rails, with the manager, the custodian and the fund documents named before you commit.</p></div>
-        <div class="card"><div class="tag">EQUITIES · CATALOG LIVE</div><h3>Tokenized stocks and ETFs</h3><p>Over a thousand xStocks from Backed, a Kraken company, each backed 1:1 by the share: live prices, proof of reserves and market hours on <a href="assets/stocks/">the Stocks page</a>. Trading in USDC on Arc switches on the moment the tokens land there. We show them; they issue them.</p></div>
-      </div>
-    </div>
-  </section>
+  <div class="integ"><small>INTEGRATED WITH</small>
+    <div class="names"><span>Circle</span><span>Morpho</span><span>Centrifuge</span><span>Backed</span><span>Uniswap</span><span>LI.FI</span></div>
+    <p>Names belong to their owners. An integration is not an endorsement or a partnership.</p></div>
 
-  <section id="how">
-    <div class="wrap">
-      <h2>Who does what</h2>
-      <p class="sub">A clean line between the regulated issuer and the interface. That line is the product.</p>
-      <div class="roles">
-        <div class="card"><div class="tag">THE ISSUER</div><h3>A regulated entity, always</h3>
-          <ul><li>Creates and legally stands behind the asset</li><li>Runs KYC, eligibility and investor checks</li><li>Holds the underlying and handles redemptions</li><li>Publishes reports and disclosures</li></ul></div>
-        <div class="card"><div class="tag">A NEW ONE</div><h3>Launch &amp; distribution</h3>
-          <ul><li>A launch page for every approved asset on Arc</li><li>Wallet access, USDC payments, cross-chain onboarding</li><li>Issuer, terms and on-chain data in one place</li><li>Never custody, never issuance, never advice</li></ul></div>
-      </div>
-    </div>
-  </section>
+  <div class="band" id="docs"><h2>Issuing a real asset on <em>Arc</em>?</h2>
+    <p>List it where Arc users start. The issuer stays in control: you run KYC, hold the underlying and handle redemptions. We bring the front door.</p>
+    <div class="row"><a class="nx-btn lit big" href="mailto:support@anewone.xyz?subject=Issuer%20listing">List as an issuer <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="nx-btn big" href="docs.html">Read the docs</a></div></div>
+</div></section>
 
-  <section>
-    <div class="wrap">
-      <h2>Why Arc</h2>
-      <p class="sub">Arc is built for real-world finance: USDC as gas, predictable fees and deterministic finality. The same qualities an institution needs before it puts a real asset on-chain.</p>
-      <div class="stats">
-        <div><b>USDC</b><span>Gas &amp; settlement</span></div>
-        <div><b>&lt;1s</b><span>Deterministic finality</span></div>
-        <div><b>24/7</b><span>Always-open markets</span></div>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap funbox">
-      <div>
-        <div class="tag">LIVE NOW</div>
-        <h2 style="margin-top:8px">Tokenized funds on Arc</h2>
-        <p class="sub" style="margin:0">JTRSY, JAAA and HYB through Centrifuge: price and yield read from the chain, the issuer's terms in plain words, and USDC orders from a whitelisted wallet. Professional investors; the issuer runs KYC.</p>
-      </div>
-      <a class="btn primary" href="assets/">Open Funds →</a>
-    </div>
-  </section>
-
-  <section id="earn">
-    <div class="wrap funbox">
-      <div>
-        <div class="tag">LIVE NOW</div>
-        <h2 style="margin-top:8px">Earn on USDC</h2>
-        <p class="sub" style="margin:0">Morpho vaults on Arc run by curators such as Bitwise, Gauntlet and Steakhouse. Deposit and withdraw from your own wallet; the money stays in the vault contract.</p>
-      </div>
-      <a class="btn primary" href="earn/">Open Earn →</a>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap funbox">
-      <div>
-        <div class="tag">THE FUN SIDE</div>
-        <h2 style="margin-top:8px">AnewOne.Fun</h2>
-        <p class="sub" style="margin:0">Our memecoin launchpad still runs: bonding curves priced in USDC, liquidity locked for good at graduation.</p>
-      </div>
-      <a class="btn primary" href="fun/">Open AnewOne.Fun →</a>
-    </div>
-  </section>
-</main>
-
-<footer>
-  <div class="wrap">
-    <div class="links"><a href="assets/stocks/">RWA</a><a href="earn/">DeFi</a><a href="fun/">AnewOne.Fun</a><a href="bridge/">Swap &amp; Bridge</a><a href="chat/">Deckhand</a><a href="docs.html">Docs</a><a href="about.html">About</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a></div>
-    Nothing on this site is an offer or investment advice. Assets are issued by third-party regulated entities and may be limited to eligible investors in some jurisdictions.
+<footer id="about"><div class="wrap">
+  <div class="fgrid">
+    <div class="fbrand"><a class="nx-brand" href="#top"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a><p>The front door to real assets on Arc. Open source, non-custodial, built by one person.</p></div>
+    <div><h4>PRODUCTS</h4><a href="earn/" target="_blank" rel="noopener">DeFi</a><a href="assets/stocks/" target="_blank" rel="noopener">RWA</a><a href="fun/" target="_blank" rel="noopener">AnewOne.Fun</a></div>
+    <div><h4>TOOLS</h4><a href="bridge/" target="_blank" rel="noopener">Swap &amp; Bridge</a><a href="#ask">Ask the Deckhand</a></div>
+    <div><h4>RESOURCES</h4><a href="docs.html">Docs</a><a href="#trust">Trust</a><a href="https://github.com/izzetcakmak/anewone">GitHub</a><a href="https://github.com/izzetcakmak/anewone">Open source (MIT)</a></div>
+    <div><h4>COMPANY</h4><a href="about.html">About</a><a href="mailto:support@anewone.xyz">Contact</a><a href="https://x.com/anewone_xyz">X · @anewone_xyz</a></div>
+    <div><h4>LEGAL</h4><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a></div>
   </div>
-</footer>
+  <div class="legal">© 2026 A NEW ONE · anewone.xyz<span>Nothing on this site is an offer or investment advice. Assets are issued by third-party regulated entities and may be limited to eligible investors in some jurisdictions.</span></div>
+</div></footer>
+
+<script src="shell.js"></script>
 <script>
-  // the phone menu: a pick closes it
-  (function () {
-    var btn = document.getElementById("menuBtn"), menu = document.getElementById("menu");
-    function shut() { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); }
-    btn.addEventListener("click", function () {
-      menu.hidden = !menu.hidden; btn.setAttribute("aria-expanded", menu.hidden ? "false" : "true");
-    });
-    menu.addEventListener("click", function (e) { if (e.target.closest("a")) shut(); });
-    document.addEventListener("click", function (e) { if (!menu.hidden && !menu.contains(e.target) && !btn.contains(e.target)) shut(); });
-    document.addEventListener("keydown", function (e) { if (e.key === "Escape") shut(); });
-  })();
+(function () {
+  "use strict";
+  var fmt = function (n) { return n.toLocaleString("en-US"); }, $ = function (id) { return document.getElementById(id); };
+  // Arc's block height through the site's own relay (Brave blocks *.arc.io); the proof band and the ribbon show it
+  function block() {
+    fetch("api/rpc", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var n = parseInt(j.result, 16); if (!isFinite(n)) return;
+        $("nxBlock").textContent = fmt(n);
+        var bs = $("nxRibbon").children; for (var i = 0; i < bs.length; i++) bs[i].firstChild.textContent = "#" + fmt(n - 7 + i + 1);
+      }).catch(function () {});
+  }
+  block(); setInterval(function () { if (document.visibilityState === "visible") block(); }, 15000);
+  // JTRSY's trailing 30-day yield from Centrifuge's indexer, which is open to browsers (27-decimal fixed point)
+  var q = '{ s: tokenSnapshots(where:{id:"0x00010000000000060000000000000001"}, orderBy:"timestamp", orderDirection:"desc", limit:1){ items { yield30d365 } } }';
+  fetch("https://api.centrifuge.io", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: q }) })
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      var it = j.data && j.data.s && j.data.s.items && j.data.s.items[0]; if (!it || !it.yield30d365) return;
+      var pct = Number(BigInt(it.yield30d365)) / 1e27 * 100; if (!isFinite(pct) || pct <= 0 || pct > 30) return;
+      $("fyV").textContent = pct.toFixed(2) + "%"; $("fyM").hidden = false;
+    }).catch(function () {});
+})();
 </script>
 </body>
 </html>

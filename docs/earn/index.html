@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
   (function () {
-    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "light"); }
-    catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "dark"); }
+    catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   })();
 </script>
 <title>Earn &amp; Borrow · USDC on Arc | A NEW ONE</title>
@@ -20,7 +20,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* The floor's theme system, verbatim: one accent, neutral everything else. */
   :root {
@@ -47,70 +47,28 @@
   a:hover { text-decoration: underline; }
   button { font: inherit; cursor: pointer; }
 
-  .topbar { position: sticky; top: 0; z-index: 200; background: rgba(var(--bg-rgb),.78); backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid var(--border); }
-  .topbar-inner { max-width: 1160px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 10px; }
-  .tb-brand { display: flex; align-items: center; gap: 12px; }
-  .tb-brand:hover { text-decoration: none; }
-  .tb-brand img { width: 40px; height: 40px; border-radius: 11px; }
-  .tb-brand span { font: 700 20px 'Space Grotesk', sans-serif; letter-spacing: .8px; color: var(--text); white-space: nowrap; }
-  .tb-nav { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-  /* The home page's glass, on the bar's pills, the Earn/Borrow switch and the filter chips: a
-     translucent green pane with a lit top edge and a faint halo, solid green under the hand and
-     when selected. */
-  .tbx, .views button, .chip { position: relative; color: var(--accent); border: 1px solid rgba(var(--accent-rgb), .45); border-radius: 999px;
+  /* the filter chips: the shell's glass pill, small */
+  .chip { position: relative; color: var(--accent); border: 1px solid rgba(var(--accent-rgb), .45); border-radius: 999px;
     background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
     box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
     -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
     text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
-  .tbx::before, .views button::before, .chip::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
-  .tbx:hover, .views button:hover, .views button.on, .chip:hover, .chip.on { text-decoration: none; color: var(--accent-ink); text-shadow: none;
+  .chip::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
+  .chip:hover, .chip.on { text-decoration: none; color: var(--accent-ink); text-shadow: none;
     background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
     box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
-  .tbx:hover, .views button:hover, .chip:hover { transform: translateY(-1px); }
-  :root[data-theme="light"] .tbx, :root[data-theme="light"] .views button, :root[data-theme="light"] .chip { text-shadow: none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
-  /* the bar's pills are one size, as on the home page, 142px so the seven fit the 1160px bar;
-     the theme switch is the round one */
-  .tbx { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; width: 142px; padding: 0 10px;
-    font: 700 12px var(--mono); letter-spacing: .01em; white-space: nowrap; }
-  .tbx.theme { width: 40px; padding: 0; }
-  /* below the width the full row needs, the doors keep their icons alone */
-  @media (max-width: 1180px) { .tbx .lbl { display: none; } .tbx:not(.net):not(.primary) { width: 40px; padding: 0; } }
-  .tbx.theme .i-sun, .tbx.theme .i-moon { width: 16px; height: 16px; }
-  :root[data-theme="light"] .i-sun { display: none; }
-  :root:not([data-theme="light"]) .i-moon { display: none; }
-  /* on a phone the bar is two rows of equal pills: the crest, then the doors; then the
-     network and the wallet. Icons alone at the same 42px height as the wallet button. */
-  @media (max-width: 600px) {
-    .tb-brand span, .tbx .lbl { display: none; }
-    .topbar-inner { padding: 10px 14px; gap: 8px; }
-    .tb-nav { gap: 8px; }
-    .tbx { height: 42px; min-width: 42px; width: auto; padding: 0 12px; font-size: 16px; }
-    .tbx.net, .tbx.primary { font-size: 13px; padding: 0 14px; }
-    .tbx.theme .i-sun, .tbx.theme .i-moon { width: 20px; height: 20px; }
-  }
+  .chip:hover { transform: translateY(-1px); }
+  :root[data-theme="light"] .chip { text-shadow: none; box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
 
   .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
-  .hero { padding: 48px 0 28px; }
-  .eyebrow { font: 700 11px var(--mono); letter-spacing: .2em; color: var(--accent); text-transform: uppercase; }
-  h1 { font: 700 clamp(30px, 4.5vw, 46px)/1.08 'Space Grotesk', sans-serif; margin: 12px 0 12px; letter-spacing: -.02em; }
-  .lead { color: var(--dim); font-size: 16px; max-width: 720px; margin: 0; }
-  .lead b { color: var(--text); }
-
-  /* the two windows: Earn (lend USDC) and Borrow (USDC against collateral) */
-  /* the page's two main doors, so they are the biggest glass on it, the open one lit */
-  .views { display: flex; gap: 10px; width: max-content; max-width: 100%; margin: 8px 0 10px; }
-  .views button { height: 52px; min-width: 180px; padding: 0 32px; font: 700 18px 'Space Grotesk', sans-serif; letter-spacing: .01em; }
-  @media (max-width: 600px) { .views { width: 100%; } .views button { flex: 1; min-width: 0; } }
   .view[hidden] { display: none; }
   .filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 24px 0 14px; }
   .chip { padding: 7px 14px; font: 500 12px var(--mono); }
   .count { margin-left: auto; color: var(--faint); font: 500 12px var(--mono); }
 
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  @media (max-width: 960px) { .grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  @media (max-width: 960px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 620px) { .grid { grid-template-columns: minmax(0, 1fr); } }
   .vault { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; }
   .vault .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
   .vault h3 { margin: 0; font: 600 16px 'Space Grotesk', sans-serif; line-height: 1.25; }
@@ -201,38 +159,77 @@
   .wdivider::before, .wdivider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
   .hint { color: var(--dim); font-size: 12px; margin-top: 10px; }
   .hint a { text-decoration: underline; }
+
+  /* Arc Noir: glass cards, the best vault lit, the number big */
+  .grid { gap: 22px; }
+  .vault { position: relative; background: var(--nx-card); border: 1px solid var(--nx-line2); border-radius: 26px; padding: 26px; gap: 18px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08); transition: transform .3s cubic-bezier(.2,.8,.2,1), border-color .3s, box-shadow .3s; }
+  :root[data-theme="light"] .vault { box-shadow: 0 24px 60px rgba(10,20,17,.08), inset 0 1px 0 #fff; }
+  .vault:hover { transform: translateY(-5px); border-color: rgba(var(--accent-rgb), .5); }
+  .vault.feat { border-color: rgba(var(--accent-rgb), .55); box-shadow: 0 0 70px rgba(var(--accent-rgb), .15), 0 24px 60px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.1); }
+  .vault .feat-b { position: absolute; top: -13px; left: 26px; padding: 6px 14px; border-radius: 999px; font: 700 10.5px var(--mono); letter-spacing: .16em; color: var(--accent-ink);
+    background: linear-gradient(180deg, var(--nx-ice), var(--accent)); box-shadow: 0 8px 20px rgba(var(--accent-rgb), .4); }
+  .vault h3 { font: 600 19px/1.25 'Space Grotesk', sans-serif; letter-spacing: -.015em; }
+  .vault .curator { margin-top: 5px; font: 500 12px var(--mono); color: var(--faint); letter-spacing: .03em; }
+  .tag { padding: 6px 11px; border-radius: 999px; font: 700 11px var(--mono); letter-spacing: .08em; background: var(--card); }
+  .tag.usdc { color: var(--accent); background: rgba(var(--accent-rgb), .1); border: 1px solid rgba(var(--accent-rgb), .35); }
+  .tag.warn { background: rgba(var(--gold-rgb), .08); border: 1px solid rgba(var(--gold-rgb), .4); letter-spacing: .02em; }
+  .vault > .tag { white-space: normal; line-height: 1.4; border-radius: 16px; }
+  .apy { font: 500 54px/1 'Space Grotesk', sans-serif; letter-spacing: -.045em; }
+  .apy small { font: 500 12px var(--mono); letter-spacing: .16em; color: var(--dim); margin-left: 10px; }
+  .meter { height: 6px; border-radius: 99px; background: var(--border); overflow: hidden; margin-top: -4px; }
+  .meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--nx-ice)); box-shadow: 0 0 12px rgba(var(--accent-rgb), .6); }
+  .stats div { font: 500 17px 'Space Grotesk', sans-serif; letter-spacing: -.01em; }
+  .stats span { font: 500 10.5px var(--mono); letter-spacing: .15em; color: var(--faint); margin-top: 3px; }
+  .stats { grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+  .stats div:nth-child(3) { grid-column: 1 / -1; }
+  .pos { border-radius: 999px; padding: 8px 14px; }
+  .vault .btn, .vault .btn.primary { height: 50px; padding: 0 16px; border-radius: 999px; font: 700 13.5px var(--mono); letter-spacing: .02em; color: var(--accent);
+    border: 1px solid rgba(var(--accent-rgb), .45); background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 18px rgba(var(--accent-rgb), .14); transition: background .2s, box-shadow .2s, color .2s; }
+  .vault .btn:hover:not(:disabled), .vault .btn.primary:hover:not(:disabled), .vault.feat .btn.primary { color: var(--accent-ink);
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .98), rgba(var(--accent-rgb), .82)); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 10px 30px rgba(var(--accent-rgb), .38); }
+  .getcol { border-radius: 24px; border: 1px solid var(--nx-line2); border-style: solid; background: var(--nx-card); padding: 20px 24px; }
+  .getcol .btn { height: 46px; padding: 0 22px; border-radius: 999px; font: 700 13px var(--mono); color: var(--accent-ink); border: 1px solid rgba(var(--accent-rgb), .3);
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .98), rgba(var(--accent-rgb), .82)); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 10px 30px rgba(var(--accent-rgb), .3); }
+  @media (max-width: 520px) { .vault { padding: 22px; } .apy { font-size: 46px; } }
 </style>
+<link rel="stylesheet" href="../shell.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="topbar-inner">
-    <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../brand/logo.svg" alt=""><span>A NEW ONE</span></a>
-    <nav class="tb-nav">
-      <a class="tbx" href="/">← <span class="lbl">Home</span></a>
-      <a class="tbx" href="../assets/stocks/" title="Tokenized stocks, ETFs and funds on Arc">🏦 <span class="lbl">RWA</span></a>
-      <a class="tbx" href="../bridge/" title="Bring USDC aboard from any chain">🌉 <span class="lbl">Swap &amp; Bridge</span></a>
-      <a class="tbx" href="../fun/">🎮 <span class="lbl">AnewOne.Fun</span></a>
-      <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark">
-        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
-        <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg>
-      </button>
-      <span class="tbx net" id="netPill">…</span>
-      <button type="button" class="tbx primary" id="connectBtn">Connect</button>
-    </nav>
+<header class="nx-bar" id="nxBar"><div class="nx-bar-in">
+  <a class="nx-brand" href="../" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
+  <nav class="nx-seg" aria-label="Apps"><a href="../earn/" class="on">DeFi</a><a href="../assets/stocks/">RWA</a><a href="../fun/" class="f">Fun</a></nav>
+  <div class="nx-actions">
+    <button type="button" class="nx-icon" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
+    <span class="nx-pill" id="netPill" hidden>…</span>
+    <button type="button" class="nx-btn lit" id="connectBtn">Connect</button>
   </div>
-</header>
+</div></header>
 
-<main class="wrap">
-  <div class="hero">
-    <div class="eyebrow">Earn &amp; Borrow · Morpho on Arc · settled in USDC</div>
-    <h1>Put your USDC to work,<br>or borrow against what you hold.</h1>
-    <p class="lead">Lending vaults on Arc, run by curators such as <b>Bitwise</b>, <b>Gauntlet</b> and <b>Steakhouse</b> on the Morpho protocol. You deposit, withdraw, borrow and repay from your own wallet; the money sits in the Morpho contracts, never with us. <b>A NEW ONE is the interface, not the issuer.</b> Vault data by Circle's Earn service.</p>
-  </div>
+<section class="nx-hero">
+  <div class="nx-hero-in"><div class="nx-hero-t">
+    <div class="nx-eyebrow">DeFi · Earn &amp; Borrow · Morpho on Arc</div>
+    <h1 class="nx-h1">Put your USDC <em>to work</em>,<br>or borrow against what you hold.</h1>
+    <p class="nx-lead">Curated Morpho vaults on Arc. Deposit and borrow from your own wallet; the money stays in the Morpho contracts, <b>never with us</b>.</p>
+    <div class="nx-views" role="tablist">
+      <button id="viewEarn" class="on" role="tab">Earn</button>
+      <button id="viewBorrow" role="tab">Borrow</button>
+    </div>
+  </div></div>
+  <aside class="nx-lcard" id="topCard" hidden><div class="k"><i></i>TOP VAULT · LIVE</div><svg viewBox="0 0 260 160" class="pic" aria-hidden="true"><defs><linearGradient id="nxGv" x1="0" x2="1"><stop offset="0" stop-color="var(--nx-mint)" stop-opacity=".25"/><stop offset="1" stop-color="var(--nx-ice)"/></linearGradient><filter id="nxGb"><feGaussianBlur stdDeviation="5"/></filter></defs>
+  <g class="dial"><line x1="234.0" y1="134.0" x2="243.0" y2="134.0"/><line x1="232.7" y1="117.7" x2="237.7" y2="116.9"/><line x1="228.9" y1="101.9" x2="233.7" y2="100.3"/><line x1="222.7" y1="86.8" x2="227.1" y2="84.5"/><line x1="214.1" y1="72.9" x2="218.2" y2="69.9"/><line x1="203.5" y1="60.5" x2="209.9" y2="54.1"/><line x1="191.1" y1="49.9" x2="194.1" y2="45.8"/><line x1="177.2" y1="41.3" x2="179.5" y2="36.9"/><line x1="162.1" y1="35.1" x2="163.7" y2="30.3"/><line x1="146.3" y1="31.3" x2="147.1" y2="26.3"/><line x1="130.0" y1="30.0" x2="130.0" y2="21.0"/><line x1="113.7" y1="31.3" x2="112.9" y2="26.3"/><line x1="97.9" y1="35.1" x2="96.3" y2="30.3"/><line x1="82.8" y1="41.3" x2="80.5" y2="36.9"/><line x1="68.9" y1="49.9" x2="65.9" y2="45.8"/><line x1="56.5" y1="60.5" x2="50.1" y2="54.1"/><line x1="45.9" y1="72.9" x2="41.8" y2="69.9"/><line x1="37.3" y1="86.8" x2="32.9" y2="84.5"/><line x1="31.1" y1="101.9" x2="26.3" y2="100.3"/><line x1="27.3" y1="117.7" x2="22.3" y2="116.9"/><line x1="26.0" y1="134.0" x2="17.0" y2="134.0"/></g>
+  <path d="M34 134A96 96 0 0 1 226 134" fill="none" stroke="var(--nx-line2)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M34 134A96 96 0 0 1 144.7 39.1" fill="none" stroke="url(#nxGv)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M34 134A96 96 0 0 1 144.7 39.1" fill="none" stroke="var(--nx-mint)" stroke-width="12" stroke-linecap="round" opacity=".45" filter="url(#nxGb)"/>
+  <circle cx="144.7" cy="39.1" r="6" fill="var(--nx-ice)"/><circle cx="144.7" cy="39.1" r="13" fill="none" stroke="var(--nx-mint)" stroke-opacity=".5"/>
+  <text x="130" y="118" text-anchor="middle" class="nx-gnum" id="topApy">—</text>
+  <text x="130" y="140" text-anchor="middle" class="nx-gcap">APY · TOP VAULT</text></svg><div class="ln" id="topName"></div><div class="ld" id="topBy"></div></aside>
+</section>
 
-  <div class="views" role="tablist">
-    <button id="viewEarn" class="on" role="tab">Earn</button>
-    <button id="viewBorrow" role="tab">Borrow</button>
-  </div>
+<main class="nx-main"><div class="nx-wrap">
+  <div class="nx-strip"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17c0-5 4-9 9-9s9 4 9 9"/><path d="M3 17h18M7.5 17v-4M12 17V8M16.5 17v-4"/></svg></span><div><b>Need USDC on Arc?</b><span class="t">Bring it from Base, Ethereum, Arbitrum and more with Swap &amp; Bridge, or buy it with a card.</span></div>
+    <div class="acts"><a class="nx-btn lit" href="../bridge/" target="_blank" rel="noopener">Swap &amp; Bridge <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a><a class="nx-btn" href="../bridge/?way=card" target="_blank" rel="noopener">Buy with card</a></div></div>
 
   <div class="view" id="earnView">
   <div class="filters">
@@ -262,7 +259,8 @@
   </div>
 
   <p class="legal">Yields are variable, set by the market, and shown as reported by the vault; past rates do not predict future ones. Vaults carry smart-contract and credit risk, including loss of principal, and a vault marked <b>low liquidity</b> may not let you withdraw at once. Vault fees go to the curator, none to us. A loan is over-collateralised: if the collateral's price falls until the health factor reaches 1.0, Morpho liquidates part of it, with a penalty. Borrow rates are variable. A NEW ONE may take an origination fee on a new loan, shown in the quote before you sign. Nothing here is investment advice or an offer; A NEW ONE does not custody funds, does not issue any asset and does not choose for you. Some jurisdictions restrict these products. <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></p>
-</main>
+</div></main>
+<footer class="nx-foot"><div class="nx-foot-in"><span>© 2026 A NEW ONE</span><a href="../docs.html">Docs</a><a href="../about.html">About</a><a href="../terms.html">Terms</a><a href="../privacy.html">Privacy</a><a href="mailto:support@anewone.xyz">Contact</a><span class="sp">Yields are variable and loans can be liquidated. Nothing here is investment advice.</span></div></footer>
 
 <div class="overlay" id="overlay" role="dialog" aria-modal="true">
   <div class="sheet">
@@ -352,6 +350,7 @@
   const CHAIN = net === "mainnet" ? "Arc" : "Arc_Testnet";
   const $ = (id) => document.getElementById(id);
   $("netPill").textContent = net === "mainnet" ? "● Arc mainnet" : "● Arc testnet";
+  $("netPill").hidden = net === "mainnet";   // the label is a warning, not a badge: it appears only off mainnet
 
   // theme
   $("themeSw").onclick = () => {
@@ -407,11 +406,21 @@
       const seen = [];
       for await (const v of k.exploreVaultsIterator({ chain: CHAIN, sortBy: "apy" })) seen.push(v);
       vaults = seen;
+      fillTop();
       render();
     } catch (e) {
       $("grid").innerHTML = `<div class="empty">Could not load vaults: ${esc(e.message || e)}</div>`;
       $("count").textContent = "";
     }
+  }
+  // the live card in the hero: the best curated USDC vault right now
+  function fillTop() {
+    const top = vaults.filter((v) => v.asset === "USDC" && curated(v)).sort((a, b) => Number(b.currentApy) - Number(a.currentApy))[0];
+    if (!top) return;
+    $("topApy").textContent = pct(top.currentApy);
+    $("topName").textContent = top.name;
+    $("topBy").textContent = "by " + ((top.manager && top.manager.name) || "curator") + " · Morpho on Arc";
+    $("topCard").hidden = false;
   }
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   function render() {
@@ -419,16 +428,19 @@
     const hidden = vaults.filter((v) => (filter === "all" || v.asset === filter) && !curated(v)).length;
     $("count").textContent = `${list.length} vault${list.length === 1 ? "" : "s"}${!showAll && hidden ? ` · ${hidden} unlisted hidden` : ""}`;
     if (!list.length) { $("grid").innerHTML = `<div class="empty">No ${filter} vaults on ${CHAIN} right now.</div>`; return; }
+    const maxApy = Math.max(...list.map((x) => Number(x.currentApy) || 0), 1e-9);
     $("grid").innerHTML = list.map((v, i) => {
       const cur = v.manager && v.manager.name ? v.manager.name : "unlisted curator";
       const low = v.status !== "active";
       const uncurated = !curated(v);
       const p = positions[v.vaultAddress];
       const fee = v.fee ? `${pct(v.fee.performance)} perf · ${pct(v.fee.management)} mgmt` : pct(v.vaultFee);
-      return `<div class="vault" data-i="${vaults.indexOf(v)}">
+      const lit = i === 0 && !uncurated;
+      return `<div class="vault${lit ? " feat" : ""}" data-i="${vaults.indexOf(v)}">${lit ? '<span class="feat-b">TOP APY</span>' : ""}
         <div class="head"><div><h3>${esc(v.name)}</h3><div class="curator">by ${esc(cur)} · ${esc(v.protocol)}</div></div>
           <span class="tag ${v.asset === "USDC" ? "usdc" : ""}">${esc(v.asset)}</span></div>
         <div class="apy">${pct(v.currentApy)}<small>APY</small></div>
+        <div class="meter"><i style="width:${Math.max(4, Math.round(((Number(v.currentApy) || 0) / maxApy) * 100))}%"></i></div>
         <div class="stats"><div>${money(v.totalDeposits)}<span>Deposits</span></div><div>${money(v.liquidity)}<span>Liquidity</span></div><div>${esc(fee)}<span>Vault fee</span></div></div>
         ${low ? `<span class="tag warn">⚠ ${esc(String(v.status).replace(/_/g, " "))}</span>` : ""}
         ${uncurated ? `<span class="tag warn">⚠ not curated: no named curator or flagged by Circle. Anyone can deploy a vault with any name.</span>` : (v.circleGuarded ? `<span class="tag usdc">✓ Circle-guarded${v.asset === "USDC" ? " · deposit from Base" : ""}</span>` : "")}
@@ -1275,5 +1287,6 @@ Time: ${new Date().toISOString()}`;
     B("loanOverlay").classList.remove("open");
   };
 </script>
+<script src="../shell.js"></script>
 </body>
 </html>
