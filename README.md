@@ -95,7 +95,9 @@ On Arc mainnet the platform points at Uniswap's official v3 deployment: factory
   Walrus Memory under a per-wallet namespace, reads the floor index for live Arc data and answers with an
   OpenAI-compatible model; its `mode: "site"` is the anonymous assistant on the home page and in the corner of every page
   (no memory, answers about the whole site, suggested questions cached, a daily allowance per visitor and for the site:
-  `CHAT_SITE_DAY_IP`, `CHAT_SITE_DAY_ALL`). `rpc.js` relays reads for browsers that block `*.arc.io`; `lifi/` proxies Swap & Bridge quotes.
+  `CHAT_SITE_DAY_IP`, `CHAT_SITE_DAY_ALL`; `LLM_MODEL_SITE` gives it its own model, `openai/gpt-oss-20b` in production:
+  Groq meters tokens per model, so the home page's questions never draw on the memory chat's allowance, and a full
+  prompt is about 1,800 input tokens against the free plan's 8,000 a minute and 200,000 a day for each model). `rpc.js` relays reads for browsers that block `*.arc.io`; `lifi/` proxies Swap & Bridge quotes.
 - `monitor/`: the jobs behind the launch, run every minute by Windows Task Scheduler (`AnewoneMainnetScan`):
   - `scan.mjs` finds Arc mainnet, bridges USDC, deploys, confirms the launch on chain and flips `docs/config.js`
   - `bridge.mjs` moves 10 USDC from Base to Arc with CCTP V2 and Circle's Forwarding Service

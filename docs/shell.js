@@ -100,22 +100,43 @@
   }
   function changed() { views.forEach(function (v) { v.render(); }); persist(); }
 
+  var MSG = {
+    daily: "The Deckhand has answered a lot of questions today and is resting until tomorrow. The Docs hold the same answers: ",
+    minute: "That is a lot of questions in a minute. Give it a moment and ask again.",
+    busy: "The Deckhand is busy with other visitors right now. Ask again in a minute, or read the Docs: ",
+    down: "The Deckhand is not answering right now. The Docs hold the same answers: ",
+    net: "Could not reach the Deckhand. Check your connection and try again, or read the Docs: "
+  };
+  // one round trip: resolves to { reply } or { err, wait }
+  function once(history) {
+    var ctl = typeof AbortController === "function" ? new AbortController() : null, timer = ctl && setTimeout(function () { ctl.abort(); }, 45000);
+    return fetch(API, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "chat", mode: "site", messages: history }), signal: ctl ? ctl.signal : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { r: r, j: j }; }); })
+      .then(function (x) {
+        if (x.r.ok && x.j.reply) return { reply: String(x.j.reply) };
+        if (x.r.status === 429 && x.j.error === "daily") return { err: "daily" };
+        if (x.r.status === 429) return { err: "minute" };
+        if (x.r.status === 503 && x.j.error === "busy") return { err: "busy", wait: Number(x.j.retryAfter) || 5 };
+        return { err: "down" };
+      })
+      .catch(function () { return { err: "net" }; })
+      .then(function (res) { if (timer) clearTimeout(timer); return res; });
+  }
+
   function ask(q) {
     q = String(q || "").trim().slice(0, MAX_CHARS);
     if (!q || state.busy) return;
     state.msgs.push({ role: "user", content: q }); state.busy = true; changed();
-    var history = state.msgs.filter(function (m) { return !m.err; }).slice(-MAX_TURNS).map(function (m) { return { role: m.role, content: m.content }; });
-    var ctl = typeof AbortController === "function" ? new AbortController() : null, timer = ctl && setTimeout(function () { ctl.abort(); }, 45000);
-    fetch(API, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "chat", mode: "site", messages: history }), signal: ctl ? ctl.signal : undefined })
-      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { r: r, j: j }; }); })
-      .then(function (x) {
-        if (x.r.ok && x.j.reply) state.msgs.push({ role: "assistant", content: String(x.j.reply) });
-        else if (x.r.status === 429 && x.j.error === "daily") state.msgs.push({ role: "assistant", err: true, content: "The Deckhand has answered a lot of questions today and is resting until tomorrow. The Docs hold the same answers: " + DOCS });
-        else if (x.r.status === 429) state.msgs.push({ role: "assistant", err: true, content: "That is a lot of questions in a minute. Give it a moment and ask again." });
-        else state.msgs.push({ role: "assistant", err: true, content: "The Deckhand is not answering right now. The Docs hold the same answers: " + DOCS });
-      })
-      .catch(function () { state.msgs.push({ role: "assistant", err: true, content: "Could not reach the Deckhand. Check your connection and try again, or read the Docs: " + DOCS }); })
-      .then(function () { if (timer) clearTimeout(timer); state.busy = false; changed(); });
+    var history = state.msgs.filter(function (m) { return !m.err; }).slice(-MAX_TURNS).map(function (m) { return { role: m.role, content: m.content }; }), tries = 0;
+    (function go() {
+      once(history).then(function (res) {
+        // the model is metered by the minute: wait the time it names, twice at most, with the dots still showing
+        if (res.err === "busy" && tries < 2) { tries++; setTimeout(go, Math.min(12, Math.max(3, res.wait)) * 1000); return; }
+        if (res.reply) state.msgs.push({ role: "assistant", content: res.reply });
+        else state.msgs.push({ role: "assistant", err: true, content: MSG[res.err] + (/(daily|busy|down|net)/.test(res.err) ? DOCS : "") });
+        state.busy = false; changed();
+      });
+    })();
   }
 
   function mount(host, opt) {
