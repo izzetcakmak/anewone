@@ -87,10 +87,15 @@ On Arc mainnet the platform points at Uniswap's official v3 deployment: factory
 - `script/DeployUniswapV3.s.sol`: stands up Uniswap v3 from its npm bytecode for testnet and anvil rehearsals.
 - `test/`: the forge test suite and the Uniswap v3 fixtures (provenance in `test/fixtures/uniswap-v3/PROVENANCE.md`).
 - `docs/`: the static site, deployed by Vercel on every push: the app, docs, the ark, the Boarding Pass,
-  Swap & Bridge (`bridge/`), Deck Hand (`chat/`), privacy and terms.
+  Swap & Bridge (`bridge/`), Deck Hand (`chat/`), privacy and terms. Every page shares one look through two files:
+  `docs/shell.css` (the colours, the bar, the hero, the glass pills, the Deck Hand widget; its classes are prefixed `nx-`
+  and it loads after a page's own `<style>`) and `docs/shell.js` (the sky and arch under each hero, the bar, the theme
+  switch, and the Deck Hand launcher and inline chat). The home page `docs/index.html` is the wallet-free front door.
 - `api/`: Vercel functions. `chat.js` is Deck Hand: verifies the wallet signature, recalls from and remembers to
   Walrus Memory under a per-wallet namespace, reads the floor index for live Arc data and answers with an
-  OpenAI-compatible model. `rpc.js` relays reads for browsers that block `*.arc.io`; `lifi/` proxies Swap & Bridge quotes.
+  OpenAI-compatible model; its `mode: "site"` is the anonymous assistant on the home page and in the corner of every page
+  (no memory, answers about the whole site, suggested questions cached, a daily allowance per visitor and for the site:
+  `CHAT_SITE_DAY_IP`, `CHAT_SITE_DAY_ALL`). `rpc.js` relays reads for browsers that block `*.arc.io`; `lifi/` proxies Swap & Bridge quotes.
 - `monitor/`: the jobs behind the launch, run every minute by Windows Task Scheduler (`AnewoneMainnetScan`):
   - `scan.mjs` finds Arc mainnet, bridges USDC, deploys, confirms the launch on chain and flips `docs/config.js`
   - `bridge.mjs` moves 10 USDC from Base to Arc with CCTP V2 and Circle's Forwarding Service
