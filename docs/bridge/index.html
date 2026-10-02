@@ -193,28 +193,41 @@
   footer { max-width: 1160px; margin: 0 auto; padding: 20px; color: var(--faint); font-size: 12px; border-top: 1px solid var(--border); }
   footer a { color: var(--dim); margin-right: 14px; }
 
-  /* the same bar as the floor: one height, one padding, one quiet border for every control,
-     one light/dark toggle, and only the network in a highlighted pill */
-  .tb-nav2 { display: flex; align-items: center; gap: 12px; margin-left: auto; }
-  .tbx { height: 39px; box-sizing: border-box; padding: 0 13px; border-radius: 999px; display: inline-flex;
-    align-items: center; justify-content: center; gap: 7px; font: 500 12.5px var(--mono); letter-spacing: .4px;
-    line-height: 1; white-space: nowrap; border: 1px solid var(--border-2); background: transparent; color: var(--text); text-decoration: none; }
-  a.tbx:hover, button.tbx:hover { text-decoration: none; border-color: rgba(var(--accent-rgb),.45); background: rgba(var(--accent-rgb),.06); }
+  /* The bar's pills as on the home page, Earn and Assets: a translucent green pane with a lit top
+     edge and a faint halo, solid green under the hand, one size; the theme switch is the round one.
+     (The network pill keeps its ::before for the dot.) */
+  .tb-nav2 { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .tbx { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
+    height: 40px; width: 142px; padding: 0 10px; border-radius: 999px; font: 700 12px var(--mono); letter-spacing: .01em;
+    line-height: 1; white-space: nowrap; color: var(--accent); text-decoration: none;
+    border: 1px solid rgba(var(--accent-rgb), .45);
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
+    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
+  .tbx:not(.net)::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
+  a.tbx:hover, button.tbx:hover { transform: translateY(-1px); text-decoration: none; color: #04120b; text-shadow: none;
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
+  :root[data-theme="light"] .tbx { text-shadow: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
   button.tbx { cursor: pointer; }
-  .tbx.theme { width: 39px; padding: 0; }
-  .tbx.theme svg { width: 17px; height: 17px; }
+  .tbx.theme { width: 40px; padding: 0; }
+  .tbx.theme svg { width: 16px; height: 16px; }
   /* the floor's own drawing of the ark, at the size it has there (1.6x the text) */
   .tbx .ark-ico { width: 1.6em; height: 1.6em; display: block; flex: none; }
   .tbx.theme .i-moon, :root[data-theme="dark"] .tbx.theme .i-sun, :root[data-theme="dim"] .tbx.theme .i-sun { display: none; }
   :root[data-theme="dark"] .tbx.theme .i-moon, :root[data-theme="dim"] .tbx.theme .i-moon { display: block; }
-  .tbx.net { color: var(--green); border-color: rgba(var(--green-rgb),.5); background: rgba(var(--green-rgb),.10); }
   .tbx.net::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
-  .tbx.net.test { color: var(--gold, #d69200); border-color: rgba(214,146,0,.5); background: rgba(214,146,0,.10); }
-  /* the labels fold away before the bar runs out of room beside the full-size crest and
-     wordmark; every button keeps its icon */
-  @media (max-width: 800px) { .tbx .lbl { display: none; } }
-  @media (max-width: 640px) { .tb-nav2 { gap: 5px; } .tbx { padding: 0 9px; font-size: 11.5px; height: 36px; }
-    .tbx.theme { width: 36px; } }
+  .tbx.net.test { color: var(--gold, #d69200); }
+  /* below 1181px the doors keep their icons alone, round, as on Earn and Assets */
+  @media (max-width: 1180px) { .tbx .lbl { display: none; } .tbx:not(.net) { width: 40px; padding: 0; } }
+  @media (max-width: 640px) { .tb-nav2 { gap: 5px; } .tbx { height: 36px; font-size: 11.5px; }
+    .tbx:not(.net) { width: 36px; } .tbx.net { width: auto; padding: 0 10px; } }
+  /* the narrowest phones: smaller circles and gaps, so the five still fit 320px */
+  @media (max-width: 360px) { .topbar-inner { padding-left: 10px; padding-right: 10px; } .tb-nav2 { gap: 4px; }
+    .tbx:not(.net) { width: 32px; height: 32px; } .tbx.net { height: 32px; padding: 0 8px; font-size: 11px; } }
 
   /* ---- one workflow column */
   .flow { max-width: 560px; margin: 0 auto; }
@@ -258,7 +271,7 @@
   <div class="topbar-inner">
     <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../brand/logo.svg" alt=""><span>A NEW ONE</span></a>
     <div class="tb-nav2">
-      <a class="tbx" href="/">← <span class="lbl">Floor</span></a>
+      <a class="tbx" href="/">← <span class="lbl">Home</span></a>
       <a class="tbx" href="../ark/" target="_blank"><svg class="ark-ico" viewBox="0 0 60 48" fill="none" stroke="#12080E" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M9 23 L30 8 L51 23 Z" fill="#E08A86"/><path d="M18 23 H42 V32 H18 Z" fill="#F8D49B"/><path d="M5 32 H55 Q51 44 30 46 Q9 44 5 32 Z" fill="#C9925E"/></svg> <span class="lbl">Ark</span></a>
       <a class="tbx" href="../chat/" title="Deckhand, the AI assistant"><img src="../chat/deckhand.svg" alt="" width="16" height="16" style="border-radius:4px"> <span class="lbl">Deckhand</span></a>
       <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
