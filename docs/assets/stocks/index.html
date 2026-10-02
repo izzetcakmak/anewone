@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  (function () {
+    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "light"); }
+    catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+  })();
+</script>
+<title>Stocks · Tokenized US stocks and ETFs on Arc | A NEW ONE</title>
+<link rel="canonical" href="https://anewone.xyz/assets/stocks/">
+<meta name="description" content="Tokenized US stocks and ETFs from xStocks, issued by Backed Assets (JE) Ltd, a Kraken company: Tesla, Nvidia, Apple, S&P 500 and over a thousand more, each backed 1:1 by the share. Live reference prices, proof of reserves and trading hours; trading in USDC on Arc the moment the tokens land there. A NEW ONE is the interface, never the issuer.">
+<meta property="og:title" content="Stocks · Tokenized US stocks and ETFs on Arc">
+<meta property="og:description" content="Over a thousand xStocks with live prices and proof of reserves, settled in USDC on Arc.">
+<meta property="og:url" content="https://anewone.xyz/assets/stocks/">
+<meta property="og:image" content="https://anewone.xyz/brand/logo-1024.png">
+<link rel="icon" type="image/png" sizes="32x32" href="../../favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* The floor's theme system, verbatim: one accent, neutral everything else. */
+  :root {
+    --accent-rgb: 0,184,119; --green-rgb: 0,165,104; --red-rgb: 224,51,79; --gold-rgb: 200,138,0;
+    --accent: rgb(var(--accent-rgb)); --green: rgb(var(--green-rgb)); --red: rgb(var(--red-rgb)); --gold: rgb(var(--gold-rgb));
+    --r: 20px; --r-md: 14px; --r-sm: 10px; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  :root, :root[data-theme="light"] {
+    --bg: #f4f4f5; --bg-2: #ffffff; --card: #ececee; --bg-rgb: 244,244,245; --ink-rgb: 16,16,24;
+    --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16);
+    --text: #111116; --dim: #5f5f6d; --faint: #8b8b98; --accent-soft: #e8f9f1; --accent-ink: #ffffff;
+    --shadow: 0 1px 2px rgba(16,16,24,.06);
+  }
+  :root[data-theme="dim"], :root[data-theme="dark"] {
+    --bg: #0d0d10; --bg-2: #151519; --card: #1b1b20; --bg-rgb: 13,13,16; --ink-rgb: 255,255,255;
+    --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16);
+    --text: #f2f2f5; --dim: #a0a0ae; --faint: #6e6e7c; --accent-rgb: 62,230,160; --green-rgb: 62,230,160; --red-rgb: 255,84,112; --gold-rgb: 255,194,77;
+    --accent-soft: rgba(62,230,160,.10); --accent-ink: #04140d; --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 Inter, system-ui, sans-serif; min-height: 100vh; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  button { font: inherit; cursor: pointer; }
+
+  .topbar { position: sticky; top: 0; z-index: 200; background: rgba(var(--bg-rgb),.78); backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid var(--border); }
+  .topbar-inner { max-width: 1160px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 10px; }
+  .tb-brand { display: flex; align-items: center; gap: 12px; }
+  .tb-brand:hover { text-decoration: none; }
+  .tb-brand img { width: 40px; height: 40px; border-radius: 11px; }
+  .tb-brand span { font: 700 20px 'Space Grotesk', sans-serif; letter-spacing: .8px; color: var(--text); white-space: nowrap; }
+  .tb-nav { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .tbx { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; width: 142px; padding: 0 10px;
+    font: 700 12px var(--mono); letter-spacing: .01em; white-space: nowrap; color: var(--accent); border: 1px solid rgba(var(--accent-rgb), .45); border-radius: 999px;
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
+    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
+  .tbx::before { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
+  .tbx:hover { text-decoration: none; color: var(--accent-ink); text-shadow: none; transform: translateY(-1px);
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
+  :root[data-theme="light"] .tbx { text-shadow: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
+  .tbx.theme { width: 40px; padding: 0; }
+  @media (max-width: 1180px) { .tbx .lbl { display: none; } .tbx:not(.net):not(.primary) { width: 40px; padding: 0; } }
+  .tbx.theme .i-sun, .tbx.theme .i-moon { width: 16px; height: 16px; }
+  :root[data-theme="light"] .i-sun { display: none; }
+  :root:not([data-theme="light"]) .i-moon { display: none; }
+  @media (max-width: 600px) {
+    .tb-brand span, .tbx .lbl { display: none; }
+    .topbar-inner { padding: 10px 14px; gap: 8px; }
+    .tb-nav { gap: 8px; }
+    .tbx { height: 42px; min-width: 42px; width: auto; padding: 0 12px; font-size: 16px; }
+    .tbx.net, .tbx.primary { font-size: 13px; padding: 0 14px; }
+    .tbx.theme .i-sun, .tbx.theme .i-moon { width: 20px; height: 20px; }
+  }
+
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
+  .hero { padding: 48px 0 28px; }
+  .eyebrow { font: 700 11px var(--mono); letter-spacing: .2em; color: var(--accent); text-transform: uppercase; }
+  h1 { font: 700 clamp(30px, 4.5vw, 46px)/1.08 'Space Grotesk', sans-serif; margin: 12px 0 12px; letter-spacing: -.02em; }
+  .lead { color: var(--dim); font-size: 16px; max-width: 760px; margin: 0; }
+  .lead b { color: var(--text); }
+
+  /* where the tokens stand on Arc, said once above the cards */
+  .elig { display: flex; align-items: flex-start; gap: 14px; background: var(--bg-2); border: 1px solid var(--border-2); border-radius: var(--r); padding: 16px 20px; margin: 20px 0 22px; color: var(--dim); font-size: 14px; }
+  .elig .ico { font-size: 22px; line-height: 1; }
+  .elig b { color: var(--text); }
+  .elig a { text-decoration: underline; }
+  .elig.live { border-color: rgba(var(--green-rgb),.5); background: rgba(var(--green-rgb),.06); }
+
+  .filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 14px; }
+  .search { flex: 1 1 220px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-2); border-radius: 999px; padding: 0 14px; height: 38px; background: var(--bg-2); }
+  .search input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font: 500 14px Inter, sans-serif; outline: none; }
+  .chip { height: 34px; padding: 0 14px; border: 1px solid var(--border-2); border-radius: 999px; background: var(--bg-2); color: var(--dim); font: 600 12px var(--mono); }
+  .chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .count { margin-left: auto; color: var(--faint); font: 500 12px var(--mono); }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 960px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
+  .stock { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; }
+  .stock .head { display: flex; align-items: center; gap: 12px; }
+  .stock .logo { width: 40px; height: 40px; border-radius: 10px; background: var(--card); object-fit: cover; flex: none; display: grid; place-items: center; font: 700 12px var(--mono); color: var(--dim); overflow: hidden; }
+  .stock .logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .stock h3 { margin: 0; font: 600 16px 'Space Grotesk', sans-serif; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stock .by { color: var(--dim); font: 500 12px var(--mono); margin-top: 2px; }
+  .stock .head > div { min-width: 0; flex: 1; }
+  .tag { font: 700 10px var(--mono); letter-spacing: .12em; padding: 4px 8px; border-radius: 6px; background: var(--card); color: var(--dim); white-space: nowrap; }
+  .tag.usdc { color: var(--accent); background: var(--accent-soft); }
+  .tag.warn { color: var(--gold); white-space: normal; }
+  .tag.ok { color: var(--green); background: rgba(var(--green-rgb),.12); white-space: normal; }
+  .tag.bad { color: var(--red); background: rgba(var(--red-rgb),.1); white-space: normal; }
+  .price { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .price .v { font: 700 30px var(--mono); line-height: 1; }
+  .price .v.loading { color: var(--faint); }
+  .price small { font: 600 11px var(--mono); letter-spacing: .12em; color: var(--faint); }
+  .hours { display: inline-flex; align-items: center; gap: 6px; font: 500 12px var(--mono); color: var(--dim); }
+  .hours .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+  .hours.market .dot { background: var(--green); box-shadow: 0 0 0 3px rgba(var(--green-rgb),.18); }
+  .hours.extended .dot, .hours.overnight .dot { background: var(--gold); }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stats div { font: 600 13px var(--mono); }
+  .stats span { display: block; font: 500 10px var(--mono); letter-spacing: .12em; color: var(--faint); text-transform: uppercase; margin-top: 2px; }
+  .stock .links { display: flex; gap: 12px; flex-wrap: wrap; font: 500 12px var(--mono); }
+  .pos { font: 500 12px var(--mono); color: var(--accent); background: var(--accent-soft); border-radius: var(--r-sm); padding: 8px 10px; line-height: 1.6; }
+  .stock .btn { margin-top: auto; padding: 11px; border: 1px solid var(--border-2); border-radius: var(--r-sm); background: var(--card); color: var(--text); font-weight: 600; text-align: center; }
+  .stock .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .stock .btn:hover { text-decoration: none; }
+  .stock .btn:disabled { opacity: .5; cursor: default; }
+  .empty { grid-column: 1 / -1; color: var(--dim); text-align: center; padding: 40px 0; }
+  .more { display: block; margin: 18px auto 0; padding: 11px 22px; border: 1px solid var(--border-2); border-radius: 999px; background: var(--bg-2); color: var(--text); font-weight: 600; }
+  .more[hidden] { display: none; }
+
+  h2.sec { font: 600 20px 'Space Grotesk', sans-serif; margin: 36px 0 12px; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 800px) { .steps { grid-template-columns: 1fr; } }
+  .step { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 20px; color: var(--dim); font-size: 13px; }
+  .step b { display: block; color: var(--text); font: 600 15px 'Space Grotesk', sans-serif; margin-bottom: 6px; }
+  .step .n { font: 700 11px var(--mono); letter-spacing: .2em; color: var(--accent); }
+  .issuers { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 800px) { .issuers { grid-template-columns: 1fr; } }
+
+  .legal { margin: 40px 0 56px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--faint); font-size: 12px; max-width: 860px; }
+  .legal a { color: var(--dim); text-decoration: underline; }
+
+  /* the order sheet */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 300; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .overlay.open { display: flex; }
+  .sheet { width: 100%; max-width: 420px; background: var(--bg-2); border: 1px solid var(--border-2); border-radius: var(--r); padding: 22px; max-height: 94vh; overflow: auto; }
+  .sheet h2 { margin: 0 0 4px; font: 600 18px 'Space Grotesk', sans-serif; }
+  .sheet .sub { color: var(--dim); font-size: 12px; margin: 0 0 16px; }
+  .tabs { display: flex; gap: 4px; background: var(--card); border-radius: var(--r-sm); padding: 4px; margin-bottom: 14px; }
+  .tabs button { flex: 1; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--dim); font-weight: 600; }
+  .tabs button.on { background: var(--bg-2); color: var(--text); box-shadow: var(--shadow); }
+  .amt { display: flex; align-items: center; border: 1px solid var(--border-2); border-radius: var(--r-sm); padding: 6px 6px 6px 14px; background: var(--bg); }
+  .amt input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font: 600 22px var(--mono); outline: none; }
+  .amt .unit { font: 600 12px var(--mono); color: var(--dim); padding: 0 8px; }
+  .amt button { padding: 6px 10px; border: 1px solid var(--border-2); border-radius: 7px; background: var(--bg-2); color: var(--dim); font: 600 11px var(--mono); }
+  .bal { display: flex; justify-content: space-between; color: var(--faint); font: 500 12px var(--mono); margin: 8px 2px 16px; }
+  .quote { background: var(--card); border-radius: var(--r-sm); padding: 10px 12px; margin: -6px 0 14px; font: 500 12px var(--mono); color: var(--dim); display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; }
+  .quote b { color: var(--text); text-align: right; }
+  .quote[hidden] { display: none; }
+  .sheet .go { width: 100%; padding: 13px; border: 0; border-radius: var(--r-sm); background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 15px; }
+  .sheet .go:disabled { opacity: .5; cursor: default; }
+  .sheet .close { width: 100%; margin-top: 8px; padding: 10px; border: 0; background: transparent; color: var(--dim); }
+  .status { min-height: 20px; margin-top: 12px; font: 500 12px var(--mono); color: var(--dim); word-break: break-word; }
+  .status.err { color: var(--red); }
+  .status.ok { color: var(--green); }
+  .wraprow { background: var(--card); border-radius: var(--r-sm); padding: 12px 14px; margin-bottom: 14px; font: 500 12px var(--mono); color: var(--dim); line-height: 1.7; }
+  .wraprow b { color: var(--text); }
+  .wraprow button { margin-top: 6px; padding: 7px 12px; border: 1px solid var(--border-2); border-radius: 7px; background: var(--bg-2); color: var(--text); font: 600 12px var(--mono); }
+  .wraprow[hidden] { display: none; }
+
+  .ack { margin: 0 0 16px; padding-left: 18px; color: var(--dim); font-size: 13px; line-height: 1.5; }
+  .ack li { margin: 6px 0; }
+  .ack b { color: var(--text); }
+  .ack a { text-decoration: underline; }
+  .wrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; margin-top: 8px; border: 1px solid var(--border-2); border-radius: var(--r-sm); background: var(--bg); color: var(--text); font-weight: 600; text-align: left; }
+  .wrow:hover { border-color: var(--accent); }
+  .wrow img { width: 24px; height: 24px; border-radius: 6px; }
+  .wrow small { color: var(--dim); font-weight: 500; }
+  .wdivider { display: flex; align-items: center; gap: 10px; color: var(--faint); font: 500 11px var(--mono); margin: 14px 0 6px; }
+  .wdivider::before, .wdivider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+  .hint { color: var(--dim); font-size: 12px; margin-top: 10px; }
+  .hint a { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../../brand/logo.svg" alt=""><span>A NEW ONE</span></a>
+    <nav class="tb-nav">
+      <a class="tbx" href="/">← <span class="lbl">Home</span></a>
+      <a class="tbx" href="../" title="Tokenized funds on Arc through Centrifuge">🏦 <span class="lbl">Funds</span></a>
+      <a class="tbx" href="../../earn/" title="USDC vaults and loans on Morpho">💵 <span class="lbl">Earn &amp; Borrow</span></a>
+      <a class="tbx" href="../../bridge/" title="Bring USDC aboard from any chain">🌉 <span class="lbl">Swap &amp; Bridge</span></a>
+      <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark">
+        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+        <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg>
+      </button>
+      <span class="tbx net" id="netPill">…</span>
+      <button type="button" class="tbx primary" id="connectBtn">Connect</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <div class="eyebrow">Assets · Stocks · xStocks on Arc · settled in USDC</div>
+    <h1>US stocks and ETFs,<br>on Arc.</h1>
+    <p class="lead">Over a thousand <b>xStocks</b>: tokens that each track one share of a US stock or ETF, held 1:1 with regulated custodians and issued by <b>Backed Assets (JE) Ltd</b>, a Kraken company. Every card reads the issuer's live reference price, proof of reserves and market hours. On Arc they trade in <b>USDC, around the clock</b>, from your own wallet. <b>A NEW ONE is the interface, not the issuer.</b></p>
+  </div>
+
+  <div class="elig" id="arcState">
+    <span class="ico">🛰️</span>
+    <div><b>Checking Arc…</b> Reading the issuer's deployments and the Arc chain for the stock tokens.</div>
+  </div>
+
+  <div class="filters">
+    <label class="search"><span aria-hidden="true">🔎</span><input id="q" placeholder="Search a company, ticker or ETF…" autocomplete="off"></label>
+    <button class="chip on" data-f="featured">Featured</button>
+    <button class="chip" data-f="all">All</button>
+    <button class="chip" data-f="etf">Index &amp; ETFs</button>
+    <button class="chip" data-f="arc" hidden>Live on Arc</button>
+    <button class="chip" data-f="mine" hidden>My holdings</button>
+    <span class="count" id="count">loading the catalog…</span>
+  </div>
+  <div class="grid" id="grid"><div class="empty">Loading the catalog from the issuer…</div></div>
+  <button class="more" id="more" hidden>Show more</button>
+
+  <h2 class="sec">How a stock token works</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1 · THE TOKEN</span><b>One token, one share</b>Backed buys the share and keeps it with a regulated custodian in a segregated account; the token is a tracker certificate on it, redeemable with the issuer. Proof of reserves is published per stock and shown on each card. No voting rights; dividends are reinvested into the token's balance.</div>
+    <div class="step"><span class="n">2 · ON ARC</span><b>Trade in USDC, 24/7</b>The tokens are plain ERC-20s, so on Arc they trade in Uniswap pools against USDC from any wallet, at any hour. The pool price can stray from the exchange price when the market is closed; both are on the card, and the quote shows the difference before you sign.</div>
+    <div class="step"><span class="n">3 · THE WRAPPER</span><b>Why you receive wTSLAx, not TSLAx</b>Dividends and splits change xStock balances automatically. Pools cannot hold a token whose balances move, so they hold the wrapped, non-rebasing version (ERC-4626). It is worth exactly the same share; the card shows your holding either way and can wrap or unwrap in one click.</div>
+  </div>
+
+  <h2 class="sec">Issuers on Arc</h2>
+  <div class="issuers">
+    <div class="step"><span class="n">XSTOCKS · BACKED, A KRAKEN COMPANY</span><b>1,100+ stocks and ETFs</b>Jersey-registered issuer, Liechtenstein FMA-approved base prospectus, 1:1 custody with Alpaca, Chainlink reserves and bridge. Live on Ethereum, Solana, Arbitrum, BNB Chain, Mantle, Ink, X Layer, Optimism, HyperEVM, Monad, TON and Tron; <span id="xsArcWord">Arc next</span>. <a href="https://xstocks.com" target="_blank" rel="noopener">xstocks.com ↗</a></div>
+    <div class="step"><span class="n">DINARI · DSHARES</span><b>700+ US stocks and ETFs, live on Arc since 16 September 2026</b>SEC-registered transfer agent, broker-dealer orders in USDC with the issuer's own KYC and dividends paid in USDC. A NEW ONE's order flow is built and awaiting partner access; it opens here the day Dinari switches it on. <a href="https://dinari.com" target="_blank" rel="noopener">dinari.com ↗</a></div>
+  </div>
+
+  <p class="legal">Prices, hours and reserves are read from the issuer's public API and the Arc chain; the reference price is Backed's quote for the underlying and is indicative, not a price you will get in a pool. xStocks are tracker certificates issued by Backed Assets (JE) Limited, a Jersey company registered with the Jersey Financial Services Commission, under a base prospectus approved by the Liechtenstein FMA; they give economic exposure to a share, not the share itself or its voting rights, and their documents at <a href="https://assets.backed.fi/legal-documentation" target="_blank" rel="noopener">assets.backed.fi</a> prevail over anything shown here. They are not offered to US persons. A NEW ONE does not issue, custody, broker or advise; trades on Arc happen in third-party pools you choose to use, at a price you see before you sign, and you can lose what you put in. Nothing here is an offer. Some jurisdictions restrict these products. <a href="../../terms.html">Terms</a> · <a href="../../privacy.html">Privacy</a></p>
+</main>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2 id="shName">Stock</h2>
+    <p class="sub" id="shSub"></p>
+    <div class="tabs"><button id="tabBuy" class="on">Buy</button><button id="tabSell">Sell</button></div>
+    <div class="wraprow" id="wrapRow" hidden></div>
+    <div class="amt" id="amtRow"><input id="amt" inputmode="decimal" placeholder="0.00" autocomplete="off"><span class="unit" id="unit">USDC</span><button id="maxBtn">MAX</button></div>
+    <div class="bal"><span id="balL">Wallet: …</span><span id="balR">Holding: …</span></div>
+    <div class="quote" id="quote" hidden></div>
+    <button class="go" id="goBtn">Buy</button>
+    <div class="status" id="status"></div>
+    <button class="close" id="closeBtn">Close</button>
+  </div>
+</div>
+
+<div class="overlay" id="ackModal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2>Before you start</h2>
+    <p class="sub">One signature, once per wallet. It costs nothing and moves nothing; it only records that you accept the terms.</p>
+    <ul class="ack">
+      <li>A NEW ONE is a <b>non-custodial interface</b>: it never holds your funds or keys, never issues an asset and never gives advice.</li>
+      <li>The tokens are issued and run by third parties. <b>Prices move</b>, pools can be thin, and you can lose what you put in.</li>
+      <li>Fees are shown before you sign: the pool's fee and the quote's slippage limit; none to us on these tokens.</li>
+      <li>You are 18 or older, act for yourself, meet the issuer's eligibility rules, and are responsible for your own taxes and local rules.</li>
+      <li>You accept the <a href="../../terms.html" target="_blank" rel="noopener">Terms of Use</a> and the <a href="../../privacy.html" target="_blank" rel="noopener">Privacy Notice</a>.</li>
+    </ul>
+    <button class="go" id="ackSign">Sign to accept</button>
+    <div class="status" id="ackStatus"></div>
+    <button class="close" id="ackClose">Not now</button>
+  </div>
+</div>
+
+<div class="overlay" id="acctModal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2>Your wallet</h2>
+    <p class="sub" id="acctAddr" style="font-family:var(--mono);word-break:break-all"></p>
+    <p class="sub" id="acctKind"></p>
+    <button class="wrow" id="acctSwitch" type="button"><span style="font-size:20px">⇄</span><span>Switch wallet <small>· connect a different one</small></span></button>
+    <button class="wrow" id="acctDisconnect" type="button" style="color:var(--red)"><span style="font-size:20px">⏏</span><span>Disconnect <small>· ends the session, also in the wallet app</small></span></button>
+    <button class="close" id="acctClose">Close</button>
+  </div>
+</div>
+
+<div class="overlay" id="walletModal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2>Connect</h2>
+    <p class="sub">Same doors as the floor: your sign-in wallet, a browser wallet, or a wallet app.</p>
+    <button class="wrow" id="gmailBtn" type="button"><span style="font-size:20px">@</span><span>Continue with Email or Social <small>· Google, X, Apple…</small></span></button>
+    <div class="wdivider" id="wOr"><span>or a wallet of your own</span></div>
+    <div id="walletList"></div>
+    <button class="wrow" id="wcBtn" type="button"><span style="font-size:20px">🔗</span><span>WalletConnect <small>· Rabby, Trust, any wallet app</small></span></button>
+    <button class="close" id="walletX">Close</button>
+  </div>
+</div>
+
+<script src="../../config.js"></script>
+<script src="../../vendor/ethers.umd.min.js"></script>
+<script type="module">
+  const cfg = window.ANEWONE_CONFIG;
+  const net = cfg.mainnet && cfg.mainnet.live ? "mainnet" : "testnet";
+  const arcCfg = cfg[net];
+  const $ = (id) => document.getElementById(id);
+  $("netPill").textContent = net === "mainnet" ? "● Arc mainnet" : "● Arc testnet";
+
+  $("themeSw").onclick = () => {
+    const t = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+    try { localStorage.setItem("anewone_theme", t); } catch {}
+  };
+
+  // ---- the venue on Arc: USDC's ERC-20 face and Uniswap v3 (router and quoter from config.js,
+  // the factory asked of the router). xStocks use one address on every EVM chain, so a token's
+  // Arc address is known before Backed deploys it; the card turns live when code appears there.
+  const USDC = "0x3600000000000000000000000000000000000000";
+  const UNI = (cfg.uniswap && cfg.uniswap[net]) || {};
+  const FEES = [100, 500, 3000, 10000];
+  const SLIPPAGE_BPS = 50n;
+  const API = "../../api/xstocks";
+  const LOGO = (s) => `https://xstocks-metadata.backed.fi/logos/tokens/${encodeURIComponent(s)}.png`;
+  const FEATURED = ["SPYx", "QQQx", "NVDAx", "TSLAx", "AAPLx", "MSFTx", "AMZNx", "GOOGLx", "METAx", "AVGOx", "NFLXx", "MSTRx", "COINx", "CRCLx", "HOODx", "PLTRx", "AMDx", "JPMx", "LLYx", "ORCLx", "GLDx", "IWMx", "TQQQx", "BRK.Bx", "INTCx", "UNHx", "BABAx", "GMEx", "TSMx", "WMTx"];
+  const ETF_EXCHANGES = new Set(["ARCA", "BATS", "NYSE ARCA", "CBOE"]);
+
+  const ERC20 = ["function balanceOf(address) view returns (uint256)", "function allowance(address,address) view returns (uint256)", "function approve(address,uint256) returns (bool)", "function decimals() view returns (uint8)", "function symbol() view returns (string)"];
+  const WRAPPER = [...ERC20, "function deposit(uint256,address) returns (uint256)", "function redeem(uint256,address,address) returns (uint256)", "function convertToAssets(uint256) view returns (uint256)", "function asset() view returns (address)"];
+  const ROUTER_ABI = ["function factory() view returns (address)", "function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96)) payable returns (uint256)"];
+  const QUOTER_ABI = ["function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96)) returns (uint256 amountOut,uint160,uint32,uint256)"];
+  const FACTORY_ABI = ["function getPool(address,address,uint24) view returns (address)"];
+  const POOL_ABI = ["function liquidity() view returns (uint128)"];
+
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const fmt = (n, d = 2) => Number(n).toLocaleString("en-US", { maximumFractionDigits: d });
+  const usd = (n) => (n == null ? "—" : "$" + fmt(n, n >= 1000 ? 2 : n >= 1 ? 2 : 4));
+  const explorer = (path) => (arcCfg.explorer ? `${arcCfg.explorer.replace(/\/$/, "")}/${path}` : "");
+  const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
+
+  // ---- reads through the site's RPC pool, the Earn page's way: a 429 or a host Brave blocks
+  // moves to the next endpoint, and the site's relay comes last
+  const READ_URLS = [arcCfg.rpc, ...(arcCfg.rpcs || []).map((r) => (typeof r === "string" ? r : r.hosts && r.hosts.includes(location.hostname) ? r.url : null))].filter((u, i, a) => u && a.indexOf(u) === i);
+  const readProviders = new Map();
+  const readProvider = (u = READ_URLS[0]) => {
+    let p = readProviders.get(u);
+    if (!p) { const r = new ethers.FetchRequest(u); r.timeout = 5000; p = new ethers.JsonRpcProvider(r, Number(arcCfg.chainId), { staticNetwork: true }); readProviders.set(u, p); }
+    return p;
+  };
+  async function viaPool(fn) {
+    let last = null;
+    for (const u of READ_URLS) {
+      try { return await fn(readProvider(u)); }
+      catch (e) { last = e; if (e && e.code === "CALL_EXCEPTION") throw e; }
+    }
+    throw last || new Error("no RPC answered");
+  }
+  async function rawRpc(method, params) { return viaPool((p) => p.send(method, params || [])); }
+
+  // ---- the catalog, from the issuer through api/xstocks ----
+  let ASSETS = [], byKey = new Map(), prices = {}, pricesAt = 0, catalogAt = 0, stale = false;
+  async function loadCatalog() {
+    const r = await fetch(API, { cache: "no-store" });
+    const j = await r.json();
+    if (!r.ok || !Array.isArray(j.assets)) throw new Error(j.error || "catalog unavailable");
+    ASSETS = j.assets; catalogAt = j.at; stale = !!j.stale;
+    byKey = new Map(ASSETS.map((a) => [a.s, a]));
+    // local preview only: ?arcmock=0x… pretends TSLAx lives at an address that does have code on
+    // Arc, so the live card and banner can be seen before Backed deploys
+    const mock = location.hostname === "localhost" && new URLSearchParams(location.search).get("arcmock");
+    if (mock && byKey.get("TSLAx")) Object.assign(byKey.get("TSLAx"), { addr: mock.toLowerCase(), wrap: null });
+  }
+  async function loadPrices(syms) {
+    const want = [...new Set(syms)].filter(Boolean);
+    for (let i = 0; i < want.length; i += 60) {
+      const r = await fetch(API + "?prices=" + want.slice(i, i + 60).map(encodeURIComponent).join(","), { cache: "no-store" }).then((x) => x.json()).catch(() => null);
+      if (r && r.prices) { Object.assign(prices, r.prices); pricesAt = r.at || Date.now(); }
+    }
+  }
+
+  // ---- Arc: is the token there, is there a pool, what does the pool say ----
+  let arcLive = null;        // null unknown, false not yet, true at least one stock token has code on Arc
+  let factory = null;
+  const onArc = new Map();   // symbol -> { addr, wrap, pool, fee, liq, price } | false
+  async function codeAt(addr) { try { const c = await viaPool((p) => p.getCode(addr)); return c && c !== "0x"; } catch { return false; } }
+  async function loadFactory() {
+    if (factory !== null || !UNI.router) return factory;
+    try { factory = await viaPool((p) => new ethers.Contract(UNI.router, ROUTER_ABI, p).factory()); } catch { factory = ""; }
+    return factory;
+  }
+  /** The token's standing on Arc, read once and kept: deployed? wrapped? which pool, and the pool's price for 1 token in USDC. */
+  async function arcStanding(a) {
+    if (onArc.has(a.s)) return onArc.get(a.s);
+    const pending = (async () => {
+      const addr = (a.arc && a.arc.addr) || a.addr, wrap = (a.arc && a.arc.wrap) || a.wrap;
+      if (!addr || !(await codeAt(addr))) return false;
+      const st = { addr, wrap: wrap && (await codeAt(wrap)) ? wrap : null, pool: null, fee: null, liq: 0n, price: null, dec: 18, wdec: 18 };
+      try { st.dec = Number(await viaPool((p) => new ethers.Contract(addr, ERC20, p).decimals())); } catch {}
+      if (st.wrap) { try { st.wdec = Number(await viaPool((p) => new ethers.Contract(st.wrap, ERC20, p).decimals())); } catch {} }
+      // the pool holds the wrapped token when there is one; a pool against the raw token counts too
+      const f = await loadFactory();
+      if (f && f !== ethers.ZeroAddress) {
+        for (const tok of [st.wrap, addr].filter(Boolean)) {
+          const pools = await Promise.all(FEES.map((fee) => viaPool((p) => new ethers.Contract(f, FACTORY_ABI, p).getPool(USDC, tok, fee)).catch(() => ethers.ZeroAddress)));
+          const liqs = await Promise.all(pools.map((pl) => pl !== ethers.ZeroAddress ? viaPool((p) => new ethers.Contract(pl, POOL_ABI, p).liquidity()).catch(() => 0n) : 0n));
+          let best = -1;
+          liqs.forEach((l, i) => { if (l > 0n && (best < 0 || l > liqs[best])) best = i; });
+          if (best >= 0) { st.pool = pools[best]; st.fee = FEES[best]; st.liq = liqs[best]; st.poolToken = tok; st.poolDec = tok === st.wrap ? st.wdec : st.dec; break; }
+        }
+      }
+      if (st.pool && UNI.quoter) {
+        try {
+          const probe = ethers.parseUnits("100", 6);
+          const r = await viaPool((p) => new ethers.Contract(UNI.quoter, QUOTER_ABI, p).quoteExactInputSingle.staticCall({ tokenIn: USDC, tokenOut: st.poolToken, amountIn: probe, fee: st.fee, sqrtPriceLimitX96: 0 }));
+          const out = Number(ethers.formatUnits(r[0], st.poolDec));
+          if (out > 0) st.price = 100 / out;
+        } catch {}
+      }
+      return st;
+    })();
+    onArc.set(a.s, pending);
+    const v = await pending;
+    onArc.set(a.s, v);
+    return v;
+  }
+  async function detectArc() {
+    // the issuer's own word first, then the chain itself at the bellwethers' known addresses
+    const announced = ASSETS.filter((a) => a.arc && a.arc.addr);
+    const bells = (announced.length ? announced : ["TSLAx", "NVDAx", "SPYx", "AAPLx"].map((s) => byKey.get(s)).filter(Boolean)).slice(0, 4);
+    const found = await Promise.all(bells.map((a) => arcStanding(a)));
+    arcLive = found.some(Boolean);
+    paintArcState(announced.length);
+  }
+  function paintArcState(announced) {
+    const el = $("arcState");
+    const q = document.querySelector('[data-f="arc"]');
+    if (arcLive) {
+      el.classList.add("live");
+      el.innerHTML = `<span class="ico">🟢</span><div><b>xStocks are on Arc.</b> The tokens have landed at their usual addresses and the cards below read the Arc pools live: a card with a pool price trades here in USDC, from your wallet, at any hour. A card without one is waiting for its first pool. ${announced ? "" : "Backed has not yet listed Arc in its catalog, so this comes from the chain itself."}</div>`;
+      q.hidden = false;
+      $("xsArcWord").textContent = "Arc live";
+    } else {
+      el.innerHTML = `<span class="ico">🛰️</span><div><b>Not on Arc yet.</b> Backed has deployed xStocks on twelve networks and Circle names it among the issuers coming to Arc; this page checks the chain at the tokens' known addresses every minute and switches on the moment they land. Until then the cards show the issuer's live prices and reserves, and each links to where the token trades today. <a href="../">The funds already on Arc are here.</a></div>`;
+    }
+  }
+
+  // ---- cards ----
+  let filter = "featured", query = "", shown = 36;
+  const asking = new Set(); // symbols whose price is on its way, so a re-render does not ask twice
+  let holdings = {};   // symbol -> { raw, wrapped } in token units, for the connected wallet
+  function visible() {
+    let list = ASSETS;
+    const q = query.trim().toLowerCase();
+    if (q) list = list.filter((a) => a.s.toLowerCase().includes(q) || (a.n || "").toLowerCase().includes(q) || (a.u || "").toLowerCase().includes(q));
+    else if (filter === "featured") list = FEATURED.map((s) => byKey.get(s)).filter(Boolean);
+    else if (filter === "etf") list = list.filter((a) => a.x && ETF_EXCHANGES.has(String(a.x).toUpperCase()));
+    else if (filter === "arc") list = list.filter((a) => { const s = onArc.get(a.s); return s && typeof s.then !== "function"; });
+    else if (filter === "mine") list = list.filter((a) => { const h = holdings[a.s]; return h && (h.raw > 0 || h.wrapped > 0); });
+    return list;
+  }
+  const hoursLabel = (a) => a.halted ? ["bad", "Trading halted by the issuer"] : a.period === "market" ? ["market", "Market open"] : a.period === "extended" ? ["extended", "Extended hours"] : a.period === "overnight" ? ["overnight", "Overnight session"] : a.period === "closed" ? ["closed", "Market closed · tokens trade 24/7"] : ["", ""];
+  function card(a) {
+    const px = prices[a.s];
+    const st = onArc.get(a.s); const live = st && typeof st.then !== "function" && st;
+    const [hcls, htxt] = hoursLabel(a);
+    const h = holdings[a.s];
+    const held = h && (h.raw > 0 || h.wrapped > 0) ? `<div class="pos">You hold ${h.wrapped > 0 ? fmt(h.wrapped, 4) + " w" + esc(a.s) : ""}${h.wrapped > 0 && h.raw > 0 ? " + " : ""}${h.raw > 0 ? fmt(h.raw, 4) + " " + esc(a.s) : ""}${px ? " ≈ " + usd((h.raw + h.wrapped) * px) : ""}</div>` : "";
+    const diff = live && live.price && px ? (live.price / px - 1) * 100 : null;
+    let action, arcTag = "";
+    if (live === false || (arcLive === false && !live)) {
+      arcTag = `<span class="tag">NOT ON ARC YET</span>`;
+      action = `<a class="btn" href="https://xstocks.com/products" target="_blank" rel="noopener" title="Where the token trades today, on the issuer's site">Where it trades today ↗</a>`;
+    } else if (!live) {
+      action = `<button class="btn" disabled>Checking Arc…</button>`;
+    } else if (!live.pool) {
+      arcTag = `<span class="tag ok">ON ARC · NO POOL YET</span>`;
+      action = `<a class="btn" href="${esc(explorer("token/" + live.addr))}" target="_blank" rel="noopener">Token on Arc ↗</a>`;
+    } else {
+      arcTag = `<span class="tag ok">ON ARC · POOL ${(live.fee / 10000).toFixed(2)}%</span>`;
+      action = account ? `<button class="btn primary" data-open="${esc(a.s)}">Buy with USDC</button>` : `<button class="btn primary" data-open="${esc(a.s)}">Connect to trade</button>`;
+    }
+    return `<div class="stock" data-s="${esc(a.s)}">
+      <div class="head"><span class="logo">${a.logo ? `<img src="${LOGO(a.s)}" alt="" loading="lazy" onerror="this.remove()">` : esc((a.u || a.s).slice(0, 4))}</span><div><h3 title="${esc(a.n)}">${esc(a.n)}</h3><div class="by">${esc(a.s)} · ${esc(a.u || "")}${a.x ? " · " + esc(a.x) : ""}</div></div><span class="tag usdc">USDC</span></div>
+      <div class="price"><span class="v ${px == null ? "loading" : ""}">${px == null ? "…" : usd(px)}</span><small>REFERENCE · USD</small></div>
+      <div class="hours ${hcls}"><span class="dot"></span>${esc(htxt)}</div>
+      <div class="stats">
+        <div>${live && live.price ? usd(live.price) : "—"}<span>Arc pool price</span></div>
+        <div${diff != null ? ` style="color:${Math.abs(diff) > 2 ? "var(--gold)" : "var(--dim)"}"` : ""}>${diff == null ? "—" : (diff > 0 ? "+" : "") + fmt(diff, 2) + "%"}<span>Pool vs reference</span></div>
+      </div>
+      ${arcTag}
+      ${held}
+      <div class="links"><a href="#" data-por="${esc(a.s)}">Proof of reserves</a><a href="https://xstocks.com/products" target="_blank" rel="noopener">On xStocks ↗</a>${live && live.addr ? `<a href="${esc(explorer("token/" + live.addr))}" target="_blank" rel="noopener">Token on Arc ↗</a>` : ""}</div>
+      ${action}
+    </div>`;
+  }
+  function render() {
+    const list = visible();
+    const page = list.slice(0, shown);
+    $("count").textContent = `${list.length === ASSETS.length ? ASSETS.length : list.length + " of " + ASSETS.length} xStocks${stale ? " · issuer data a few minutes old" : ""}`;
+    $("grid").innerHTML = page.length ? page.map(card).join("") : `<div class="empty">Nothing matches "${esc(query)}". Try a ticker like NVDA or a name like Tesla.</div>`;
+    $("more").hidden = list.length <= shown;
+    $("more").textContent = `Show ${Math.min(36, list.length - shown)} more`;
+    // prices for what is on screen, then the Arc standing of each once Arc is known to carry the tokens
+    const need = page.filter((a) => prices[a.s] === undefined && !asking.has(a.s)).map((a) => a.s);
+    need.forEach((s) => asking.add(s));
+    if (need.length) loadPrices(need).then(() => patchPrices(page)).finally(() => need.forEach((s) => asking.delete(s)));
+    // the Arc standing of each card once Arc is known to carry the tokens; only a card that was
+    // still being read triggers another paint, or this would paint forever
+    if (arcLive) {
+      const unread = page.filter((a) => !onArc.has(a.s) || typeof (onArc.get(a.s) || {}).then === "function"); // false means read: not on Arc
+      if (unread.length) Promise.all(unread.map((a) => arcStanding(a))).then(() => { render(); if (account) refreshHoldings(page); });
+      else if (account) refreshHoldings(page.filter((a) => !holdings[a.s]));
+    }
+  }
+  function patchPrices(list) {
+    for (const a of list) {
+      const el = document.querySelector(`.stock[data-s="${CSS.escape(a.s)}"] .price .v`);
+      if (el && prices[a.s] != null) { el.textContent = usd(prices[a.s]); el.classList.remove("loading"); }
+    }
+  }
+  $("more").onclick = () => { shown += 36; render(); };
+  document.querySelectorAll(".chip").forEach((c) => c.onclick = () => { document.querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", x === c)); filter = c.dataset.f; shown = 36; $("q").value = ""; query = ""; render(); });
+  let qt = null;
+  $("q").oninput = () => { clearTimeout(qt); qt = setTimeout(() => { query = $("q").value; shown = 36; document.querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", !query && x.dataset.f === filter)); render(); }, 150); };
+  $("grid").addEventListener("click", async (e) => {
+    const por = e.target.closest("[data-por]");
+    if (por) {
+      e.preventDefault();
+      const s = por.dataset.por; por.textContent = "Reading reserves…";
+      try {
+        const j = await fetch(API + "?por=" + encodeURIComponent(s), { cache: "no-store" }).then((r) => r.json());
+        const held = Number(j.sharesHeld), circ = Number(j.circulatingSupply);
+        por.textContent = isFinite(held) && isFinite(circ) ? `${fmt(held, 0)} ${esc(byKey.get(s).u || "")} held at ${(j.holdings || []).map((h) => h.provider).join(", ") || "custodian"} for ${fmt(circ, 2)} tokens · ${new Date(j.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : "Reserves unavailable right now";
+        por.removeAttribute("data-por"); por.removeAttribute("href");
+      } catch { por.textContent = "Reserves unavailable right now"; }
+      return;
+    }
+    const b = e.target.closest("[data-open]");
+    if (!b) return;
+    if (!account) return openPicker();
+    openSheet(byKey.get(b.dataset.open));
+  });
+
+  // ---- wallet: the floor's three doors, on one EIP-1193 path (the Assets page's code) ----
+  let account = null, active = null, activeKind = null;
+  const wallet = () => active;
+  async function ensureArc() {
+    const have = BigInt(await wallet().request({ method: "eth_chainId" }));
+    if (have === BigInt(arcCfg.chainId)) return;
+    try { await wallet().request({ method: "wallet_switchEthereumChain", params: [{ chainId: arcCfg.chainIdHex }] }); }
+    catch (e) {
+      if (e && (e.code === 4902 || /unrecognized|not added/i.test(e.message || ""))) {
+        await wallet().request({ method: "wallet_addEthereumChain", params: [{
+          chainId: arcCfg.chainIdHex, chainName: NET_NAME,
+          nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 }, rpcUrls: [arcCfg.rpc],
+          blockExplorerUrls: arcCfg.explorer ? [arcCfg.explorer] : [] }] });
+      } else throw e;
+    }
+  }
+  const LAST_KEY = "anewone_last_wallet";
+  const discovered = new Map();
+  window.addEventListener("eip6963:announceProvider", (ev) => {
+    const d = ev.detail; if (d?.info?.rdns && d?.provider) discovered.set(d.info.rdns, d);
+  });
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  const walletChoices = () => {
+    const l = [...discovered.values()];
+    if (!l.length && window.ethereum) l.push({ info: { rdns: "legacy", name: "Browser wallet" }, provider: window.ethereum });
+    return l;
+  };
+  const W3A = (cfg.web3auth || {})[net] || {};
+  const WC_ID = (cfg.walletConnect || {}).projectId || "";
+  const NET_NAME = net === "mainnet" ? "Arc" : "Arc Testnet";
+  let w3a = null, wcProvider = null;
+  async function loadWeb3Auth() {
+    if (w3a) return w3a;
+    const { Web3Auth, CHAIN_NAMESPACES, WEB3AUTH_NETWORK, EthereumPrivateKeyProvider } = await import("../../vendor/web3auth.esm.js");
+    let rpcTarget = arcCfg.rpc;
+    try {
+      const brave = !!(navigator.brave && await navigator.brave.isBrave());
+      const relay = (arcCfg.rpcs || []).find((r) => r && typeof r === "object" && r.hosts && r.hosts.includes(location.hostname));
+      if (brave && relay) rpcTarget = relay.url;
+    } catch {}
+    const privateKeyProvider = new EthereumPrivateKeyProvider({ config: { chainConfig: {
+      chainNamespace: CHAIN_NAMESPACES.EIP155, chainId: arcCfg.chainIdHex, rpcTarget, displayName: NET_NAME,
+      ticker: "USDC", tickerName: "USD Coin", blockExplorerUrl: arcCfg.explorer || "" } } });
+    const netKey = (W3A.network || "sapphire_devnet").toUpperCase();
+    w3a = new Web3Auth({ clientId: W3A.clientId, web3AuthNetwork: WEB3AUTH_NETWORK[netKey] || WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
+      privateKeyProvider, uiConfig: { uxMode: "redirect" } });
+    await w3a.initModal();
+    return w3a;
+  }
+  async function loadWalletConnect() {
+    if (wcProvider) return wcProvider;
+    const { EthereumProvider } = await import("../../vendor/walletconnect.esm.js");
+    wcProvider = await EthereumProvider.init({
+      projectId: WC_ID, chains: [arcCfg.chainId], rpcMap: { [arcCfg.chainId]: arcCfg.rpc },
+      optionalMethods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_sign", "wallet_switchEthereumChain", "wallet_addEthereumChain"],
+      showQrModal: true, qrModalOptions: { themeMode: document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark" },
+      metadata: { name: "A NEW ONE", description: "Tokenized stocks on Arc.", url: "https://anewone.xyz", icons: ["https://anewone.xyz/apple-touch-icon.png"] },
+    });
+    return wcProvider;
+  }
+  const WALLET_METHODS = new Set(["eth_requestAccounts", "eth_accounts", "eth_chainId", "eth_sendTransaction", "eth_signTransaction",
+    "eth_sign", "personal_sign", "eth_signTypedData", "eth_signTypedData_v3", "eth_signTypedData_v4",
+    "wallet_switchEthereumChain", "wallet_addEthereumChain", "wallet_watchAsset", "wallet_getPermissions", "wallet_requestPermissions"]);
+  const wcFacade = (p) => ({
+    request: (args) => (WALLET_METHODS.has(args.method) ? p.request(args) : rawRpc(args.method, args.params)),
+    get chainId() { return p.chainId; },
+    on: (ev, fn) => p.on(ev, fn), removeListener: (ev, fn) => p.removeListener(ev, fn),
+    disconnect: () => p.disconnect(), get session() { return p.session; },
+  });
+  const modal = $("walletModal");
+  function openPicker() {
+    $("gmailBtn").hidden = !W3A.clientId; $("wOr").hidden = !W3A.clientId;
+    $("wcBtn").hidden = !WC_ID;
+    const list = walletChoices();
+    $("walletList").innerHTML = list.map((d) => `<button class="wrow" data-rdns="${esc(d.info.rdns)}">${d.info.icon ? `<img src="${esc(d.info.icon)}" alt="">` : "🦊"}<span>${esc(d.info.name)}</span></button>`).join("")
+      || `<div class="hint">No browser wallet found. Install <a href="https://metamask.io" target="_blank" rel="noopener">MetaMask</a>, <a href="https://rabby.io" target="_blank" rel="noopener">Rabby</a> or <a href="https://www.okx.com/web3" target="_blank" rel="noopener">OKX</a>, or use one of the options above.</div>`;
+    $("walletList").querySelectorAll("[data-rdns]").forEach((b) => b.onclick = () => {
+      const d = list.find((x) => x.info.rdns === b.dataset.rdns);
+      if (d) use(d.provider, d.info.rdns).catch(fail);
+    });
+    modal.classList.add("open");
+  }
+  const fail = (e) => { modal.classList.remove("open"); alert(e.shortMessage || e.message || String(e)); };
+  $("walletX").onclick = () => modal.classList.remove("open");
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("open"); });
+  $("gmailBtn").onclick = async () => {
+    try {
+      $("gmailBtn").disabled = true;
+      const wa = await loadWeb3Auth();
+      try { localStorage.setItem(LAST_KEY, "google"); } catch {}
+      const p = await wa.connect();
+      if (p) await use(p, "google");
+    } catch (e) { try { localStorage.removeItem(LAST_KEY); } catch {} fail(e); }
+    finally { $("gmailBtn").disabled = false; }
+  };
+  const withTimeout = (pr, ms, what) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => rej(new Error(what + " took too long. Open your wallet app and try again.")), ms))]);
+  const wcLabel = $("wcBtn").querySelector("span:last-child");
+  $("wcBtn").onclick = async () => {
+    const orig = wcLabel.innerHTML;
+    $("wcBtn").disabled = true; wcLabel.textContent = "Opening WalletConnect…";
+    try {
+      const p = await withTimeout(loadWalletConnect(), 15000, "WalletConnect");
+      if (p.session) {
+        try { const a = await withTimeout(p.request({ method: "eth_accounts" }), 4000, "The old session"); if (!a || !a[0]) throw new Error("empty"); }
+        catch { try { await p.disconnect(); } catch {} }
+      }
+      if (!p.session) { wcLabel.textContent = "Approve in your wallet app…"; await p.connect(); }
+      await withTimeout(use(wcFacade(p), "walletconnect"), 20000, "Connecting");
+    } catch (e) { try { localStorage.removeItem(LAST_KEY); } catch {} fail(e); }
+    finally { $("wcBtn").disabled = false; wcLabel.innerHTML = orig; }
+  };
+
+  // ---- terms acknowledgment: the same record as Earn's and the funds', one signature per wallet
+  const ACK_VERSION = "2026-09-30";
+  const ACK_KEY = "anewone_terms_ack";
+  function ackStore() { try { return JSON.parse(localStorage.getItem(ACK_KEY) || "{}"); } catch { return {}; } }
+  function hasAck() { const a = ackStore()[String(account).toLowerCase()]; return !!(a && a.version === ACK_VERSION && a.sig); }
+  function ackText() {
+    return `A NEW ONE (anewone.xyz) - Terms acknowledgment
+
+I have read and accept the Terms of Use (anewone.xyz/terms.html) and the Privacy Notice (anewone.xyz/privacy.html), version ${ACK_VERSION}.
+
+I understand that A NEW ONE is a non-custodial interface: it never holds my funds or keys, never issues any asset and never gives financial advice. Funds, vaults and markets are run by third parties; yields are variable, orders settle on the issuer's schedule, and I can lose what I put in. Fees are shown before I sign. I am 18 or older, I act for myself, I meet the issuer's eligibility rules, and I am responsible for my own taxes and local rules.
+
+Wallet: ${account}
+Time: ${new Date().toISOString()}`;
+  }
+  let ackResolve = null;
+  async function syncAck() {
+    if (!account) return;
+    const st = ackStore(), mine = st[String(account).toLowerCase()];
+    try {
+      if (mine && mine.version === ACK_VERSION && mine.sig && !mine.server) {
+        const j = await fetch("../../api/ack", { method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ address: account, version: ACK_VERSION, text: mine.text, signature: mine.sig }) }).then((r) => r.json());
+        if (j && j.stored) { mine.server = j.at; localStorage.setItem(ACK_KEY, JSON.stringify(st)); }
+      } else if (!mine || mine.version !== ACK_VERSION) {
+        const j = await fetch("../../api/ack?address=" + account).then((r) => r.json());
+        if (j && j.accepted && j.accepted.version === ACK_VERSION) { st[String(account).toLowerCase()] = { version: ACK_VERSION, sig: "server", server: j.accepted.at, at: Date.now() }; localStorage.setItem(ACK_KEY, JSON.stringify(st)); }
+      }
+    } catch {}
+  }
+  function ensureAck() {
+    if (!account || hasAck()) return Promise.resolve(true);
+    $("ackStatus").textContent = ""; $("ackStatus").className = "status";
+    $("ackModal").classList.add("open");
+    return new Promise((res) => { ackResolve = res; });
+  }
+  $("ackSign").onclick = async () => {
+    $("ackSign").disabled = true;
+    $("ackStatus").textContent = "Confirm the signature in your wallet…"; $("ackStatus").className = "status";
+    try {
+      const text = ackText();
+      const hex = "0x" + Array.from(new TextEncoder().encode(text)).map((b) => b.toString(16).padStart(2, "0")).join("");
+      const sig = await wallet().request({ method: "personal_sign", params: [hex, account] });
+      const st = ackStore(); st[String(account).toLowerCase()] = { version: ACK_VERSION, sig, text, at: Date.now() };
+      try { localStorage.setItem(ACK_KEY, JSON.stringify(st)); } catch {}
+      fetch("../../api/ack", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ address: account, version: ACK_VERSION, text, signature: sig }) })
+        .then((r) => r.json()).then((j) => { if (j && j.stored) { st[String(account).toLowerCase()].server = j.at; try { localStorage.setItem(ACK_KEY, JSON.stringify(st)); } catch {} } }).catch(() => {});
+      $("ackModal").classList.remove("open");
+      if (ackResolve) { ackResolve(true); ackResolve = null; }
+    } catch (e) {
+      $("ackStatus").textContent = e.code === 4001 || /reject|denied/i.test(e.message || "") ? "Signature refused. You can read the terms and sign later." : (e.shortMessage || e.message || String(e));
+      $("ackStatus").className = "status err";
+    } finally { $("ackSign").disabled = false; }
+  };
+  $("ackClose").onclick = () => { $("ackModal").classList.remove("open"); if (ackResolve) { ackResolve(false); ackResolve = null; } };
+
+  async function use(provider, kind) {
+    active = provider; activeKind = kind;
+    const accts = await provider.request({ method: kind === "walletconnect" ? "eth_accounts" : "eth_requestAccounts" });
+    if (!accts || !accts[0]) throw new Error("No account");
+    if (kind !== "google" && kind !== "walletconnect") await ensureArc();
+    account = ethers.getAddress(accts[0]);
+    window.__anewoneWallet = { provider, account, kind };
+    try { localStorage.setItem(LAST_KEY, kind); } catch {}
+    $("connectBtn").textContent = short(account);
+    modal.classList.remove("open");
+    provider.on && provider.on("accountsChanged", () => location.reload());
+    provider.on && provider.on("chainChanged", () => location.reload());
+    provider.on && provider.on("disconnect", () => location.reload());
+    document.querySelector('[data-f="mine"]').hidden = !arcLive;
+    render();
+    syncAck().then(ensureAck);
+  }
+  (async () => {
+    let last = null; try { last = localStorage.getItem(LAST_KEY); } catch {}
+    if (!last) return;
+    try {
+      if (last === "google" && W3A.clientId) {
+        const wa = await loadWeb3Auth();
+        if (wa.connected && wa.provider) await use(wa.provider, "google");
+      } else if (last === "walletconnect" && WC_ID) {
+        const p = await withTimeout(loadWalletConnect(), 15000, "WalletConnect");
+        if (p.session) await withTimeout(use(wcFacade(p), "walletconnect"), 20000, "Connecting");
+      } else {
+        await new Promise((r) => setTimeout(r, 300));
+        const d = walletChoices().find((x) => x.info.rdns === last);
+        if (d) { const a = await d.provider.request({ method: "eth_accounts" }); if (a && a[0]) await use(d.provider, last); }
+      }
+    } catch { try { localStorage.removeItem(LAST_KEY); } catch {} }
+  })();
+  $("connectBtn").onclick = () => { if (!account) return openPicker(); $("acctAddr").textContent = account; $("acctKind").textContent = { walletconnect: "Connected through WalletConnect", google: "Signed in with email or social (Web3Auth)" }[activeKind] || "Browser wallet"; $("acctModal").classList.add("open"); };
+  $("acctClose").onclick = () => $("acctModal").classList.remove("open");
+  $("acctModal").addEventListener("click", (e) => { if (e.target === $("acctModal")) $("acctModal").classList.remove("open"); });
+  async function disconnectWallet() {
+    try { localStorage.removeItem(LAST_KEY); } catch {}
+    try { if (activeKind === "walletconnect" && wcProvider) await withTimeout(wcProvider.disconnect(), 4000, "Disconnect"); } catch {}
+    try { if (activeKind === "google" && w3a) await withTimeout(w3a.logout(), 4000, "Sign-out"); } catch {}
+    try { window.__anewoneWallet = null; } catch {}
+  }
+  $("acctDisconnect").onclick = async () => { $("acctDisconnect").disabled = true; await disconnectWallet(); location.reload(); };
+  $("acctSwitch").onclick = async () => { $("acctSwitch").disabled = true; await disconnectWallet(); $("acctModal").classList.remove("open"); account = null; active = null; activeKind = null; $("connectBtn").textContent = "Connect"; holdings = {}; render(); openPicker(); $("acctSwitch").disabled = false; };
+
+  // ---- the wallet's holdings in the tokens on screen, raw and wrapped ----
+  async function refreshHoldings(list) {
+    if (!account) return;
+    let changed = false;
+    await Promise.all(list.map(async (a) => {
+      const st = onArc.get(a.s); if (!st || typeof st.then === "function") return;
+      try {
+        const [raw, wr] = await Promise.all([
+          viaPool((p) => new ethers.Contract(st.addr, ERC20, p).balanceOf(account)),
+          st.wrap ? viaPool((p) => new ethers.Contract(st.wrap, ERC20, p).balanceOf(account)) : 0n]);
+        const h = { raw: Number(ethers.formatUnits(raw, st.dec)), wrapped: Number(ethers.formatUnits(wr, st.wdec)), rawWei: raw, wrappedWei: wr };
+        const old = holdings[a.s]; if (!old || old.rawWei !== h.rawWei || old.wrappedWei !== h.wrappedWei) changed = true;
+        holdings[a.s] = h;
+      } catch {}
+    }));
+    if (changed) render();
+  }
+
+  // ---- the order sheet: buy with USDC or sell for USDC in the token's Uniswap pool on Arc ----
+  let cur = null, st = null, mode = "buy", usdcBal = 0n, lastQuote = null, quoteTimer = null;
+  const sheet = $("overlay");
+  function setStatus(t, cls) { const s = $("status"); s.textContent = t; s.className = "status " + (cls || ""); }
+  function openSheet(a) {
+    cur = a; st = onArc.get(a.s);
+    if (!st || typeof st.then === "function" || !st.pool) return;
+    $("shName").textContent = `${a.n} · ${a.s}`;
+    $("shSub").textContent = `Uniswap v3 pool on Arc, ${(st.fee / 10000).toFixed(2)}% fee, against USDC. The pool's own price, not the exchange's; the quote below is what you would get right now.`;
+    $("amt").value = ""; $("quote").hidden = true; lastQuote = null; setStatus("");
+    setMode("buy");
+    sheet.classList.add("open");
+    paintBalances();
+  }
+  function setMode(m) {
+    mode = m;
+    $("tabBuy").classList.toggle("on", m === "buy"); $("tabSell").classList.toggle("on", m === "sell");
+    $("unit").textContent = m === "buy" ? "USDC" : (st.poolToken === st.wrap ? "w" : "") + cur.s;
+    $("goBtn").textContent = m === "buy" ? "Buy" : "Sell";
+    $("amt").value = ""; $("quote").hidden = true; lastQuote = null; setStatus("");
+    paintWrapRow();
+  }
+  $("tabBuy").onclick = () => setMode("buy"); $("tabSell").onclick = () => setMode("sell");
+  $("closeBtn").onclick = () => sheet.classList.remove("open");
+  sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.classList.remove("open"); });
+  async function paintBalances() {
+    try {
+      usdcBal = await viaPool((p) => new ethers.Contract(USDC, ERC20, p).balanceOf(account));
+      await refreshHoldings([cur]);
+      const h = holdings[cur.s] || { raw: 0, wrapped: 0 };
+      $("balL").textContent = `Wallet: ${fmt(ethers.formatUnits(usdcBal, 6), 2)} USDC`;
+      $("balR").textContent = `Holding: ${fmt(h.wrapped, 4)} w${cur.s}${h.raw > 0 ? ` + ${fmt(h.raw, 4)} ${cur.s}` : ""}`;
+      paintWrapRow();
+    } catch {}
+  }
+  // raw xStocks in the wallet (bought elsewhere, or bridged) have to be wrapped before a pool takes them
+  function paintWrapRow() {
+    const h = holdings[cur.s]; const row = $("wrapRow");
+    if (mode !== "sell" || !st.wrap || st.poolToken !== st.wrap || !h || !(h.raw > 0)) { row.hidden = true; return; }
+    row.hidden = false;
+    row.innerHTML = `You hold <b>${fmt(h.raw, 4)} ${esc(cur.s)}</b> unwrapped. The pool trades the wrapped token, so wrap first; it is the same share, with no fee.<br><button id="wrapBtn">Wrap ${fmt(h.raw, 4)} ${esc(cur.s)}</button>`;
+    $("wrapBtn").onclick = wrapAll;
+  }
+  async function wrapAll() {
+    const h = holdings[cur.s]; if (!h || !(h.rawWei > 0n)) return;
+    $("wrapBtn").disabled = true;
+    try {
+      if (activeKind !== "google") await ensureArc();
+      const s = await signer();
+      const raw = new ethers.Contract(st.addr, ERC20, s);
+      if ((await raw.allowance(account, st.wrap)) < h.rawWei) { setStatus("Approve the token for wrapping in your wallet…"); const tx = await raw.approve(st.wrap, h.rawWei); await viaPool((p) => p.waitForTransaction(tx.hash, 1, 120000)); }
+      setStatus("Confirm the wrap in your wallet…");
+      await send({ to: st.wrap, data: new ethers.Interface(WRAPPER).encodeFunctionData("deposit", [h.rawWei, account]) }, "Wrap");
+      setStatus("Wrapped. You can sell now.", "ok");
+      await paintBalances();
+    } catch (e) { setStatus(e.code === 4001 || /reject|denied/i.test(e.message || "") ? "Cancelled in the wallet." : (e.shortMessage || e.message || String(e)), "err"); }
+  }
+  $("maxBtn").onclick = () => {
+    if (mode === "buy") $("amt").value = ethers.formatUnits(usdcBal, 6);
+    else { const h = holdings[cur.s]; $("amt").value = h ? ethers.formatUnits(st.poolToken === st.wrap ? h.wrappedWei : h.rawWei, st.poolDec) : "0"; }
+    quote();
+  };
+  $("amt").oninput = () => { clearTimeout(quoteTimer); quoteTimer = setTimeout(quote, 250); };
+  const trim = (s, d) => { const [a, b = ""] = String(s).trim().split("."); return b ? `${a}.${b.slice(0, d)}`.replace(/\.?0+$/, "") : a; };
+  async function quote() {
+    const n = Number($("amt").value);
+    lastQuote = null; $("quote").hidden = true;
+    if (!(n > 0) || !UNI.quoter) return;
+    const inDec = mode === "buy" ? 6 : st.poolDec, outDec = mode === "buy" ? st.poolDec : 6;
+    const tokenIn = mode === "buy" ? USDC : st.poolToken, tokenOut = mode === "buy" ? st.poolToken : USDC;
+    let amountIn;
+    try { amountIn = ethers.parseUnits(trim(n, inDec), inDec); } catch { return; }
+    try {
+      const r = await viaPool((p) => new ethers.Contract(UNI.quoter, QUOTER_ABI, p).quoteExactInputSingle.staticCall({ tokenIn, tokenOut, amountIn, fee: st.fee, sqrtPriceLimitX96: 0 }));
+      const out = r[0], min = out - (out * SLIPPAGE_BPS) / 10000n;
+      const outN = Number(ethers.formatUnits(out, outDec));
+      const unit = mode === "buy" ? n / outN : outN / n;
+      const ref = prices[cur.s];
+      lastQuote = { amountIn, out, min, tokenIn, tokenOut };
+      $("quote").hidden = false;
+      $("quote").innerHTML = `<span>You receive</span><b>${fmt(outN, outDec === 6 ? 2 : 6)} ${mode === "buy" ? (st.poolToken === st.wrap ? "w" : "") + esc(cur.s) : "USDC"}</b>
+        <span>Pool price</span><b>${usd(unit)} per share</b>
+        ${ref ? `<span>Reference price</span><b>${usd(ref)} · ${unit / ref - 1 >= 0 ? "+" : ""}${fmt((unit / ref - 1) * 100, 2)}%</b>` : ""}
+        <span>Pool fee</span><b>${(st.fee / 10000).toFixed(2)}%</b>
+        <span>Minimum after slippage</span><b>${fmt(ethers.formatUnits(min, outDec), outDec === 6 ? 2 : 6)}</b>`;
+      if (ref && Math.abs(unit / ref - 1) > 0.05) setStatus("This pool is more than 5% away from the issuer's reference price. Thin pool or closed market; the price is yours to accept or not.", "err");
+      else setStatus("");
+    } catch (e) {
+      setStatus(/insufficient|liquidity|revert/i.test(e.message || "") ? "The pool cannot fill that amount. Try a smaller one." : (e.shortMessage || e.message || String(e)), "err");
+    }
+  }
+  const signer = async () => new ethers.BrowserProvider(wallet(), Number(arcCfg.chainId)).getSigner(account);
+  async function send(tx, what) {
+    const s = await signer();
+    const resp = await s.sendTransaction(tx);
+    setStatus(`${what} sent, waiting for Arc…`);
+    const rc = await viaPool((p) => p.waitForTransaction(resp.hash, 1, 120000));
+    if (!rc || rc.status !== 1) throw new Error(`${what} failed on chain`);
+    return resp.hash;
+  }
+  $("goBtn").onclick = async () => {
+    if (!account) { sheet.classList.remove("open"); openPicker(); return; }
+    if (!lastQuote) { setStatus("Enter an amount first.", "err"); return; }
+    if (!(await ensureAck())) { setStatus("Accept the terms to continue.", "err"); return; }
+    $("goBtn").disabled = true;
+    try {
+      if (activeKind !== "google") await ensureArc();
+      const q = lastQuote;
+      const have = mode === "buy" ? usdcBal : (st.poolToken === st.wrap ? holdings[cur.s].wrappedWei : holdings[cur.s].rawWei);
+      if (q.amountIn > have) throw new Error("Not that much in the wallet.");
+      const s = await signer();
+      const erc = new ethers.Contract(q.tokenIn, ERC20, s);
+      if ((await erc.allowance(account, UNI.router)) < q.amountIn) {
+        setStatus(`Approve ${mode === "buy" ? "USDC" : cur.s} for the pool in your wallet…`);
+        const tx = await erc.approve(UNI.router, q.amountIn);
+        setStatus("Approval sent, waiting for Arc…");
+        await viaPool((p) => p.waitForTransaction(tx.hash, 1, 120000));
+      }
+      setStatus(`Confirm the ${mode} in your wallet…`);
+      const data = new ethers.Interface(ROUTER_ABI).encodeFunctionData("exactInputSingle", [{ tokenIn: q.tokenIn, tokenOut: q.tokenOut, fee: st.fee, recipient: account, amountIn: q.amountIn, amountOutMinimum: q.min, sqrtPriceLimitX96: 0 }]);
+      // run it as a call first: a fill the pool will refuse never reaches the wallet
+      await viaPool((p) => p.call({ to: UNI.router, data, from: account }));
+      const hash = await send({ to: UNI.router, data }, mode === "buy" ? "Buy" : "Sell");
+      const url = explorer("tx/" + hash);
+      setStatus("", "ok");
+      $("status").innerHTML = `${mode === "buy" ? "Bought" : "Sold"}. ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">View transaction ↗</a>` : ""}`;
+      $("amt").value = ""; $("quote").hidden = true; lastQuote = null;
+      await paintBalances(); render();
+    } catch (e) {
+      const m = e.shortMessage || e.message || String(e);
+      setStatus(e.code === 4001 || /reject|denied/i.test(m) ? "Cancelled in the wallet." : m, "err");
+    } finally { $("goBtn").disabled = false; }
+  };
+
+  // ---- go ----
+  (async () => {
+    try { await loadCatalog(); }
+    catch (e) {
+      $("grid").innerHTML = `<div class="empty">The issuer's catalog did not answer (${esc(e.message || e)}). Try again in a minute.</div>`;
+      $("count").textContent = "";
+      return;
+    }
+    render();
+    if (net === "mainnet") {
+      await detectArc();
+      render();
+      // the chain is asked again every minute until the tokens land, then the pools are refreshed
+      setInterval(async () => {
+        if (!arcLive) { for (const s of ["TSLAx", "NVDAx", "SPYx", "AAPLx"]) onArc.delete(s); await detectArc(); if (arcLive) { onArc.clear(); render(); } }
+        else { onArc.clear(); render(); }
+      }, 60000);
+    } else {
+      arcLive = false; paintArcState(0);
+      $("arcState").querySelector("div").innerHTML = "<b>Arc testnet.</b> xStocks live on mainnets only; this site is on Arc testnet right now, so the cards show the issuer's data and nothing trades here.";
+    }
+    // reference prices refresh every minute for what is on screen
+    setInterval(() => { const page = visible().slice(0, shown); loadPrices(page.map((a) => a.s)).then(() => patchPrices(page)); }, 60000);
+  })();
+</script>
+</body>
+</html>
