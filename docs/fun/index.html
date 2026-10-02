@@ -449,9 +449,7 @@
   .tb-theme:hover { color: var(--text); }
   /* A wide screen: every nav control one height, one padding, one quiet border; only the
      network state keeps a highlighted pill */
-  /* A wide screen: every control in the bar one height, one padding, one quiet border (only
-     the network state keeps a highlighted pill), spread at equal gaps across the bar, and
-     sized with the screen (30% below the earlier 1.5x step) */
+  /* A wide screen: the crest on the left, sized with the screen as on every page's bar */
   @media (min-width: 901px) {
     /* the crest on the left, the controls grouped on the right at one small, even gap */
     .topbar-inner { justify-content: flex-start; gap: 10px;
@@ -460,25 +458,44 @@
     .topbar-inner .tb-brand { margin-right: auto; }
     .tb-brand img { width: var(--tbc-h); height: var(--tbc-h); }
     .tb-brand span { font-size: clamp(18px, 1.2vw, 22px); }
-    .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav .tb-more-btn, .tb-nav .tb-theme, .tb-nav #netBadge,
-    .topbar-inner #balChip, .topbar-inner #connectBtn, .topbar-inner #createBtn {
-      height: var(--tbc-h); min-height: var(--tbc-h); box-sizing: border-box; padding: 0 var(--tbc-p);
-      border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-      font-size: var(--tbc-f); letter-spacing: .4px; line-height: 1; white-space: nowrap; }
-    .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav .tb-more-btn, .tb-nav .tb-theme, .tb-nav #netBadge { font-family: var(--mono); }
-    .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav .tb-more-btn, .tb-nav .tb-theme {
-      border: 1px solid var(--border-2); background: transparent; color: var(--text); text-transform: none; }
-    .tb-nav .tb-ark:hover, .tb-nav .tb-link:hover, .tb-nav .tb-more-btn:hover, .tb-nav .tb-theme:hover {
-      border-color: rgba(var(--accent-rgb),.45); background: rgba(var(--accent-rgb),.06); color: var(--text); }
-    .tb-nav .tb-theme { width: var(--tbc-h); padding: 0; }
-    .tb-nav .tb-theme svg { width: calc(var(--tbc-f) * 1.35); height: calc(var(--tbc-f) * 1.35); }
-    .tb-nav .tb-ark svg { width: calc(var(--tbc-f) * 1.6); height: calc(var(--tbc-f) * 1.6); }
-    .tb-nav .tb-link .tb-ico { width: calc(var(--tbc-f) * 1.28); height: calc(var(--tbc-f) * 1.28); }
   }
-  /* the narrowest full bar: with a wallet connected its balance and address leave no slack
-     at 901-1000px, so the controls sit a little closer together there */
-  @media (min-width: 901px) and (max-width: 1000px) {
-    .topbar-inner { gap: 6px; --tbc-p: 8px; }
+  /* The bar in the glass of the home page, Earn and Assets: a translucent green pane with a lit
+     top edge and a faint halo, solid green under the hand. Create Coin, this page's main action,
+     stays lit. (The network badge keeps its ::before for the live dot.) */
+  .topbar-inner .tb-ark, .topbar-inner .tb-link, .topbar-inner .tb-theme, .topbar-inner #netBadge, .topbar-inner #balChip,
+  .topbar-inner #connectBtn, .topbar-inner #createBtn, .topbar-inner .tb-menu {
+    position: relative; color: var(--accent); border: 1px solid rgba(var(--accent-rgb), .45); border-radius: 999px; text-transform: none;
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 0 0 1px rgba(var(--accent-rgb), .06), 0 6px 18px rgba(var(--accent-rgb), .14);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
+    text-shadow: 0 0 12px rgba(var(--accent-rgb), .35); transition: background .2s, box-shadow .2s, color .2s, transform .15s; }
+  .topbar-inner .tb-ark::before, .topbar-inner .tb-link::before, .topbar-inner .tb-theme::before, .topbar-inner #balChip::before,
+  .topbar-inner #connectBtn::before, .topbar-inner #createBtn::before, .topbar-inner .tb-menu::before {
+    content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
+  .topbar-inner .tb-ark:hover, .topbar-inner .tb-link:hover, .topbar-inner .tb-more-btn[aria-expanded="true"], .topbar-inner .tb-theme:hover,
+  .topbar-inner #connectBtn:hover, .topbar-inner #createBtn, .topbar-inner .tb-menu:hover {
+    text-decoration: none; color: #04120b; text-shadow: none; filter: none;
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
+  .topbar-inner #createBtn:hover { filter: brightness(1.06); }
+  :root[data-theme="light"] .topbar-inner :is(.tb-ark, .tb-link, .tb-theme, #netBadge, #balChip, #connectBtn, .tb-menu) { text-shadow: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
+  /* the full bar, one size as on the other pages: 142x40 pills, the theme switch round */
+  @media (min-width: 1181px) {
+    .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav #netBadge, .topbar-inner #balChip, .topbar-inner #connectBtn, .topbar-inner #createBtn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
+      height: 40px; min-height: 40px; width: 142px; padding: 0 10px;
+      font: 700 12px var(--mono); letter-spacing: .01em; line-height: 1; white-space: nowrap; }
+    .tb-nav .tb-theme { width: 40px; height: 40px; padding: 0; box-sizing: border-box; }
+    .tb-nav .tb-theme svg { width: 16px; height: 16px; }
+    .tb-nav .tb-ark svg { width: 20px; height: 20px; }
+    .tb-nav .tb-link .tb-ico { width: 16px; height: 16px; }
+  }
+  /* up to 1500px the three doors keep their icons alone, round, so a connected wallet's
+     balance and address still fit beside them */
+  @media (min-width: 1181px) and (max-width: 1500px) {
+    .tb-nav .tb-ark, .tb-nav .tb-link:not(.tb-more-btn) { width: 40px; padding: 0; }
   }
   .tb-link-quiet:hover { color: var(--text); border-color: var(--border-2);
     background: rgba(var(--ink-rgb),.05); }
@@ -559,19 +576,20 @@
      the whole point of the badge once the words are gone. Swap & Bridge and Deckhand
      fold to their icons at the same width: below it a connected wallet's balance and
      address no longer fit on the line beside the three labels */
-  @media (max-width: 1180px) {
+  @media (max-width: 1500px) {
     .tb-ark > span:not(.ark-tip), .tb-link .tb-lbl { display: none; }
-    .tb-ark { padding: 5px 7px; }
   }
-  /* ---- phone and tablet: the bar keeps the logo, the wallet and Create; everything
-     else folds into one panel. Without this the ark, the Boarding Pass, the network
-     badge and the balance were simply gone on a phone, with no way to reach them.
-     The full bar needs a desktop's width: at 761-900px it ran off the screen. */
-  @media (max-width: 900px) {
+  /* ---- phone, tablet and small laptop: the bar keeps the logo, the wallet and Create;
+     everything else folds into one panel. Without this the ark, the Boarding Pass, the
+     network badge and the balance were simply gone on a phone, with no way to reach them.
+     The full bar of 142px pills needs 1181px. */
+  @media (max-width: 1180px) {
     /* the crest on the left; the wallet, Create and the menu button at the right edge,
        under the panel they open */
     .topbar-inner .tb-brand { margin-right: auto; }
-    .tb-menu { display: inline-flex; }
+    .tb-menu { display: inline-flex; width: 40px; height: 40px; border-radius: 999px; }
+    .topbar-inner #connectBtn, .topbar-inner #createBtn { height: 40px; min-height: 40px; width: 142px; padding: 0 10px;
+      font: 700 12px var(--mono); letter-spacing: .01em; }
     .tb-nav { display: none; position: absolute; top: 100%; right: 10px; margin-top: 8px;
       flex-direction: column; align-items: stretch; gap: 8px; padding: 10px;
       min-width: 232px; z-index: 60; background: var(--bg-2);
@@ -581,8 +599,8 @@
        hide these in the bar must not follow them in here */
     .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav #netBadge,
     .tb-nav #balChip:not([hidden]) {
-      display: flex !important; margin: 0; justify-content: flex-start;
-      width: 100%; min-height: 42px; align-items: center; }
+      display: flex !important; margin: 0; justify-content: flex-start; gap: 8px; box-sizing: border-box;
+      width: 100%; min-height: 42px; align-items: center; padding: 0 14px; font: 700 12.5px var(--mono); letter-spacing: .02em; }
     .tb-nav .tb-ark > span:not(.ark-tip), .tb-nav .tb-link .tb-lbl { display: inline !important; }
     .tb-nav .ark-tip { display: none; }      /* no room for a bubble in a dropdown */
     .tb-nav .nav-only { display: flex !important; }
@@ -591,10 +609,14 @@
     .tb-nav .tb-more-btn { display: none !important; }
     .tb-nav .tb-more-menu, .tb-nav .tb-more-menu[hidden] { display: flex; position: static; min-width: 0;
       padding: 0; gap: 8px; background: none; border: 0; box-shadow: none; }
-    .tb-nav .tb-more-menu a { min-height: 42px; border: 1px solid var(--border-2); border-radius: 999px; padding: 9px 14px; color: var(--dim); }
+    /* the More rows take the same glass as the rows above them */
+    .tb-nav .tb-more-menu a { min-height: 42px; border-radius: 999px; padding: 9px 14px; color: var(--accent);
+      font: 700 12.5px var(--mono); letter-spacing: .02em;
+      border: 1px solid rgba(var(--accent-rgb), .45); background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 6px 18px rgba(var(--accent-rgb), .14); }
+    .tb-nav .tb-more-menu a:hover { color: #04120b; background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8)); }
     .tb-nav .theme-sw { align-self: flex-start; margin: 0; }
-    .tb-nav .tb-theme { align-self: flex-start; width: 42px; height: 42px; box-sizing: border-box;
-      border: 1px solid var(--border-2); border-radius: 999px; }
+    .tb-nav .tb-theme { align-self: flex-start; width: 42px; height: 42px; box-sizing: border-box; }
   }
   @media (max-width: 760px) {
     /* The wallet menu was pinned to the right edge of the Connect button. With the
@@ -1228,12 +1250,12 @@
        44px rule above turned the 40px menu square into a 40×44 slab */
     .topbar-inner > button, .topbar-inner #connectBtn, .topbar-inner #createBtn, .topbar-inner .tb-menu { height: 42px; min-height: 42px; box-sizing: border-box;
       display: inline-flex; align-items: center; justify-content: center; line-height: 1; padding: 0 13px; }
-    .topbar-inner .tb-menu { width: 42px; padding: 0; border-radius: 12px; }
+    .topbar-inner .tb-menu { width: 42px; padding: 0; border-radius: 999px; }
     /* Connect and Create are one size: a width that fits "+ Create Coin" and a connected
        address, shrinking together on the narrowest phones */
     #walletWrap, .topbar-inner #createBtn { flex: 0 1 100px; }
     .topbar-inner #connectBtn { width: 100%; }
-    .topbar-inner #connectBtn, .topbar-inner #createBtn { padding: 0 9px; }
+    .topbar-inner #connectBtn, .topbar-inner #createBtn { padding: 0 9px; font: 600 11.5px 'Space Grotesk', sans-serif; letter-spacing: 0; }
     .tb-brand img { width: 42px; height: 42px; border-radius: 11px; }
     .modal-x { min-height: 0; width: 38px; height: 38px; }
     .pctrow button, .sorts button { min-height: 44px; }
