@@ -215,8 +215,6 @@
   button.tbx { cursor: pointer; }
   .tbx.theme { width: 40px; padding: 0; }
   .tbx.theme svg { width: 16px; height: 16px; }
-  /* the floor's own drawing of the ark, at the size it has there (1.6x the text) */
-  .tbx .ark-ico { width: 1.6em; height: 1.6em; display: block; flex: none; }
   .tbx.theme .i-moon, :root[data-theme="dark"] .tbx.theme .i-sun, :root[data-theme="dim"] .tbx.theme .i-sun { display: none; }
   :root[data-theme="dark"] .tbx.theme .i-moon, :root[data-theme="dim"] .tbx.theme .i-moon { display: block; }
   .tbx.net::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
@@ -272,8 +270,6 @@
     <a class="tb-brand" href="/" aria-label="A NEW ONE, home"><img src="../brand/logo.svg" alt=""><span>A NEW ONE</span></a>
     <div class="tb-nav2">
       <a class="tbx" href="/">← <span class="lbl">Home</span></a>
-      <a class="tbx" href="../ark/" target="_blank"><svg class="ark-ico" viewBox="0 0 60 48" fill="none" stroke="#12080E" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M9 23 L30 8 L51 23 Z" fill="#E08A86"/><path d="M18 23 H42 V32 H18 Z" fill="#F8D49B"/><path d="M5 32 H55 Q51 44 30 46 Q9 44 5 32 Z" fill="#C9925E"/></svg> <span class="lbl">Ark</span></a>
-      <a class="tbx" href="../chat/" title="Deckhand, the AI assistant"><img src="../chat/deckhand.svg" alt="" width="16" height="16" style="border-radius:4px"> <span class="lbl">Deckhand</span></a>
       <button type="button" class="tbx theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
       <span class="tbx net" id="netPill">…</span>
     </div>
@@ -409,7 +405,7 @@
   </div>
 </main>
 <footer>
-  <a href="/">A NEW ONE</a><a href="../docs.html">Docs</a><a href="../ark/" target="_blank">The ark</a><a href="../privacy.html">Privacy</a><a href="../terms.html">Terms</a>
+  <a href="/">A NEW ONE</a><a href="../docs.html">Docs</a><a href="../privacy.html">Privacy</a><a href="../terms.html">Terms</a>
 </footer>
 
 <script src="../vendor/ethers.umd.min.js"></script>
@@ -1570,10 +1566,14 @@ let onrampCfg = null, onrampKit = null, onrampWidget = null, onrampBusy = false;
       document.querySelectorAll("#addSeg button").forEach((x) => x.classList.toggle("on", x.dataset.way === w));
       $$("wayChain").hidden = w !== "chain"; $$("wayCard").hidden = w !== "card";
     };
-    document.querySelectorAll("#addSeg button").forEach((b) => b.addEventListener("click", () => way(b.dataset.way)));
+    let wantCard = new URLSearchParams(location.search).get("way") === "card";
+    document.querySelectorAll("#addSeg button").forEach((b) => b.addEventListener("click", () => { wantCard = false; way(b.dataset.way); }));
     // "Buy with card" is offered only when the page can open the onramp (config and a wallet)
     const oc = $$("onrampCard");
-    const syncCard = () => { $$("waySeg").hidden = oc.hidden; if (oc.hidden && !$$("wayCard").hidden) way("chain"); };
+    const syncCard = () => {
+      $$("waySeg").hidden = oc.hidden; if (oc.hidden && !$$("wayCard").hidden) way("chain");
+      if (wantCard && !oc.hidden) { wantCard = false; way("card"); }
+    };
     new MutationObserver(syncCard).observe(oc, { attributes: true, attributeFilter: ["hidden"] }); syncCard();
     // Advanced settings: bridge speed and a custom recipient
     const adv = $$("advToggle");

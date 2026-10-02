@@ -440,8 +440,6 @@
   /* Swap & Bridge and Deckhand carry the same icons as on every other page's bar:
      the bridge emoji, and the Deckhand's walrus */
   .tb-link .tb-ico { width: 16px; height: 16px; border-radius: 4px; flex: none; }
-  /* Docs is secondary: same shape, no accent until hovered */
-  .tb-link-quiet { border-color: var(--border-2); background: transparent; color: var(--dim); }
   .tb-theme { all: unset; cursor: pointer; display: inline-grid; place-items: center; color: var(--dim); }
   .tb-theme svg { width: 17px; height: 17px; }
   .tb-theme .i-moon, :root[data-theme="dark"] .tb-theme .i-sun, :root[data-theme="dim"] .tb-theme .i-sun { display: none; }
@@ -461,8 +459,8 @@
   }
   /* The bar in the glass of the home page, Earn and Assets: a translucent green pane with a lit
      top edge and a faint halo, solid green under the hand. Create Coin, this page's main action,
-     stays lit. (The network badge keeps its ::before for the live dot.) */
-  .topbar-inner .tb-ark, .topbar-inner .tb-link, .topbar-inner .tb-theme, .topbar-inner #netBadge, .topbar-inner #balChip,
+     stays lit. */
+  .topbar-inner .tb-ark, .topbar-inner .tb-link, .topbar-inner .tb-theme, .topbar-inner #balChip,
   .topbar-inner #connectBtn, .topbar-inner #createBtn, .topbar-inner .tb-menu {
     position: relative; color: var(--accent); border: 1px solid rgba(var(--accent-rgb), .45); border-radius: 999px; text-transform: none;
     background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
@@ -473,17 +471,17 @@
   .topbar-inner #connectBtn::before, .topbar-inner #createBtn::before, .topbar-inner .tb-menu::before {
     content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none;
     background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 55%); }
-  .topbar-inner .tb-ark:hover, .topbar-inner .tb-link:hover, .topbar-inner .tb-more-btn[aria-expanded="true"], .topbar-inner .tb-theme:hover,
+  .topbar-inner .tb-ark:hover, .topbar-inner .tb-link:hover, .topbar-inner .tb-theme:hover,
   .topbar-inner #connectBtn:hover, .topbar-inner #createBtn, .topbar-inner .tb-menu:hover {
     text-decoration: none; color: #04120b; text-shadow: none; filter: none;
     background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8));
     box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(var(--accent-rgb), .3), 0 10px 28px rgba(var(--accent-rgb), .35); }
   .topbar-inner #createBtn:hover { filter: brightness(1.06); }
-  :root[data-theme="light"] .topbar-inner :is(.tb-ark, .tb-link, .tb-theme, #netBadge, #balChip, #connectBtn, .tb-menu) { text-shadow: none;
+  :root[data-theme="light"] .topbar-inner :is(.tb-ark, .tb-link, .tb-theme, #balChip, #connectBtn, .tb-menu) { text-shadow: none;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 0 1px rgba(var(--accent-rgb), .08), 0 6px 18px rgba(var(--accent-rgb), .18); }
   /* the full bar, one size as on the other pages: 142x40 pills, the theme switch round */
   @media (min-width: 1181px) {
-    .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav #netBadge, .topbar-inner #balChip, .topbar-inner #connectBtn, .topbar-inner #createBtn {
+    .tb-nav .tb-ark, .tb-nav .tb-link, .topbar-inner #balChip, .topbar-inner #connectBtn, .topbar-inner #createBtn {
       display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
       height: 40px; min-height: 40px; width: 142px; padding: 0 10px;
       font: 700 12px var(--mono); letter-spacing: .01em; line-height: 1; white-space: nowrap; }
@@ -492,13 +490,6 @@
     .tb-nav .tb-ark svg { width: 20px; height: 20px; }
     .tb-nav .tb-link .tb-ico { width: 16px; height: 16px; }
   }
-  /* up to 1500px the three doors keep their icons alone, round, so a connected wallet's
-     balance and address still fit beside them */
-  @media (min-width: 1181px) and (max-width: 1500px) {
-    .tb-nav .tb-ark, .tb-nav .tb-link:not(.tb-more-btn) { width: 40px; padding: 0; }
-  }
-  .tb-link-quiet:hover { color: var(--text); border-color: var(--border-2);
-    background: rgba(var(--ink-rgb),.05); }
   /* ---- the fold-away nav.
      display:contents means this wrapper draws nothing and its children stay direct
      flex items of the bar, so a wide screen is laid out exactly as before. Only the
@@ -509,18 +500,6 @@
     border: 1px solid var(--border-2); background: transparent; color: var(--text); }
   .tb-menu svg { width: 19px; height: 19px; }
   .nav-only { display: none; }   /* only ever shown inside the panel */
-  /* ---- the More menu: a dropdown on a wide screen ---- */
-  .tb-more { position: relative; }
-  .tb-caret { display: inline-block; width: 6px; height: 6px; margin-left: 2px; border-right: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); }
-  .tb-more-btn[aria-expanded="true"] { color: var(--text); border-color: var(--border-2); }
-  .tb-more-menu { position: absolute; top: calc(100% + 8px); left: 0; min-width: 210px; z-index: 60;
-    display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--bg-2);
-    border: 1px solid var(--border-2); border-radius: 14px; box-shadow: var(--shadow-lg); }
-  .tb-more-menu[hidden] { display: none; }
-  .tb-more-menu a { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 9px;
-    font-family: var(--mono); font-size: 12.5px; letter-spacing: .5px; color: var(--dim); text-decoration: none; white-space: nowrap; }
-  .tb-more-menu a:hover { background: rgba(var(--accent-rgb),.08); color: var(--accent); text-decoration: none; }
 
   /* ---- the address row in the wallet menu ---- */
   .wm-copy { display: block; width: 100%; text-align: left; border: none;
@@ -571,14 +550,6 @@
   @media (prefers-reduced-motion: reduce) {
     .tb-ark:hover svg { animation: none; transform: scale(1.12); }
   }
-  /* the header is already fighting for room on a phone; the footer carries it there */
-  /* only the label folds away on a narrower header — not the bubble, which is
-     the whole point of the badge once the words are gone. Swap & Bridge and Deckhand
-     fold to their icons at the same width: below it a connected wallet's balance and
-     address no longer fit on the line beside the three labels */
-  @media (max-width: 1500px) {
-    .tb-ark > span:not(.ark-tip), .tb-link .tb-lbl { display: none; }
-  }
   /* ---- phone, tablet and small laptop: the bar keeps the logo, the wallet and Create;
      everything else folds into one panel. Without this the ark, the Boarding Pass, the
      network badge and the balance were simply gone on a phone, with no way to reach them.
@@ -597,24 +568,13 @@
     .tb-nav.open { display: flex; }
     /* inside the panel every item is a full-width row, and the width rules that
        hide these in the bar must not follow them in here */
-    .tb-nav .tb-ark, .tb-nav .tb-link, .tb-nav #netBadge,
+    .tb-nav .tb-ark, .tb-nav .tb-link,
     .tb-nav #balChip:not([hidden]) {
       display: flex !important; margin: 0; justify-content: flex-start; gap: 8px; box-sizing: border-box;
       width: 100%; min-height: 42px; align-items: center; padding: 0 14px; font: 700 12.5px var(--mono); letter-spacing: .02em; }
     .tb-nav .tb-ark > span:not(.ark-tip), .tb-nav .tb-link .tb-lbl { display: inline !important; }
     .tb-nav .ark-tip { display: none; }      /* no room for a bubble in a dropdown */
     .tb-nav .nav-only { display: flex !important; }
-    /* on a phone the More menu dissolves: its rows join the panel, the button goes */
-    .tb-nav .tb-more { display: contents; }
-    .tb-nav .tb-more-btn { display: none !important; }
-    .tb-nav .tb-more-menu, .tb-nav .tb-more-menu[hidden] { display: flex; position: static; min-width: 0;
-      padding: 0; gap: 8px; background: none; border: 0; box-shadow: none; }
-    /* the More rows take the same glass as the rows above them */
-    .tb-nav .tb-more-menu a { min-height: 42px; border-radius: 999px; padding: 9px 14px; color: var(--accent);
-      font: 700 12.5px var(--mono); letter-spacing: .02em;
-      border: 1px solid rgba(var(--accent-rgb), .45); background: linear-gradient(180deg, rgba(var(--accent-rgb), .22), rgba(var(--accent-rgb), .08));
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.18), 0 6px 18px rgba(var(--accent-rgb), .14); }
-    .tb-nav .tb-more-menu a:hover { color: #04120b; background: linear-gradient(180deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .8)); }
     .tb-nav .theme-sw { align-self: flex-start; margin: 0; }
     .tb-nav .tb-theme { align-self: flex-start; width: 42px; height: 42px; box-sizing: border-box; }
   }
@@ -1240,7 +1200,6 @@
     #createBtn { padding: 9px 11px; font-size: 11.5px; }
     #connectBtn { padding: 9px 11px; font-size: 11.5px; }
     .tb-brand img { width: 36px; height: 36px; border-radius: 9px; }
-    #netBadge { display: none; }
     #balChip { display: none !important; }
     .topbar .badge { font-size: 10px; padding: 6px 9px; }
     .topbar button { white-space: nowrap; padding: 10px 13px; font-size: 13px; }
@@ -1475,23 +1434,11 @@
          buy a coin on the floor in the same trip. Same shape as the Boarding Pass link. -->
     <a class="tb-link" href="bridge/" aria-label="Swap &amp; Bridge" title="Swap &amp; Bridge: bring ETH, USDC or almost anything aboard from any chain, then buy on the floor"><span aria-hidden="true">🌉</span><span class="tb-lbl">Swap &amp; Bridge</span></a>
     <a class="tb-link" href="chat/" aria-label="Deckhand" title="Deckhand, the AI assistant: ask about any coin; it remembers you, memory on Walrus"><img class="tb-ico" src="chat/deckhand.svg" alt=""><span class="tb-lbl">Deckhand</span></a>
-    <!-- Everything that is not a door or the money: one quiet menu on a wide screen,
-         plain rows inside the phone panel. The footer no longer repeats any of it. -->
-    <div class="tb-more" id="moreWrap">
-      <button class="tb-link tb-link-quiet tb-more-btn" id="moreBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="moreMenu">More <span class="tb-caret" aria-hidden="true"></span></button>
-      <div class="tb-more-menu" id="moreMenu" hidden>
-        <a href="earn/">💰 DeFi</a>
-        <a href="docs.html">📄 Docs</a>
-        <a href="about.html">👋 About</a>
-        <a href="mailto:support@anewone.xyz">✉ Contact</a>
-      </div>
-    </div>
     <!-- one light/dark toggle; the old dim theme is still honoured if a visitor had picked it -->
     <button type="button" class="tb-theme" id="themeSw" aria-label="Switch between light and dark" title="Light / dark">
       <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
       <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg>
     </button>
-    <span id="netBadge" class="badge">Testnet</span>
     <span id="balChip" class="badge" hidden title="Your USDC on Arc. Pays gas and trades"></span>
     </div>
     <span id="walletWrap" style="position:relative;display:inline-block">
@@ -1682,7 +1629,7 @@
           <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M18.244 2H21.5l-7.5 8.57L23 22h-6.75l-5.28-6.9L4.9 22H1.64l8.02-9.17L1 2h6.92l4.77 6.31L18.244 2Zm-1.18 18h1.83L7.02 3.9H5.06l12 16.1Z"/></svg>
           <span>Follow on X</span>
         </a>
-        <!-- the footer is for reaching us, nothing else: the pages live in the More menu -->
+        <!-- the footer is for reaching us, nothing else -->
         <div class="foot-contact">
           <button class="foot-btn" id="contactBtn" aria-haspopup="true" aria-expanded="false" aria-label="Contact by email">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
@@ -2847,9 +2794,7 @@ const normInfo = (r) => ({
   metadataURI: r.metadataURI
 });
 
-$("netBadge").textContent = NET_NAME;
 if (window.ANEWONE_CONFIG.mainnet.live) {
-  $("netBadge").classList.add("live");
   $("comingSoon").style.display = "none"; // sign comes down the moment mainnet is live
 }
 
@@ -5818,21 +5763,6 @@ setInterval(liveTail, 15_000);
   addEventListener("click", (e) => {
     if (!menu.contains(e.target) && e.target !== btn) shut();
   });
-  addEventListener("keydown", (e) => { if (e.key === "Escape") shut(); });
-})();
-
-/* ---- the More menu on a wide screen: open on click, close on a pick, outside click or Escape ---- */
-(() => {
-  const btn = $("moreBtn"), menu = $("moreMenu");
-  if (!btn || !menu) return;
-  const shut = () => { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); };
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    menu.hidden = !menu.hidden;
-    btn.setAttribute("aria-expanded", menu.hidden ? "false" : "true");
-  });
-  menu.addEventListener("click", (e) => { if (e.target.closest("a")) shut(); });
-  addEventListener("click", (e) => { if (!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) shut(); });
   addEventListener("keydown", (e) => { if (e.key === "Escape") shut(); });
 })();
 
