@@ -717,7 +717,11 @@ function candlesOf(floor, addr, tfSec, limit, live = LIVE_NONE) {
   }));
 }
 
-async function serve(req, res) {
+/**
+ * The whole API. api/basedbot serves it free; api/agent serves the same answers behind the x402
+ * paywall (opts.prefix "agent", opts.paywall from api/_x402.js, opts.payment for the document).
+ */
+export async function serve(req, res, opts = {}) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Max-Age", "86400");
@@ -730,7 +734,7 @@ async function serve(req, res) {
   res.setHeader("Cache-Control", `public, s-maxage=${CACHE_S}, stale-while-revalidate=60`);
 
   const u = new URL(req.url, "https://anewone.xyz");
-  const parts = u.pathname.replace(/^\/api\/basedbot\/?/, "").replace(/\/+$/, "").split("/").filter(Boolean);
+  const parts = u.pathname.replace(new RegExp("^/api/" + (opts.prefix || "basedbot") + "/?"), "").replace(/\/+$/, "").split("/").filter(Boolean);
   const q = u.searchParams;
   const clamp = (name, def, max) => {
     const n = Number.parseInt(q.get(name) || "", 10);
@@ -756,7 +760,25 @@ async function serve(req, res) {
 
   const route = (parts[0] || "").toLowerCase();
 
-  if (!route) return res.status(200).json(envelope(floor, meta(floor)));
+  // One key per endpoint whatever it was called, which is what the agent API prices by: the
+  // list, one coin, trades, distribution, candles, or "" for the document. An unknown route
+  // has no price and falls through to the 404 below unpaid.
+  const routeKey = !route ? ""
+    : isAddr(route) ? "token"
+    : route === "tokens" || route === "token" || route === "coins" ? (named(1) ? "token" : "tokens")
+    : route === "holders" ? "distribution"
+    : route === "ohlcv" ? "candles"
+    : route;
+  if (opts.paywall && !(await opts.paywall(req, res, routeKey))) return;
+
+  if (!route) {
+    let m = meta(floor);
+    if (opts.prefix) {
+      m = JSON.parse(JSON.stringify(m).replaceAll("/api/basedbot", "/api/" + opts.prefix));
+      if (opts.payment) m.payment = opts.payment();
+    }
+    return res.status(200).json(envelope(floor, m));
+  }
 
   // A serverless catch-all routes exactly one segment on this project: /api/basedbot/token/0x...
   // answers Vercel's own 404, never this handler. So an address IS a route, and every endpoint

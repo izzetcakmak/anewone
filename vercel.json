@@ -3,7 +3,9 @@
   "outputDirectory": "docs",
   "functions": {
     "api/basedbot.js": { "includeFiles": "docs/data/floor.json" },
-    "api/basedbot/*.js": { "includeFiles": "docs/data/floor.json" }
+    "api/basedbot/*.js": { "includeFiles": "docs/data/floor.json" },
+    "api/agent.js": { "includeFiles": "docs/data/floor.json" },
+    "api/agent/*.js": { "includeFiles": "docs/data/floor.json" }
   },
   "redirects": [
     {
