@@ -194,14 +194,15 @@ const big = (x) => { try { return BigInt(x); } catch { return null; } };
  * Gate one request. Returns true when the route is free or paid for, in which case the caller
  * serves the resource; false when a response (402, 503) has already been sent.
  */
-export async function paywall(req, res, route) {
+export async function paywall(req, res, route, resourcePath) {
   const cfg = config();
   const amount = cfg.prices[route] ?? "0";
   if (amount === "0") return true;
-  const resourceUrl = SITE + (req.url || "/").split("?")[0];
+  // the resource is the exact request, query included: that is what the payment buys
+  const resourceUrl = SITE + (resourcePath || req.url || "/");
   if (!cfg.ok) {
     res.setHeader("Cache-Control", "no-store");
-    res.status(503).json({ error: "paid API not configured; the free index is at " + SITE + "/api/basedbot" });
+    res.status(503).json({ error: "paid API not configured; the free index is at " + SITE + "/api/basedbot", resource: resourceUrl });
     return false;
   }
 

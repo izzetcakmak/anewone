@@ -734,7 +734,15 @@ export async function serve(req, res, opts = {}) {
   res.setHeader("Cache-Control", `public, s-maxage=${CACHE_S}, stale-while-revalidate=60`);
 
   const u = new URL(req.url, "https://anewone.xyz");
-  const parts = u.pathname.replace(new RegExp("^/api/" + (opts.prefix || "basedbot") + "/?"), "").replace(/\/+$/, "").split("/").filter(Boolean);
+  // the agent door arrives rewritten onto this function's own path (vercel.json), so both spellings strip
+  const parts = u.pathname.replace(/^\/api\/(basedbot|agent)\/?/, "").replace(/\/+$/, "").split("/").filter(Boolean);
+  if (opts.prefix === "agent" && parts[0] && parts[0].startsWith("agent-")) parts[0] = parts[0].slice("agent-".length);
+  // the resource as the caller named it, for the 402 and the payment record: the public path,
+  // its query less the door
+  const publicQuery = new URLSearchParams(u.searchParams);
+  publicQuery.delete("door");
+  for (const k of [...publicQuery.keys()]) if (k.startsWith("...")) publicQuery.delete(k); // the catch-all's own "...path"
+  const resourcePath = "/api/" + (opts.prefix || "basedbot") + (parts.length ? "/" + parts.join("/") : "") + (publicQuery.size ? "?" + publicQuery.toString() : "");
   const q = u.searchParams;
   const clamp = (name, def, max) => {
     const n = Number.parseInt(q.get(name) || "", 10);
@@ -769,7 +777,7 @@ export async function serve(req, res, opts = {}) {
     : route === "holders" ? "distribution"
     : route === "ohlcv" ? "candles"
     : route;
-  if (opts.paywall && !(await opts.paywall(req, res, routeKey))) return;
+  if (opts.paywall && !(await opts.paywall(req, res, routeKey, resourcePath))) return;
 
   if (!route) {
     let m = meta(floor);
@@ -859,7 +867,8 @@ export async function serve(req, res, opts = {}) {
     }));
   }
 
-  return res.status(404).json({ error: "unknown endpoint", endpoints: meta(floor).endpoints });
+  const endpoints = meta(floor).endpoints.map((s) => (opts.prefix ? s.replaceAll("/api/basedbot", "/api/" + opts.prefix) : s));
+  return res.status(404).json({ error: "unknown endpoint", endpoints });
 }
 
 export default async function handler(req, res) {

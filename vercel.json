@@ -3,10 +3,12 @@
   "outputDirectory": "docs",
   "functions": {
     "api/basedbot.js": { "includeFiles": "docs/data/floor.json" },
-    "api/basedbot/*.js": { "includeFiles": "docs/data/floor.json" },
-    "api/agent.js": { "includeFiles": "docs/data/floor.json" },
-    "api/agent/*.js": { "includeFiles": "docs/data/floor.json" }
+    "api/basedbot/*.js": { "includeFiles": "docs/data/floor.json" }
   },
+  "rewrites": [
+    { "source": "/api/agent", "destination": "/api/basedbot?door=agent" },
+    { "source": "/api/agent/:path", "destination": "/api/basedbot/agent-:path" }
+  ],
   "redirects": [
     {
       "source": "/(.*)",

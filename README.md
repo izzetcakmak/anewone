@@ -70,7 +70,8 @@ The full runbook is in [MIGRATION.md](MIGRATION.md).
 
 ## Selling to agents (x402)
 
-The index API has a second door, `/api/agent`, which serves the very same answers as `/api/basedbot`
+The index API has a second door, `/api/agent` (a rewrite onto the same function, so it costs no extra
+serverless function), which serves the very same answers as `/api/basedbot`
 priced per call in USDC under the [x402 protocol](https://developers.circle.com/x402-facilitators/x402)
 (v2) and settled by Circle's Facilitator Service on Arc mainnet. An agent calls a priced endpoint,
 gets a `402` with the accepted options (`PAYMENT-REQUIRED` header), signs an EIP-3009 USDC
