@@ -37,6 +37,11 @@
       }
     });
     var keyD = wedge(-keyHalf + deg(2), keyHalf - deg(2), R1 - 6, R2 + 12), k = P((R1 - 6 + R2 + 12) / 2, 0), A = 12.5, sc = 0.42;
+    // the brand A in ink; on AnewOne.Fun it is the cabin of the Ark, with a hull under it (see arkDoor)
+    var mark = '<path fill="#04140d" fill-opacity=".92" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/>';
+    var ark = root.getAttribute("data-app") === "fun", gy = ark ? -31 : -49 * sc;
+    var glyph = '<g transform="translate(' + f(-50 * sc) + " " + f(gy) + ') scale(' + sc + ')">' + mark + "</g>" +
+      (ark ? '<path fill="#04140d" fill-opacity=".92" d="M-27 5.2H27Q23 22 0 27.5Q-23 22 -27 5.2Z"/>' : "");
     return '<svg class="nx-arch" viewBox="0 0 ' + W + ' 300" aria-hidden="true"><defs>' +
       '<radialGradient id="nxStone" cx="' + cx + '" cy="' + cy + '" r="' + R2 + '" gradientUnits="userSpaceOnUse"><stop offset="' + (R1 / R2).toFixed(4) + '" stop-color="var(--nx-mint)" stop-opacity=".02"/><stop offset=".9945" stop-color="var(--nx-mint)" stop-opacity=".3"/><stop offset="1" stop-color="var(--nx-ice)" stop-opacity=".9"/></radialGradient>' +
       '<linearGradient id="nxEdge" gradientUnits="userSpaceOnUse" x1="' + (cx - 1300) + '" x2="' + (cx + 1300) + '"><stop offset="0" stop-color="var(--nx-mint)" stop-opacity=".25"/><stop offset=".5" stop-color="var(--nx-ice)"/><stop offset="1" stop-color="var(--nx-mint)" stop-opacity=".25"/></linearGradient>' +
@@ -50,9 +55,27 @@
       '<path d="' + arcP(R1, -A, A) + '" fill="none" stroke="url(#nxEdge)" stroke-width="1" opacity=".5"/>' +
       '<path d="' + keyD + '" fill="var(--nx-mint)" opacity=".55" filter="url(#nxBk)"/>' +
       '<path d="' + keyD + '" fill="url(#nxKey)" stroke="#fff" stroke-opacity=".55" stroke-width="1"/>' +
-      '<g transform="translate(' + f(k[0] - 50 * sc) + " " + f(k[1] - 49 * sc) + ') scale(' + sc + ')"><path fill="#04140d" fill-opacity=".92" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></g></svg>';
+      '<g transform="translate(' + f(k[0]) + " " + f(k[1]) + ')"><g class="nx-keyglyph">' + glyph + "</g></g></svg>";
   }
   qsa(".nx-hero").forEach(function (h) { if (!qs(".nx-arch", h)) h.insertAdjacentHTML("afterbegin", starsSvg() + archSvg()); });
+
+  // AnewOne.Fun: the keystone is a door to the Ark, the story behind the site. The arch ignores the pointer, so a link sits over
+  // the stone, placed from the stone's own box so it follows the arch at every width. Hover or focus rocks the boat.
+  function arkDoor(hero) {
+    var stone = qsa(".nx-arch > path", hero).pop(), glyph = qs(".nx-keyglyph", hero);
+    if (!stone || !glyph || qs(".nx-door", hero) || stone.getBoundingClientRect().width < 1) return;
+    var a = el("a", "nx-door"), tip = el("span", "nx-door-tip", "If you're curious about our story, ");
+    a.href = new URL("ark/", BASE).href; a.target = "_blank"; a.rel = "noopener"; a.setAttribute("aria-label", "The Ark, the story behind A NEW ONE");
+    tip.appendChild(el("b", null, "CLICK")); a.appendChild(tip); hero.appendChild(a);
+    function place() {
+      var h = hero.getBoundingClientRect(), r = stone.getBoundingClientRect();
+      a.style.left = (r.left - h.left) + "px"; a.style.bottom = (h.bottom - r.bottom) + "px"; a.style.width = r.width + "px"; a.style.height = r.height + "px";
+    }
+    ["mouseenter", "focus"].forEach(function (t) { a.addEventListener(t, function () { glyph.classList.add("rock"); }); });
+    ["mouseleave", "blur"].forEach(function (t) { a.addEventListener(t, function () { glyph.classList.remove("rock"); }); });
+    place(); window.addEventListener("resize", place); window.addEventListener("load", place);
+  }
+  if (root.getAttribute("data-app") === "fun") qsa(".nx-hero").forEach(arkDoor);
 
   // ---- the bar turns to glass once the page moves under it ----
   var bar = qs(".nx-bar") || qs(".nx-nav");
