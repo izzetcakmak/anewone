@@ -377,7 +377,7 @@
     const want = [...new Set(syms)].filter(Boolean);
     for (let i = 0; i < want.length; i += 60) {
       const r = await fetch(API + "?prices=" + want.slice(i, i + 60).map(encodeURIComponent).join(","), { cache: "no-store" }).then((x) => x.json()).catch(() => null);
-      if (r && r.prices) { Object.assign(prices, r.prices); pricesAt = r.at || Date.now(); }
+      if (r && r.prices) { for (const [k, v] of Object.entries(r.prices)) if (typeof v === "number") prices[k] = v; pricesAt = r.at || Date.now(); }
     }
   }
 
@@ -455,6 +455,7 @@
   // ---- cards ----
   let filter = "featured", query = "", shown = 36;
   const asking = new Set(); // symbols whose price is on its way, so a re-render does not ask twice
+  const tries = {};         // symbol -> rounds the issuer's feed left it unanswered; after two the card says so
   let holdings = {};   // symbol -> { raw, wrapped } in token units, for the connected wallet
   function visible() {
     let list = ASSETS;
@@ -490,7 +491,7 @@
     return `<div class="stock" data-s="${esc(a.s)}">
       <div class="head"><span class="logo">${a.logo ? `<img src="${LOGO(a.s)}" alt="" loading="lazy" onerror="this.remove()">` : esc((a.u || a.s).slice(0, 4))}</span><span class="sym">${esc(a.s)}</span>${a.x ? `<span class="ex">${esc(a.x)}</span>` : ""}</div>
       <div class="nm"><h3 title="${esc(a.n)}">${esc(a.n)}</h3><div class="by">${esc(a.u || a.s)} · USDC</div></div>
-      <div class="price"><span class="v ${px == null ? "loading" : ""}">${px == null ? "…" : usd(px)}</span><small>REFERENCE · USD</small></div>
+      <div class="price"><span class="v ${px == null ? "loading" : ""}"${px == null && (tries[a.s] || 0) >= 2 ? ' title="The issuer's price feed is not answering right now; it is asked again every minute."' : ""}>${px != null ? usd(px) : (tries[a.s] || 0) >= 2 ? "—" : "…"}</span><small>REFERENCE · USD</small></div>
       <div class="hours ${hcls}"><span class="dot"></span>${esc(htxt)}</div>
       <div class="stats">
         <div>${live && live.price ? usd(live.price) : "—"}<span>Arc pool price</span></div>
@@ -510,9 +511,9 @@
     $("more").hidden = list.length <= shown;
     $("more").textContent = `Show ${Math.min(36, list.length - shown)} more`;
     // prices for what is on screen, then the Arc standing of each once Arc is known to carry the tokens
-    const need = page.filter((a) => prices[a.s] === undefined && !asking.has(a.s)).map((a) => a.s);
+    const need = page.filter((a) => prices[a.s] == null && !asking.has(a.s)).map((a) => a.s); // null: asked, not answered yet
     need.forEach((s) => asking.add(s));
-    if (need.length) loadPrices(need).then(() => patchPrices(page)).finally(() => need.forEach((s) => asking.delete(s)));
+    if (need.length) loadPrices(need).then(() => { need.forEach((s) => { if (prices[s] == null) tries[s] = (tries[s] || 0) + 1; }); patchPrices(page); }).finally(() => need.forEach((s) => asking.delete(s)));
     // the Arc standing of each card once Arc is known to carry the tokens; only a card that was
     // still being read triggers another paint, or this would paint forever
     if (arcLive) {
@@ -524,7 +525,9 @@
   function patchPrices(list) {
     for (const a of list) {
       const el = document.querySelector(`.stock[data-s="${CSS.escape(a.s)}"] .price .v`);
-      if (el && prices[a.s] != null) { el.textContent = usd(prices[a.s]); el.classList.remove("loading"); }
+      if (!el) continue;
+      if (prices[a.s] != null) { el.textContent = usd(prices[a.s]); el.classList.remove("loading"); }
+      else if ((tries[a.s] || 0) >= 2) { el.textContent = "—"; el.title = "The issuer's price feed is not answering right now; it is asked again every minute."; }
     }
   }
   $("more").onclick = () => { shown += 36; render(); };

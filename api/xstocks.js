@@ -102,13 +102,30 @@ export default async function handler(req, res) {
 
   try {
     if (typeof req.query.prices === "string") {
+      // Backed answers a price in a few hundred ms on a good day and in seconds on a bad one, so
+      // the symbols go eight at a time inside a budget the function can keep; a symbol that does
+      // not answer in time is left out (never cached as null) and the page asks again next minute
       const syms = [...new Set(req.query.prices.split(",").map((s) => s.trim()).filter((s) => SYM_RE.test(s)))].slice(0, MAX_PRICES);
-      const pairs = await Promise.all(syms.map(async (s) => {
-        try { const v = await cached("xs:px:" + s, PRICE_TTL, async () => { const j = await backed(`/assets/${encodeURIComponent(s)}/price-data`); return j && typeof j.quote === "number" ? j.quote : null; }); return [s, v]; }
-        catch { return [s, null]; }
-      }));
-      res.setHeader("Cache-Control", `public, max-age=${PRICE_TTL}`);
-      return res.status(200).json({ at: Date.now(), prices: Object.fromEntries(pairs) });
+      const out = {}, deadline = Date.now() + 8500;
+      let i = 0;
+      const worker = async () => {
+        while (i < syms.length && Date.now() < deadline) {
+          const s = syms[i++];
+          try {
+            const v = await cached("xs:px:" + s, PRICE_TTL, async () => {
+              const r = await fetch(`${BASE}/assets/${encodeURIComponent(s)}/price-data`, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(Math.max(500, Math.min(5000, deadline - Date.now()))) });
+              if (!r.ok) throw new Error("backed " + r.status);
+              const j = await r.json();
+              if (!j || typeof j.quote !== "number") throw new Error("no quote");
+              return j.quote;
+            });
+            if (typeof v === "number") out[s] = v;
+          } catch {}
+        }
+      };
+      await Promise.all(Array.from({ length: 8 }, worker));
+      res.setHeader("Cache-Control", `public, max-age=${Object.keys(out).length === syms.length ? PRICE_TTL : 5}`);
+      return res.status(200).json({ at: Date.now(), prices: out, missing: syms.filter((s) => !(s in out)) });
     }
     if (typeof req.query.por === "string") {
       const s = req.query.por.trim();
