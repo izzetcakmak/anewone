@@ -68,6 +68,29 @@ The full runbook is in [MIGRATION.md](MIGRATION.md).
   rehearsal on a fork of Arc mainnet against the live platform and Uniswap's own deployment
   (`test/ANewOneMainnetFork.t.sol`, see [MIGRATION.md](MIGRATION.md)). No external audit yet.
 
+## Selling to agents (x402)
+
+The index API has a second door, `/api/agent`, which serves the very same answers as `/api/basedbot`
+priced per call in USDC under the [x402 protocol](https://developers.circle.com/x402-facilitators/x402)
+(v2) and settled by Circle's Facilitator Service on Arc mainnet. An agent calls a priced endpoint,
+gets a `402` with the accepted options (`PAYMENT-REQUIRED` header), signs an EIP-3009 USDC
+authorization for one of them and retries with it in `PAYMENT-SIGNATURE`; the answer carries the
+settlement in `PAYMENT-RESPONSE`. The Circle CLI does all of it:
+`circle services pay "https://anewone.xyz/api/agent/tokens" -X GET --chain ARC`. The document at
+`/api/agent` and the [OpenAPI spec](https://anewone.xyz/openapi.yaml) are free; the list, a coin, the
+tape and the distribution cost $0.001 a call and candles $0.002 (`X402_PRICES` overrides).
+
+`api/_x402.js` is the paywall: it advertises the price, checks the buyer's payload against it,
+refuses a replayed authorization, submits the rest to the facilitator's `/settle`, and serves only on
+terminal success, never from a cache. It authenticates to the facilitator with `CIRCLE_API_KEY`, or
+on the keyless trial with a seller proof signed by `X402_SELLER_KEY`, the key of the payout wallet
+`X402_PAY_TO` (a wallet of its own, holding nothing but the fees). Until `X402_PAY_TO` is set the priced
+endpoints answer 503 and point at the free index. `node monitor/x402-smoke.mjs --local` runs the
+handshake in-process; `--pay` with `BUYER_KEY` pays a real call (rehearse on Arc testnet first).
+Listing in [Circle's Agent Marketplace](https://agents.circle.com/services) is by intake form, reviewed by
+hand, with the payout wallet sanctions-screened; Gateway nanopayments (gasless, sub-cent) are the step
+after that.
+
 ## Deployments
 
 | Network | Platform | $NOAH |
