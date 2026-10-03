@@ -243,9 +243,11 @@ export async function paywall(req, res, route, resourcePath) {
   });
   let out;
   try { out = await facilitator(cfg, "settle", "/settle", settleBody, ours.network); } catch (e) {
-    console.error("x402: settle unreachable:", e.message);
+    const ours_ = /does not control/.test(e.message); // our configuration, not the network
+    console.error("x402: settle " + (ours_ ? "misconfigured" : "unreachable") + ":", e.message);
     res.setHeader("Cache-Control", "no-store");
-    res.status(503).json({ error: "payment facilitator unreachable, retry with the same authorization" });
+    res.status(503).json({ error: ours_ ? "paid API misconfigured: the seller key does not control payTo; nothing was charged"
+      : "payment facilitator unreachable, retry with the same authorization" });
     return false;
   }
   const s = out.body || {};
