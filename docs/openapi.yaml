@@ -1,0 +1,406 @@
+openapi: 3.1.0
+info:
+  title: A NEW ONE agent API
+  version: 1.0.0
+  summary: Arc mainnet launchpad data, priced per call in USDC over x402
+  description: |
+    The public index of every coin launched on A NEW ONE (https://anewone.xyz), the launchpad on
+    Arc Network (chain id 5042, Circle's USDC-gas L1): prices, caps, liquidity, volume, holder
+    concentration, trade tape and OHLCV candles, for coins on their USDC bonding curve and, once
+    graduated, in their Uniswap v3 pool.
+
+    Two doors to the same data:
+    * `/api/basedbot` is free, rate-limited per IP (240/min), cached 15 s at the edge.
+    * `/api/agent` is the same API priced per call in USDC under the x402 protocol (v2), settled
+      by Circle's Facilitator Service on Arc mainnet. Call a priced endpoint without a
+      `PAYMENT-SIGNATURE` header and the answer is `402` with the accepted options, in the body
+      and base64-encoded in the `PAYMENT-REQUIRED` header. Sign an EIP-3009
+      `TransferWithAuthorization` for one of them and retry with the signed payload base64 in
+      `PAYMENT-SIGNATURE`; the resource comes back with a `PAYMENT-RESPONSE` header carrying the
+      settlement (transaction hash, network, payer). The Circle CLI does the whole dance:
+      `circle services pay "https://anewone.xyz/api/agent/tokens" -X GET --chain ARC`.
+
+    Amounts: USD figures are plain numbers in dollars (Arc's native currency is USDC); token
+    amounts are whole tokens; `priceWad` and `raisedWei` carry the exact 18-decimal strings. Times
+    are unix seconds. No wallet is ever named: holders are a count and concentration shares,
+    trades a tape of sides and sizes.
+  contact:
+    name: A NEW ONE
+    url: https://x.com/anewone_xyz
+    email: support@anewone.xyz
+  license:
+    name: MIT
+    url: https://github.com/izzetcakmak/anewone/blob/main/LICENSE
+  x-provider:
+    name: A NEW ONE
+    website: https://anewone.xyz
+    docsUrl: https://anewone.xyz/api/agent
+    openApiUrl: https://anewone.xyz/openapi.yaml
+    category: FINANCIAL_ANALYSIS
+    tags: [x402, arc, launchpad, memecoin, dex, uniswap-v3, ohlcv, holders, on-chain, usdc]
+  x-x402:
+    version: 2
+    scheme: exact
+    networks:
+      - network: eip155:5042
+        name: Arc
+        asset: "0x3600000000000000000000000000000000000000"
+        assetName: USDC
+    facilitator: Circle Facilitator Service
+    note: payTo and the live price list are in every 402 and in GET /api/agent (payment)
+
+servers:
+  - url: https://anewone.xyz
+
+tags:
+  - name: document
+  - name: coins
+  - name: market data
+
+paths:
+  /api/agent:
+    get:
+      tags: [document]
+      operationId: getDocument
+      summary: The API's own document, free
+      description: Field semantics, endpoint list, prices, the payTo wallet and accepted networks.
+      x-x402-price-usdc: 0
+      responses:
+        "200":
+          description: The document
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      platform: { type: string, const: A NEW ONE }
+                      chain: { $ref: "#/components/schemas/Chain" }
+                      endpoints: { type: array, items: { type: string } }
+                      payment: { $ref: "#/components/schemas/PaymentInfo" }
+
+  /api/agent/tokens:
+    get:
+      tags: [coins]
+      operationId: listTokens
+      summary: Every coin on the platform
+      description: Sorted by 24h volume unless `sort` says otherwise; `graduated` and `q` filter.
+      x-x402-price-usdc: 0.001
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 100 } }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [volume24h, volumeAll, marketCap, fdv, liquidity, trades24h, holders, age, created], default: volume24h }
+        - { name: graduated, in: query, schema: { type: boolean }, description: Only graduated (true) or only on the curve (false) }
+        - { name: q, in: query, schema: { type: string }, description: Name or symbol substring }
+      responses:
+        "200":
+          description: The list
+          headers:
+            PAYMENT-RESPONSE: { $ref: "#/components/headers/PaymentResponse" }
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      count: { type: integer }
+                      tokens: { type: array, items: { $ref: "#/components/schemas/Token" } }
+        "402": { $ref: "#/components/responses/PaymentRequired" }
+        "429": { $ref: "#/components/responses/TooMany" }
+
+  /api/agent/{address}:
+    get:
+      tags: [coins]
+      operationId: getToken
+      summary: One coin, with its holder distribution and last trades
+      x-x402-price-usdc: 0.001
+      parameters:
+        - { name: address, in: path, required: true, schema: { $ref: "#/components/schemas/Address" } }
+        - { name: trades, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 20 }, description: How many of its last trades to include }
+      responses:
+        "200":
+          description: The coin
+          headers:
+            PAYMENT-RESPONSE: { $ref: "#/components/headers/PaymentResponse" }
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      token: { $ref: "#/components/schemas/Token" }
+                      distribution: { $ref: "#/components/schemas/Distribution" }
+                      trades: { type: array, items: { $ref: "#/components/schemas/Trade" } }
+        "402": { $ref: "#/components/responses/PaymentRequired" }
+        "404": { $ref: "#/components/responses/NoCoin" }
+        "429": { $ref: "#/components/responses/TooMany" }
+
+  /api/agent/trades:
+    get:
+      tags: [market data]
+      operationId: listTrades
+      summary: Trades of the last 24 hours, newest first
+      description: Curve trades and, for a migrated coin, its Uniswap v3 pool swaps on the same tape. Without `address`, every coin's.
+      x-x402-price-usdc: 0.001
+      parameters:
+        - { name: address, in: query, schema: { $ref: "#/components/schemas/Address" } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 100 } }
+      responses:
+        "200":
+          description: The tape
+          headers:
+            PAYMENT-RESPONSE: { $ref: "#/components/headers/PaymentResponse" }
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      token: { oneOf: [{ $ref: "#/components/schemas/Address" }, { type: "null" }] }
+                      windowHours: { type: integer, const: 24 }
+                      trades: { type: array, items: { $ref: "#/components/schemas/Trade" } }
+        "402": { $ref: "#/components/responses/PaymentRequired" }
+        "404": { $ref: "#/components/responses/NoCoin" }
+        "429": { $ref: "#/components/responses/TooMany" }
+
+  /api/agent/distribution:
+    get:
+      tags: [market data]
+      operationId: getDistribution
+      summary: Holder count and concentration, no wallet named
+      x-x402-price-usdc: 0.001
+      parameters:
+        - { name: address, in: query, required: true, schema: { $ref: "#/components/schemas/Address" } }
+      responses:
+        "200":
+          description: The distribution
+          headers:
+            PAYMENT-RESPONSE: { $ref: "#/components/headers/PaymentResponse" }
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      token: { $ref: "#/components/schemas/Address" }
+                      distribution: { $ref: "#/components/schemas/Distribution" }
+        "402": { $ref: "#/components/responses/PaymentRequired" }
+        "404": { $ref: "#/components/responses/NoCoin" }
+        "429": { $ref: "#/components/responses/TooMany" }
+
+  /api/agent/candles:
+    get:
+      tags: [market data]
+      operationId: getCandles
+      summary: OHLCV candles in USDC
+      description: Built from the coin's indexed price points (at most 600 on the curve) and, once migrated, the newest 600 of its pool plus the swaps since.
+      x-x402-price-usdc: 0.002
+      parameters:
+        - { name: address, in: query, required: true, schema: { $ref: "#/components/schemas/Address" } }
+        - { name: tf, in: query, schema: { type: string, enum: [1m, 5m, 15m, 1h, 4h, 1d], default: 5m } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 500 } }
+      responses:
+        "200":
+          description: The candles
+          headers:
+            PAYMENT-RESPONSE: { $ref: "#/components/headers/PaymentResponse" }
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      token: { $ref: "#/components/schemas/Address" }
+                      tf: { type: string }
+                      note: { type: string }
+                      candles: { type: array, items: { $ref: "#/components/schemas/Candle" } }
+        "400":
+          description: Bad tf or address
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "402": { $ref: "#/components/responses/PaymentRequired" }
+        "404": { $ref: "#/components/responses/NoCoin" }
+        "429": { $ref: "#/components/responses/TooMany" }
+
+components:
+  headers:
+    PaymentResponse:
+      description: Base64 JSON of the settlement, present on a paid answer. `{success, transaction, network, payer, amount}`
+      schema: { type: string }
+    PaymentRequired:
+      description: Base64 JSON of the 402 body, the x402 v2 payment requirements
+      schema: { type: string }
+
+  responses:
+    PaymentRequired:
+      description: Payment required, or the payment sent was not accepted (`error` says why)
+      headers:
+        PAYMENT-REQUIRED: { $ref: "#/components/headers/PaymentRequired" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/PaymentRequirements" }
+    NoCoin:
+      description: No coin at that address on this platform
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    TooMany:
+      description: Over the per-IP rate limit; Retry-After says when
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  schemas:
+    Address:
+      type: string
+      pattern: "^0x[0-9a-fA-F]{40}$"
+      description: An EVM address, lower-cased on the way out
+    Error:
+      type: object
+      properties: { error: { type: string } }
+    Chain:
+      type: object
+      properties:
+        name: { type: string, const: Arc }
+        chainId: { type: integer, const: 5042 }
+        explorer: { type: string, format: uri }
+    Envelope:
+      type: object
+      description: On every answer
+      properties:
+        updatedAt: { type: integer, description: When the index behind the answer was built, unix seconds }
+        blockHeight: { type: integer, description: The index's tip block }
+        chainId: { type: integer, const: 5042 }
+    Token:
+      type: object
+      properties:
+        address: { $ref: "#/components/schemas/Address" }
+        name: { type: string, description: As the creator wrote it on chain, escape before rendering }
+        symbol: { type: string }
+        creator: { $ref: "#/components/schemas/Address" }
+        createdBlock: { type: integer }
+        createdAt: { type: integer }
+        graduated: { type: boolean, description: Raised its 5,000 USDC target }
+        venue:
+          type: string
+          enum: [bonding-curve, migrating, uniswap-v3]
+          description: Where it trades now
+        poolAddress: { oneOf: [{ $ref: "#/components/schemas/Address" }, { type: "null" }] }
+        priceUsd: { type: number }
+        priceWad: { type: string, description: The exact price, 18 decimals }
+        priceSource: { type: string, enum: [bonding-curve, uniswap-v3] }
+        priceAt: { type: integer, description: When the price was read, unix seconds }
+        marketCapUsd: { type: number, description: price x circulating supply }
+        holderCapUsd: { type: number, description: price x tokens in wallets (pool inventory left out) }
+        fdvUsd: { type: number, description: price x total supply (1B less burned) }
+        circulatingSupply: { type: number }
+        holderSupply: { type: number }
+        totalSupply: { type: number }
+        burnedSupply: { type: number }
+        initialSupply: { type: integer, const: 1000000000 }
+        liquidityUsd: { type: [number, "null"], description: USDC in the curve, or the pool's two balances at its price }
+        raisedUsd: { type: number }
+        raisedWei: { type: string }
+        graduationTargetUsd: { type: number }
+        graduationProgressPct: { type: [number, "null"] }
+        volumeUsd24h: { type: number }
+        volumeUsdAll: { type: number }
+        trades24h: { type: integer }
+        tradesAll: { type: integer }
+        holders: { type: integer }
+        lastTradeAt: { type: [integer, "null"] }
+        priceChangePct:
+          type: object
+          properties:
+            m5: { type: [number, "null"] }
+            h1: { type: [number, "null"] }
+            h24: { type: [number, "null"] }
+        buyFeeBps: { type: integer, const: 150 }
+        sellFeeBps: { type: integer, const: 150 }
+        metadataURI: { type: [string, "null"], description: Untrusted, check the scheme before following }
+        imageUrl: { type: string, format: uri }
+        url: { type: string, format: uri }
+        shareUrl: { type: string, format: uri }
+        explorerUrl: { type: string, format: uri }
+    Trade:
+      type: object
+      properties:
+        token: { $ref: "#/components/schemas/Address" }
+        side: { type: string, enum: [buy, sell] }
+        venue: { type: string, enum: [bonding-curve, uniswap-v3] }
+        block: { type: integer }
+        time: { type: integer }
+        usdcPaidOrReceived: { type: number }
+        volumeUsd: { type: number, description: On the curve's (or pool's) side of the trade, fee taken out }
+        tokenAmount: { type: number }
+    Distribution:
+      type: object
+      properties:
+        holders: { type: integer }
+        topHolderPct: { type: number }
+        top5Pct: { type: number }
+        top10Pct: { type: number }
+        creatorPct: { type: number }
+        curveHeldPct: { type: number }
+        poolHeldPct: { type: number }
+        note: { type: string }
+    Candle:
+      type: object
+      properties:
+        time: { type: integer, description: Bucket open, unix seconds }
+        open: { type: number }
+        high: { type: number }
+        low: { type: number }
+        close: { type: number }
+        volumeUsd: { type: number }
+        trades: { type: integer }
+    PaymentInfo:
+      type: object
+      properties:
+        protocol: { type: string, const: x402 v2 }
+        configured: { type: boolean }
+        payTo: { oneOf: [{ $ref: "#/components/schemas/Address" }, { type: "null" }] }
+        networks:
+          type: array
+          items:
+            type: object
+            properties:
+              network: { type: string, example: "eip155:5042" }
+              name: { type: string }
+              usdc: { $ref: "#/components/schemas/Address" }
+        pricesUsdc: { type: object, additionalProperties: { type: number } }
+        howTo: { type: string }
+    PaymentRequirements:
+      type: object
+      description: The x402 v2 payment requirements, as the body of a 402 and base64 in PAYMENT-REQUIRED
+      properties:
+        x402Version: { type: integer, const: 2 }
+        error: { type: string, description: Why the payment sent was not accepted, when one was }
+        resource:
+          type: object
+          properties:
+            url: { type: string, format: uri }
+            description: { type: string }
+            mimeType: { type: string, const: application/json }
+        accepts:
+          type: array
+          items:
+            type: object
+            properties:
+              scheme: { type: string, const: exact }
+              network: { type: string, description: CAIP-2, e.g. eip155:5042 }
+              amount: { type: string, description: USDC, 6-decimal units }
+              asset: { $ref: "#/components/schemas/Address" }
+              payTo: { $ref: "#/components/schemas/Address" }
+              maxTimeoutSeconds: { type: integer }
+              extra:
+                type: object
+                properties:
+                  name: { type: string, description: USDC's EIP-712 domain name on that network }
+                  version: { type: string }
+                  assetTransferMethod: { type: string, const: eip3009 }
+        extensions:
+          type: object
+          description: x402 Bazaar discovery info (input shape, output type)
