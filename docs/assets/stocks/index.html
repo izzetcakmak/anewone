@@ -491,7 +491,7 @@
     return `<div class="stock" data-s="${esc(a.s)}">
       <div class="head"><span class="logo">${a.logo ? `<img src="${LOGO(a.s)}" alt="" loading="lazy" onerror="this.remove()">` : esc((a.u || a.s).slice(0, 4))}</span><span class="sym">${esc(a.s)}</span>${a.x ? `<span class="ex">${esc(a.x)}</span>` : ""}</div>
       <div class="nm"><h3 title="${esc(a.n)}">${esc(a.n)}</h3><div class="by">${esc(a.u || a.s)} · USDC</div></div>
-      <div class="price"><span class="v ${px == null ? "loading" : ""}"${px == null && (tries[a.s] || 0) >= 2 ? ' title="The issuer's price feed is not answering right now; it is asked again every minute."' : ""}>${px != null ? usd(px) : (tries[a.s] || 0) >= 2 ? "—" : "…"}</span><small>REFERENCE · USD</small></div>
+      <div class="price"><span class="v ${px == null ? "loading" : ""}"${px == null && (tries[a.s] || 0) >= 2 ? ` title="The issuer's price feed is not answering right now; it is asked again every minute."` : ""}>${px != null ? usd(px) : (tries[a.s] || 0) >= 2 ? "—" : "…"}</span><small>REFERENCE · USD</small></div>
       <div class="hours ${hcls}"><span class="dot"></span>${esc(htxt)}</div>
       <div class="stats">
         <div>${live && live.price ? usd(live.price) : "—"}<span>Arc pool price</span></div>
