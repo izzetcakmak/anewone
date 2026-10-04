@@ -6,8 +6,12 @@
 //                                    hours, the EVM address (one address on every EVM chain) and
 //                                    its Arc deployment if Backed has published one. Cached
 //                                    CATALOG_TTL seconds in Redis (api/_kv.js) and in the instance.
-//   GET /api/xstocks?prices=TSLAx,NVDAx   {TSLAx: 357.6, ...} for up to MAX_PRICES symbols,
-//                                    each cached PRICE_TTL seconds.
+//   GET /api/xstocks?prices=TSLAx,NVDAx   {prices: {TSLAx: 357.6, ...}, last: {NVDAx: {p, at}}}
+//                                    for up to MAX_PRICES symbols, each cached PRICE_TTL seconds.
+//                                    Every fresh quote is also kept LAST_TTL seconds as the last
+//                                    known price; a symbol Backed does not answer comes back under
+//                                    `last` with the time it was quoted, so a card is never empty
+//                                    because the issuer's feed is down.
 //   GET /api/xstocks?por=TSLAx       proof of reserves for one symbol, cached POR_TTL seconds.
 //
 // Backed allows about 1000 calls per window per caller; the caches keep this far below that
@@ -17,6 +21,7 @@ import { tooMany } from "./_ratelimit.js";
 
 const BASE = "https://api.backed.fi/api/v2/public";
 const CATALOG_TTL = 600, PRICE_TTL = 45, POR_TTL = 300;
+const LAST_TTL = 7 * 86400; // a last price outlives a weekend and a long outage
 const MAX_PRICES = 60;
 const ORIGINS = new Set(["https://anewone.xyz", "https://www.anewone.xyz"]);
 const SYM_RE = /^[A-Za-z0-9.]{1,12}$/;
@@ -117,6 +122,10 @@ export default async function handler(req, res) {
               if (!r.ok) throw new Error("backed " + r.status);
               const j = await r.json();
               if (!j || typeof j.quote !== "number") throw new Error("no quote");
+              // only a quote fetched from Backed just now is written as the last known price
+              const rec = { p: j.quote, at: Date.now() };
+              memSet("xs:last:" + s, rec, LAST_TTL);
+              if (kvAvailable()) { try { await kv("SET", "xs:last:" + s, JSON.stringify(rec), "EX", LAST_TTL); } catch {} }
               return j.quote;
             });
             if (typeof v === "number") out[s] = v;
@@ -124,8 +133,18 @@ export default async function handler(req, res) {
         }
       };
       await Promise.all(Array.from({ length: 8 }, worker));
-      res.setHeader("Cache-Control", `public, max-age=${Object.keys(out).length === syms.length ? PRICE_TTL : 5}`);
-      return res.status(200).json({ at: Date.now(), prices: out, missing: syms.filter((s) => !(s in out)) });
+      // what Backed did not answer: the last known price, from the instance or, in one MGET, Redis
+      const missing = syms.filter((s) => !(s in out)), last = {};
+      const fromRedis = [];
+      for (const s of missing) { const m = memGet("xs:last:" + s); if (m) last[s] = m; else fromRedis.push(s); }
+      if (fromRedis.length && kvAvailable()) {
+        try {
+          const vals = await kv("MGET", ...fromRedis.map((s) => "xs:last:" + s));
+          fromRedis.forEach((s, k) => { try { const v = vals && vals[k] ? JSON.parse(vals[k]) : null; if (v && typeof v.p === "number") { last[s] = v; memSet("xs:last:" + s, v, 60); } } catch {} });
+        } catch {}
+      }
+      res.setHeader("Cache-Control", `public, max-age=${missing.length ? 5 : PRICE_TTL}`);
+      return res.status(200).json({ at: Date.now(), prices: out, last, missing: missing.filter((s) => !(s in last)) });
     }
     if (typeof req.query.por === "string") {
       const s = req.query.por.trim();

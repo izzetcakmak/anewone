@@ -361,6 +361,7 @@
 
   // ---- the catalog, from the issuer through api/xstocks ----
   let ASSETS = [], byKey = new Map(), prices = {}, pricesAt = 0, catalogAt = 0, stale = false;
+  const lastAt = {};  // symbol -> ms of a last known price shown while the issuer's feed is quiet; absent for a live quote
   async function loadCatalog() {
     const r = await fetch(API, { cache: "no-store" });
     const j = await r.json();
@@ -377,7 +378,12 @@
     const want = [...new Set(syms)].filter(Boolean);
     for (let i = 0; i < want.length; i += 60) {
       const r = await fetch(API + "?prices=" + want.slice(i, i + 60).map(encodeURIComponent).join(","), { cache: "no-store" }).then((x) => x.json()).catch(() => null);
-      if (r && r.prices) { for (const [k, v] of Object.entries(r.prices)) if (typeof v === "number") prices[k] = v; pricesAt = r.at || Date.now(); }
+      if (r && r.prices) {
+        for (const [k, v] of Object.entries(r.prices)) if (typeof v === "number") { prices[k] = v; delete lastAt[k]; }
+        // a last known price only fills a card that has no live one
+        for (const [k, v] of Object.entries(r.last || {})) if (v && typeof v.p === "number" && (prices[k] == null || lastAt[k])) { prices[k] = v.p; lastAt[k] = v.at; }
+        pricesAt = r.at || Date.now();
+      }
     }
   }
 
@@ -491,12 +497,12 @@
     return `<div class="stock" data-s="${esc(a.s)}">
       <div class="head"><span class="logo">${a.logo ? `<img src="${LOGO(a.s)}" alt="" loading="lazy" onerror="this.remove()">` : esc((a.u || a.s).slice(0, 4))}</span><span class="sym">${esc(a.s)}</span>${a.x ? `<span class="ex">${esc(a.x)}</span>` : ""}</div>
       <div class="nm"><h3 title="${esc(a.n)}">${esc(a.n)}</h3><div class="by">${esc(a.u || a.s)} · USDC</div></div>
-      <div class="price"><span class="v ${px == null ? "loading" : ""}"${px == null && (tries[a.s] || 0) >= 2 ? ` title="The issuer's price feed is not answering right now; it is asked again every minute."` : ""}>${px != null ? usd(px) : (tries[a.s] || 0) >= 2 ? "—" : "…"}</span><small>REFERENCE · USD</small></div>
+      ${priceRow(a)}
       <div class="hours ${hcls}"><span class="dot"></span>${esc(htxt)}</div>
-      <div class="stats">
-        <div>${live && live.price ? usd(live.price) : "—"}<span>Arc pool price</span></div>
+      ${live && live.price ? `<div class="stats">
+        <div>${usd(live.price)}<span>Arc pool price</span></div>
         <div${diff != null ? ` style="color:${Math.abs(diff) > 2 ? "var(--gold)" : "var(--dim)"}"` : ""}>${diff == null ? "—" : (diff > 0 ? "+" : "") + fmt(diff, 2) + "%"}<span>Pool vs reference</span></div>
-      </div>
+      </div>` : ""}
       ${arcTag}
       ${held}
       <div class="links"><a href="#" data-por="${esc(a.s)}">Proof of reserves</a><a href="https://xstocks.com/products" target="_blank" rel="noopener">On xStocks ↗</a>${live && live.addr ? `<a href="${esc(explorer("token/" + live.addr))}" target="_blank" rel="noopener">Token on Arc ↗</a>` : ""}</div>
@@ -522,12 +528,24 @@
       else if (account) refreshHoldings(page.filter((a) => !holdings[a.s]));
     }
   }
+  // the reference price: live, or the last known one with the time it was quoted, or a wait
+  const QUIET = "The issuer's price feed is not answering right now; it is asked again every minute.";
+  const whenLabel = (ms) => {
+    const d = new Date(ms), now = new Date();
+    const hm = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    return d.toDateString() === now.toDateString() ? hm : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + " " + hm;
+  };
+  function priceRow(a) {
+    const px = prices[a.s], old = lastAt[a.s];
+    if (px != null && old) return `<div class="price"><span class="v" title="${esc(QUIET)} This is the last price it gave.">${usd(px)}</span><small>LAST PRICE · ${esc(whenLabel(old))}</small></div>`;
+    if (px != null) return `<div class="price"><span class="v">${usd(px)}</span><small>REFERENCE · USD</small></div>`;
+    const quiet = (tries[a.s] || 0) >= 2;
+    return `<div class="price"><span class="v loading"${quiet ? ` title="${esc(QUIET)}"` : ""}>${quiet ? "—" : "…"}</span><small>REFERENCE · USD</small></div>`;
+  }
   function patchPrices(list) {
     for (const a of list) {
-      const el = document.querySelector(`.stock[data-s="${CSS.escape(a.s)}"] .price .v`);
-      if (!el) continue;
-      if (prices[a.s] != null) { el.textContent = usd(prices[a.s]); el.classList.remove("loading"); }
-      else if ((tries[a.s] || 0) >= 2) { el.textContent = "—"; el.title = "The issuer's price feed is not answering right now; it is asked again every minute."; }
+      const el = document.querySelector(`.stock[data-s="${CSS.escape(a.s)}"] .price`);
+      if (el) el.outerHTML = priceRow(a);
     }
   }
   $("more").onclick = () => { shown += 36; render(); };
