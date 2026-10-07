@@ -1,31 +1,38 @@
-# Kaynaklar — Sui Basecamp 2026 (7 Ekim 2026, ~14:30 SGT)
+# Kaynaklar, Sui Basecamp 2026
 
-> Not: Bu oturumda sui.io, x.com, luma.com, content.buildonsui.io ve haber siteleri ağ proxy'si tarafından engellendi (EGRESS_BLOCKED). Sayfaların kendisi okunamadı; aşağıdaki bilgiler yalnızca **arama sonucu özetlerine** dayanıyor. Hepsini yayınlamadan önce kaynağında kontrol et.
+Güncelleme: 7 Ekim 2026, 23:15 Türkiye saati. Bulut rutini sayfaları okuyamamıştı; bu sürüm yerel oturumdan, sayfaların kendisi okunarak hazırlandı.
 
 ## Canlı yayın
-- Resmi canlı yayın linki: **BULUNAMADI** [DOĞRULA]. Arama özetleri yayının (keynote'lar, Summit Stage, TPS rekor denemesi) çevrimiçi izlenebileceğini söylüyor ama link vermiyor.
-- Bakılacak yerler: https://www.sui.io/basecamp ve https://x.com/SuiNetwork
+- Resmi sayfa 2026 için ayrı bir yayın linki vermiyor. Online izleyiciler X'te @SuiNetwork'e yönlendiriliyor: https://x.com/SuiNetwork
+- Sui YouTube kanalı (geçmiş oturumlar buraya yükleniyor): https://www.youtube.com/@Sui-Network
+- 2025 oturum listesi, biçim fikri için: https://www.youtube.com/playlist?list=PL9t2y-BKvZBSu6bJb0z3uDLykL7nu7Vvm
 
-## Ajanda / etkinlik sayfaları
-- Resmi etkinlik sayfası: https://www.sui.io/basecamp (okunamadı, arama özeti)
-- Luma: https://luma.com/SuiBasecamp2026 (okunamadı)
-- Resmi blog: https://www.sui.io/blog/the-agentic-economy-takes-sui-basecamp-2026-singapore (okunamadı, arama özeti)
-- Agentic Workshop sayfası: https://suibasecampworkshop.pages.dev/ (okunamadı)
+## Program
+- Resmi sayfa, saatli tam ajanda: https://www.sui.io/basecamp
+- Ajanda PDF: https://cdn.prod.website-files.com/68e8e0120513ba12c5cd12e0/6ac3e417089e390f226c2fa3_Sui%20Basecamp%20Agenda.pdf
+- Luma kayıt: https://luma.com/SuiBasecamp2026
+- Sahneler: Summit Stage, X Stage, AI Builder Lab, SUIG Arena. Kapılar 11:00 SGT.
 
 ## Yarışma
-- Kurallar: https://content.buildonsui.io (okunamadı). Görev metnindeki kurallar: içerik orijinal, 7 Ekim 11:00 SGT sonrası yayınlanmış, araştırma/özet olabilir. Kategori ve gönderim şeklini sayfadan teyit et.
+- Kurallar ve başvuru: https://content.buildonsui.io
+- Hedef kategori: Best non-English content ($4.000). İçerik orijinal, 7 Ekim 11:00 SGT sonrası yayınlanmış, herkese açık bir linkte.
 
-## Arama özetlerinden çıkan bilgiler
-- Tarih/yer: 7–8 Ekim 2026, Marina Bay Sands, Singapur; TOKEN2049 ile aynı döneme denk geliyor; Sui Foundation ve Mysten Labs organizatör. (sui.io/basecamp, luma, coinlaunch.space özetleri)
-- Tema: agentic economy; anlık takas, otonom ödemeler, gizli işlemler, stabil dijital dolarlar, post-kuantum güvenlik. (sui.io blog özeti, coinfomania)
-- Sahneler: Summit Stage, X Stage, AI Builder Lab, SUIG Arena. (arama özeti)
-- Konuşmacılar (duyuru listesi): Evan Cheng, Adeniyi Abiodun (Mysten Labs), Raoul Pal (Real Vision), Hilmar Veigar Pétursson (Fenris Creations / EVE Frontier), Jen Zhu Scott, Alexandre Moufarek (Google DeepMind), Brian Quintenz (Sui Group Holdings), Richard Socher (Recursive, You.com). 100+ konuşmacı, 2.000+ katılımcı iddiası.
-- TPS denemesi: 7 Ekim'de Main Stage'de Kostas Chalkias, 4 Temmuz'da kaydedilen 6.086.766 TPS rekorunu geçmeye çalışacak; yayın izleyicileri için SUI ödüllü tahmin yarışması var. **Sonuç bulunamadı** [DOĞRULA].
-- Oturum başlıkları (arama özeti): Adeniyi Abiodun "The Machine Economy Won't Wait"; Dio Lougaris "Walrus Memory in Practice" ve workshop "Build an Agent That Never Forgets". Saatleri bulunamadı.
-- SUI Group, Platinum sponsor: https://www.nasdaq.com/press-release/sui-group-serve-platinum-sponsor-sui-basecamp-2026-2026-09-29
-- Etkinlik öncesi haberler: https://cryptopotato.com/the-agentic-economy-takes-center-stage-at-sui-basecamp-2026-in-singapore/ , https://www.criptolog.com/coin/sui/sui-basecamp-2026-agentic-finance-takes-center-stage-in-singapore/ , https://coinfomania.com/sui-announces-basecamp-2026-event-for-agentic-finance-stack/
-- X: https://x.com/SuiNetwork/status/2106821414477287900 ("12 ekip" duyurusu, etkinlikten 3 gün önce); https://x.com/SuiNetwork/status/2033982246882054346 (tarih duyurusu)
-- Walrus MemWal SDK (25 Mart 2026, 450TB iddiası): https://blockeden.xyz/blog/2026/04/18/walrus-protocol-ai-agent-memory-layer-sui-decentralized-storage/ — ikincil kaynak [DOĞRULA]
+## Birincil kaynaklar
+- Sui blog, etkinlik öncesi: https://www.sui.io/blog/the-agentic-economy-takes-sui-basecamp-2026-singapore
+- Sui blog, TPS sonucu (40.614.180 TPS, 10 bin+ tunnel, CertiK raporu bekleniyor): https://www.sui.io/blog/sui-sets-record-for-highest-verified-throughput-settled-to-a-blockchain
+- Sui X, TPS sonucu: https://x.com/SuiNetwork/status/2107753140162617740
+- Sui X, VAA duyurusu (Mysten Labs ve Google Cloud): https://x.com/SuiNetwork/status/2107473798769574049
+- VAA basın bülteni, 6 Ekim: https://www.hpcwire.com/aiwire/2026/10/06/mysten-labs-announces-verifiable-agent-arbiter-in-collaboration-with-google-cloud/
 
-## Bulunamayanlar
-- 1. gün duyuruları (canlı), TPS sonucu, saatli ajanda, YouTube/X canlı yayın linki, The Block / CoinDesk / Decrypt'ten bugüne ait haber.
+## İkincil kaynaklar
+- HackerNoon, canlı testin sahne anlatımı ve şerhler: https://hackernoon.com/sui-hits-406-million-tps-live-in-singapore-with-certik-as-the-referee
+- KuCoin, 1. gün özeti (Alibaba Cloud, VAA, DeFi ürünleri, "mahkeme" benzetmesi): https://www.kucoin.com/news/insight/SUI/6ac66cbe38a2640007930476
+- Crypto Briefing, VAA: https://cryptobriefing.com/mysten-labs-google-cloud-verifiable-agent-arbiter/
+- Startup Fortune, Alibaba Cloud ayrıntıları ve açık sorular: https://startupfortune.com/sui-lets-ai-agents-pay-alibaba-cloud-in-stablecoins-for-every-single-task/
+- The Crypto Times, CertiK incelemesi: https://www.cryptotimes.io/2026/10/07/sui-hits-40-6m-tps-in-basecamp-test-as-certik-reviews-results/
+- The Coin Republic, fiyat tepkisi: https://www.thecoinrepublic.com/2026/10/07/whats-next-for-sui-crypto-price-as-sui-network-sets-new-40-6-million-tps-record/
+
+## Doğrulanamayan noktalar
+- Alibaba Cloud duyurusunun Sui ya da Alibaba tarafından yayınlanmış birincil metni bulunamadı; haberler sahne duyurusuna dayanıyor. Yazıda "duyuruya göre" diye geçiyor ve ayrıntının az olduğu söyleniyor.
+- SUI fiyatındaki yüzde 6 düşüş haberlerden; yazıda "haberlerde geçiyor" diye verildi.
+- CertiK raporu henüz yayınlanmadı. Yayınlanırsa yazıya bir cümle eklenebilir.

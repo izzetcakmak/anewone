@@ -1,19 +1,39 @@
-# X dizisi (taslak) — her gönderi <280 karakter. Sonuç/duyuru yerlerini doğrulamadan atma.
+# X dizisi: Sui Basecamp 1. gün
 
-1/ Sui Basecamp 2026 Singapur'da başladı (7-8 Ekim, Marina Bay Sands). Bu yılki tema tek cümlede: finansın çoğu insan olmadığında nasıl görünür? Yani ajanların ekonomisi. Bir konu açıyorum 🧵
+Her gönderi 280 karakterin altında. Son gönderide [YAZI LİNKİ] yer tutucusu var.
 
-2/ Programdaki başlıklar: anlık takas, otonom ödemeler, gizli işlemler, stabil dolarlar, post-kuantum güvenlik. Bir yazılım ajanının kendi başına ödeme yapması için bunların hepsi gerekiyor. Sui kendini bu yığın olarak konumluyor.
+---
 
-3/ Konuşmacılar: Evan Cheng, Adeniyi Abiodun (Mysten), Raoul Pal, Google DeepMind'dan Alexandre Moufarek, Richard Socher, Hilmar Veigar Pétursson, Brian Quintenz. Organizatörler 100+ konuşmacı diyor.
+1/
+Sui Basecamp'in ilk günü bitti. Manşet: sahnede canlı test, 40.614.180 TPS.
 
-4/ Adeniyi Abiodun'un keynote başlığı: "The Machine Economy Won't Wait". Makine ekonomisi beklemez. Mesaj net: Sui ajanlar için altyapı olmak istiyor.
+Rakam büyük ama ne ölçtüğünü bilmeden anlamı yok. Türkçe kısa özet, ayrıntısı yazıda. 🧵
 
-5/ Mysten'den Dio Lougaris "Walrus Memory in Practice" anlatıyor ve "Build an Agent That Never Forgets" workshop'u yapıyor. Fikir: ajanın hafızası Walrus'ta dursun. Sahnede ne gösterildiğini henüz görmedim.
+2/
+Önce rakam. Hedef 20 milyon TPS'ti, Temmuz'daki rekor 6 milyondu. Test "Sui tunnels" içinde yapıldı: Lightning benzeri zincir dışı kanallar. Açmak 1 işlem, kapatmak 1 işlem, arası zincire yazılmıyor. Fark: programlanabilir, oyun ve sohbet de taşıyor.
 
-6/ Günün şovu: Kostas Chalkias Main Stage'de canlı TPS denemesi yapacak. Hedef, 4 Temmuz'daki 6.086.766 TPS rekorunu geçmek. İzleyiciler için de SUI ödüllü tahmin yarışması var.
+3/
+Yani bu Sui ana zincirinin saniyede 40M işlem yazması değil. Abiodun'un sözüyle: "Sui'nin her etkileşimi işlemesi gerekmiyor, hepsinin güven katmanı olması gerekiyor." Sahnede "Sui'yi mahkeme gibi düşünün" demiş.
 
-7/ Benim şerhim: TPS testi hız vitrinidir, organik kullanım değil. Sonuç açıklanınca hangi işlem tipi, kaç doğrulayıcı, hangi donanım diye bakmak lazım. Rakamdan çok koşullar önemli.
+4/
+Şerh: Solana ya da Ethereum L1 TPS'iyle kıyaslanamaz, farklı şeyi ölçüyor. Ve bağımsız rapor henüz yok. CertiK kanıtları ve günlükleri inceleyip "önümüzdeki günlerde" yayınlayacak. O güne kadar rakam Mysten'in rakamı. SUI fiyatı gün içinde ~%6 düştü.
 
-8/ Asıl soru: ajanlar bu zincirlerde gerçekten ödeme yapıyor mu, yoksa hâlâ demo mu? Bugünkü duyurular buna cevap veriyorsa onları ayrıca yazacağım. Resmi hesaplar: @SuiNetwork @Mysten_Labs
+5/
+Asıl hikâye TPS değil, "ajanlara bütçe vermek". Abiodun'un keynote'u "The Machine Economy Won't Wait": insan ajana izin ve bütçe verir, ajan hizmet satın alır, yüksek frekans zincir dışında döner, hesaplaşma zincirde olur.
 
-9/ Yatırım tavsiyesi değildir; etkinlik özeti. Kaynaklar ve ayrıntılı yazı için: [LİNK EKLE]
+6/
+Ayak 1, Alibaba Cloud: bulut ve AI kapasitesi Sui Agent Payments'a geliyor. Ajan stablecoin bütçesiyle her API çağrısını ayrı işlem olarak ödüyor. Fatura yok, defter var. Ama hangi stablecoin, hangi fiyat belli değil; dizinde hâlâ "yakında".
+
+7/
+Ayak 2, Google Cloud ile Verifiable Agent Arbiter: ajanın yetkisi içinde kaldığını kanıtlayan katman. Promptlar ve çıktılar müşterinin GCS'inde kalıyor, kanıtlar Walrus'a yazılıyor, koordinasyon Sui'de. AB yapay zekâ yasası cezalarına karşı pazarlanıyor. Henüz ürün değil.
+
+8/
+Yan sahneler DeFi: Hudi sosyal trading yarışması, Beep sohbetten canlı işleme ajan demosu, Hashi Bitcoin'i sarmadan Sui'ye getirme iddiasıyla ana ağa yaklaşıyor. Dio Lougaris ajan hafızasını Walrus'ta tutmayı anlattı.
+
+9/
+Yarın: Richard Socher, Evan Cheng "What's Next?", Circle'dan Matt Stafford, Grayscale'den Zach Pandl ve Abiodun'un "One More Thing..." oturumu. Stablecoin ve kurumsal taraf yarın.
+
+10/
+Benim okumam: Sui "hızlıyız" demeyi bıraktı, "ajanların zinciri biziz" diyor. Üç iddia da henüz kanıtsız: CertiK raporu yok, Alibaba "yakında", VAA geliştirmede. Takip edilecek şey demo ile gerçek kullanım arasındaki fark.
+
+Uzun yazı: [YAZI LİNKİ]

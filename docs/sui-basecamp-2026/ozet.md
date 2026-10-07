@@ -1,21 +1,22 @@
-# Izzet'e not (7 Ekim 2026, ~14:30 SGT)
+# İzzet'e not, 7 Ekim 23:15
 
-**Kısa durum: taslak hazır ama içeriği zayıf, bugünkü duyuruları dolduramadım.**
+Durum: taslak dolduruldu, yayınlanmaya hazır. [DOĞRULA] etiketi kalmadı.
 
-## Ne buldum
-- Etkinlik genel çerçevesi: tarih, yer, tema (agentic economy), sahneler, konuşmacı listesi, TPS rekor denemesi (hedef 6.086.766 TPS üstü, Kostas Chalkias, Main Stage, 7 Ekim), iki Mysten oturumunun başlıkları. Hepsi arama özetlerinden; kaynaklar `kaynaklar.md`'de.
+## Ne oldu
+- Sabahki bulut rutini çalıştı ama sui.io, X ve haber siteleri o ortamda engelliydi. İskelet taslak bıraktı.
+- Akşam yerel oturumdan sayfalar okundu, 1. gün duyuruları eklendi: 40,6M TPS testi ve şerhleri, Alibaba Cloud ile Agent Payments, Google Cloud ile Verifiable Agent Arbiter, yan sahne DeFi ürünleri, 2. gün programı.
 
-## Ne bulamadım
-- Bu ortamda sui.io, x.com, luma, content.buildonsui.io ve haber sitelerine erişim yok (proxy engeli). Hiçbir sayfayı doğrudan okuyamadım, yarışma kurallarını da.
-- Resmi canlı yayın linki, saatli ajanda, bugün yapılan duyurular, TPS sonucu, The Block/CoinDesk/Decrypt'ten bugüne ait haber: **bulunamadı**. Uydurmadım; `yazi.md`'deki "1. gün duyuruları" bölümü bilerek boş.
+## Dosyalar
+- yazi.md: yaklaşık 1.100 kelime, Türkçe, kaynaklar sonda.
+- x-dizisi.md: 10 gönderi, hepsi 280 karakter altı. Son gönderide [YAZI LİNKİ] yer tutucusu var.
+- kaynaklar.md: linkler ve doğrulanamayan noktalar.
 
-## Yayın hâlâ sürüyor mu / hangi oturumlar kaldı
-- Saatli ajandaya ulaşamadım, o yüzden bilmiyorum. Etkinlik 8 Ekim'e kadar sürüyor (2. gün tümüyle ileride). TPS denemesi 1. gün için duyurulmuştu; yapılıp yapılmadığını doğrulayamadım. Ajandayı sui.io/basecamp'ten kontrol et.
+## Yayın ve başvuru
+1. Yazıyı izzetc.com'a koy (ya da X'te uzun gönderi olarak yayınla). Tarih 7 Ekim 11:00 SGT'den sonra olmalı; şu an zaten sonrası.
+2. X dizisini at, son gönderiye yazı linkini yaz.
+3. content.buildonsui.io'da "Best non-English content" kategorisine yazının linkini gönder. Kategori 1. günle birlikte kapanmıyor, acelesi yok ama ertelemenin de faydası yok.
+4. İstersen 2. gün için aynı formatta ikinci bir yazı yazılır; kategori tek giriş alıyor, o zaman ikinci yazıyı birinciyle değiştirir ya da iki günü tek yazıda birleştiririz.
 
-## Başvuruda hangi link
-- Yazıyı kendi sitende (izzetc.com) veya X'te yayınla; yarışma sayfasının istediği formata göre bak. Önce: duyuru bölümünü ve TPS sonucunu doldur, [DOĞRULA] etiketlerini temizle, sonra yayınla. Yayın zamanı 11:00 SGT sonrası olmalı. X dizisini atarsan başvuruya dizinin ilk gönderi linkini ver; uzun yazıyı da yanında tam metin olarak ekle.
-
-## Yapman gerekenler
-1. Canlı yayın linkini ve bugünkü duyuruları resmi hesaplardan ekle.
-2. Kural sayfasını (content.buildonsui.io) kendin oku: kategori, gönderim şekli, dil.
-3. Taslakta "Türk okur için not" ve ton sana uygun mu bak.
+## Riskler
+- CertiK raporu çıkarsa yazıdaki "rapor henüz yok" cümlesi eskir. Çıkınca bir cümle ekleriz.
+- Alibaba duyurusunun birincil metni yok; yazı bunu açıkça söylüyor.
