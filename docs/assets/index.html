@@ -11,9 +11,9 @@
 </script>
 <title>RWA · Tokenized funds on Arc | A NEW ONE</title>
 <link rel="canonical" href="https://anewone.xyz/assets/">
-<meta name="description" content="Tokenized funds from Janus Henderson and New York Life Investment Management, issued by Anemoy on Centrifuge and live on Arc: JTRSY, JAAA and HYB. Live NAV, yield, terms and eligibility; deposits in USDC for whitelisted wallets. A NEW ONE is the interface, never the issuer.">
+<meta name="description" content="Tokenized funds live on Arc: Janus Henderson JTRSY and JAAA and NYLIM HYB through Centrifuge, and USYC, Circle's tokenized money market fund. Live NAV, yield, terms and eligibility; deposits in USDC for whitelisted wallets. A NEW ONE is the interface, never the issuer.">
 <meta property="og:title" content="Assets · Tokenized funds on Arc">
-<meta property="og:description" content="JTRSY, JAAA and HYB on Arc through Centrifuge: live NAV, terms and eligibility in one place.">
+<meta property="og:description" content="JTRSY, JAAA, HYB and USYC on Arc: live NAV, terms and eligibility in one place.">
 <meta property="og:url" content="https://anewone.xyz/assets/">
 <meta property="og:image" content="https://anewone.xyz/brand/logo-1024.png">
 <link rel="icon" type="image/png" sizes="32x32" href="../favicon.png">
@@ -58,8 +58,7 @@
   .count { color: var(--faint); font: 500 12.5px var(--mono); letter-spacing: .04em; }
 
   /* the fund cards: glass, the yield and the NAV the big numbers, the facts a ruled table, the notes under it */
-  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
-  @media (max-width: 1180px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
   @media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }
   .fund { position: relative; display: flex; flex-direction: column; gap: 20px; min-width: 0; padding: 28px; border-radius: 26px;
     background: var(--nx-card); border: 1px solid var(--nx-line2); box-shadow: 0 24px 60px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
@@ -162,21 +161,21 @@
 
 <section class="nx-hero">
   <div class="nx-hero-in"><div class="nx-hero-t">
-    <div class="nx-eyebrow">RWA · Funds · Centrifuge on Arc</div>
+    <div class="nx-eyebrow">RWA · Funds · Centrifuge and Circle on Arc</div>
     <h1 class="nx-h1">Institutional funds,<br><em>live on Arc.</em></h1>
-    <p class="nx-lead">Three tokenized funds from <b>Janus Henderson</b> and <b>New York Life Investment Management</b>, issued by Anemoy Capital on Centrifuge. Each card reads its price and yield from the chain.</p>
+    <p class="nx-lead">Four tokenized funds: three from <b>Janus Henderson</b> and <b>New York Life Investment Management</b>, issued by Anemoy Capital on Centrifuge, and <b>USYC</b>, Circle's own money market fund. Each card reads its price and yield from the chain.</p>
     <nav class="nx-views" aria-label="RWA">
       <a href="../assets/stocks/">Stocks / ETF</a>
       <a class="on" href="../assets/" aria-current="page">Funds</a>
     </nav>
   </div></div>
-  <aside class="nx-lcard rules" aria-label="Who can invest"><div class="k"><i></i>3 FUNDS · LIVE ON ARC</div><div class="ln">Who can invest</div><ul class="who"><li>Non-US professional investors</li><li>Issuer-run KYC, your wallet whitelisted</li><li>Minimums from 100,000 USDC</li><li>Orders placed in USDC from here</li></ul></aside>
+  <aside class="nx-lcard rules" aria-label="Who can invest"><div class="k"><i></i>4 FUNDS · LIVE ON ARC</div><div class="ln">Who can invest</div><ul class="who"><li>Non-US professional investors and institutions</li><li>Issuer-run KYC, your wallet whitelisted</li><li>Minimums from 100,000 USDC</li><li>Orders placed in USDC from here</li></ul></aside>
 </section>
 
 <main class="nx-main"><div class="nx-wrap">
   <div class="nx-notice ok">
     <span class="ni">🪪</span>
-    <div><b>Who can invest.</b> These are BVI professional funds for <b>non-US professional investors</b>. The issuer runs KYC and whitelists the wallet; until it does, the share tokens refuse every transfer to you, and the Deposit button here stays off. Minimums are 500,000 USD for JTRSY and JAAA, 100,000 USDC for HYB. Onboarding happens with the issuer, on <a href="https://app.centrifuge.io" target="_blank" rel="noopener">Centrifuge</a>; we never see your documents.</div>
+    <div><b>Who can invest.</b> The Centrifuge funds are BVI professional funds for <b>non-US professional investors</b>; USYC is for <b>institutions outside the United States</b>. The issuer runs KYC and whitelists the wallet; until it does, the share tokens refuse every transfer to you, and the Deposit button here stays off. Minimums are 500,000 USD for JTRSY and JAAA, 100,000 for HYB and USYC. Onboarding happens with the issuer, on <a href="https://app.centrifuge.io" target="_blank" rel="noopener">Centrifuge</a> or with <a href="https://help.circle.com/s/article/Investor-Onboarding?language=en_US&amp;category=With_USYC" target="_blank" rel="noopener">Circle</a>; we never see your documents.</div>
   </div>
   <div class="nx-strip"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17c0-5 4-9 9-9s9 4 9 9"/><path d="M3 17h18M7.5 17v-4M12 17V8M16.5 17v-4"/></svg></span><div><b>Need USDC on Arc?</b><span class="t">Orders are placed in USDC. Bring it from Base, Ethereum, Arbitrum and more with Swap &amp; Bridge, or buy it with a card.</span></div>
     <div class="acts"><a class="nx-btn lit" href="../bridge/" target="_blank" rel="noopener">Swap &amp; Bridge <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a><a class="nx-btn" href="../bridge/?way=card" target="_blank" rel="noopener">Buy with card</a></div></div>
@@ -186,12 +185,12 @@
 
   <h2 class="sec">How an order works</h2>
   <div class="steps">
-    <div class="step"><span class="n">1 · ELIGIBILITY</span><b>The issuer whitelists you</b>Anemoy checks who you are and marks your wallet as a member of the fund on Arc. The card shows "whitelisted" the moment that lands; nothing on this site can skip it.</div>
-    <div class="step"><span class="n">2 · DEPOSIT</span><b>Request, then claim</b>You send USDC on Arc with a deposit request. The fund's hub on Ethereum approves orders daily and sets the price; your shares then wait in the vault until you claim them, from here or from Centrifuge.</div>
-    <div class="step"><span class="n">3 · REDEEM</span><b>The same, in reverse</b>A redeem request locks your shares; once the issuer processes it, USDC waits for you to claim. Each request carries a message to Ethereum, and that message fee, paid in USDC on Arc, shows in the quote before you sign.</div>
+    <div class="step"><span class="n">1 · ELIGIBILITY</span><b>The issuer whitelists you</b>Anemoy for the Centrifuge funds, Circle for USYC: the issuer checks who you are and marks your wallet on Arc. The card shows "whitelisted" the moment that lands; nothing on this site can skip it.</div>
+    <div class="step"><span class="n">2 · DEPOSIT</span><b>Request and claim, or mint at once</b>Centrifuge funds: you send USDC with a deposit request, the fund's hub on Ethereum approves orders daily and sets the price, and your shares wait in the vault until you claim them. USYC: the Teller mints it against your USDC in the same transaction, at the issuer's subscription price.</div>
+    <div class="step"><span class="n">3 · REDEEM</span><b>The same, in reverse</b>Centrifuge funds: a redeem request locks your shares, and once the issuer processes it, USDC waits for you to claim; each request carries a message to Ethereum, and that fee, paid in USDC on Arc, shows in the quote before you sign. USYC: the Teller burns it and pays USDC at once, no message and no fee.</div>
   </div>
 
-  <p class="legal">Fund data is read from the Arc chain and from Centrifuge's indexer and the issuer's published factsheets; yields are the issuer's trailing 30-day figures, variable, and no promise of future returns. These funds are offered by Anemoy Capital SPC Limited, a BVI fund licensed by the BVI Financial Services Commission, to non-US professional investors only, under the fund's own documents, which prevail over anything shown here. A NEW ONE takes no fee on these funds, does not custody anything, does not issue any asset, does not run eligibility checks and does not give advice. Nothing here is an offer. Some jurisdictions restrict these products. <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></p>
+  <p class="legal">Fund data is read from the Arc chain, from Centrifuge's indexer and from the issuers' published price reports and factsheets; yields are trailing 30-day figures, variable, and no promise of future returns. JTRSY, JAAA and HYB are offered by Anemoy Capital SPC Limited, a BVI fund licensed by the BVI Financial Services Commission, to non-US professional investors only. USYC represents an interest in Hashnote International Short Duration Yield Fund Ltd, a Cayman Islands mutual fund licensed by the Cayman Islands Monetary Authority, managed by Circle International Bermuda Limited, regulated by the Bermuda Monetary Authority, for entities that are not US Persons under Regulation S. Each fund's own documents prevail over anything shown here. A NEW ONE takes no fee on these funds, does not custody anything, does not issue any asset, does not run eligibility checks and does not give advice. Nothing here is an offer. Some jurisdictions restrict these products. <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></p>
 </div></main>
 <footer class="nx-foot"><div class="nx-foot-in"><span>© 2026 A NEW ONE</span><a href="../docs.html">Docs</a><a href="../about.html">About</a><a href="../terms.html">Terms</a><a href="../privacy.html">Privacy</a><a href="mailto:support@anewone.xyz">Contact</a><span class="sp">Nothing here is investment advice. The issuer is always a regulated entity.</span></div></footer>
 
@@ -296,7 +295,22 @@
       cls: "Corporate bonds · US high yield", manager: "New York Life Investment Management (MacKay Shields)", minUsd: 100000, min: "100,000 USDC",
       liquidity: "Daily dealing · T+3 to T+5 settlement", fee: "0% wrapper · 0.55% underlying fund", inception: "Jun 2026", risk: "Moderate to high",
       ratings: "Not rated", summary: null, unlisted: true },
+    // Circle's own tokenized money market fund, on Arc since launch day: USYC is a share of the
+    // Hashnote International Short Duration Yield Fund (Cayman, CIMA-licensed; reverse repo on
+    // US government securities), run by Circle International Bermuda. No hub elsewhere and no
+    // message fee: the Teller mints and burns against USDC on Arc itself, at the price the
+    // issuer's oracle sets each business day. Addresses from developers.circle.com/tokenized/usyc,
+    // read 9 Oct 2026; Arc supply was 0 that day, like the Centrifuge three at their launch.
+    { key: "USYC", kind: "usyc", name: "Hashnote International Short Duration Yield Fund",
+      share: "0x8a5D989Bbb96929F689B0200f435f53dA42bF490", teller: "0x51A8CE47dC08ba5CD19c7aa84EA6fD6664f60f9b",
+      oracle: "0x4BC8d5aCD3d040d2903dD9C5B7048520c6ff537A", entitlements: "0xb69ecb156Dc0028198028c501340d5367845ca72", dec: 6,
+      cls: "Money market · reverse repo on US government securities", manager: "Circle International Bermuda (Hashnote)",
+      issuer: "Circle International Bermuda Ltd · Cayman mutual fund, CIMA", minUsd: 100000, min: "100,000 USD",
+      liquidity: "24/7 · instant at the Teller (T+0)", fee: "Teller fee read live · fund fees in the offering documents", inception: "May 2023", risk: "Low",
+      ratings: "Not rated", docs: "https://developers.circle.com/tokenized/usyc",
+      onboard: "https://help.circle.com/s/article/Investor-Onboarding?language=en_US&category=With_USYC" },
   ];
+  const CF = FUNDS.filter((f) => f.kind !== "usyc");   // the Centrifuge three: vault, router and indexer apply to these only
   const ERC20 = ["function balanceOf(address) view returns (uint256)", "function allowance(address,address) view returns (uint256)", "function approve(address,uint256) returns (bool)", "function totalSupply() view returns (uint256)"];
   // ERC-7540 async vault, Centrifuge flavour: maxMint is the claimable shares of a fulfilled
   // deposit, maxWithdraw the claimable USDC of a fulfilled redemption
@@ -312,6 +326,17 @@
   const GAS = ["function messageOverallGasLimit(uint16,bytes) view returns (uint128)"];
   const ADAPTER = ["function estimate(uint16,bytes,uint256) view returns (uint256)"];
   const routerIface = new ethers.Interface(ROUTER);
+  // USYC: the issuer's oracle (Chainlink shape, 18 decimals, one round per business day), the
+  // Teller (ERC-4626 shape over USDC: deposit mints, redeem burns, both settle in the call) and
+  // the Entitlements authority both of them consult: canCall(wallet, teller, selector) is the
+  // whitelist, false for every wallet the issuer has not onboarded
+  const ORACLE = ["function latestRoundData() view returns (uint80,int256,uint256,uint256,uint80)", "function getRoundData(uint80) view returns (uint80,int256,uint256,uint256,uint80)"];
+  const TELLER = ["function mintPrice() view returns (uint256)", "function previewDeposit(uint256) view returns (uint256)", "function previewRedeem(uint256) view returns (uint256)",
+    "function maxDeposit(address) view returns (uint256)", "function maxRedeem(address) view returns (uint256)",
+    "function deposit(uint256,address) returns (uint256)", "function redeem(uint256,address,address) returns (uint256)"];
+  const ENTITLE = ["function canCall(address,address,bytes4) view returns (bool)"];
+  const tellerIface = new ethers.Interface(TELLER);
+  const SEL = { deposit: tellerIface.getFunction("deposit").selector };
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const fmt = (n, d = 2) => Number(n).toLocaleString("en-US", { maximumFractionDigits: d });
@@ -347,10 +372,11 @@
     return j.data;
   }
 
-  let live = {};   // key -> { price, priceAt, arcSupply, issuance, aum, apy }
+  let live = {};   // key -> { price, priceAt, arcSupply, issuance, aum, apy; USYC also subPrice, feeIn, feeOut }
   async function loadFunds() {
     try {
       await Promise.all(FUNDS.map(async (f) => {
+        if (f.kind === "usyc") return loadUsyc(f).catch((e) => console.warn("usyc", e));
         const [price, priceAt, supply] = await viaPool(async (p) => {
           const v = new ethers.Contract(f.vault, VAULT, p), s = new ethers.Contract(f.share, ERC20, p);
           return Promise.all([v.pricePerShare(), v.priceLastUpdated(), s.totalSupply()]);
@@ -360,10 +386,10 @@
     } catch (e) { console.warn("chain reads", e); }
     render();
     try {
-      const ids = FUNDS.map((f) => `"${f.tokenId}"`).join(",");
+      const ids = CF.map((f) => `"${f.tokenId}"`).join(",");
       const d = await gql(`{ tokens(where:{id_in:[${ids}]}){ items { id totalIssuance tokenPrice } } ` +
-        FUNDS.map((f, i) => `s${i}: tokenSnapshots(where:{id:"${f.tokenId}"}, orderBy:"timestamp", orderDirection:"desc", limit:1){ items { yield30d365 timestamp } }`).join(" ") + " }");
-      FUNDS.forEach((f, i) => {
+        CF.map((f, i) => `s${i}: tokenSnapshots(where:{id:"${f.tokenId}"}, orderBy:"timestamp", orderDirection:"desc", limit:1){ items { yield30d365 timestamp } }`).join(" ") + " }");
+      CF.forEach((f, i) => {
         const t = (d.tokens.items || []).find((x) => x.id === f.tokenId);
         const l = live[f.key] || (live[f.key] = {});
         if (t) {
@@ -378,15 +404,43 @@
     } catch (e) { console.warn("indexer", e); }
     render();
   }
+  // USYC: price and its age from the oracle's latest round; the trailing 30-day yield from the
+  // round about 30 days back, annualized over the real interval between the two reports; the
+  // Teller's fees from what a preview returns against the quoted price (both 0 on 9 Oct 2026);
+  // the fund's global size from the issuer's price report, relayed by api/usyc.js because the
+  // issuer's feed sends no CORS headers
+  async function loadUsyc(f) {
+    const l = live[f.key] = {};
+    await viaPool(async (p) => {
+      const o = new ethers.Contract(f.oracle, ORACLE, p), t = new ethers.Contract(f.teller, TELLER, p), s = new ethers.Contract(f.share, ERC20, p);
+      const [rd, supply, subPrice, outFor1000, inFor100] = await Promise.all([o.latestRoundData(), s.totalSupply(), t.mintPrice(), t.previewDeposit(ethers.parseUnits("1000", 6)), t.previewRedeem(ethers.parseUnits("100", f.dec))]);
+      const price = Number(ethers.formatUnits(rd[1], 18)), sub = Number(ethers.formatUnits(subPrice, 18));
+      Object.assign(l, { price, priceAt: Number(rd[3]) * 1000, arcSupply: Number(ethers.formatUnits(supply, f.dec)), subPrice: sub,
+        feeIn: Math.max(0, 1 - Number(ethers.formatUnits(outFor1000, f.dec)) * sub / 1000), feeOut: Math.max(0, 1 - Number(ethers.formatUnits(inFor100, 6)) / (100 * price)) });
+      // one round per business day, so 21 rounds back is about 30 calendar days; the interval is measured, not assumed
+      const back = rd[0] > 21n ? rd[0] - 21n : 1n;
+      if (back < rd[0]) {
+        const r0 = await o.getRoundData(back), p0 = Number(ethers.formatUnits(r0[1], 18)), dt = Number(rd[3] - r0[3]);
+        if (p0 > 0 && dt > 0) l.apy = (price / p0 - 1) * 365.25 * 86400 / dt;
+      }
+    });
+    render();
+    try {
+      const j = await fetch("../api/usyc", { signal: AbortSignal.timeout(8000) }).then((r) => r.json());
+      if (j && j.nav > 0) { l.aum = j.nav; l.issuance = j.supply; }
+    } catch (e) { console.warn("usyc report", e); }
+  }
 
   // ---- cards ----
   let positions = {};  // key -> { allowed, shares, pendingDep, claimShares, pendingRed, claimAssets }
   function render() {
-    $("count").textContent = `${FUNDS.length} funds · Centrifuge on Arc`;
+    $("count").textContent = `${FUNDS.length} funds · Centrifuge and Circle on Arc`;
     $("grid").innerHTML = FUNDS.map((f, i) => {
       const l = live[f.key] || {}, p = positions[f.key];
-      const stale = l.priceAt && Date.now() - l.priceAt > 3 * 86400e3;
-      const summary = f.summary ? `<a href="${CFG.ipfs}${f.summary}" target="_blank" rel="noopener">Executive summary ↗</a>` : "";
+      const stale = l.priceAt && Date.now() - l.priceAt > (f.kind === "usyc" ? 4 : 3) * 86400e3;   // the oracle skips weekends
+      const summary = f.summary ? `<a href="${CFG.ipfs}${f.summary}" target="_blank" rel="noopener">Executive summary ↗</a>` : f.docs ? `<a href="${esc(f.docs)}" target="_blank" rel="noopener">Issuer docs ↗</a>` : "";
+      const onboard = f.kind === "usyc" ? f.onboard : CFG.app + f.poolId;
+      const feeTxt = f.kind === "usyc" && l.feeIn != null ? `${pct(l.feeIn)} in · ${pct(l.feeOut)} out at the Teller · fund fees in the offering documents` : f.fee;
       const posLines = p ? [
         p.shares > 0 ? `Shares: ${fmt(p.shares, 4)} ${f.key}${l.price ? " ≈ " + money(p.shares * l.price) : ""}` : "",
         p.pendingDep > 0 ? `Pending deposit: ${fmt(p.pendingDep, 2)} USDC` : "",
@@ -398,7 +452,7 @@
       if (!account) action = `<button class="btn primary" data-open="${i}">Connect to invest</button>`;
       else if (!p) action = `<button class="btn" disabled>Checking your wallet…</button>`;
       else if (p.allowed) action = `<button class="btn primary" data-open="${i}">${p.claimShares > 0 || p.claimAssets > 0 ? "Claim" : "Deposit USDC"}</button>`;
-      else action = `<a class="btn" href="${CFG.app}${f.poolId}" target="_blank" rel="noopener" title="The issuer runs eligibility and KYC on Centrifuge; once your wallet is a member, this card lets you deposit">Onboard with the issuer ↗</a>`;
+      else action = `<a class="btn" href="${esc(onboard)}" target="_blank" rel="noopener" title="The issuer runs eligibility and KYC; once your wallet is whitelisted, this card lets you deposit">Onboard with the issuer ↗</a>`;
       return `<div class="fund">
         <div class="head"><div><h3>${esc(f.name)}</h3><div class="by">${esc(f.key)} · ${esc(f.cls)}</div></div><span class="tag usdc">USDC</span></div>
         <div class="tw">
@@ -409,17 +463,17 @@
           <dt>Fund size</dt><dd>${money(l.aum)}</dd>
           <dt>On Arc</dt><dd>${l.arcSupply != null ? fmt(l.arcSupply, 2) : "—"}</dd>
           <dt>Manager</dt><dd>${esc(f.manager)}</dd>
-          <dt>Issuer</dt><dd>Anemoy Capital SPC Ltd · BVI professional fund</dd>
+          <dt>Issuer</dt><dd>${esc(f.issuer || "Anemoy Capital SPC Ltd · BVI professional fund")}</dd>
           <dt>Minimum</dt><dd>${esc(f.min)}</dd>
           <dt>Liquidity</dt><dd>${esc(f.liquidity)}</dd>
-          <dt>Fees</dt><dd>${esc(f.fee)}</dd>
+          <dt>Fees</dt><dd>${esc(feeTxt)}</dd>
           <dt>Ratings</dt><dd>${esc(f.ratings)}</dd>
           <dt>Since</dt><dd>${esc(f.inception)} · risk ${esc(f.risk.toLowerCase())}</dd>
         </dl>
         ${stale ? `<span class="tag warn">price last set ${new Date(l.priceAt).toLocaleDateString("en-GB")}</span>` : ""}
         ${f.unlisted ? `<span class="tag warn">Not yet listed on Centrifuge's own app: the issuer has it open for direct subscriptions only.</span>` : ""}
         ${p ? (p.allowed ? `<span class="tag ok">✓ Your wallet is whitelisted for this fund</span>` : `<span class="tag warn">Your wallet is not whitelisted for this fund yet; the issuer decides that, not us.</span>`) : ""}
-        <div class="links">${summary}<a href="${CFG.app}${f.poolId}" target="_blank" rel="noopener">On Centrifuge ↗</a>${explorer("token/" + f.share) ? `<a href="${esc(explorer("token/" + f.share))}" target="_blank" rel="noopener">Token on Arc ↗</a>` : ""}</div>
+        <div class="links">${summary}${f.kind === "usyc" ? "" : `<a href="${CFG.app}${f.poolId}" target="_blank" rel="noopener">On Centrifuge ↗</a>`}${explorer("token/" + f.share) ? `<a href="${esc(explorer("token/" + f.share))}" target="_blank" rel="noopener">Token on Arc ↗</a>` : ""}</div>
         <div class="pos ${posLines.length ? "show" : ""}">${posLines.map(esc).join("<br>")}</div>
         ${action}
       </div>`;
@@ -488,7 +542,7 @@
       projectId: WC_ID, chains: [arcCfg.chainId], rpcMap: { [arcCfg.chainId]: arcCfg.rpc },
       optionalMethods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_sign", "wallet_switchEthereumChain", "wallet_addEthereumChain"],
       showQrModal: true, qrModalOptions: { themeMode: document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark" },
-      metadata: { name: "A NEW ONE", description: "Tokenized funds on Arc through Centrifuge.", url: "https://anewone.xyz", icons: ["https://anewone.xyz/apple-touch-icon.png"] },
+      metadata: { name: "A NEW ONE", description: "Tokenized funds on Arc through Centrifuge and Circle.", url: "https://anewone.xyz", icons: ["https://anewone.xyz/apple-touch-icon.png"] },
     });
     return wcProvider;
   }
@@ -651,6 +705,13 @@ Time: ${new Date().toISOString()}`;
 
   // ---- the wallet's standing in each fund: whitelisted or not, shares, orders in flight ----
   async function readPosition(f) {
+    if (f.kind === "usyc") return viaPool(async (p) => {
+      const t = new ethers.Contract(f.teller, TELLER, p), s = new ethers.Contract(f.share, ERC20, p), e = new ethers.Contract(f.entitlements, ENTITLE, p);
+      const [allowed, shares, cap, capOut] = await Promise.all([e.canCall(account, f.teller, SEL.deposit), s.balanceOf(account), t.maxDeposit(account), t.maxRedeem(account)]);
+      // nothing is ever pending or claimable: the Teller settles in the call. cap is what it takes right now
+      return { allowed, shares: Number(ethers.formatUnits(shares, f.dec)), pendingDep: 0, claimShares: 0, pendingRed: 0, claimAssets: 0,
+        cap: Number(ethers.formatUnits(cap, 6)), capOut: Number(ethers.formatUnits(capOut, f.dec)) };
+    });
     return viaPool(async (p) => {
       const v = new ethers.Contract(f.vault, VAULT, p), s = new ethers.Contract(f.share, ERC20, p);
       const [allowed, shares, pendingDep, claimShares, pendingRed, claimAssets] = await Promise.all([
@@ -670,15 +731,16 @@ Time: ${new Date().toISOString()}`;
   const sheet = $("overlay");
   function setStatus(t, cls) { const s = $("status"); s.textContent = t; s.className = "status " + (cls || ""); }
   function openSheet(f) {
-    cur = f; feeWei = null;
+    cur = f; feeWei = f.kind === "usyc" ? 0n : null;   // USYC carries no message anywhere
     const p = positions[f.key] || {};
     $("shName").textContent = f.name;
     $("shSub").textContent = `${f.key} · minimum ${f.min} · ${f.liquidity}`;
+    $("tabClaim").hidden = f.kind === "usyc";
     setMode(p.claimShares > 0 || p.claimAssets > 0 ? "claim" : "deposit");
     $("amt").value = ""; setStatus("");
     sheet.classList.add("open");
     paintBalances();
-    quoteFee();
+    if (f.kind === "usyc") paintQuote(); else quoteFee();
   }
   function setMode(m) {
     mode = m;
@@ -687,7 +749,7 @@ Time: ${new Date().toISOString()}`;
     $("amtRow").hidden = m === "claim";
     $("claimRow").hidden = m !== "claim";
     $("unit").textContent = m === "redeem" ? cur.key : "USDC";
-    $("goBtn").textContent = m === "deposit" ? "Request deposit" : m === "redeem" ? "Request redemption" : "Claim";
+    $("goBtn").textContent = cur.kind === "usyc" ? (m === "deposit" ? "Mint USYC" : "Redeem for USDC") : m === "deposit" ? "Request deposit" : m === "redeem" ? "Request redemption" : "Claim";
     if (m === "claim") {
       const lines = [];
       if (p.claimShares > 0) lines.push(`<b>${fmt(p.claimShares, 4)} ${esc(cur.key)}</b> filled and waiting for you`);
@@ -734,6 +796,26 @@ Time: ${new Date().toISOString()}`;
     if (mode === "claim") return;
     const q = $("quote"), l = live[cur.key] || {}, n = Number($("amt").value || 0);
     const rows = [];
+    if (cur.kind === "usyc") {
+      // the Teller's own numbers: the subscription price is the oracle's price until 2 pm New York,
+      // the issuer's forecast of the next report after that; redemptions are always at the price
+      const p = positions[cur.key] || {};
+      if (mode === "deposit") {
+        rows.push(["You send", `${fmt(n, 2)} USDC`]);
+        if (l.subPrice && n > 0) rows.push(["USYC at the subscription price", `≈ ${fmt(n / l.subPrice, 4)} USYC`]);
+        rows.push(["Issuer minimum", cur.min]);
+        if (p.cap != null) rows.push(["Teller takes right now", `${fmt(p.cap, 2)} USDC`]);
+      } else {
+        rows.push(["You redeem", `${fmt(n, 4)} USYC`]);
+        if (l.price && n > 0) rows.push(["USDC at today's NAV", `≈ ${fmt(n * l.price, 2)} USDC`]);
+      }
+      rows.push(["Teller fee", l.feeIn == null ? "…" : pct(mode === "deposit" ? l.feeIn : l.feeOut)]);
+      rows.push(["Settlement", "in this transaction"]);
+      rows.push(["Fee to A NEW ONE", "none"]);
+      q.innerHTML = rows.map(([k, v]) => `<span>${esc(k)}</span><b>${esc(v)}</b>`).join("");
+      q.hidden = false;
+      return;
+    }
     if (mode === "deposit") {
       rows.push(["You send", `${fmt(n, 2)} USDC`]);
       if (l.price && n > 0) rows.push(["Shares at today's NAV", `≈ ${fmt(n / l.price, 4)} ${cur.key}`]);
@@ -768,44 +850,79 @@ Time: ${new Date().toISOString()}`;
     $("goBtn").disabled = true;
     try {
       if (activeKind !== "google") await ensureArc();
-      const router = new ethers.Contract(CFG.vaultRouter, ROUTER, await signer());
-      const enabled = await viaPool((pr) => new ethers.Contract(CFG.vaultRouter, ROUTER, pr).isEnabled(cur.vault, account));
-      const calls = enabled ? [] : [routerIface.encodeFunctionData("enable", [cur.vault])];
       let hash, done;
-      if (mode === "claim") {
-        if (p.claimShares > 0) calls.push(routerIface.encodeFunctionData("claimDeposit", [cur.vault, account, account]));
-        if (p.claimAssets > 0) calls.push(routerIface.encodeFunctionData("claimRedeem", [cur.vault, account, account]));
-        setStatus("Confirm the claim in your wallet…");
-        hash = await send({ to: CFG.vaultRouter, data: routerIface.encodeFunctionData("multicall", [calls]) }, "Claim");
-        done = "Claimed. Shares and USDC are in your wallet.";
-      } else {
-        if (feeWei == null) await quoteFee();
-        if (feeWei == null) throw new Error("Could not price the message fee; try again in a moment.");
+      if (cur.kind === "usyc") {
+        // one contract, one call: USDC approved to the Teller, then deposit mints USYC to the
+        // wallet or redeem burns it and pays USDC, both in the same block; the Teller's own
+        // limits are read first so a refused order never costs a signature
         const n = Number($("amt").value || 0);
         if (!(n > 0)) throw new Error("Enter an amount.");
+        const t = new ethers.Contract(cur.teller, TELLER, await signer());
         if (mode === "deposit") {
           if (n < cur.minUsd && !(p.shares > 0)) throw new Error(`The issuer's minimum initial subscription is ${cur.min}.`);
           const amount = ethers.parseUnits(trim(n, 6), 6);
           if (amount > usdcBal) throw new Error("Not enough USDC in the wallet.");
-          const allowance = await viaPool((pr) => new ethers.Contract(CFG.usdc, ERC20, pr).allowance(account, cur.vault));
+          const cap = await viaPool((pr) => new ethers.Contract(cur.teller, TELLER, pr).maxDeposit(account));
+          if (amount > cap) throw new Error(`The Teller takes at most ${fmt(ethers.formatUnits(cap, 6), 2)} USDC right now; try a smaller amount, or later.`);
+          const allowance = await viaPool((pr) => new ethers.Contract(CFG.usdc, ERC20, pr).allowance(account, cur.teller));
           if (allowance < amount) {
             setStatus("Confirm the USDC approval in your wallet…");
             const usdc = new ethers.Contract(CFG.usdc, ERC20, await signer());
-            const tx = await usdc.approve(cur.vault, amount);
+            const tx = await usdc.approve(cur.teller, amount);
             setStatus("Approval sent, waiting for Arc…");
             await viaPool((pr) => pr.waitForTransaction(tx.hash, 1, 120000));
           }
-          calls.push(routerIface.encodeFunctionData("requestDeposit", [cur.vault, amount, account, account]));
-          setStatus("Confirm the deposit request in your wallet…");
-          hash = await send({ to: CFG.vaultRouter, data: routerIface.encodeFunctionData("multicall", [calls]), value: feeWei }, "Deposit request");
-          done = `Deposit request for ${fmt(n, 2)} USDC is on its way to the issuer. Shares appear under Claim once the order is filled.`;
+          setStatus("Confirm the subscription in your wallet…");
+          hash = await send({ to: cur.teller, data: t.interface.encodeFunctionData("deposit", [amount, account]) }, "Subscription");
+          done = `Done. USYC for ${fmt(n, 2)} USDC is in your wallet.`;
         } else {
           const shares = ethers.parseUnits(trim(n, cur.dec), cur.dec);
           if (!(p.shares > 0) || Number(trim(n, cur.dec)) > p.shares) throw new Error("Not that many shares in the wallet.");
-          calls.push(routerIface.encodeFunctionData("requestRedeem", [cur.vault, shares, account, account]));
-          setStatus("Confirm the redemption request in your wallet…");
-          hash = await send({ to: CFG.vaultRouter, data: routerIface.encodeFunctionData("multicall", [calls]), value: feeWei }, "Redemption request");
-          done = `Redemption request for ${fmt(n, 4)} ${cur.key} is on its way to the issuer. USDC appears under Claim once it is processed.`;
+          const cap = await viaPool((pr) => new ethers.Contract(cur.teller, TELLER, pr).maxRedeem(account));
+          if (shares > cap) throw new Error(`The Teller redeems at most ${fmt(ethers.formatUnits(cap, cur.dec), 4)} USYC right now; try a smaller amount, or later.`);
+          setStatus("Confirm the redemption in your wallet…");
+          hash = await send({ to: cur.teller, data: t.interface.encodeFunctionData("redeem", [shares, account, account]) }, "Redemption");
+          done = `Done. USDC for ${fmt(n, 4)} USYC is in your wallet.`;
+        }
+      } else {
+        const router = new ethers.Contract(CFG.vaultRouter, ROUTER, await signer());
+        const enabled = await viaPool((pr) => new ethers.Contract(CFG.vaultRouter, ROUTER, pr).isEnabled(cur.vault, account));
+        const calls = enabled ? [] : [routerIface.encodeFunctionData("enable", [cur.vault])];
+        if (mode === "claim") {
+          if (p.claimShares > 0) calls.push(routerIface.encodeFunctionData("claimDeposit", [cur.vault, account, account]));
+          if (p.claimAssets > 0) calls.push(routerIface.encodeFunctionData("claimRedeem", [cur.vault, account, account]));
+          setStatus("Confirm the claim in your wallet…");
+          hash = await send({ to: CFG.vaultRouter, data: routerIface.encodeFunctionData("multicall", [calls]) }, "Claim");
+          done = "Claimed. Shares and USDC are in your wallet.";
+        } else {
+          if (feeWei == null) await quoteFee();
+          if (feeWei == null) throw new Error("Could not price the message fee; try again in a moment.");
+          const n = Number($("amt").value || 0);
+          if (!(n > 0)) throw new Error("Enter an amount.");
+          if (mode === "deposit") {
+            if (n < cur.minUsd && !(p.shares > 0)) throw new Error(`The issuer's minimum initial subscription is ${cur.min}.`);
+            const amount = ethers.parseUnits(trim(n, 6), 6);
+            if (amount > usdcBal) throw new Error("Not enough USDC in the wallet.");
+            const allowance = await viaPool((pr) => new ethers.Contract(CFG.usdc, ERC20, pr).allowance(account, cur.vault));
+            if (allowance < amount) {
+              setStatus("Confirm the USDC approval in your wallet…");
+              const usdc = new ethers.Contract(CFG.usdc, ERC20, await signer());
+              const tx = await usdc.approve(cur.vault, amount);
+              setStatus("Approval sent, waiting for Arc…");
+              await viaPool((pr) => pr.waitForTransaction(tx.hash, 1, 120000));
+            }
+            calls.push(routerIface.encodeFunctionData("requestDeposit", [cur.vault, amount, account, account]));
+            setStatus("Confirm the deposit request in your wallet…");
+            hash = await send({ to: CFG.vaultRouter, data: routerIface.encodeFunctionData("multicall", [calls]), value: feeWei }, "Deposit request");
+            done = `Deposit request for ${fmt(n, 2)} USDC is on its way to the issuer. Shares appear under Claim once the order is filled.`;
+          } else {
+            const shares = ethers.parseUnits(trim(n, cur.dec), cur.dec);
+            if (!(p.shares > 0) || Number(trim(n, cur.dec)) > p.shares) throw new Error("Not that many shares in the wallet.");
+            calls.push(routerIface.encodeFunctionData("requestRedeem", [cur.vault, shares, account, account]));
+            setStatus("Confirm the redemption request in your wallet…");
+            hash = await send({ to: CFG.vaultRouter, data: routerIface.encodeFunctionData("multicall", [calls]), value: feeWei }, "Redemption request");
+            done = `Redemption request for ${fmt(n, 4)} ${cur.key} is on its way to the issuer. USDC appears under Claim once it is processed.`;
+          }
         }
       }
       const url = explorer("tx/" + hash);
@@ -823,7 +940,7 @@ Time: ${new Date().toISOString()}`;
   };
 
   if (net !== "mainnet") {
-    $("grid").innerHTML = `<div class="empty">Centrifuge's funds live on Arc mainnet only; this site is on Arc testnet right now.</div>`;
+    $("grid").innerHTML = `<div class="empty">These funds live on Arc mainnet only; this site is on Arc testnet right now.</div>`;
     $("count").textContent = "";
   } else loadFunds();
 </script>
