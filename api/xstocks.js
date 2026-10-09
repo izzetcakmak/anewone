@@ -69,17 +69,19 @@ function compact(a) {
  *  one says there is no next page; sequentially it took 20 seconds, longer than a function may run. */
 async function loadCatalog() {
   const out = [];
+  // a page that fails is asked once more; a page that fails twice fails the whole load, so a
+  // truncated catalog is never cached (on 9 Oct 2026 one lost page left the site at 500 stocks)
+  const page = (n) => backed(`/assets?pageSize=100&page=${n}`).catch(() => backed(`/assets?pageSize=100&page=${n}`));
   for (let first = 1; first <= 31; first += 6) {
-    const pages = await Promise.all(Array.from({ length: 6 }, (_, i) => backed(`/assets?pageSize=100&page=${first + i}`).catch(() => null)));
+    const pages = await Promise.all(Array.from({ length: 6 }, (_, i) => page(first + i)));
     let done = false;
     for (const j of pages) {
-      if (!j) { done = true; break; }
       for (const a of j.nodes || []) out.push(compact(a));
       if (!j.page || !j.page.hasNextPage) { done = true; break; }
     }
     if (done) break;
   }
-  if (out.length < 100) throw new Error("catalog came back short");
+  if (out.length < 1000) throw new Error("catalog came back short: " + out.length);
   return { at: Date.now(), count: out.length, assets: out };
 }
 
@@ -87,7 +89,7 @@ async function loadCatalog() {
  *  catalog is worse than one a few minutes old. */
 async function catalog() {
   try {
-    const c = await cached("xs:catalog:v2", CATALOG_TTL, loadCatalog);
+    const c = await cached("xs:catalog:v3", CATALOG_TTL, loadCatalog);
     if (kvAvailable()) { try { await kv("SET", "xs:catalog:last", JSON.stringify(c)); } catch {} }
     return c;
   } catch (e) {
