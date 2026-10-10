@@ -123,10 +123,10 @@ cd build-walletconnect && npm ci && npm run build && sha256sum ../docs/vendor/wa
 | | |
 |---|---|
 | Package | `gangway-kit` (in-house, izzetcakmak; GangWay Kit, formerly arc-bridge-kit) |
-| Version | 0.5.2 |
+| Version | 0.6.0 |
 | File | `gangway-kit.js` |
-| Size | 117,573 bytes (LF line endings, as committed and served) |
-| SHA-256 | `c8fa22ce2d2d8ec7beed85e218081d3f784605f9d3845427f2c1d9abb0ec0849` |
+| Size | 153,611 bytes (LF line endings, as committed and served) |
+| SHA-256 | `9e493c7c9d95a9ad6f1c72e4f6fe01879c95221985785d1c24cce142031495fc` |
 
 Built here, not fetched: the source is public at https://github.com/izzetcakmak/gangway-kit
 (local checkout `C:\Users\Monster\arc-bridge-kit`, demo at https://arc-bridge-kit.vercel.app) and is copied verbatim. It is plain JavaScript on
@@ -134,8 +134,16 @@ top of the vendored ethers v6: Circle CCTP V2 + Forwarding Service for the bridg
 public API for same-chain swaps (through this site's `/api/lifi` proxy, which holds the key),
 and the platform's own `buy` for the last leg. From Solana (v0.5.0, 23 Sep 2026) the whole
 trip is one LI.FI route signed by the user's Wallet Standard wallet; the kit bundles no Solana
-library and reads Solana balances over public JSON-RPC. It builds no swap calldata of its own;
-LI.FI transactions are sent exactly as quoted, CCTP calls go to Circle's uniform contract addresses.
+library and reads Solana balances over public JSON-RPC. From Sui (v0.6.0, 10 Oct 2026, two days after
+Circle's CCTP V2 went live there) USDC goes over CCTP V2 with the Forwarding Service: the kit builds
+one programmable transaction itself, the JSON a Wallet Standard wallet receives from `transaction.toJSON()`,
+calling Circle's published Move packages (`deposit_for_burn`, `handler::burn`, `complete_burn`; ids from
+developers.circle.com/cctp/references/sui-packages, equal to those of a live mainnet burn). That JSON is
+tested equal to what `@mysten/sui` 2.35.0 prints and was dry-run on Sui mainnet against real accounts;
+no Sui library is bundled, and balances, coins and status are read over Sui's GraphQL endpoint
+(`graphql.mainnet.sui.io`, public JSON-RPC being switched off). Any swap into USDC on Sui is LI.FI's
+transaction, signed exactly as quoted. It builds no swap calldata of its own;
+LI.FI transactions are sent exactly as quoted, CCTP calls go to Circle's uniform contract addresses on EVM chains.
 
 To re-verify after an update: `curl -s https://anewone.xyz/vendor/gangway-kit.js | sha256sum` (or
 `git show HEAD:docs/vendor/gangway-kit.js | sha256sum`); a Windows checkout may carry CRLF and hash differently.

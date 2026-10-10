@@ -1,5 +1,5 @@
 /*!
- * gangway-kit v0.5.2 (GangWay Kit, formerly arc-bridge-kit)
+ * gangway-kit v0.6.0 (GangWay Kit, formerly arc-bridge-kit)
  * Drop-in "pay with anything, land USDC on Arc, then buy" kit.
  *
  *  Legs (each optional except the bridge):
@@ -16,6 +16,10 @@
  *    single LI.FI route (Relay underneath, verified live 23 Sep 2026), signed by a Wallet
  *    Standard wallet (Phantom, Solflare, Backpack…) straight from the bytes LI.FI returns, so
  *    no Solana library is bundled. The USDC lands at the EVM recipient on Arc.
+ *  - Sui: the other non-EVM source. USDC (or any Sui token, swapped into USDC first by LI.FI) goes
+ *    over Circle CCTP V2 on Sui (live 8 Oct 2026) with the Forwarding Service: one programmable
+ *    transaction, built here as JSON and signed by a Wallet Standard wallet (Slush, Phantom,
+ *    Suiet...), so no Sui library is bundled either. Reads go to Sui's GraphQL endpoint.
  *
  *  Usage (browser, classic script):
  *    <script src="ethers.umd.min.js"></script>
@@ -35,7 +39,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.5.2";
+  const VERSION = "0.6.0";
 
   // ------------------------------------------------------------------ constants
 
@@ -99,6 +103,42 @@
   // a syntactically valid pubkey LI.FI will quote for before a Solana wallet is connected;
   // never signed, never sent: the real transfer is always quoted again for the connected account
   const SOL_QUOTE_ADDR = "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy";
+
+  // Sui. LI.FI addresses the chain by this id and SUI itself by its full coin type; Wallet Standard
+  // names it "sui:mainnet". The bridge leg is Circle's own CCTP V2 on Sui (Move packages, live since
+  // 8 Oct 2026, domain 8), called in one programmable transaction whose JSON this kit builds and hands
+  // to the wallet, so no Sui library is bundled. Reads go to Sui's GraphQL endpoint: public JSON-RPC
+  // was switched off in 2026, and GraphQL answers a browser with CORS open.
+  const SUI_LIFI_CHAIN_ID = 9270000000000000;
+  const SUI_NATIVE = "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI";
+  // a syntactically valid address LI.FI will quote a swap for before a Sui wallet is connected;
+  // never signed, never sent: the real swap is quoted again for the connected account
+  const SUI_QUOTE_ADDR = "0x0000000000000000000000000000000000000000000000000000000000000001";
+  const SUI_DENY_LIST = "0x0000000000000000000000000000000000000000000000000000000000000403";
+  const SUI_MIN_GAS = 8_000_000n;   // MIST (0.008 SUI): a burn's gas budget is about 0.007 SUI and the wallet must be able to reserve it
+  const SUI_MAX_COINS = 250;        // USDC coin objects merged into one burn; a wallet with more needs tidying anyway
+  // Circle's CCTP V2 packages on Sui and the shared objects they take
+  // (developers.circle.com/cctp/references/sui-packages; the mainnet set was checked against a live burn on 9 Oct 2026)
+  const SUI_CCTP = {
+    mainnet: {
+      chain: "sui:mainnet",
+      tokenMessengerPkg: "0xeb14978abfe93a37c5d5bf86a0623b923553a5f0e794daac7724f1e2fdbfb830",
+      handlerPkg: "0x185ed207c4d64fc594882ab927f9f3c6ff957aad03df8a731ba64378faeeb2bf",
+      tokenMessenger: "0x06fb166941cd7bc095edc019d054a753ec3f1e4c25f28f2ecc4a6cfa0a9b1167",
+      messageTransmitter: "0x0c067f7d325e5b60e3179712e7783534ba1556cbb3d359d8161497e37689230c",
+      handler: "0xa32de8a6dd0178fb05f662929d55cddb69a25c26bde4b83f89e36d17ead94c41",
+      treasury: "0x57d6725e7a8b49a7b2a612f6bd66ab5f39fc95332ca48be421c3229d514a6de7",
+    },
+    testnet: {
+      chain: "sui:testnet",
+      tokenMessengerPkg: "0x267d3c0cb776eace2840f27e4d33da9c6d952f9749403f1fe6579f4962ed3c64",
+      handlerPkg: "0xbe8479044396a45e07de2c7f14789c35b8338406eebc53b2527da56839a91561",
+      tokenMessenger: "0x72cb55cd14d01e6361386d6ea93eecda9fa1efc3c202b8dd69c1e4683e4c0ca0",
+      messageTransmitter: "0xfee3a2b47f9ef2de2405fc63d79194307945f8ea768815cfc46083bc20fbe6ed",
+      handler: "0xfbd9c0517c4f0e1817445ee2be598806e3c392a465d7e3d773d1055f3f0eed32",
+      treasury: "0x7170137d4a6431bf83351ac025baf462909bffe2877d87716374fb42b9629ebe",
+    },
+  };
 
   // Source chains. `fast` = Circle offers Fast Transfer on this chain (others finalize
   // quickly anyway, so standard is already fast there). Order = what users see.
@@ -167,6 +207,12 @@
         // "Access forbidden" (verified 23 Sep 2026), so it only serves Node-side checks
         rpcs: ["https://solana-rpc.publicnode.com", "https://api.mainnet-beta.solana.com"],
         explorer: "https://solscan.io", native: { name: "Solana", symbol: "SOL", decimals: 9 } },
+      { key: "sui", name: "Sui", vm: "move", chainId: SUI_LIFI_CHAIN_ID, domain: 8, fast: false, estStandardSec: 15,
+        usdc: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+        // standard finality on Sui is about half a second; real forwarded transfers took 4-10 s from burn to mint (measured 10 Oct 2026)
+        // Sui's GraphQL endpoint: public JSON-RPC was switched off in 2026 (verified 9 Oct 2026), GraphQL answers a browser with CORS open
+        rpcs: ["https://graphql.mainnet.sui.io/graphql"],
+        explorer: "https://suiscan.xyz/mainnet", native: { name: "Sui", symbol: "SUI", decimals: 9 } },
     ],
     testnet: [
       { key: "base-sepolia", name: "Base Sepolia", chainId: 84532, domain: 6, fast: true,
@@ -236,6 +282,35 @@
     { address: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm", symbol: "WIF", name: "dogwifhat", decimals: 6 },
   ];
 
+  // Sui Testnet is NOT in SOURCES.testnet: Circle's sandbox Iris answers "Invalid source/destination domain id" for a forwarded
+  // route from Sui (checked 10 Oct 2026), so no payment from it could be planned. The packages are Circle's published testnet
+  // ones; pass this through opts.sources once the sandbox quotes the route.
+  const SUI_TESTNET_SOURCE = { key: "sui-testnet", name: "Sui Testnet", vm: "move", chainId: SUI_LIFI_CHAIN_ID, domain: 8, fast: false, estStandardSec: 15,
+    usdc: "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
+    rpcs: ["https://graphql.testnet.sui.io/graphql"],
+    explorer: "https://suiscan.xyz/testnet", native: { name: "Sui", symbol: "SUI", decimals: 9 } };
+
+  // Sui's canonical pay-with tokens, by exact coin type. LI.FI lists several tokens under one symbol on Sui (three USDC,
+  // three USDT, two WBTC: Wormhole and other bridged copies), so a symbol match would hand a user the wrong coin. Each entry
+  // was checked against the chain's own coin metadata on 9 Oct 2026, and is offered only when LI.FI lists that exact type.
+  const MOVE_KNOWN = [
+    { address: "0x375f70cf2ae4c00bf37117d0c85a2c71545e6ee05c4a5c7d282cd66a4504b068::usdt::USDT", symbol: "USDT", name: "Tether", decimals: 6 },
+    { address: "0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL", symbol: "WAL", name: "WAL Token", decimals: 9 },
+    { address: "0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP", symbol: "DEEP", name: "DeepBook Token", decimals: 6 },
+    { address: "0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29::eth::ETH", symbol: "ETH", name: "ETH by Sui Bridge", decimals: 8 },
+    { address: "0x0041f9f9344cac094454cd574e333c4fdb132d7bcc9379bcd4aab485b2a63942::wbtc::WBTC", symbol: "WBTC", name: "Wrapped BTC", decimals: 8 },
+    { address: "0xbde4ba4c2e274a60ce15c1cfff9e5c42e41654ac8b6d906a57efa4bd3c29f47d::hasui::HASUI", symbol: "haSUI", name: "haSUI", decimals: 9 },
+    { address: "0x549e8b69270defbfafd4f94e17ec44cdbdd99820b33bda2278dea3b9a32d3f55::cert::CERT", symbol: "vSUI", name: "Volo Staked SUI", decimals: 9 },
+    { address: "0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS", symbol: "CETUS", name: "Cetus Token", decimals: 9 },
+    { address: "0xa99b8952d4f7d947ea77fe0ecdcc9e5fc0bcab2841d6e2a5aa00c3044e5544b5::navx::NAVX", symbol: "NAVX", name: "NAVX Token", decimals: 9 },
+    { address: "0xe1b45a0e641b9955a20aa0ad1c1f4ad86aad8afb07296d4085e349a50e90bdca::blue::BLUE", symbol: "BLUE", name: "Bluefin", decimals: 9 },
+    { address: "0x35169bc93e1fddfcf3a82a9eae726d349689ed59e4b065369af8789fe59f8608::mmt::MMT", symbol: "MMT", name: "MMT", decimals: 9 },
+    { address: "0x7016aae72cfc67f2fadf55769c0a7dd54291a583b63051a5ed71081cce836ac6::sca::SCA", symbol: "SCA", name: "Scallop", decimals: 9 },
+    { address: "0xb45fcfcc2cc07ce0702cc2d229621e046c906ef14d9b25e8e4d25f6e8763fef7::send::SEND", symbol: "SEND", name: "SEND", decimals: 6 },
+    { address: "0xce7ff77a83ea0cb6fd39bd8748e2ec89a3f41e8efdc3f4eb123e0ca37b184db2::buck::BUCK", symbol: "BUCK", name: "Bucket USD", decimals: 9 },
+    { address: "0x2053d08c1e2bd02791056171aab0fd12bd7cd7efad2ab8f6b9c8902f14df2ff2::ausd::AUSD", symbol: "AUSD", name: "AUSD", decimals: 6 },
+  ];
+
   const ABI = {
     erc20: [
       "function approve(address spender, uint256 value) returns (bool)",
@@ -258,13 +333,16 @@
   const sameAddr = (a, b) => String(a || "").toLowerCase() === String(b || "").toLowerCase();
   const isNative = (a) => sameAddr(a, NATIVE);
   const isSvm = (cfg) => !!(cfg && cfg.vm === "svm");
+  const isMove = (cfg) => !!(cfg && cfg.vm === "move");   // Sui
+  /** a chain with a wallet of its own (Solana, Sui), not the page's EVM one */
+  const isAlt = (cfg) => isSvm(cfg) || isMove(cfg);
   // a Solana address: base58, 32 bytes, so 32-44 characters of the base58 alphabet
   const B58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
   const isSolAddress = (a) => B58_RE.test(String(a || ""));
   /** the source chain's own "native coin" address, as LI.FI spells it */
-  const nativeOf = (cfg) => (isSvm(cfg) ? SOL_NATIVE : NATIVE);
+  const nativeOf = (cfg) => (isSvm(cfg) ? SOL_NATIVE : isMove(cfg) ? SUI_NATIVE : NATIVE);
   /** token equality on a chain: EVM addresses are case-insensitive, base58 is not */
-  const sameTok = (cfg, a, b) => (isSvm(cfg) ? String(a || "") === String(b || "") : sameAddr(a, b));
+  const sameTok = (cfg, a, b) => (isSvm(cfg) ? String(a || "") === String(b || "") : isMove(cfg) ? normMoveType(a) === normMoveType(b) : sameAddr(a, b));
 
   const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
   /** bytes -> base58 (a Solana signature or pubkey). Leading zero bytes become leading '1's. */
@@ -287,6 +365,106 @@
     let bin = "";
     for (const x of bytes) bin += String.fromCharCode(x);
     return btoa(bin);
+  }
+
+  // ---- Sui: addresses, coin types, and the transaction JSON a wallet is handed
+
+  const SUI_ADDR_RE = /^0x[0-9a-fA-F]{64}$/;
+  const MOVE_TYPE_RE = /^0x[0-9a-fA-F]+::[A-Za-z0-9_]+::[A-Za-z0-9_]+$/;
+  /** a Sui address: 0x and 32 bytes of hex */
+  const isSuiAddress = (a) => SUI_ADDR_RE.test(String(a || ""));
+  /** any hex id -> 0x + 64 lower-case hex ("0x2" -> "0x000...02"), the form wallets and Sui's own tools print */
+  const normSuiAddress = (a) => "0x" + String(a || "").replace(/^0x/i, "").toLowerCase().padStart(64, "0");
+  /** "0x2::sui::SUI" -> "0x000...02::sui::SUI": coin types compare equal once the package address is padded and lower-cased */
+  const normMoveType = (t) => String(t || "").replace(/^(0x)?([0-9a-fA-F]+)::/, (m, p, h) => "0x" + h.toLowerCase().padStart(64, "0") + "::");
+
+  function hexToBytes(hex) {
+    const h = String(hex || "").replace(/^0x/i, "");
+    if (h.length % 2 || /[^0-9a-fA-F]/.test(h)) throw new Error("not hex: " + String(hex).slice(0, 20));
+    const out = new Uint8Array(h.length / 2);
+    for (let i = 0; i < out.length; i++) out[i] = parseInt(h.slice(2 * i, 2 * i + 2), 16);
+    return out;
+  }
+  /** little-endian unsigned integer of `size` bytes: BCS u32 / u64 / u256 */
+  function leBytes(n, size) {
+    let v = BigInt(n);
+    if (v < 0n) throw new Error("negative number");
+    const out = new Uint8Array(size);
+    for (let i = 0; i < size; i++) { out[i] = Number(v & 255n); v >>= 8n; }
+    if (v !== 0n) throw new Error("number does not fit in " + size + " bytes");
+    return out;
+  }
+  /** BCS vector<u8>: the length as ULEB128, then the bytes */
+  function bcsVecU8(bytes) {
+    const len = [];
+    let n = bytes.length;
+    do { let b = n & 127; n >>>= 7; if (n) b |= 128; len.push(b); } while (n);
+    return Uint8Array.from([...len, ...bytes]);
+  }
+
+  /**
+   * The JSON a Sui wallet is handed (what @mysten/sui's transaction.toJSON() prints; the wallet resolves
+   * object versions, gas and how each shared object is used). One programmable transaction:
+   *   1. get exactly `amount` USDC into one Coin: the owner's coin objects first (every wallet reads those),
+   *      topped up from the address balance (SIP-58, redeem_funds) only for what the coins do not cover
+   *   2. deposit_for_burn (the Forwarding Service hook rides in hookData)  3. handler::burn  4. complete_burn
+   * Pure, so it can be tested against the SDK's own output.
+   *   o = { cctp, usdcType, sender, amount, coins: [{ id, balance }], addressBalance, destinationDomain,
+   *         mintRecipient (0x + 64 hex), maxFee, minFinalityThreshold, hookData (0x hex) }
+   */
+  function buildSuiBurnTx(o) {
+    const cc = o.cctp, usdc = o.usdcType, amount = BigInt(o.amount);
+    if (amount <= 0n) throw new Error("amount must be positive");
+    const mint = hexToBytes(o.mintRecipient);
+    if (mint.length !== 32) throw new Error("mintRecipient must be 32 bytes");
+    const hook = hexToBytes(o.hookData || "0x");
+    const inputs = [], commands = [], seen = new Map();
+    const pure = (bytes) => { inputs.push({ Pure: { bytes: bytesToB64(bytes) } }); return { Input: inputs.length - 1 }; };
+    // an object (a shared state object or one of the owner's coins) is one input however often it is used
+    const obj = (id) => {
+      const k = normSuiAddress(id);
+      if (!seen.has(k)) { inputs.push({ UnresolvedObject: { objectId: k } }); seen.set(k, inputs.length - 1); }
+      return { Input: seen.get(k) };
+    };
+    const withdraw = (n) => {
+      inputs.push({ FundsWithdrawal: { reservation: { MaxAmountU64: String(n), $kind: "MaxAmountU64" }, typeArg: { Balance: usdc, $kind: "Balance" }, withdrawFrom: { Sender: true, $kind: "Sender" } } });
+      return { Input: inputs.length - 1 };
+    };
+    const push = (c) => { commands.push(c); return commands.length - 1; };
+    const res = (i, j = 0) => ({ NestedResult: [i, j] });
+    const call = (pkg, module, fn, typeArguments, args) => push({ MoveCall: { package: normSuiAddress(pkg), module, function: fn, typeArguments, arguments: args } });
+
+    // 1. the Coin<USDC> to burn
+    const owned = (o.coins || []).map((c) => ({ id: normSuiAddress(c.id), balance: BigInt(c.balance) })).filter((c) => c.balance > 0n)
+      .sort((a, b) => (a.balance === b.balance ? 0 : a.balance < b.balance ? 1 : -1));
+    const addrBal = BigInt(o.addressBalance || 0);
+    const picked = [];
+    let have = 0n;
+    for (const c of owned) { if (have >= amount || picked.length >= SUI_MAX_COINS) break; picked.push(c); have += c.balance; }
+    const topUp = amount > have ? amount - have : 0n;
+    if (topUp > addrBal) {
+      if (owned.length > picked.length) throw new Error("This wallet holds its USDC in " + owned.length + " small coins. Merge them in your Sui wallet first.");
+      throw new Error("Not enough USDC on Sui: need " + formatUsdc(amount) + ", this wallet has " + formatUsdc(have + addrBal) + ".");
+    }
+    let coin;
+    if (picked.length) {
+      const primary = obj(picked[0].id);
+      const rest = picked.slice(1).map((c) => obj(c.id));
+      const sources = topUp > 0n ? [...rest, res(call("0x2", "coin", "redeem_funds", [usdc], [withdraw(topUp)]))] : rest;
+      if (sources.length) push({ MergeCoins: { destination: primary, sources } });
+      coin = have + topUp === amount ? primary : res(push({ SplitCoins: { coin: primary, amounts: [pure(leBytes(amount, 8))] } }));
+    } else {
+      coin = res(call("0x2", "coin", "redeem_funds", [usdc], [withdraw(amount)]));
+    }
+
+    // 2-4. burn, with Arc's mint forwarded by Circle
+    const dfb = call(cc.tokenMessengerPkg, "deposit_for_burn", "deposit_for_burn", [usdc], [
+      coin, pure(leBytes(o.destinationDomain, 4)), pure(mint), pure(new Uint8Array(32)), pure(leBytes(o.maxFee, 32)),
+      pure(leBytes(o.minFinalityThreshold, 4)), pure(bcsVecU8(hook)), obj(cc.tokenMessenger)]);
+    const brn = call(cc.handlerPkg, "handler", "burn", [], [obj(cc.handler), res(dfb, 0), res(dfb, 1), obj(SUI_DENY_LIST), obj(cc.treasury)]);
+    call(cc.tokenMessengerPkg, "deposit_for_burn", "complete_burn", [usdc, normSuiAddress(cc.handlerPkg) + "::handler::Auth"],
+      [res(brn, 0), obj(cc.tokenMessenger), obj(cc.messageTransmitter)]);
+    return JSON.stringify({ version: 2, sender: normSuiAddress(o.sender), expiration: null, gasData: { budget: null, price: null, owner: null, payment: null }, inputs, commands });
   }
 
   /** EVM address -> bytes32 mintRecipient. Strict: a malformed recipient is not a failed
@@ -365,6 +543,12 @@
       if (/could not find token/i.test(r)) return "LI.FI does not list that token on " + src.name + ". Pay with USDC or SOL.";
       return "No LI.FI route from " + src.name + " to Arc: " + r;
     }
+    // Sui: LI.FI only swaps into USDC there; the bridge leg is CCTP, so paying in USDC needs no LI.FI at all
+    if (isMove(src)) {
+      if (/no available quotes/i.test(r)) return "LI.FI found no swap into USDC on " + src.name + " for that amount within a 10% price impact. Try a smaller amount, or pay with USDC.";
+      if (/could not find token/i.test(r)) return "LI.FI does not list that token on " + src.name + ". Pay with USDC or SUI.";
+      return "No LI.FI swap into USDC on " + src.name + ": " + r;
+    }
     if (/no available quotes/i.test(r)) {
       return network === "testnet"
         ? "LI.FI has no swap for that amount on " + src.name + ". Testnet pools are shallow: try a smaller amount (0.001–0.002 " + src.native.symbol + "), or pay with USDC."
@@ -432,6 +616,11 @@
     const native = list.find((t) => sameTok(chain, t.address, nat)) || { address: nat, symbol: chain.native.symbol, name: chain.native.name, decimals: chain.native.decimals };
     const usdc = { address: chain.usdc, symbol: "USDC", name: "USD Coin", decimals: USDC_DECIMALS };
     const out = [native, usdc];
+    // Sui: only the pinned coin types LI.FI lists (a symbol match could land on a bridged copy)
+    if (isMove(chain)) {
+      for (const k of MOVE_KNOWN) { const t = list.find((x) => sameTok(chain, x.address, k.address)); if (t) out.push({ address: k.address, symbol: k.symbol, name: k.name, decimals: Number(t.decimals ?? k.decimals) }); }
+      return out;
+    }
     for (const sym of (isSvm(chain) ? PAY_SYMBOLS_SVM : PAY_SYMBOLS)) {
       const t = list.find((x) => x.symbol === sym && !sameTok(chain, x.address, nat) && !sameTok(chain, x.address, chain.usdc));
       if (t) out.push({ address: t.address, symbol: t.symbol, name: t.name, decimals: Number(t.decimals) });
@@ -444,6 +633,12 @@
   /** LI.FI transactionRequest for Solana: only `data`, a base64 serialized transaction. */
   function toSvmTx(t) {
     if (!t || !t.data) throw new Error("LI.FI quote has no Solana transaction");
+    return { data: String(t.data) };
+  }
+
+  /** LI.FI transactionRequest for Sui: only `data`, the base64 BCS of the whole transaction (gas payment included). */
+  function toMoveTx(t) {
+    if (!t || !t.data) throw new Error("LI.FI quote has no Sui transaction");
     return { data: String(t.data) };
   }
 
@@ -493,6 +688,72 @@
     finally { clearTimeout(t); }
   }
 
+  // ------------------------------------------------------------------ Sui reads (GraphQL)
+
+  const CURSOR_RE = new RegExp("^[A-Za-z0-9+/=_-]+$");
+
+  /** POST one GraphQL query to the first endpoint that answers with data; null when none does. */
+  async function suiGql(urls, query, timeoutMs = 10000) {
+    for (const u of urls || []) {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), timeoutMs);
+      try {
+        const res = await fetch(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query }), signal: ctl.signal });
+        if (!res.ok) continue;
+        const j = await res.json();
+        if (j && j.data && !j.errors) return j.data;
+      } catch { /* on to the next endpoint */ }
+      finally { clearTimeout(t); }
+    }
+    return null;
+  }
+
+  /** { total, coin, address } in minor units: coin objects, the SIP-58 address balance, and both together. null when the read failed. */
+  async function suiBalance(urls, coinType, owner) {
+    if (!isSuiAddress(owner) || !MOVE_TYPE_RE.test(String(coinType || ""))) return null;
+    const d = await suiGql(urls, '{ address(address: "' + owner + '") { balance(coinType: "' + coinType + '") { totalBalance coinBalance addressBalance } } }');
+    if (!d || !d.address) return null;
+    const b = d.address.balance;
+    if (!b) return { total: 0n, coin: 0n, address: 0n };
+    try { return { total: BigInt(b.totalBalance), coin: BigInt(b.coinBalance), address: BigInt(b.addressBalance) }; } catch { return null; }
+  }
+
+  /** The owner's coin objects of one coin type, [{ id, balance }]. The address balance is not an object: suiBalance reads it. null when the read failed. */
+  async function suiCoins(urls, coinType, owner) {
+    if (!isSuiAddress(owner) || !MOVE_TYPE_RE.test(String(coinType || ""))) return null;
+    const out = [];
+    let after = null;
+    for (let page = 0; page < 6; page++) {
+      const d = await suiGql(urls, '{ address(address: "' + owner + '") { objects(first: 50' + (after ? ', after: "' + after + '"' : "") +
+        ', filter: { type: "0x2::coin::Coin<' + coinType + '>" }) { pageInfo { hasNextPage endCursor } nodes { address contents { json } } } } }');
+      const o = d && d.address && d.address.objects;
+      if (!o) return null;
+      for (const n of o.nodes || []) { try { out.push({ id: n.address, balance: BigInt(n.contents.json.balance) }); } catch { /* not a coin */ } }
+      if (!o.pageInfo || !o.pageInfo.hasNextPage || !CURSOR_RE.test(String(o.pageInfo.endCursor || ""))) break;
+      after = o.pageInfo.endCursor;
+    }
+    return out;
+  }
+
+  /**
+   * Is Circle's token messenger on Sui open? Its state object carries a `paused` flag; a burn into a paused one only aborts
+   * and costs the sender the network fee. true / false, or null when the state could not be read (then nothing is blocked).
+   */
+  async function suiCctpOpen(urls, cc) {
+    const d = await suiGql(urls, '{ object(address: "' + cc.tokenMessenger + '") { asMoveObject { contents { json } } } }');
+    const j = d && d.object && d.object.asMoveObject && d.object.asMoveObject.contents && d.object.asMoveObject.contents.json;
+    if (!j || typeof j.paused !== "boolean") return null;
+    return !j.paused;
+  }
+
+  /** "ok" | "failed" | "pending" for a Sui transaction digest ("pending": not indexed yet, or the read failed). */
+  async function suiTxStatus(urls, digest) {
+    if (!B58_RE.test(String(digest || ""))) return "pending";
+    const d = await suiGql(urls, '{ transaction(digest: "' + digest + '") { effects { status } } }');
+    const s = d && d.transaction && d.transaction.effects && d.transaction.effects.status;
+    return s === "SUCCESS" ? "ok" : s === "FAILURE" ? "failed" : "pending";
+  }
+
   // ------------------------------------------------------------------ storage
 
   function makeStorage(custom) {
@@ -535,12 +796,15 @@
    *                 LI.FI deducts it from the swapped amount and forwards it to the integrator's
    *                 fee wallet at execution; the quote's feeCosts already include it. If the
    *                 integrator is not set up for fees at portal.li.fi, LI.FI refuses the quote:
-   *                 the engine then retries without the fee, keeps it off for the session and
-   *                 calls onLifiFeeRefused(message) so the host can fix the portal side.
+   *                 the engine then retries without the fee, keeps it off for that source chain for the
+   *                 session (the portal sets fee wallets per chain) and calls onLifiFeeRefused(message)
+   *                 so the host can fix the portal side.
    *   slippage      swap slippage as a fraction (default 0.005 = 0.5%)
    *   solanaWallet  a Wallet Standard wallet to use for Solana, or () => wallet. Optional: by
    *                 default the wallets installed in the browser are discovered (Phantom,
    *                 Solflare, Backpack… all announce themselves through Wallet Standard).
+   *   suiWallet     the same for Sui (Slush, Phantom, Suiet... announce themselves the same way).
+   *   suiPollMs     how often to ask Sui about a transaction or balance that is not indexed yet (default 1500).
    *
    * Solana is one of the sources. It has no CCTP leg here: every payment from it, USDC
    * included, goes as one LI.FI route (whatever `router` says), signed by the Solana wallet
@@ -572,10 +836,10 @@
       // Paid straight to the fee wallet registered for `lifiIntegrator` at portal.li.fi.
       this.lifiFee = Number(opts.lifiFee || 0);
       if (!(this.lifiFee >= 0 && this.lifiFee < 1)) throw new Error("lifiFee must be a fraction in [0, 1)");
-      this._lifiFeeRefused = false;             // set when LI.FI refuses the fee for this integrator
+      this._lifiFeeRefused = new Set();         // chain ids on which LI.FI refused the fee for this integrator (fee wallets are set per chain at portal.li.fi)
       this.onLifiFeeRefused = opts.onLifiFeeRefused || null;
       /** true while quotes actually carry the integrator fee */
-      Object.defineProperty(this, "lifiFeeActive", { get: () => this.lifiFee > 0 && !this._lifiFeeRefused });
+      Object.defineProperty(this, "lifiFeeActive", { get: () => this.lifiFee > 0 && this._lifiFeeRefused.size === 0 });
       this.slippage = opts.slippage ?? 0.005;
       this._lifiBlockedUntil = 0;   // set when LI.FI answers 429; no calls until then
       this._quoteCache = new Map();  // key -> { at, value }
@@ -585,6 +849,10 @@
       this.solanaWalletOpt = opts.solanaWallet || null;
       this._sol = null;            // { wallet, account } once a Solana wallet is connected
       this._solWallets = null;     // discovered Wallet Standard wallets (cached per session)
+      this.suiWalletOpt = opts.suiWallet || null;
+      this.suiPollMs = opts.suiPollMs ?? 1500;   // how often Sui's index is asked about a transaction or a balance that has not shown up yet
+      this._sui = null;            // { wallet, account } once a Sui wallet is connected
+      this._suiWallets = null;     // discovered Wallet Standard wallets for Sui (cached per session)
 
       const all = SOURCES[this.network];
       if (Array.isArray(opts.sources) && opts.sources.length) {
@@ -604,6 +872,9 @@
     explorerAddress(cfg, addr) { return cfg.explorer ? cfg.explorer.replace(/\/$/, "") + "/address/" + addr : ""; }
 
     // ---- LI.FI
+
+    /** true while quotes from this source chain actually carry the integrator fee */
+    lifiFeeActiveFor(chainId) { return this.lifiFee > 0 && !this._lifiFeeRefused.has(String(chainId)); }
 
     _lifiHeaders() { return this.lifiApiKey ? { "x-lifi-api-key": this.lifiApiKey } : {}; }
 
@@ -629,8 +900,9 @@
      */
     async lifiQuote({ fromChain, toChain, fromToken, toToken, fromAmount, fromAddress, toAddress, order }) {
       if (Date.now() < this._lifiBlockedUntil) return { available: false, reason: "Rate limit exceeded (paused)" };
-      const svm = Number(fromChain) === SOL_LIFI_CHAIN_ID;
+      const svm = Number(fromChain) === SOL_LIFI_CHAIN_ID, move = Number(fromChain) === SUI_LIFI_CHAIN_ID;
       const from = svm ? (isSolAddress(fromAddress) ? fromAddress : SOL_QUOTE_ADDR)
+        : move ? (isSuiAddress(fromAddress) ? normSuiAddress(fromAddress) : SUI_QUOTE_ADDR)
         : (isAddress(fromAddress) ? fromAddress.toLowerCase() : "0x000000000000000000000000000000000000dead");
       const key = [fromChain, toChain, fromToken, toToken, String(fromAmount), from, toAddress || "", order || "", this.lifiIntegrator, this.lifiFee].join("|").toLowerCase();
       const hit = this._quoteCache.get(key);
@@ -640,7 +912,7 @@
         fromAddress: from, fromAmount: String(fromAmount), slippage: String(this.slippage),
         integrator: this.lifiIntegrator,
       });
-      if (this.lifiFee > 0 && !this._lifiFeeRefused) q.set("fee", String(this.lifiFee));
+      if (this.lifiFeeActiveFor(fromChain)) q.set("fee", String(this.lifiFee));
       if (toAddress && isAddress(toAddress)) q.set("toAddress", toAddress.toLowerCase());
       // a route across VMs has no sender-shaped default for the receiving side: quote for a
       // burn address when the host has not named a recipient yet, and never send that quote
@@ -649,9 +921,9 @@
       let j = await fetchJson(`${this.lifiApi}/quote?${q}`, 15000, this._lifiHeaders());
       // An integrator that is not set up for fees at portal.li.fi makes LI.FI refuse the whole
       // quote, not just the fee. The user's swap must not die for that: retry without the fee,
-      // remember the refusal for this session and tell the host (onLifiFeeRefused) so it gets fixed.
+      // remember the refusal for this chain and session and tell the host (onLifiFeeRefused) so it gets fixed.
       if (j && q.has("fee") && /not configured for collecting fees|fee wallet/i.test(String(j.error || j.message || ""))) {
-        this._lifiFeeRefused = true;
+        this._lifiFeeRefused.add(String(fromChain));
         try { this.onLifiFeeRefused && this.onLifiFeeRefused(String(j.error || j.message)); } catch {}
         q.delete("fee");
         j = await fetchJson(`${this.lifiApi}/quote?${q}`, 15000, this._lifiHeaders());
@@ -667,7 +939,7 @@
         value = {
           available: true, quote: j, tool: j.tool, type: j.type,
           toAmount: BigInt(e.toAmount), toAmountMin: BigInt(e.toAmountMin || e.toAmount),
-          approvalAddress: e.approvalAddress || null, tx: svm ? toSvmTx(j.transactionRequest) : toTxRequest(j.transactionRequest),
+          approvalAddress: e.approvalAddress || null, tx: svm ? toSvmTx(j.transactionRequest) : move ? toMoveTx(j.transactionRequest) : toTxRequest(j.transactionRequest),
           estSeconds: Number(e.executionDuration || 0),
           gasUsd: (e.gasCosts || []).reduce((s, g) => s + Number(g.amountUSD || 0), 0),
           feeUsd: (e.feeCosts || []).reduce((s, f) => s + Number(f.amountUSD || 0), 0),
@@ -682,7 +954,7 @@
     /** Same-chain swap quote into USDC on `source`. */
     async quoteSwap(source, fromToken, fromAmount, fromAddress) {
       const src = typeof source === "object" ? source : this.source(source);
-      if (sameAddr(fromToken, src.usdc)) return { available: true, identity: true, toAmount: BigInt(fromAmount), toAmountMin: BigInt(fromAmount) };
+      if (sameTok(src, fromToken, src.usdc)) return { available: true, identity: true, toAmount: BigInt(fromAmount), toAmountMin: BigInt(fromAmount) };
       return this.lifiQuote({ fromChain: src.chainId, toChain: src.chainId, fromToken, toToken: src.usdc, fromAmount, fromAddress });
     }
 
@@ -711,7 +983,7 @@
       const q = computeFees(fees, amount, src.fast ? speed : "standard", this.feeHeadroom);
       if (!q) return { available: false, reason: "Circle is not quoting a forwarded route from " + src.name + " to Arc right now." };
       return { available: true, router: "cctp", source: src, amount: BigInt(amount), ...q,
-        estSeconds: q.minFinalityThreshold === FINALITY.fast ? 20 : (src.domain === 0 ? 900 : 120) };
+        estSeconds: q.minFinalityThreshold === FINALITY.fast ? 20 : (src.estStandardSec || (src.domain === 0 ? 900 : 120)) };
     }
 
     /**
@@ -742,7 +1014,7 @@
       let cctpPlan = null, cctpReason = null;
       {
         let swap = null, usdcIn = amt;
-        if (!sameAddr(token, src.usdc)) {
+        if (!sameTok(src, token, src.usdc)) {
           swap = await this.quoteSwap(src, token, amt, fromAddress);
           if (!swap.available) cctpReason = explainLifi(swap.reason, src, this.network);
           else usdcIn = swap.toAmountMin; // plan on the guaranteed minimum; the real amount is measured after the swap
@@ -760,7 +1032,8 @@
           }
         }
       }
-      if (this.router === "cctp") return cctpPlan || { available: false, reason: cctpReason };
+      // Sui has no LI.FI route into Arc: the house path is the only one
+      if (this.router === "cctp" || isMove(src)) return cctpPlan || { available: false, reason: cctpReason };
 
       // A LI.FI route straight into Arc is taken only when it is forced, when CCTP cannot serve
       // this payment at all, or when it actually beats CCTP on what lands AND on time. On Arc's
@@ -786,11 +1059,13 @@
     async usdcBalance(source, owner) {
       const src = typeof source === "object" ? source : this.source(source);
       if (isSvm(src)) return this._svmBalance(src, src.usdc, owner);
+      if (isMove(src)) return this._moveBalance(src, src.usdc, owner);
       return erc20Balance(src.rpcs, src.usdc, owner);
     }
     async tokenBalance(source, token, owner) {
       const src = typeof source === "object" ? source : this.source(source);
       if (isSvm(src)) return this._svmBalance(src, token, owner);
+      if (isMove(src)) return this._moveBalance(src, token, owner);
       if (isNative(token)) return this.nativeBalance(src, owner);
       return erc20Balance(src.rpcs, token, owner);
     }
@@ -808,6 +1083,11 @@
         try { sum += BigInt(a.account.data.parsed.info.tokenAmount.amount); } catch {}
       }
       return sum;
+    }
+    /** Sui: one coin type's total for the owner, coin objects plus the SIP-58 address balance, in minor units; null when the read failed. */
+    async _moveBalance(src, coinType, owner) {
+      const b = await suiBalance(src.rpcs, coinType, owner);
+      return b ? b.total : null;
     }
     async arcUsdcBalance(owner) {
       if (!this.arc.rpcs.length) return null;
@@ -830,6 +1110,7 @@
     }
     async nativeBalance(source, owner) {
       if (isSvm(source)) return this._svmBalance(source, SOL_NATIVE, owner);
+      if (isMove(source)) return this._moveBalance(source, SUI_NATIVE, owner);
       const r = await rpcAny(source.rpcs, "eth_getBalance", [owner, "latest"]);
       return r ? BigInt(r) : null;
     }
@@ -917,6 +1198,96 @@
           if (s.confirmationStatus === "confirmed" || s.confirmationStatus === "finalized") return "ok";
         }
         await sleep(2000);
+      }
+      return "timeout";
+    }
+
+    // ---- Sui wallet (Wallet Standard)
+
+    /**
+     * The Sui wallets in this browser (Slush, Phantom, Suiet, Backpack... announce themselves through
+     * Wallet Standard, the same way the Solana ones do). Discovered once per session.
+     */
+    async suiWallets() {
+      if (this.suiWalletOpt) {
+        const w = typeof this.suiWalletOpt === "function" ? await this.suiWalletOpt() : this.suiWalletOpt;
+        return w ? [w] : [];
+      }
+      if (this._suiWallets) return this._suiWallets;
+      if (typeof window === "undefined") return [];
+      const found = new Map();
+      const take = (w) => {
+        try {
+          if (w && w.features && w.features["standard:connect"] && Array.isArray(w.chains) && w.chains.some((c) => String(c).startsWith("sui:"))
+            && (w.features["sui:signAndExecuteTransaction"] || w.features["sui:signTransaction"])) found.set(w.name, w);
+        } catch {}
+      };
+      const api = { register: (...ws) => { ws.forEach(take); return () => {}; } };
+      window.addEventListener("wallet-standard:register-wallet", (e) => { try { e.detail(api); } catch {} });
+      try { window.dispatchEvent(new CustomEvent("wallet-standard:app-ready", { detail: api })); } catch {}
+      await sleep(150); // registrations are synchronous, the wait is for wallets still injecting
+      this._suiWallets = [...found.values()];
+      return this._suiWallets;
+    }
+
+    /** Connect a Sui wallet (the first discovered when none is named). silent: no prompt. Resolves to the address. */
+    async connectSui(wallet, { silent = false } = {}) {
+      const w = wallet || (await this.suiWallets())[0];
+      if (!w) throw new Error("No Sui wallet in this browser. Install Slush, Phantom or Suiet.");
+      const res = await w.features["standard:connect"].connect(silent ? { silent: true } : undefined);
+      const chain = SUI_CCTP[this.network].chain;
+      const accounts = (res && res.accounts) || w.accounts || [];
+      const account = accounts.find((a) => (a.chains || []).includes(chain)) || accounts.find((a) => (a.chains || []).some((c) => String(c).startsWith("sui:")));
+      if (!account) { if (silent) return null; throw new Error("The wallet connected without a Sui account."); }
+      this._sui = { wallet: w, account };
+      return normSuiAddress(account.address);
+    }
+    suiAccount() { return this._sui ? normSuiAddress(this._sui.account.address) : null; }
+    suiWalletName() { return this._sui ? this._sui.wallet.name : null; }
+    disconnectSui() {
+      const s = this._sui; this._sui = null;
+      try { s && s.wallet.features["standard:disconnect"] && s.wallet.features["standard:disconnect"].disconnect(); } catch {}
+    }
+
+    /**
+     * Sign a transaction in the Sui wallet and get it on chain; resolves to its digest. `payload` is what the wallet
+     * receives from transaction.toJSON(): the JSON this kit built, or the base64 bytes LI.FI returned (the wallet
+     * reads either with its own SDK).
+     */
+    async _suiSignAndExecute(payload, src) {
+      if (!this._sui) throw new Error("Connect a Sui wallet first.");
+      const { wallet, account } = this._sui;
+      const chain = SUI_CCTP[this.network].chain;
+      const transaction = { toJSON: async () => payload };
+      const both = wallet.features["sui:signAndExecuteTransaction"];
+      if (both) {
+        const out = await both.signAndExecuteTransaction({ transaction, account, chain });
+        if (!out || !out.digest) throw new Error("the wallet returned no transaction digest");
+        return out.digest;
+      }
+      const signOnly = wallet.features["sui:signTransaction"];
+      if (signOnly) {
+        // a wallet that signs but does not submit: the GraphQL endpoint takes the signed transaction
+        const out = await signOnly.signTransaction({ transaction, account, chain });
+        if (!out || !out.bytes || !out.signature) throw new Error("the wallet returned no signature");
+        const b64 = new RegExp("^[A-Za-z0-9+/=]+$");
+        if (!b64.test(out.bytes) || !b64.test(out.signature)) throw new Error("the wallet returned a malformed signature");
+        const q = 'mutation { executeTransaction(transactionDataBcs: "' + out.bytes + '", signatures: ["' + out.signature + '"]) { effects { digest status } } }';
+        const d = await suiGql(src.rpcs, q, 30_000);
+        const e = d && d.executeTransaction && d.executeTransaction.effects;
+        if (!e || !e.digest) throw new Error("The Sui endpoint did not accept the transaction (it may have expired; try again).");
+        return e.digest;
+      }
+      throw new Error(wallet.name + " offers no Wallet Standard signing for Sui.");
+    }
+
+    /** "ok" | "failed" | "timeout" for a Sui transaction digest, polling GraphQL until it is indexed. */
+    async _suiConfirm(src, digest, timeoutMs = 60_000) {
+      const until = Date.now() + timeoutMs;
+      while (Date.now() < until) {
+        const s = await suiTxStatus(src.rpcs, digest);
+        if (s !== "pending") return s;
+        await sleep(this.suiPollMs);
       }
       return "timeout";
     }
@@ -1031,6 +1402,7 @@
       const amt = BigInt(amount);
       const mintRecipient = toBytes32Address(recipient);
       if (isSvm(src)) return this._svmBridge(src, token, amt, recipient, dest, onStep);
+      if (isMove(src)) return this._suiBridge(src, token, amt, recipient, mintRecipient, dest, onStep);
 
       onStep({ step: "switching", chain: src });
       await this.ensureChain(src);
@@ -1129,6 +1501,91 @@
       return tr;
     }
 
+    /**
+     * Sui: an optional LI.FI swap into USDC on Sui, then Circle CCTP V2 with the Forwarding Service, both signed in
+     * the Sui wallet. The transfer record is a CCTP one (router "cctp", source domain 8, burnTx = the Sui digest),
+     * so track() follows it unchanged.
+     * onStep: planning, swapping, swap_sent, swapped, burning, burn_sent, burned.
+     */
+    async _suiBridge(src, token, amt, recipient, mintRecipient, dest, onStep) {
+      const owner = this.suiAccount();
+      if (!owner) throw new Error("Connect a Sui wallet first.");
+
+      onStep({ step: "planning" });
+      this._quoteCache.clear(); // never sign a 45 s old swap route
+      const plan = await this.plan({ source: src, payToken: token, fromAmount: amt, speed: "standard", fromAddress: owner, recipient });
+      if (!plan.available) throw new Error(plan.reason);
+
+      const bal = await this.tokenBalance(src, token, owner);
+      if (bal != null && bal < amt) throw new Error("balance on " + src.name + " is too low for that amount");
+      const gas = await this.nativeBalance(src, owner);
+      if (gas != null && gas < SUI_MIN_GAS) throw new Error("This Sui wallet needs about 0.01 SUI for the network fee.");
+
+      const tr = this._save({
+        id: "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), network: this.network,
+        router: "cctp", sourceKey: src.key, sourceChainId: src.chainId, sourceDomain: src.domain,
+        payToken: token, payAmount: amt.toString(), recipient: this.ethers.getAddress(recipient), sender: owner,
+        speed: "standard", dest: dest ? { status: "pending" } : undefined, status: "planned", startedAt: Date.now(),
+      });
+
+      // ---- leg 1: swap into USDC on Sui (LI.FI), signed from the bytes it returned
+      let usdcAmount = amt;
+      if (plan.swap && !plan.swap.identity) {
+        const before = await this.usdcBalance(src, owner);
+        onStep({ step: "swapping", tool: plan.swap.tool, expected: plan.swap.toAmount });
+        // LI.FI hands the whole transaction back as base64 bytes, and a wallet reads what transaction.toJSON() gives it with its own SDK, which
+        // takes bytes as well as JSON. A wallet that does not: say what to do instead of showing its parse error. A refusal passes through.
+        let digest;
+        try { digest = await this._suiSignAndExecute(plan.swap.tx.data, src); }
+        catch (e) {
+          const m = String((e && e.message) || e);
+          if (/reject|denied|declin|cancel/i.test(m)) throw e;
+          throw new Error("Your Sui wallet could not take the swap (" + m.slice(0, 100) + "). Pay in USDC instead: swap to USDC in your wallet first, then bridge it here.");
+        }
+        tr.status = "swapping"; tr.swapTx = digest; this._save(tr);
+        onStep({ step: "swap_sent", hash: digest, url: this.explorerTx(src, digest), transfer: tr });
+        const conf = await this._suiConfirm(src, digest);
+        if (conf === "failed") { tr.status = "failed"; tr.error = "swap failed"; this._save(tr); throw new Error("The swap failed on Sui; nothing left your wallet but the network fee."); }
+        // what the swap actually delivered: the balance now against the balance before (the Sui index can trail by a moment)
+        let after = null;
+        for (let i = 0; i < 8; i++) {
+          after = await this.usdcBalance(src, owner);
+          if (after != null && before != null && after > before) break;
+          await sleep(this.suiPollMs);
+        }
+        usdcAmount = after != null && before != null && after > before ? after - before : plan.swap.toAmountMin;
+        tr.status = "swapped"; tr.amount = usdcAmount.toString(); this._save(tr);
+        onStep({ step: "swapped", hash: digest, usdc: usdcAmount, transfer: tr });
+      }
+
+      // ---- leg 2: CCTP burn with forwarding
+      return this._suiBurnLeg(tr, src, owner, usdcAmount, mintRecipient, onStep);
+    }
+
+    async _suiBurnLeg(tr, src, owner, usdcAmount, mintRecipient, onStep) {
+      const q = await this.quote(src, usdcAmount, "standard");
+      if (!q.available) throw new Error(q.reason);
+      if (q.maxFee >= usdcAmount) throw new Error("amount too small to cover fees (max fee " + formatUsdc(q.maxFee) + " USDC)");
+      const [bal, coins, open] = await Promise.all([suiBalance(src.rpcs, src.usdc, owner), suiCoins(src.rpcs, src.usdc, owner), suiCctpOpen(src.rpcs, SUI_CCTP[this.network])]);
+      if (open === false) throw new Error("Circle has paused CCTP on Sui for now. Nothing was sent; try again later.");
+      if (!bal || !coins) throw new Error("The Sui endpoint did not answer; could not read your USDC. Try again in a moment.");
+      if (bal.total < usdcAmount) throw new Error("USDC balance on " + src.name + " is " + formatUsdc(bal.total) + ", need " + formatUsdc(usdcAmount));
+      const json = buildSuiBurnTx({ cctp: SUI_CCTP[this.network], usdcType: src.usdc, sender: owner, amount: usdcAmount, coins, addressBalance: bal.address,
+        destinationDomain: ARC_DOMAIN, mintRecipient, maxFee: q.maxFee, minFinalityThreshold: q.minFinalityThreshold, hookData: FORWARD_HOOK });
+
+      onStep({ step: "burning", amount: usdcAmount, maxFee: q.maxFee });
+      const digest = await this._suiSignAndExecute(json, src);
+      tr.burnTx = digest; tr.amount = usdcAmount.toString(); tr.expectedFee = q.expectedFee.toString();
+      tr.maxFee = q.maxFee.toString(); tr.status = "burning"; this._save(tr);
+      onStep({ step: "burn_sent", hash: digest, url: this.explorerTx(src, digest), transfer: tr });
+      const conf = await this._suiConfirm(src, digest);
+      if (conf === "failed") { tr.status = "failed"; tr.error = "burn failed"; this._save(tr); throw new Error("The burn failed on Sui; nothing left your wallet but the network fee."); }
+      // "timeout": the wallet had it executed and the Sui index is only late; Circle's attestation follows it from here
+      tr.status = "burned"; tr.burnedAt = Date.now(); this._save(tr);
+      onStep({ step: "burned", hash: digest, transfer: tr });
+      return tr;
+    }
+
     async _cctpLeg(tr, src, signer, owner, usdcAmount, mintRecipient, speed, onStep) {
       const q = await this.quote(src, usdcAmount, speed);
       if (!q.available) throw new Error(q.reason);
@@ -1157,6 +1614,11 @@
     async continueBridge(tr, onStep = () => {}) {
       if (tr.status !== "swapped") throw new Error("nothing to continue");
       const src = this.source(tr.sourceKey);
+      if (isMove(src)) {
+        const who = this.suiAccount();
+        if (!who) throw new Error("Connect a Sui wallet first.");
+        return this._suiBurnLeg(tr, src, who, BigInt(tr.amount), toBytes32Address(tr.recipient), onStep);
+      }
       onStep({ step: "switching", chain: src });
       await this.ensureChain(src);
       const signer = await this._signer();
@@ -1451,8 +1913,9 @@
     if (plan && plan.router === "lifi") s.push({ key: "burn", label: "Send via LI.FI" + (plan.source && isSvm(plan.source) ? " from " + plan.source.name : "") }, { key: "attest", label: "Route to Arc" });
     else {
       if (plan && plan.swap && !plan.swap.identity) s.push({ key: "swap", label: "Swap to USDC on " + plan.source.name });
-      s.push({ key: "approve", label: "Approve USDC" }, { key: "burn", label: "Burn on source chain" },
-        { key: "attest", label: "Circle attestation" });
+      // Sui has no allowance to give: the burn takes the coin straight from the wallet's own transaction
+      if (!(plan && plan.source && isMove(plan.source))) s.push({ key: "approve", label: "Approve USDC" });
+      s.push({ key: "burn", label: "Burn on source chain" }, { key: "attest", label: "Circle attestation" });
     }
     s.push({ key: "mint", label: "USDC on Arc" });
     if (destination) s.push({ key: "dest", label: destination.label || "Swap on Arc" });
@@ -1507,6 +1970,9 @@
       customRecipient: false, tokens: [], payToken: null, activePlan: null,
       sol: null,          // connected Solana account (base58), for the Solana source
       solWallets: null,   // discovered Solana wallets, once the Solana source is picked
+      sui: null,          // connected Sui account (0x...), for the Sui source
+      suiWallets: null,   // discovered Sui wallets, once the Sui source is picked
+      suiGas: null,       // the Sui account's SUI, which pays the network fee
     };
     const emit = (e) => { try { opts.onEvent && opts.onEvent(e); } catch {} };
 
@@ -1532,6 +1998,10 @@
     let solRun = 0; // bumped whenever the user touches the select: a silent reconnect still running must not override the choice
     const solSel = el("select", { class: "abk-field", onchange: () => { solRun++; c0.disconnectSolana(); state.sol = null; state.balance = null; render(); } });
     const solWrap = el("div", { style: "display:none;margin-top:10px" }, [el("div", { class: "abk-label" }, "Solana wallet"), el("div", { class: "abk-sel" }, solSel)]);
+    // Sui: the same, for the Sui wallet
+    let suiRun = 0;
+    const suiSel = el("select", { class: "abk-field", onchange: () => { suiRun++; c0.disconnectSui(); state.sui = null; state.balance = null; render(); } });
+    const suiWrap = el("div", { style: "display:none;margin-top:10px" }, [el("div", { class: "abk-label" }, "Sui wallet"), el("div", { class: "abk-sel" }, suiSel)]);
     chainSel.value = state.source.key;
     const amountIn = el("input", { inputmode: "decimal", placeholder: "0.00", value: opts.defaultAmount || "", oninput: () => onAmount() });
     const tokSel = el("select", { onchange: () => { state.payToken = state.tokens.find((t) => t.address === tokSel.value) || state.tokens[0]; state.balance = null; refreshBalance(); replan(); } });
@@ -1552,6 +2022,7 @@
     const pendBox = el("div", { class: "abk-pend", style: "display:none" });
     const note = el("div", { class: "abk-note" }, "Pay with what you have; USDC lands on Arc with no gas needed there. Swaps by LI.FI, bridging by Circle CCTP.");
     const NOTE_EVM = note.textContent;
+    const NOTE_MOVE = "Pay with SUI or any Sui token; sign in your Sui wallet (twice if it is swapped to USDC first) and USDC lands at your Arc address with no gas needed there. Swaps by LI.FI, bridging by Circle CCTP. The network fee on Sui is paid in SUI.";
     const NOTE_SVM = "Pay with SOL or any Solana token; one signature in your Solana wallet and USDC lands at your Arc address. The whole trip is routed by LI.FI.";
 
     container.classList.add("abk");
@@ -1559,6 +2030,7 @@
       el("div", { class: "abk-head" }, [title, badge]),
       el("div", {}, [el("div", { class: "abk-label" }, ["From", balLbl]), el("div", { class: "abk-sel" }, chainSel)]),
       solWrap,
+      suiWrap,
       el("div", { style: "margin-top:10px" }, [el("div", { class: "abk-label" }, ["Pay", recipToggle]),
         el("div", { class: "abk-amount" }, [amountIn, tokWrap, maxBtn])]),
       recipWrap,
@@ -1567,8 +2039,10 @@
     );
 
     const svm = () => isSvm(state.source);
-    /** the address that pays: the Solana account for Solana, the EVM account elsewhere */
-    const payer = () => (svm() ? state.sol : state.account);
+    const move = () => isMove(state.source);
+    const alt = () => svm() || move();
+    /** the address that pays: the Solana or Sui account on those chains, the EVM account elsewhere */
+    const payer = () => (svm() ? state.sol : move() ? state.sui : state.account);
 
     // Picking Solana looks for wallets and reconnects one that already trusts this site, with
     // no prompt; anything else waits for the button. Leaving Solana forgets nothing: the
@@ -1584,6 +2058,8 @@
     }
     const chosenSolWallet = () => state.solWallets[Number(solSel.value) || 0];
     async function onSourceChanged() {
+      suiWrap.style.display = "none";
+      if (move()) { solWrap.style.display = "none"; await onSuiSelected(); return; }
       if (!svm()) { solWrap.style.display = "none"; render(); return; }
       await loadSolWallets();
       solWrap.style.display = state.solWallets.length > 1 ? "" : "none";
@@ -1606,6 +2082,36 @@
       await loadSolWallets();
       state.sol = await c0.connectSolana(chosenSolWallet());
       emit({ type: "solana_connected", account: state.sol, wallet: c0.solanaWalletName() });
+      refreshBalance(); resumePending(); replan(); render();
+    }
+
+    // Picking Sui works like picking Solana: find the wallets, reconnect one that already trusts this site
+    // with no prompt, otherwise wait for the button.
+    async function loadSuiWallets() {
+      if (state.suiWallets) return;
+      state.suiWallets = await c0.suiWallets().catch(() => []);
+      suiSel.replaceChildren(...state.suiWallets.map((w, i) => el("option", { value: String(i) }, w.name)));
+    }
+    const chosenSuiWallet = () => state.suiWallets[Number(suiSel.value) || 0];
+    async function onSuiSelected() {
+      await loadSuiWallets();
+      suiWrap.style.display = state.suiWallets.length > 1 && move() ? "" : "none";
+      if (!state.sui && state.suiWallets.length) {
+        const my = ++suiRun;
+        for (let i = 0; i < state.suiWallets.length && !state.sui; i++) {
+          let acct = null;
+          try { acct = await c0.connectSui(state.suiWallets[i], { silent: true }); } catch {}
+          if (suiRun !== my || !move()) { if (acct) c0.disconnectSui(); return; }
+          if (acct) { state.sui = acct; suiSel.value = String(i); }
+        }
+        if (state.sui) { emit({ type: "sui_connected", account: state.sui, silent: true, wallet: c0.suiWalletName() }); refreshBalance(); replan(); }
+      }
+      render();
+    }
+    async function connectSui() {
+      await loadSuiWallets();
+      state.sui = await c0.connectSui(chosenSuiWallet());
+      emit({ type: "sui_connected", account: state.sui, wallet: c0.suiWalletName() });
       refreshBalance(); resumePending(); replan(); render();
     }
 
@@ -1655,7 +2161,8 @@
       if (!who || !state.payToken) { render(); return; }
       const tok = state.payToken, src = state.source;
       const b = await c0.tokenBalance(src, tok.address, who);
-      if (state.payToken === tok && state.source === src) { state.balance = b; render(); }
+      const gas = isMove(src) ? await c0.nativeBalance(src, who) : null; // Sui's network fee is paid in SUI
+      if (state.payToken === tok && state.source === src) { state.balance = b; state.suiGas = gas; render(); }
     }
 
     async function connect() {
@@ -1675,6 +2182,8 @@
       state.error = ""; state.done = null;
       if (svm()) {
         if (!state.sol) { try { await connectSolana(); } catch (e) { state.error = msgOf(e); } render(); return; }
+      } else if (move()) {
+        if (!state.sui) { try { await connectSui(); } catch (e) { state.error = msgOf(e); } render(); return; }
       } else if (!state.account) { try { await connect(); } catch (e) { state.error = msgOf(e); } render(); return; }
       const amt = amountMinor();
       const to = recipient();
@@ -1682,8 +2191,8 @@
       if (!isAddress(to)) {
         // from Solana the USDC lands on Arc, which needs an EVM address: with no EVM wallet on
         // the page the only way to give one is the recipient box, so open it
-        if (svm() && !state.customRecipient) { state.customRecipient = true; recipWrap.style.display = ""; }
-        state.error = svm() ? "Enter the Arc address (0x…) the USDC should land at, or connect an EVM wallet." : "Recipient must be a valid 0x address.";
+        if (alt() && !state.customRecipient) { state.customRecipient = true; recipWrap.style.display = ""; }
+        state.error = alt() ? "Enter the Arc address (0x…) the USDC should land at, or connect an EVM wallet." : "Recipient must be a valid 0x address.";
         render(); return;
       }
       state.busy = true; state.steps = {}; state.links = {}; state.activePlan = state.plan; render();
@@ -1751,7 +2260,9 @@
         // already sent is only waiting on the network, so it is followed: a remount while it
         // was in flight used to leave it listed with its last step and never ran the leg on Arc.
         const waitsOnUser = tr.router === "lifi" ? ["planned", "sending"] : ["planned", "burning", "swapping", "sending", "swapped"];
-        if (waitsOnUser.includes(tr.status)) continue;
+        // a Sui burn the wallet already executed only waits on the network, whatever the page last saw
+        const sentFromSui = tr.status === "burning" && tr.burnTx && isMove(c0.source(tr.sourceKey));
+        if (!sentFromSui && waitsOnUser.includes(tr.status)) continue;
         follow(tr);
       }
       renderPending();
@@ -1837,8 +2348,9 @@
       const who = payer();
       balLbl.textContent = who && tok ? (state.balance == null ? "balance …" : "balance " + formatUnits(state.balance, tok.decimals, 6) + " " + tok.symbol) : "";
       // Solana has no speed to pick (LI.FI routes it in one go) and its own note
-      segWrap.style.display = svm() ? "none" : "";
-      note.textContent = svm() ? NOTE_SVM : NOTE_EVM;
+      segWrap.style.display = alt() ? "none" : "";
+      const lowGas = move() && state.suiGas != null && state.suiGas < SUI_MIN_GAS;
+      note.textContent = (svm() ? NOTE_SVM : move() ? NOTE_MOVE : NOTE_EVM) + (lowGas ? " This wallet has too little SUI: add about 0.01 SUI first." : "");
       fastBtn.disabled = !state.source.fast;
       fastBtn.title = state.source.fast ? "" : state.source.name + " finalizes quickly; standard is already fast here";
       if (!state.source.fast && state.speed === "fast") { state.speed = "standard"; fastBtn.classList.remove("on"); stdBtn.classList.add("on"); }
@@ -1855,7 +2367,7 @@
           if (p.swap && !p.swap.identity) {
             rows.push(el("div", {}, "Swap " + tok.symbol + " → USDC (LI.FI · " + p.swap.tool + ")"), el("div", { class: "v" }, "≈ " + formatUsdc(p.swap.toAmount) + " USDC"));
             rows.push(el("div", {}, "Swap min after " + (c0.slippage * 100) + "% slippage"), el("div", { class: "v" }, formatUsdc(p.swap.toAmountMin)));
-            if (c0.lifiFeeActive) rows.push(el("div", {}, "Swap fee to " + (opts.feeLabel || "this site") + " (included)"), el("div", { class: "v" }, (c0.lifiFee * 100).toFixed(2).replace(/\.?0+$/, "") + "%"));
+            if (c0.lifiFeeActiveFor(p.source.chainId)) rows.push(el("div", {}, "Swap fee to " + (opts.feeLabel || "this site") + " (included)"), el("div", { class: "v" }, (c0.lifiFee * 100).toFixed(2).replace(/\.?0+$/, "") + "%"));
           }
           rows.push(el("div", {}, "Circle protocol fee" + (p.bridge.feeBps ? " (" + p.bridge.feeBps + " bps)" : "")), el("div", { class: "v" }, formatUsdc(p.protocolFee, 4)));
           rows.push(el("div", {}, "Forwarding fee"), el("div", { class: "v" }, formatUsdc(p.forwardFee, 4)));
@@ -1871,15 +2383,16 @@
         feesBox.replaceChildren(el("div", { class: "via" }, "Getting quotes…")); feesBox.style.display = "";
       } else feesBox.style.display = "none";
       // button
-      let label = svm() ? "Connect Solana wallet" : "Connect wallet", disabled = false;
+      let label = svm() ? "Connect Solana wallet" : move() ? "Connect Sui wallet" : "Connect wallet", disabled = false;
       if (who) {
         if (state.busy) { label = "Working…"; disabled = true; }
         else if (!amt || amt === 0n) { label = "Enter amount"; disabled = true; }
         else if (state.balance != null && state.balance < amt) { label = "Insufficient " + (tok ? tok.symbol : "balance") + " on " + state.source.name; disabled = true; }
+        else if (lowGas) { label = "Needs SUI for fees"; disabled = true; }
         else if (!p) { label = "Getting quotes…"; disabled = true; }
         else if (!p.available) { label = "Route unavailable"; disabled = true; }
         else if (state.customRecipient && !isAddress(recipIn.value.trim())) { label = "Enter recipient"; disabled = true; }
-        else if (svm() && !isAddress(recipient())) { label = "Enter recipient on Arc"; }
+        else if (alt() && !isAddress(recipient())) { label = "Enter recipient on Arc"; }
         else label = (svm() ? "Send → " : (p.swap && !p.swap.identity ? "Swap & bridge → " : "Bridge → ")) + c0.arc.name + (opts.destination ? " & " + (opts.destination.buttonLabel || "swap") : "");
       }
       btn.textContent = label; btn.disabled = disabled;
@@ -1908,6 +2421,8 @@
           const sub = s.key === "mint" && st === "on" ? (state.activePlan && state.activePlan.router === "lifi" ? "LI.FI's executor delivers the USDC — nothing to sign." : "Circle's forwarder submits the mint — nothing to sign.") :
                       s.key === "attest" && st === "on" ? (state.activePlan && state.activePlan.router === "lifi" ? "LI.FI is moving the funds; nothing to sign." : "Waiting for source-chain finality + Circle signature.") :
                       s.key === "burn" && st === "on" && state.activePlan && isSvm(state.activePlan.source) ? "Confirm in your Solana wallet." :
+                      s.key === "burn" && st === "on" && state.activePlan && isMove(state.activePlan.source) ? "Confirm in your Sui wallet." :
+                      s.key === "swap" && st === "on" && state.activePlan && isMove(state.activePlan.source) ? "Confirm the swap in your Sui wallet." :
                       s.key === "swap" && st === "on" ? "Confirm the swap in your wallet." :
                       s.key === "dest" && st === "on" ? "Confirm in your wallet on " + c0.arc.name + "." : null;
           const waitBtn = s.key === "dest" && (st === "wait" || st === "err" || !st) && state.done && !(state.done.dest && state.done.dest.status === "done")
@@ -1924,7 +2439,7 @@
     (async () => {
       try { state.account = await c0.account(); } catch {}
       await loadTokens();
-      if (svm()) await onSourceChanged();
+      if (alt()) await onSourceChanged();
       if (state.account) { refreshBalance(); resumePending(); }
       if (amountIn.value) replan();
       render();
@@ -1942,6 +2457,7 @@
       core: c0,
       get account() { return state.account; },
       get solanaAccount() { return state.sol; },
+      get suiAccount() { return state.sui; },
       setAccount(a) { state.account = a; state.balance = null; refreshBalance(); resumePending(); replan(); render(); },
       setSource(key) { const s = c0.source(key); if (s) { state.source = s; chainSel.value = s.key; onSourceChanged(); loadTokens().then(() => { refreshBalance(); replan(); }); } },
       setPayToken(addr) { tokSel.value = addr; tokSel.dispatchEvent(new Event("change")); },
@@ -1952,8 +2468,9 @@
   }
 
   return {
-    VERSION, ARC_DOMAIN, FORWARD_HOOK, FINALITY, NATIVE, SOL_NATIVE, SOL_LIFI_CHAIN_ID, SOL_CHAIN, CCTP, LIFI, ARC, SOURCES, ABI, PAY_SYMBOLS, PAY_SYMBOLS_SVM,
+    VERSION, ARC_DOMAIN, FORWARD_HOOK, FINALITY, NATIVE, SOL_NATIVE, SOL_LIFI_CHAIN_ID, SOL_CHAIN, SUI_NATIVE, SUI_LIFI_CHAIN_ID, SUI_CCTP, SUI_TESTNET_SOURCE, MOVE_KNOWN, CCTP, LIFI, ARC, SOURCES, ABI, PAY_SYMBOLS, PAY_SYMBOLS_SVM,
     ArcBridge, mount,
-    utils: { parseUsdc, formatUsdc, parseUnits, formatUnits, toBytes32Address, computeFees, isAddress, isSolAddress, isSvm, jsonRpc, fetchJson, toTxRequest, toSvmTx, payShortlist, explainLifi, nonceFromMessage, judgeMint, chooseRoute, base58Encode, b64ToBytes, bytesToB64 },
+    utils: { parseUsdc, formatUsdc, parseUnits, formatUnits, toBytes32Address, computeFees, isAddress, isSolAddress, isSvm, jsonRpc, fetchJson, toTxRequest, toSvmTx, payShortlist, explainLifi, nonceFromMessage, judgeMint, chooseRoute, base58Encode, b64ToBytes, bytesToB64,
+      isMove, isAlt, isSuiAddress, normSuiAddress, normMoveType, hexToBytes, leBytes, bcsVecU8, buildSuiBurnTx, toMoveTx, suiGql, suiBalance, suiCoins, suiTxStatus, suiCctpOpen },
   };
 });

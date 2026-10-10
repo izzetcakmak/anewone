@@ -233,7 +233,7 @@
   #advToggle { order: 1; }
   #wayChain .arrive { order: 2; }
   #coinPick { order: 3; }
-  #bridge .abk-btn, #bridge .abk-note, #bridge .abk-err, #bridge .abk-ok, #bridge .abk-steps, #bridge .abk-pend, #solhint { order: 4; }
+  #bridge .abk-btn, #bridge .abk-note, #bridge .abk-err, #bridge .abk-ok, #bridge .abk-steps, #bridge .abk-pend, #solhint, #suihint { order: 4; }
   #coinLink { order: 5; }
   /* the kit, in the card's clothes: labels in mono capitals, the amount big, one lit button */
   #bridge .abk-head { display: none; }
@@ -416,7 +416,7 @@
     <div class="nx-hero-t">
       <div class="nx-eyebrow">Tools · Swap &amp; Bridge · Circle CCTP + LI.FI</div>
       <h1 class="nx-h1">Bring funds aboard<br><em>from any chain.</em></h1>
-      <p class="nx-lead">Pay with ETH, SOL, USDC or <b>almost anything</b>. It lands on Arc as USDC, <b>no gas needed there</b>, and can buy a coin on the floor in the same trip.</p>
+      <p class="nx-lead">Pay with ETH, SOL, SUI, USDC or <b>almost anything</b>. It lands on Arc as USDC, <b>no gas needed there</b>, and can buy a coin on the floor in the same trip.</p>
       <!-- One workflow at a time: the three tabs drive the panels in the card. Add funds has two ways
            in (another chain, or a card), and only asks which coin to buy once "Buy a coin" is
            picked; everything technical sits under Advanced settings or below the hero. -->
@@ -441,6 +441,12 @@
             <b>No Solana wallet in this browser.</b> On a phone, open this page inside your wallet app's browser and pay from there.
             <a class="wcbtn" id="solPhantom" href="#" rel="noopener noreferrer">👻 Open in Phantom</a>
             <a class="wcbtn" id="solSolflare" href="#" rel="noopener noreferrer">🔥 Open in Solflare</a>
+          </div>
+          <!-- the same for Sui: Slush and Phantom both have a browser of their own -->
+          <div id="suihint" class="nowallet" hidden>
+            <b>No Sui wallet in this browser.</b> On a phone, open this page inside your wallet app's browser and pay from there.
+            <a class="wcbtn" id="suiSlush" href="#" rel="noopener noreferrer">💧 Open in Slush</a>
+            <a class="wcbtn" id="suiPhantom" href="#" rel="noopener noreferrer">👻 Open in Phantom</a>
           </div>
           <div id="nowallet" class="nowallet" hidden>
             <b>No wallet found in this browser.</b> Connect a wallet app over WalletConnect, install a browser wallet such as MetaMask, Rabby or Coinbase Wallet,
@@ -536,13 +542,13 @@
   <div class="bx-pair">
     <section class="bx-card bx-info"><h2 class="nx-eyebrow">Supported chains</h2>
       <div class="chains" id="chainPills"></div>
-      <p>Fast transfers arrive in about 20 seconds where Circle offers them. From Solana, SOL or any Solana token becomes USDC on Arc in one LI.FI route, signed in Phantom, Solflare or Backpack; the USDC lands at your Arc address (Phantom carries one, or type it in).</p>
+      <p>Fast transfers arrive in about 20 seconds where Circle offers them. From Solana, SOL or any Solana token becomes USDC on Arc in one LI.FI route, signed in Phantom, Solflare or Backpack; the USDC lands at your Arc address (Phantom carries one, or type it in). From Sui, USDC goes over Circle's CCTP and lands in seconds, signed in Slush, Phantom or Suiet; SUI and other Sui tokens are swapped into USDC first by LI.FI, which makes two signatures. Sui's network fee is paid in SUI; about 0.01 SUI in the wallet is enough.</p>
     </section>
     <section class="bx-card bx-info"><h2 class="nx-eyebrow">Fees</h2>
       <dl class="fees">
         <div><dt>Circle</dt><dd>A few basis points on fast transfers (none on standard), plus about 0.02 USDC to mint on Arc for you.</dd></div>
         <div><dt>LI.FI swaps</dt><dd>The pool's price and a fixed fee of a cent or two.</dd></div>
-        <div><dt>A NEW ONE</dt><dd>On mainnet, 0.25% of a non-USDC payment goes to the floor, shown as its own line.</dd></div>
+        <div><dt>A NEW ONE</dt><dd>On mainnet, 0.25% of a non-USDC payment goes to the floor where LI.FI can carry it (not on Sui swaps yet), shown as its own line.</dd></div>
       </dl>
       <p>The quote shows everything before you sign, and the amount bridged after a swap is what actually arrived in your wallet, not an estimate.</p>
     </section>
@@ -917,7 +923,10 @@
     if (solWatch) solWatch.disconnect();
     solWatch = new MutationObserver(() => {
       const err = document.querySelector("#bridge .abk-err");
-      if (err && err.style.display !== "none" && /No Solana wallet/i.test(err.textContent)) solHint(true);
+      if (err && err.style.display !== "none") {
+        if (/No Solana wallet/i.test(err.textContent)) solHint(true);
+        if (/No Sui wallet/i.test(err.textContent)) suiHint(true);
+      }
     });
     solWatch.observe(document.getElementById("bridge"), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["style"] });
   }
@@ -941,6 +950,19 @@
       };
       wire("solPhantom", "phantom://browse/" + here + "?ref=" + ref, "https://phantom.app/ul/browse/" + here + "?ref=" + ref);
       wire("solSolflare", "solflare://ul/v1/browse/" + here + "?ref=" + ref, "https://solflare.com/ul/v1/browse/" + here + "?ref=" + ref);
+    }
+    box.hidden = !(show && phone);
+  }
+  // Slush's own link opens its in-app browser (and its web app when the app is missing, so it never dead-ends);
+  // Phantom's goes through the same scheme-then-universal-link dance as for Solana
+  function suiHint(show) {
+    const box = document.getElementById("suihint");
+    const phone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (show && phone) {
+      document.getElementById("suiSlush").href = "https://my.slush.app/browse/" + location.origin + location.pathname;
+      const here = encodeURIComponent(location.href), ref = encodeURIComponent(location.origin), ph = document.getElementById("suiPhantom");
+      ph.href = "https://phantom.app/ul/browse/" + here + "?ref=" + ref;
+      ph.onclick = (ev) => { ev.preventDefault(); location.href = "phantom://browse/" + here + "?ref=" + ref; setTimeout(() => { if (!document.hidden) location.href = ph.href; }, 1500); };
     }
     box.hidden = !(show && phone);
   }
@@ -979,7 +1001,7 @@
       defaultSource: net === "mainnet" ? "base" : "base-sepolia",
       // USDC just landed from the bridge: the send and swap cards show it at once
       onMinted: () => { try { sendRefresh(); swRefreshBalances(); swLoadHeld(); } catch {} },
-      onEvent: (e) => { if (e.type === "solana_connected") solHint(false); },
+      onEvent: (e) => { if (e.type === "solana_connected") solHint(false); if (e.type === "sui_connected") suiHint(false); },
       onDestination: (t) => {
         const tok = tokens.find((x) => x.address === buySel.value);
         if (tok) { coinLink.innerHTML = ""; const a = document.createElement("a"); a.href = "../#t=" + tok.address.toLowerCase(); a.textContent = "Open $" + tok.symbol + " on the floor →"; coinLink.append(a); coinLink.hidden = false; }
