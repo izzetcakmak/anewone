@@ -1,5 +1,5 @@
 /*!
- * gangway-kit v0.6.0 (GangWay Kit, formerly arc-bridge-kit)
+ * gangway-kit v0.6.1 (GangWay Kit, formerly arc-bridge-kit)
  * Drop-in "pay with anything, land USDC on Arc, then buy" kit.
  *
  *  Legs (each optional except the bridge):
@@ -39,7 +39,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.6.0";
+  const VERSION = "0.6.1";
 
   // ------------------------------------------------------------------ constants
 
@@ -519,7 +519,11 @@
     const forwardFee = BigInt(fw.high ?? fw.med ?? fw.medium ?? fw.low ?? 0);
     if (forwardFee === 0n) return null;
     const expectedFee = protocolFee + forwardFee;
-    const maxFee = expectedFee * headroom; // cap only; the actual fee charged is expectedFee-ish
+    // Circle's Forwarding Service takes the WHOLE maxFee of a forwarded burn: feeExecuted equalled maxFee in 25 of 25 real
+    // transfers read on 10 Oct 2026, and Circle's docs say excess gas is not refunded. So maxFee is the fee the user pays, not a
+    // cap that is only partly used: headroom 1n makes expectedReceive exact (Circle's own how-to burns the "med" forward fee plus
+    // the protocol fee, and "high", used here, is at or above it).
+    const maxFee = expectedFee * headroom;
     return {
       speed,
       minFinalityThreshold: Number(tier.finalityThreshold ?? threshold),
@@ -785,7 +789,9 @@
    *   sources       override / filter the source chain list (array of chain configs or keys)
    *   switchChain   async (chainCfg) => void — custom chain switching (Web3Auth etc.)
    *   storage       { get(k), set(k,v) } — defaults to localStorage
-   *   feeHeadroom   BigInt multiplier applied to the quoted CCTP fee for maxFee (default 2n)
+   *   feeHeadroom   BigInt multiplier applied to the quoted CCTP fee for maxFee (default 2n). The Forwarding Service
+   *                 takes the whole maxFee, nothing unused is refunded: the headroom is a cost the user pays and the
+   *                 "you receive" figure is overstated by it. Pass 1n for an exact figure (as Circle's own how-to does).
    *   minAmount     BigInt USDC minor units (default 1 USDC)
    *   router        "auto" (LI.FI route into Arc when it exists, else CCTP) | "cctp" | "lifi"
    *   lifiApiKey    optional LI.FI partner key (higher rate limits)

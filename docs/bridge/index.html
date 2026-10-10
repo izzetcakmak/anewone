@@ -986,6 +986,11 @@
       // 20-30 min per transfer on launch night and priced 20 USDC at 17.96 on arrival, so it is
       // not used for the bridge leg; LI.FI still does the same-chain swaps.
       router: "cctp",
+      // Circle's Forwarding Service takes the whole maxFee of a burn: feeExecuted equalled maxFee in all 25 real forwarded
+      // transfers read on 10 Oct 2026, and its docs say excess gas is not refunded. The kit's default doubles the quoted fee,
+      // which charged twice the forwarding fee and showed "You receive" about 0.016 USDC too high. The quote's "high" level is
+      // already at or above the "med" Circle's own how-to burns with, so the cap is the quote itself and the figure is exact.
+      feeHeadroom: 1n,
       // 0.25% of every non-USDC payment goes to the floor's fee wallet (LI.FI integrator fee;
       // the portal.li.fi integration is named "A New One", string "a-new-one", 25 bps).
       // Mainnet only; on testnet nothing is charged.

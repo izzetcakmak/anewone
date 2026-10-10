@@ -123,10 +123,10 @@ cd build-walletconnect && npm ci && npm run build && sha256sum ../docs/vendor/wa
 | | |
 |---|---|
 | Package | `gangway-kit` (in-house, izzetcakmak; GangWay Kit, formerly arc-bridge-kit) |
-| Version | 0.6.0 |
+| Version | 0.6.1 |
 | File | `gangway-kit.js` |
-| Size | 153,611 bytes (LF line endings, as committed and served) |
-| SHA-256 | `9e493c7c9d95a9ad6f1c72e4f6fe01879c95221985785d1c24cce142031495fc` |
+| Size | 154,273 bytes (LF line endings, as committed and served) |
+| SHA-256 | `87cc379f5f4af02f8ff1490ad58b5900b4aa7a531b047ecd6ab8879ea87f2be4` |
 
 Built here, not fetched: the source is public at https://github.com/izzetcakmak/gangway-kit
 (local checkout `C:\Users\Monster\arc-bridge-kit`, demo at https://arc-bridge-kit.vercel.app) and is copied verbatim. It is plain JavaScript on
