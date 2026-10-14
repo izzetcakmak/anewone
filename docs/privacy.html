@@ -3,6 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Google Tag Manager, in Consent Mode with every storage denied: no cookies are written, Google
+     gets cookieless pings only. There is no consent banner because nothing here asks for consent;
+     anything that would set a cookie must not be turned on in the GTM container. -->
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',functionality_storage:'denied',personalization_storage:'denied',security_storage:'denied'});</script>
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KDQSQQKH');</script>
+<!-- End Google Tag Manager -->
 <script>
   // Same key as the main page, so a visitor's theme carries across the site.
   (function () {
@@ -12,7 +23,7 @@
 </script>
 <title>Privacy · KVKK Aydınlatma Metni | A NEW ONE</title>
 <link rel="canonical" href="https://anewone.xyz/privacy.html">
-<meta name="description" content="How A NEW ONE handles your data: no accounts, no trackers, a few small server functions that are listed here, and we never ask for your keys.">
+<meta name="description" content="How A NEW ONE handles your data: no accounts, no cookies, a few small server functions that are listed here, and we never ask for your keys.">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <meta name="theme-color" content="#07080b">
@@ -41,6 +52,10 @@
 <link rel="stylesheet" href="shell.css">
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KDQSQQKH"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 <header class="nx-nav" id="nxNav"><div class="nx-nav-in">
   <a class="nx-brand" href="./" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
   <nav class="nx-links" aria-label="Main"><a href="./#ask">Ask</a><a href="docs.html">Docs</a><a href="about.html">About</a><a href="./#trust">Trust</a><a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">GitHub</a></nav>
@@ -62,8 +77,8 @@
   <div class="nx-hero-in"><div class="nx-hero-t">
     <div class="nx-eyebrow">Legal · Privacy · KVKK</div>
     <h1 class="nx-h1"><em>Privacy</em></h1>
-    <p class="nx-lead">A NEW ONE is a static website with a handful of small server functions, each listed below. There are no accounts, no trackers, and we will never ask for your seed phrase or private key. The data controller is İzzet Çakmak (Türkiye), <a href="mailto:support@anewone.xyz">support@anewone.xyz</a>. The privacy notice required by Türkiye's Personal Data Protection Law No. 6698 (KVKK) is at the end of this page, in Turkish: <a href="#kvkk">KVKK Aydınlatma Metni</a>.</p>
-    <p class="nx-updated">Last updated: 30 September 2026</p>
+    <p class="nx-lead">A NEW ONE is a static website with a handful of small server functions, each listed below. There are no accounts, no cookies or cross-site trackers, and we will never ask for your seed phrase or private key. The data controller is İzzet Çakmak (Türkiye), <a href="mailto:support@anewone.xyz">support@anewone.xyz</a>. The privacy notice required by Türkiye's Personal Data Protection Law No. 6698 (KVKK) is at the end of this page, in Turkish: <a href="#kvkk">KVKK Aydınlatma Metni</a>.</p>
+    <p class="nx-updated">Last updated: 14 October 2026</p>
   </div></div>
 </section>
 
@@ -72,7 +87,12 @@
   <h2>What we do not collect</h2>
   <ul>
     <li>No sign-up, no user accounts, no profiles, no email addresses.</li>
-    <li>No analytics, advertising or tracking scripts, and no tracking cookies.</li>
+    <li>No cookies of any kind and no advertising. We use Google Tag Manager and Google Analytics in Google's
+      Consent Mode with all storage denied: no cookie or local identifier is written, and Google receives cookieless,
+      anonymous measurement pings (the page, the referring site, coarse location and browser/device type) that it uses
+      to estimate visit counts. Google LLC (USA) processes these pings as our service provider; see
+      <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's privacy policy</a>.
+      Blocking googletagmanager.com in your browser stops it entirely and changes nothing else on the site.</li>
     <li>Earn, Borrow and the launchpad (the floor, coin pages, launching and trading) run entirely in your browser
       against the Arc network and the services named below. No server of ours records what you look at, deposit,
       borrow or trade.</li>
@@ -179,8 +199,13 @@
   <p>6698 sayılı Kişisel Verilerin Korunması Kanunu'nun (“KVKK”) 10. maddesi uyarınca, veri sorumlusu sıfatıyla
     anewone.xyz'i işleten <strong>İzzet Çakmak</strong> (Türkiye; <a href="mailto:support@anewone.xyz">support@anewone.xyz</a>)
     tarafından hazırlanmıştır.</p>
-  <p><strong>Hangi veriler, nasıl toplanır.</strong> Sitede hesap, üyelik, profil ve e-posta kaydı yoktur; analitik,
-    reklam veya izleme çerezi kullanılmaz. Siteyi kullanırken elektronik ortamda otomatik yollarla şu veriler
+  <p><strong>Hangi veriler, nasıl toplanır.</strong> Sitede hesap, üyelik, profil ve e-posta kaydı yoktur; hiçbir çerez ve
+    reklam kullanılmaz. Ziyaret ölçümü için Google Tag Manager ve Google Analytics, Google'ın Consent Mode
+    özelliğiyle tüm depolama kapalı olarak çalışır: çerez ya da cihazda tanımlayıcı yazılmaz; Google'a yalnızca
+    çerezsiz ve anonim ölçüm sinyalleri (ziyaret edilen sayfa, yönlendiren site, yaklaşık konum, tarayıcı ve cihaz
+    türü) gider. Bu sinyaller hizmet sağlayıcımız Google LLC (ABD) tarafından işlenir; bu nedenle yurt dışına
+    aktarım söz konusudur. Tarayıcınızda googletagmanager.com'u engellemeniz ölçümü tamamen durdurur ve sitenin
+    başka hiçbir işlevini etkilemez. Siteyi kullanırken elektronik ortamda otomatik yollarla şu veriler
     işlenebilir: (1) <em>IP adresi, zaman ve istek yolu</em>: barındırma sağlayıcısı Vercel'in standart erişim
     kayıtları ve sunucu fonksiyonlarımızın bir dakikalık hız sınırlama sayaçları (Upstash Redis, Frankfurt);
     (2) <em>cüzdan adresi</em>: Deck Hand hafızası, kart ile alım oturumu ve kredi kayıtları için, ayrıca zincir
@@ -199,10 +224,11 @@
   <p><strong>Aktarım.</strong> Veriler şu alıcı gruplarına, yalnızca ilgili özelliği kullandığınızda aktarılır:
     barındırma (Vercel), hız sınırlama ve oturum deposu (Upstash), dil modeli (Groq), şifreli hafıza (Walrus/MemWal),
     kart ile alım, Earn ve Borrow servisleri (Circle), köprü ve takas fiyatları (LI.FI), cüzdan eşleştirme (WalletConnect/Reown),
-    e-posta veya sosyal hesapla giriş (Web3Auth), yazı tipleri (Google) ve Arc ağı RPC sağlayıcıları. Bu
+    e-posta veya sosyal hesapla giriş (Web3Auth), yazı tipleri (Google), çerezsiz ziyaret ölçümü (Google Tag Manager ve Google Analytics, Google LLC) ve Arc ağı RPC sağlayıcıları. Bu
     sağlayıcıların sunucuları yurt dışındadır (AB ve ABD). Yurt dışına aktarım KVKK m. 9 çerçevesinde, ilgili
     özelliği kendi tercihinizle kullanmanız suretiyle verdiğiniz açık rızaya ve/veya sağlayıcılarla yapılan
-    sözleşmelere dayanır; bu özellikleri kullanmadığınızda aktarım gerçekleşmez. Zincir üzerindeki işlemler
+    sözleşmelere dayanır; bu özellikleri kullanmadığınızda aktarım gerçekleşmez. Çerezsiz ziyaret ölçümü her sayfada çalışır; tarayıcınızda
+    googletagmanager.com'u engelleyerek bunu durdurabilirsiniz. Zincir üzerindeki işlemler
     niteliği gereği herkese açık ve kalıcıdır; bunları biz dahil kimse silemez.</p>
   <p><strong>Saklama.</strong> Erişim kayıtları Vercel'in standart süresi kadar; hız sınırlama sayaçları bir dakika;
     oturum belirteci bir gün; Deck Hand hafızası siz sildirene kadar; koşul kabulü kaydı, olası bir uyuşmazlıkta
