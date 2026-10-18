@@ -259,7 +259,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button class="chip" id="showAllBtn" title="Vaults with no named curator, test deployments, vaults under 1,000 deposited and vaults Circle flags">Show unlisted</button>
     <span class="count" id="count">loading vaults…</span>
   </div>
-  <div id="aaveEarnWrap" hidden><h2 class="sec">Aave V4 on Arc</h2><div class="grid" id="aaveEarn"></div></div>
+  <div id="aaveEarnWrap"><h2 class="sec">Aave V4 on Arc</h2><div class="grid" id="aaveEarn"><div class="empty">Loading Aave V4 from Arc…</div></div></div>
   <h2 class="sec">Morpho vaults</h2>
   <div class="grid" id="grid"><div class="empty">Loading vaults from Arc…</div></div>
   </div>
@@ -277,7 +277,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div><b>Need the collateral first?</b> Swap USDC for cirBTC or WETH on Arc, then come back and borrow against it. Some collateral has no swap route on Arc yet; those markets say so.</div>
       <button class="btn primary" id="swapLink" type="button">Swap on Arc →</button>
     </div>
-    <div id="aaveBorrowWrap" hidden><h2 class="sec">Aave V4 on Arc</h2><div class="grid" id="aaveMarkets"></div></div>
+    <div id="aaveBorrowWrap"><h2 class="sec">Aave V4 on Arc</h2><div class="grid" id="aaveMarkets"><div class="empty">Loading Aave V4 from Arc…</div></div></div>
     <h2 class="sec">Morpho markets</h2>
     <div class="grid" id="markets"><div class="empty">Loading markets from Arc…</div></div>
   </div>
@@ -1392,11 +1392,13 @@ Time: ${new Date().toISOString()}`;
   };
 
   // ---- Aave V4 (./aave.js): Earn cards and a Main-market loan, one batched transaction per action
-  if (net === "mainnet") import("./aave.js").then((m) => {
+  // Aave V4 is on mainnet only; elsewhere its placeholders go
+  if (net !== "mainnet") { $("aaveEarnWrap").hidden = true; $("aaveBorrowWrap").hidden = true; }
+  else import("./aave.js").then((m) => {
     aave = m.initAave({ ethers, cfg: cfg.aave || {}, explorer: arcCfg.explorer, readProviders: () => READ_URLS.map(readProvider), poolProvider,
       account: () => account, wallet, ensureArc: () => (activeKind !== "google" && activeKind !== "walletconnect" ? ensureArc() : null),
       ensureAck, openPicker, filter: () => filter, onChange: () => renderMine(), fmt, money, pct, esc, GAS_RESERVE });
-  }).catch((e) => console.warn("aave", e));
+  }).catch((e) => { console.warn("aave", e); $("aaveEarnWrap").hidden = true; $("aaveBorrowWrap").hidden = true; });
 </script>
 <script src="../shell.js"></script>
 </body>

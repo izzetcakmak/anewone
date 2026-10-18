@@ -91,40 +91,64 @@ export function initAave(ctx) {
   // the hub's cap on what this spoke may hold or lend, in tokens left; Infinity when uncapped
   const room = (cap, used, dec) => (Number(cap) >= UNCAPPED ? Infinity : Math.max(0, Number(cap) - num(used, dec)));
 
+  // Reads go through Multicall3 (standard address, on Arc): a market load is three eth_calls
+  // instead of ~90. A burst that size got throttled on a single endpoint (Brave blocks every
+  // *.arc.io host, which leaves only the site's relay) and the Aave section never appeared.
+  // Each attempt walks the RPC pool; a whole round is retried after a pause.
+  const MC3 = "0xcA11bde05977b3631167028862bE2a173976CA11";
+  const iMc = new ethers.Interface(["function aggregate3((address target, bool allowFailure, bytes callData)[] calls) view returns ((bool success, bytes returnData)[])",
+    "function getEthBalance(address) view returns (uint256)"]);
+  const iHub = new ethers.Interface(HUB_ABI), iOracle = new ethers.Interface(ORACLE_ABI);
+  const q = (to, iface, fn, args = []) => ({ to, iface, fn, args });
+  async function multi(p, list) {
+    const out = [];
+    for (let i = 0; i < list.length; i += 150) {
+      const part = list.slice(i, i + 150);
+      const raw = await p.call({ to: MC3, data: iMc.encodeFunctionData("aggregate3", [part.map((c) => [c.to, true, c.iface.encodeFunctionData(c.fn, c.args)])]) });
+      const [res] = iMc.decodeFunctionResult("aggregate3", raw);
+      res.forEach((r, j) => { if (!r.success) throw new Error(`read failed: ${part[j].fn}`); out.push(part[j].iface.decodeFunctionResult(part[j].fn, r.returnData)); });
+    }
+    return out;
+  }
   async function withRead(fn) {
     let last = null;
-    for (const p of ctx.readProviders()) { try { return await fn(p); } catch (e) { last = e; } }
+    for (let round = 0; round < 3; round++) {
+      if (round) await new Promise((r) => setTimeout(r, 1500 * round));
+      for (const p of ctx.readProviders()) { try { return await fn(p); } catch (e) { last = e; } }
+    }
     throw last || new Error("no RPC answered");
   }
 
   // ---- markets: rates, liquidity, caps, prices, collateral factors -------------------------
-  async function loadSpoke(p, s) {
-    const sp = new ethers.Contract(s.address, SPOKE_ABI, p), hub = new ethers.Contract(HUB, HUB_ABI, p);
-    const n = Number(await sp.getReserveCount());
-    const rows = (await Promise.all([...Array(n).keys()].map(async (id) => {
-      const [r, rc] = await Promise.all([sp.getReserve(id), sp.getReserveConfig(id)]);
-      const t = TOKENS[r.underlying.toLowerCase()];
-      if (!t || r.hub.toLowerCase() !== HUB.toLowerCase()) return null;
-      const a = r.assetId, dec = Number(r.decimals);
-      const [dyn, added, owed, liq, rate, ac, sc, sAdded, sOwed] = await Promise.all([sp.getDynamicReserveConfig(id, r.dynamicConfigKey),
-        hub.getAddedAssets(a), hub.getAssetTotalOwed(a), hub.getAssetLiquidity(a), hub.getAssetDrawnRate(a), hub.getAssetConfig(a),
-        hub.getSpokeConfig(a, s.address), hub.getSpokeAddedAssets(a, s.address), hub.getSpokeTotalOwed(a, s.address)]);
-      const addedN = num(added, dec), owedN = num(owed, dec), drawn = Number(rate) / 1e27, liquidity = num(liq, dec);
+  async function readMarkets(p) {
+    const head = await multi(p, SPOKES.flatMap((s) => [q(s.address, iSpoke, "getReserveCount"), q(s.address, iSpoke, "ORACLE")]));
+    const ids = SPOKES.flatMap((s, i) => [...Array(Number(head[2 * i][0])).keys()].map((id) => ({ s, id, oracle: head[2 * i + 1][0] })));
+    const base = await multi(p, ids.flatMap(({ s, id }) => [q(s.address, iSpoke, "getReserve", [id]), q(s.address, iSpoke, "getReserveConfig", [id])]));
+    const kept = ids.map((x, i) => ({ ...x, r: base[2 * i], rc: base[2 * i + 1] }))
+      .filter(({ r }) => TOKENS[r.underlying.toLowerCase()] && r.hub.toLowerCase() === HUB.toLowerCase());
+    const per = 9;
+    const detail = await multi(p, [...kept.flatMap(({ s, id, r }) => [q(s.address, iSpoke, "getDynamicReserveConfig", [id, r.dynamicConfigKey]),
+      q(HUB, iHub, "getAddedAssets", [r.assetId]), q(HUB, iHub, "getAssetTotalOwed", [r.assetId]), q(HUB, iHub, "getAssetLiquidity", [r.assetId]),
+      q(HUB, iHub, "getAssetDrawnRate", [r.assetId]), q(HUB, iHub, "getAssetConfig", [r.assetId]), q(HUB, iHub, "getSpokeConfig", [r.assetId, s.address]),
+      q(HUB, iHub, "getSpokeAddedAssets", [r.assetId, s.address]), q(HUB, iHub, "getSpokeTotalOwed", [r.assetId, s.address])]),
+      ...SPOKES.map((s) => q(kept.find((k) => k.s === s)?.oracle || MC3, iOracle, "getReservesPrices", [kept.filter((k) => k.s === s).map((k) => k.id)]))]);
+    const prices = {};
+    SPOKES.forEach((s, i) => { const px = detail[kept.length * per + i][0]; kept.filter((k) => k.s === s).forEach((k, j) => { prices[s.key + ":" + k.id] = Number(px[j]) / 1e8; }); });
+    return kept.map(({ s, id, r, rc }, i) => {
+      const [dyn, added, owed, liq, rate, ac, sc, sAdded, sOwed] = detail.slice(i * per, i * per + per);
+      const dec = Number(r.decimals), addedN = num(added[0], dec), owedN = num(owed[0], dec), drawn = Number(rate[0]) / 1e27, liquidity = num(liq[0], dec);
       const util = addedN > 0 ? owedN / addedN : 0;
-      return { spoke: s.key, market: s.name, spokeAddress: s.address, id, address: r.underlying, ...t, decimals: dec, cf: Number(dyn.collateralFactor), risk: Number(rc.collateralRisk),
+      return { spoke: s.key, market: s.name, spokeAddress: s.address, id, address: r.underlying, ...TOKENS[r.underlying.toLowerCase()], decimals: dec, cf: Number(dyn.collateralFactor), risk: Number(rc.collateralRisk),
         paused: rc.paused || sc.paused || !sc.active, frozen: rc.frozen, borrowable: rc.borrowable, added: addedN, owed: owedN, liquidity, util,
         // what can actually be borrowed here: the hub's free cash, within this spoke's draw cap
-        available: Math.min(liquidity, room(sc.drawCap, sOwed, dec)), supplyRoom: room(sc.addCap, sAdded, dec),
-        spokeOwed: num(sOwed, dec), drawn, borrowApy: Math.expm1(drawn), supplyApy: Math.expm1(drawn * util * (1 - Number(ac.liquidityFee) / 1e4)) };
-    }))).filter(Boolean);
-    const oracle = new ethers.Contract(await sp.ORACLE(), ORACLE_ABI, p);
-    const px = await oracle.getReservesPrices(rows.map((r) => r.id));
-    rows.forEach((r, i) => { r.price = Number(px[i]) / 1e8; });
-    return rows;
+        available: Math.min(liquidity, room(sc.drawCap, sOwed[0], dec)), supplyRoom: room(sc.addCap, sAdded[0], dec),
+        spokeOwed: num(sOwed[0], dec), drawn, borrowApy: Math.expm1(drawn), supplyApy: Math.expm1(drawn * util * (1 - Number(ac.liquidityFee) / 1e4)),
+        price: prices[s.key + ":" + id] };
+    });
   }
   async function loadMarket() {
     try {
-      reserves = await withRead(async (p) => (await Promise.all(SPOKES.map((s) => loadSpoke(p, s)))).flat());
+      reserves = await withRead(readMarkets);
       loaded = true; loadErr = null;
     } catch (e) { loadErr = e; console.warn("aave market", e); }
   }
@@ -135,18 +159,21 @@ export function initAave(ctx) {
     if (!U || !reserves.length) { user = {}; return; }
     try {
       await withRead(async (p) => {
-        const out = {}, wallet = {};
-        await Promise.all(reserves.map(async (r) => {
-          const sp = new ethers.Contract(r.spokeAddress, SPOKE_ABI, p);
-          const [sup, debt, st, pos] = await Promise.all([sp.getUserSuppliedAssets(r.id, U), sp.getUserTotalDebt(r.id, U), sp.getUserReserveStatus(r.id, U), sp.getUserPosition(r.id, U)]);
-          // a collateral keeps the factor it was enabled under (its own config key), not today's
-          const cf = st.collateral ? Number((await sp.getDynamicReserveConfig(r.id, pos.dynamicConfigKey)).collateralFactor) : r.cf;
-          out[r.spoke + ":" + r.id] = { supRaw: sup, debtRaw: debt, supplied: num(sup, r.decimals), debt: num(debt, r.decimals), collateral: st.collateral, cf };
-        }));
         const toks = [...new Set(reserves.map((r) => r.address))];
-        await Promise.all(toks.map(async (t) => { wallet[t] = await new ethers.Contract(t, ERC20_ABI, p).balanceOf(U); }));
-        for (const r of reserves) out[r.spoke + ":" + r.id].wallet = num(wallet[r.address], r.decimals);
-        gasBal = Number(ethers.formatEther(await p.getBalance(U)));
+        const a = await multi(p, [...reserves.flatMap((r) => [q(r.spokeAddress, iSpoke, "getUserSuppliedAssets", [r.id, U]), q(r.spokeAddress, iSpoke, "getUserTotalDebt", [r.id, U]),
+          q(r.spokeAddress, iSpoke, "getUserReserveStatus", [r.id, U]), q(r.spokeAddress, iSpoke, "getUserPosition", [r.id, U])]),
+          ...toks.map((t) => q(t, iErc, "balanceOf", [U])), q(MC3, iMc, "getEthBalance", [U])]);
+        const wallet = {}; toks.forEach((t, i) => { wallet[t] = a[reserves.length * 4 + i][0]; });
+        // a collateral keeps the factor it was enabled under (its own config key), not today's
+        const cols = reserves.map((r, i) => ({ r, st: a[i * 4 + 2], pos: a[i * 4 + 3] })).filter((x) => x.st.collateral);
+        const cfs = cols.length ? await multi(p, cols.map(({ r, pos }) => q(r.spokeAddress, iSpoke, "getDynamicReserveConfig", [r.id, pos.dynamicConfigKey]))) : [];
+        const out = {};
+        reserves.forEach((r, i) => {
+          const sup = a[i * 4][0], debt = a[i * 4 + 1][0], st = a[i * 4 + 2], ci = cols.findIndex((c) => c.r === r);
+          out[r.spoke + ":" + r.id] = { supRaw: sup, debtRaw: debt, supplied: num(sup, r.decimals), debt: num(debt, r.decimals), collateral: st.collateral,
+            cf: ci >= 0 ? Number(cfs[ci].collateralFactor) : r.cf, wallet: num(wallet[r.address], r.decimals) };
+        });
+        gasBal = Number(ethers.formatEther(a[a.length - 1][0]));
         user = out;
       });
     } catch (e) { console.warn("aave user", e); }
@@ -202,11 +229,16 @@ export function initAave(ctx) {
       <button class="btn primary" data-aave-earn="${r.spoke}:${r.id}">Deposit ${esc(r.symbol)}</button>
     </div>`;
   }
+  // the section holds its place from the first paint, so Aave never pops in above the vaults
+  const placeholder = () => (loadErr
+    ? `<div class="empty">Could not reach Aave on Arc just now. <button class="btn" type="button" data-aave-retry style="margin-left:8px">Try again</button></div>`
+    : `<div class="empty">Loading Aave V4 from Arc…</div>`);
   function renderEarn() {
     const g = B("aaveEarn"); if (!g) return;
     const f = ctx.filter();
+    if (!loaded) { B("aaveEarnWrap").hidden = false; g.innerHTML = placeholder(); return; }
     const list = reserves.filter((r) => spokeOf(r.spoke).earn && (f === "all" || r.symbol === f) && (r.stable || f === "all"));
-    B("aaveEarnWrap").hidden = !loaded || !list.length;
+    B("aaveEarnWrap").hidden = !list.length;
     g.innerHTML = list.map(earnCard).join("");
     if (ctx.onChange) ctx.onChange();
   }
@@ -245,8 +277,8 @@ export function initAave(ctx) {
   }
   function renderBorrow() {
     const g = B("aaveMarkets"); if (!g) return;
-    B("aaveBorrowWrap").hidden = !loaded;
-    if (!loaded) return;
+    B("aaveBorrowWrap").hidden = false;
+    if (!loaded) { g.innerHTML = placeholder(); return; }
     const U = ctx.account();
     // one section per market, its own position card first: the two are separate accounts
     g.innerHTML = SPOKES.map((s) => {
@@ -469,6 +501,11 @@ export function initAave(ctx) {
   }
 
   // ---- wiring -------------------------------------------------------------------------------
+  for (const id of ["aaveEarn", "aaveMarkets"]) B(id).addEventListener("click", async (e) => {
+    if (!e.target.closest("[data-aave-retry]")) return;
+    loadErr = null; renderEarn(); renderBorrow();
+    await loadMarket(); await loadUser(); renderEarn(); renderBorrow();
+  });
   B("aaveEarn").addEventListener("click", (e) => { const b = e.target.closest("[data-aave-earn]"); if (b) { const [k, id] = b.dataset.aaveEarn.split(":"); open({ mode: "deposit", spoke: k, a1: Number(id) }); } });
   B("aaveMarkets").addEventListener("click", (e) => {
     const b = e.target.closest("[data-aave-col]");
