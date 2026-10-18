@@ -125,6 +125,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .quote b { color: var(--text); text-align: right; }
   .quote[hidden] { display: none; }
   .sheet .tabs.four button { padding: 8px 4px; font-size: 12px; }
+  #aaveOverlay [hidden] { display: none !important; }
 
   .legal { margin: 40px 0 56px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--faint); font-size: 12px; max-width: 860px; }
   .legal a { color: var(--dim); text-decoration: underline; }
@@ -255,6 +256,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <span class="count" id="count">loading vaults…</span>
   </div>
   <div class="grid" id="grid"><div class="empty">Loading vaults from Arc…</div></div>
+  <div id="aaveEarnWrap" hidden><h2 class="sec">Aave V4 on Arc</h2><div class="grid" id="aaveEarn"></div></div>
   </div>
 
   <div class="view" id="borrowView" hidden>
@@ -270,10 +272,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div><b>Need the collateral first?</b> Swap USDC for cirBTC or WETH on Arc, then come back and borrow against it. Some collateral has no swap route on Arc yet; those markets say so.</div>
       <button class="btn primary" id="swapLink" type="button">Swap on Arc →</button>
     </div>
+    <div id="aaveBorrowWrap" hidden><h2 class="sec">Aave V4 on Arc</h2><div class="grid" id="aaveMarkets"></div></div>
+    <h2 class="sec">Morpho markets</h2>
     <div class="grid" id="markets"><div class="empty">Loading markets from Arc…</div></div>
   </div>
 
-  <p class="legal">Yields are variable, set by the market, and shown as reported by the vault; past rates do not predict future ones. Vaults carry smart-contract and credit risk, including loss of principal, and a vault marked <b>low liquidity</b> may not let you withdraw at once. Vault fees go to the curator, none to us. A loan is over-collateralised: if the collateral's price falls until the health factor reaches 1.0, Morpho liquidates part of it, with a penalty. Borrow rates are variable. A NEW ONE may take an origination fee on a new loan, shown in the quote before you sign. Nothing here is investment advice or an offer; A NEW ONE does not custody funds, does not issue any asset and does not choose for you. Some jurisdictions restrict these products. <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></p>
+  <p class="legal">Yields are variable, set by the market, and shown as reported by the vault; past rates do not predict future ones. Vaults carry smart-contract and credit risk, including loss of principal, and a vault marked <b>low liquidity</b> may not let you withdraw at once. Vault fees go to the curator, none to us; Aave's reserve fee goes to the Aave DAO. A loan is over-collateralised: if the collateral's price falls until the health factor reaches 1.0, the protocol (Morpho or Aave) liquidates part of it, with a penalty. Borrow rates are variable. A NEW ONE may take an origination fee on a new loan, shown in the quote before you sign. Nothing here is investment advice or an offer; A NEW ONE does not custody funds, does not issue any asset and does not choose for you. Some jurisdictions restrict these products. <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></p>
 </div></main>
 <footer class="nx-foot"><div class="nx-foot-in"><span>© 2026 A NEW ONE</span><a href="../docs.html">Docs</a><a href="../about.html">About</a><a href="../terms.html">Terms</a><a href="../privacy.html">Privacy</a><a href="mailto:support@anewone.xyz">Contact</a><span class="sp">Yields are variable and loans can be liquidated. Nothing here is investment advice.</span></div></footer>
 
@@ -316,13 +320,31 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
+<div class="overlay" id="aaveOverlay" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2 id="aaName">Aave V4</h2>
+    <p class="sub" id="aaSub"></p>
+    <div class="tabs" id="aaTabs"></div>
+    <div class="fromrow" id="aaPick1"><span id="aaPick1L"></span><div class="fromchips" id="aaPick1C"></div></div>
+    <div class="amt"><input id="aaAmt1" inputmode="decimal" placeholder="0.00" autocomplete="off"><span id="aaUnit1" style="font:600 12px var(--mono);color:var(--dim);padding:0 8px"></span><button id="aaMax1">MAX</button></div>
+    <div class="bal"><span id="aaBal1L"></span><span id="aaBal1R"></span></div>
+    <div class="fromrow" id="aaPick2"><span>Borrow</span><div class="fromchips" id="aaPick2C"></div></div>
+    <div class="amt" id="aaAmt2Row"><input id="aaAmt2" inputmode="decimal" placeholder="0.00" autocomplete="off"><span id="aaUnit2" style="font:600 12px var(--mono);color:var(--dim);padding:0 8px"></span><button id="aaMax2">MAX</button></div>
+    <div class="bal" id="aaBal2"><span id="aaBal2L"></span><span id="aaBal2R"></span></div>
+    <div class="quote" id="aaQuote" hidden></div>
+    <button class="go" id="aaGo">Deposit</button>
+    <div class="status" id="aaStatus"></div>
+    <button class="close" id="aaClose">Close</button>
+  </div>
+</div>
+
 <div class="overlay" id="ackModal" role="dialog" aria-modal="true">
   <div class="sheet">
     <h2>Before you start</h2>
     <p class="sub">One signature, once per wallet. It costs nothing and moves nothing; it only records that you accept the terms.</p>
     <ul class="ack">
       <li>A NEW ONE is a <b>non-custodial interface</b>: it never holds your funds or keys, never issues an asset and never gives advice.</li>
-      <li>Vaults and markets are run by third parties on Morpho. <b>Yields are variable</b> and <b>loans can be liquidated</b> without notice. You can lose everything you put in.</li>
+      <li>Vaults and markets are run by third parties on Morpho and Aave. <b>Yields are variable</b> and <b>loans can be liquidated</b> without notice. You can lose everything you put in.</li>
       <li>Fees are shown before you sign: none on Earn, 0.15% on a new loan.</li>
       <li>You are 18 or older, act for yourself, and are responsible for your own taxes and local rules.</li>
       <li>You accept the <a href="../terms.html" target="_blank" rel="noopener">Terms of Use</a> and the <a href="../privacy.html" target="_blank" rel="noopener">Privacy Notice</a>.</li>
@@ -404,7 +426,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   }
 
   // ---- vaults ----
-  let vaults = [], filter = "USDC", positions = {}, showAll = false;
+  let vaults = [], filter = "USDC", positions = {}, showAll = false, aave = null;
   // "Curated" means what the page promises: a named curator, no risk warning from Circle,
   // and not a test deployment. Circle's list also carries look-alikes ("Steakhouse Prime
   // USDC" run by a plain wallet at 15% performance fee) and "Test" vaults; those only show
@@ -463,6 +485,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <button class="btn primary" data-open="${vaults.indexOf(v)}">Deposit ${esc(v.asset)}</button>
       </div>`;
     }).join("");
+    if (aave) aave.renderEarn();
   }
   document.querySelectorAll(".chip[data-f]").forEach((c) => c.onclick = () => {
     document.querySelectorAll(".chip[data-f]").forEach((x) => x.classList.toggle("on", x === c));
@@ -1136,7 +1159,7 @@ Time: ${new Date().toISOString()}`;
   }
   // loans refresh with the positions once a wallet is on
   const _refreshPositions = refreshPositions;
-  refreshPositions = async function () { await _refreshPositions(); if (markets.length || B("viewBorrow").classList.contains("on")) { if (!markets.length) await loadMarkets(); else refreshLoans(); } };
+  refreshPositions = async function () { if (aave) aave.refresh(); await _refreshPositions(); if (markets.length || B("viewBorrow").classList.contains("on")) { if (!markets.length) await loadMarkets(); else refreshLoans(); } };
 
   // ---- the loan sheet: open a loan on a market, or act on a loan
   let ln = null, lnMode = "borrow", lnQuoteTimer = null, lnWalletBal = "0", lnBlocked = false;
@@ -1301,6 +1324,13 @@ Time: ${new Date().toISOString()}`;
     await refreshLoans();
     B("loanOverlay").classList.remove("open");
   };
+
+  // ---- Aave V4 (./aave.js): Earn cards and a Main-market loan, one batched transaction per action
+  if (net === "mainnet") import("./aave.js").then((m) => {
+    aave = m.initAave({ ethers, cfg: cfg.aave || {}, explorer: arcCfg.explorer, readProviders: () => READ_URLS.map(readProvider), poolProvider,
+      account: () => account, wallet, ensureArc: () => (activeKind !== "google" && activeKind !== "walletconnect" ? ensureArc() : null),
+      ensureAck, openPicker, filter: () => filter, fmt, money, pct, esc, GAS_RESERVE });
+  }).catch((e) => console.warn("aave", e));
 </script>
 <script src="../shell.js"></script>
 </body>
