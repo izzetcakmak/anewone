@@ -256,7 +256,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button class="chip on" data-f="all">All</button>
     <button class="chip" data-f="USDC">USDC</button>
     <button class="chip" data-f="EURC">EURC</button>
-    <button class="chip" id="showAllBtn" title="Vaults with no named curator, test deployments and vaults Circle flags">Show unlisted</button>
+    <button class="chip" id="showAllBtn" title="Vaults with no named curator, test deployments, vaults under 1,000 deposited and vaults Circle flags">Show unlisted</button>
     <span class="count" id="count">loading vaults…</span>
   </div>
   <div id="aaveEarnWrap" hidden><h2 class="sec">Aave V4 on Arc</h2><div class="grid" id="aaveEarn"></div></div>
@@ -435,8 +435,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   // "Curated" means what the page promises: a named curator, no risk warning from Circle,
   // and not a test deployment. Circle's list also carries look-alikes ("Steakhouse Prime
   // USDC" run by a plain wallet at 15% performance fee) and "Test" vaults; those only show
-  // when the visitor asks for everything, and then carry a warning.
-  const curated = (v) => !!(v.manager && v.manager.name) && !/\btest\b/i.test(v.name || "")
+  // when the visitor asks for everything, and then carry a warning. So do vaults holding under
+  // MIN_DEPOSITS: that small is a test or an unfinished vault (Flowmark USDC Turbo, 1.24 USDC on
+  // 18 Oct 2026, refused every deposit above 0.001 by its own cap).
+  const MIN_DEPOSITS = 1000;
+  const tiny = (v) => Number(v.totalDeposits || 0) < MIN_DEPOSITS;
+  const curated = (v) => !!(v.manager && v.manager.name) && !/\btest\b/i.test(v.name || "") && !tiny(v)
     && !((v.riskSignals && v.riskSignals.warnings) || []).some(badSignal) && !((v.riskSignals && v.riskSignals.earnKitWarnings) || []).length;
   // Circle's signals: `not_whitelisted` and a RED `timelock` mark the look-alikes and the test
   // deployments; `low_liquidity` is a state a real vault can be in (Keyrock, 75M) and is shown
@@ -485,7 +489,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="meter"><i style="width:${Math.max(4, Math.round(((Number(v.currentApy) || 0) / maxApy) * 100))}%"></i></div>
         <div class="stats"><div>${money(v.totalDeposits)}<span>Deposits</span></div><div>${money(v.liquidity)}<span>Liquidity</span></div><div>${esc(fee)}<span>Vault fee</span></div></div>
         ${low ? `<span class="tag warn">⚠ ${esc(String(v.status).replace(/_/g, " "))}</span>` : ""}
-        ${uncurated ? `<span class="tag warn">⚠ not curated: no named curator or flagged by Circle. Anyone can deploy a vault with any name.</span>` : (v.circleGuarded ? `<span class="tag usdc">✓ Circle-guarded${v.asset === "USDC" ? " · deposit from Base" : ""}</span>` : "")}
+        ${uncurated ? `<span class="tag warn">⚠ ${tiny(v) && v.manager && v.manager.name ? `under ${fmt(MIN_DEPOSITS, 0)} ${esc(v.asset)} deposited: usually a test or unfinished vault, and it may refuse deposits` : "not curated: no named curator or flagged by Circle. Anyone can deploy a vault with any name."}</span>` : (v.circleGuarded ? `<span class="tag usdc">✓ Circle-guarded${v.asset === "USDC" ? " · deposit from Base" : ""}</span>` : "")}
         <div class="pos ${p && Number(p.currentBalance) > 0 ? "show" : ""}">You: ${p ? fmt(p.currentBalance, 2) + " " + esc(v.asset) : ""}</div>
         <button class="btn primary" data-open="${vaults.indexOf(v)}">Deposit ${esc(v.asset)}</button>
       </div>`;
