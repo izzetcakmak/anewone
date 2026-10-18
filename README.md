@@ -4,8 +4,8 @@
 
 The launch and distribution front end for real-world assets on **Arc Network**, Circle's stablecoin L1 where gas
 is paid in USDC. Funds and credit on Centrifuge rails, stocks from licensed issuers, and, live today, USDC that
-earns and USDC you can borrow on Morpho through Circle's Earn and Borrow kits (`docs/earn/`). The issuer is always
-a regulated entity; A NEW ONE never issues, never custodies and never advises. It is the interface.
+earns and USDC you can borrow on Aave V4 and on Morpho (`docs/earn/`). The issuer is always a regulated entity;
+A NEW ONE never issues, never custodies and never advises. It is the interface.
 
 The memecoin launchpad the project started as lives on as **AnewOne.Fun** (`docs/fun/`): coins launch on a USDC
 bonding curve and graduate into a Uniswap v3 pool whose liquidity nobody can withdraw. Everything below about the
@@ -15,7 +15,32 @@ curve, the floor and $NOAH is about that side of the house.
 on purpose: it was the first coin to launch on Arc's public mainnet, and the name tips its hat to the chain it
 boards. Everyone's boarding the Arc. Two by two. 🦒🦒
 
-## At a glance
+## Earn & Borrow
+
+`docs/earn/` puts two lending protocols on one page, each action signed from the user's own wallet.
+
+- **Aave V4** (`docs/earn/aave.js`, first on both tabs). Earn supplies USDC or EURC to Aave's Main market. Borrow
+  offers two Aave markets, each a separate account with its own health factor: the **Main** market (USDC or EURC
+  against cirBTC or WETH) and the **Forex** market, shown as *Currency loans* (EURC against USDC or USDC against EURC,
+  up to 90%). Every action (approve, supply, enable collateral, borrow, repay, withdraw) is one transaction through
+  Arc's sender-preserving batcher, Multicall3From `0x522fAf9A91c41c443c66765030741e4AaCe147D0`, and is simulated with
+  `eth_estimateGas` before the wallet opens. The page refuses a borrow or withdrawal that would leave the health
+  factor under 1.15, and "available to borrow" is the hub's free cash within the spoke's draw cap. Market and
+  position reads go through Multicall3 (three `eth_call`s for both markets).
+- **Morpho**, through Circle's Earn and Borrow kits: curated vaults on Earn, markets on Borrow. A vault deposit is
+  simulated first, so a vault whose curator caps refuse it says so before the wallet opens; vaults with no named
+  curator, test deployments, vaults Circle flags and vaults holding under 1,000 sit under *Show unlisted*.
+- **Your deposits** lists every Morpho and Aave deposit of the connected wallet at the top of the page.
+- **Fees.** Supplying, withdrawing and repaying are free on both. A new Morpho loan carries a 0.15% origination fee
+  through Circle's kit (90% to the site, 10% to Arc). Each amount borrowed on Aave through the site carries a 0.15%
+  interface fee, a token transfer to `aave.feeTo` in `docs/config.js` inside the same batch, shown in the quote;
+  an empty `feeTo` turns it off, and the code caps it at 1%.
+
+Aave V4 on Arc (from [bgd-labs/aave-address-book](https://github.com/bgd-labs/aave-address-book), checked on chain):
+Core hub `0x17288dfc86205301064577b98B02b81017e6F79C`, Main spoke `0xB843bdC3a87A05E77E07Df9FE48928b3A34b134d`,
+Forex spoke `0x4164EBCAF74670aa74C8D4F59de6157c0780F1bB`.
+
+## AnewOne.Fun at a glance
 
 | | A NEW ONE |
 |---|---|
@@ -28,7 +53,7 @@ boards. Everyone's boarding the Arc. Two by two. 🦒🦒
 | Sign-in | Any browser wallet (MetaMask, OKX, Rabby), WalletConnect to a wallet app from a phone or by QR, or Continue with Email or Social (Google, X, Discord, Apple, email code) for a non-custodial wallet |
 | Deck Hand | `/chat/`: an assistant over the live floor that remembers you across sessions and devices, memory Seal-encrypted on Walrus mainnet via [MemWal](https://github.com/MystenLabs/MemWal); model Qwen3.8 27B on Groq |
 
-## How it works
+## How the launchpad works
 
 **The curve.** Every coin trades from its first block on its own constant-product bonding curve against a
 virtual 4,000 USDC reserve. Buy or sell any time; the contract is the market maker. Token images live in the
@@ -110,7 +135,8 @@ On Arc mainnet the platform points at Uniswap's official v3 deployment: factory
 - `script/Deploy.s.sol`: deploys the platform and launches $NOAH with its dev buy in the same transaction.
 - `script/DeployUniswapV3.s.sol`: stands up Uniswap v3 from its npm bytecode for testnet and anvil rehearsals.
 - `test/`: the forge test suite and the Uniswap v3 fixtures (provenance in `test/fixtures/uniswap-v3/PROVENANCE.md`).
-- `docs/`: the static site, deployed by Vercel on every push: the app, docs, the ark, the Boarding Pass,
+- `docs/`: the static site, deployed by Vercel on every push: Earn & Borrow (`earn/`, with the Aave V4 module
+  `earn/aave.js`), real-world assets (`assets/`), the launchpad (`fun/`), docs, the ark, the Boarding Pass,
   Swap & Bridge (`bridge/`), Deck Hand (`chat/`), privacy and terms. Every page shares one look through two files:
   `docs/shell.css` (the colours, the bar, the hero, the glass pills, the Deck Hand widget; its classes are prefixed `nx-`
   and it loads after a page's own `<style>`) and `docs/shell.js` (the sky and arch under each hero, the bar, the theme
