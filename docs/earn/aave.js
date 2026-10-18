@@ -17,7 +17,8 @@ const TOKENS = {
   "0x171a4217b86a807a64eb94757db6849fb4bdbaa0": { symbol: "cirBTC", stable: false, dp: 6 },
   "0x128cc466b61f542da60c70e3aa11c10e19b84edb": { symbol: "WETH", stable: false, dp: 5 },
 };
-const EARN_ASSETS = ["USDC", "EURC"];
+// stablecoins under their own filter chip; cirBTC and WETH (near-zero supply rates, few borrowers) under "All"
+const EARN_ASSETS = ["USDC", "EURC", "cirBTC", "WETH"];
 const LOAN_ASSETS = ["USDC", "EURC"];
 const MIN_HF = 1.15;    // a borrow or withdrawal that leaves less is refused here
 const MAX_HF = 1.25;    // what MAX sizes to
@@ -156,6 +157,7 @@ export function initAave(ctx) {
         <span class="tag ${r.symbol === "USDC" ? "usdc" : ""}">${esc(r.symbol)}</span></div>
       <div class="apy">${pct(r.supplyApy)}<small>SUPPLY APY</small></div>
       <div class="stats"><div>${money(r.added * r.price)}<span>Supplied</span></div><div>${money(r.liquidity * r.price)}<span>Liquidity</span></div><div>${fmt(r.util * 100, 1)}%<span>Utilisation</span></div></div>
+      ${r.stable ? "" : `<div class="curator">Few borrow ${esc(r.symbol)}, so supplying it earns close to nothing. Its use is as collateral: borrow USDC against it on the Borrow tab.</div>`}
       ${r.paused || r.frozen ? `<span class="tag warn">⚠ ${r.paused ? "paused" : "frozen"} by Aave governance</span>` : ""}
       <div class="pos ${ctx.account() && p.supplied > 0 ? "show" : ""}">You: ${esc(show(r, p.supplied))}${p.collateral ? " · used as collateral" : ""}</div>
       <button class="btn primary" data-aave-earn="${r.id}">Deposit ${esc(r.symbol)}</button>
@@ -167,6 +169,7 @@ export function initAave(ctx) {
     const list = EARN_ASSETS.map(bySym).filter((r) => r && (f === "all" || r.symbol === f));
     B("aaveEarnWrap").hidden = !loaded || !list.length;
     g.innerHTML = list.map(earnCard).join("");
+    if (ctx.onChange) ctx.onChange();
   }
   function renderBorrow() {
     const g = B("aaveMarkets"); if (!g) return;
@@ -438,5 +441,7 @@ export function initAave(ctx) {
   // the rates move by the block; a quiet re-read every two minutes keeps the cards honest
   setInterval(async () => { if (document.hidden) return; await loadMarket(); await loadUser(); renderEarn(); renderBorrow(); }, 120000);
 
-  return { refresh, renderEarn, renderBorrow, get error() { return loadErr; } };
+  // what this wallet has supplied, for the page's "Your deposits" list
+  const deposits = () => (ctx.account() ? reserves.filter((r) => u(r.id).supplied > 0).map((r) => ({ id: r.id, symbol: r.symbol, supplied: u(r.id).supplied, dp: r.dp, apy: r.supplyApy, collateral: u(r.id).collateral })) : []);
+  return { refresh, renderEarn, renderBorrow, deposits, open, get error() { return loadErr; } };
 }

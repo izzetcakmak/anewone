@@ -22,9 +22,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 </script>
 <title>Earn &amp; Borrow · USDC on Arc | A NEW ONE</title>
 <link rel="canonical" href="https://anewone.xyz/earn/">
-<meta name="description" content="Earn on USDC and EURC on Arc, or borrow USDC against cirBTC, ETH and tokenized assets. Morpho vaults and markets through Circle's kits; your money stays in the contracts. A NEW ONE is the interface, never the issuer.">
+<meta name="description" content="Earn on USDC and EURC on Arc, or borrow USDC against cirBTC, ETH and tokenized assets. Morpho vaults and markets through Circle's kits, and the Aave V4 market; your money stays in the contracts. A NEW ONE is the interface, never the issuer.">
 <meta property="og:title" content="Earn · USDC yield on Arc">
-<meta property="og:description" content="Curated Morpho vaults on Arc, deposit and withdraw from your own wallet.">
+<meta property="og:description" content="Curated Morpho vaults and Aave V4 on Arc, deposit and withdraw from your own wallet.">
 <meta property="og:url" content="https://anewone.xyz/earn/">
 <meta property="og:image" content="https://anewone.xyz/brand/logo-1024.png">
 <link rel="icon" type="image/png" sizes="32x32" href="../favicon.png">
@@ -225,9 +225,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <section class="nx-hero">
   <div class="nx-hero-in"><div class="nx-hero-t">
-    <div class="nx-eyebrow">DeFi · Earn &amp; Borrow · Morpho on Arc</div>
+    <div class="nx-eyebrow">DeFi · Earn &amp; Borrow · Morpho &amp; Aave on Arc</div>
     <h1 class="nx-h1">Put your USDC <em>to work</em>,<br>or borrow against what you hold.</h1>
-    <p class="nx-lead">Curated Morpho vaults on Arc. Deposit and borrow from your own wallet; the money stays in the Morpho contracts, <b>never with us</b>.</p>
+    <p class="nx-lead">Curated Morpho vaults and the Aave V4 market on Arc. Deposit and borrow from your own wallet; the money stays in the protocol contracts, <b>never with us</b>.</p>
     <div class="nx-views" role="tablist">
       <button id="viewEarn" class="on" role="tab">Earn</button>
       <button id="viewBorrow" role="tab">Borrow</button>
@@ -244,6 +244,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </section>
 
 <main class="nx-main"><div class="nx-wrap">
+  <div id="mineWrap" hidden><h2 class="sec" style="margin-top:0">Your deposits</h2><div class="grid" id="mine"></div></div>
   <div class="nx-strip"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17c0-5 4-9 9-9s9 4 9 9"/><path d="M3 17h18M7.5 17v-4M12 17V8M16.5 17v-4"/></svg></span><div><b>Need USDC on Arc?</b><span class="t">Bring it from Base, Ethereum, Arbitrum and more with Swap &amp; Bridge, or buy it with a card.</span></div>
     <div class="acts"><a class="nx-btn lit" href="../bridge/" target="_blank" rel="noopener">Swap &amp; Bridge <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a><a class="nx-btn" href="../bridge/?way=card" target="_blank" rel="noopener">Buy with card</a></div></div>
 
@@ -255,8 +256,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button class="chip" id="showAllBtn" title="Vaults with no named curator, test deployments and vaults Circle flags">Show unlisted</button>
     <span class="count" id="count">loading vaults…</span>
   </div>
-  <div class="grid" id="grid"><div class="empty">Loading vaults from Arc…</div></div>
   <div id="aaveEarnWrap" hidden><h2 class="sec">Aave V4 on Arc</h2><div class="grid" id="aaveEarn"></div></div>
+  <h2 class="sec">Morpho vaults</h2>
+  <div class="grid" id="grid"><div class="empty">Loading vaults from Arc…</div></div>
   </div>
 
   <div class="view" id="borrowView" hidden>
@@ -486,7 +488,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>`;
     }).join("");
     if (aave) aave.renderEarn();
+    renderMine();
   }
+  // Every deposit this wallet holds, Morpho and Aave side by side: someone with several
+  // wallets should not have to remember which protocol holds what
+  function renderMine() {
+    const rows = account ? vaults.filter((v) => positions[v.vaultAddress] && Number(positions[v.vaultAddress].currentBalance) > 0).map((v) => ({
+      name: v.name, by: `by ${(v.manager && v.manager.name) || "unlisted curator"} · Morpho`, asset: v.asset, amount: Number(positions[v.vaultAddress].currentBalance), dp: 2,
+      apy: Number(v.currentApy), open: `data-mine-v="${vaults.indexOf(v)}"` })) : [];
+    if (account && aave) for (const d of aave.deposits()) rows.push({ name: `Aave V4 · ${d.symbol}`, by: `Main market · Aave${d.collateral ? " · used as collateral" : ""}`, asset: d.symbol, amount: d.supplied, dp: d.dp, apy: d.apy, open: `data-mine-a="${d.id}"` });
+    $("mineWrap").hidden = !rows.length;
+    $("mine").innerHTML = rows.map((r) => `<div class="vault">
+      <div class="head"><div><h3>${esc(r.name)}</h3><div class="curator">${esc(r.by)}</div></div><span class="tag ${r.asset === "USDC" ? "usdc" : ""}">${esc(r.asset)}</span></div>
+      <div class="apy">${fmt(r.amount, r.dp)}<small>${esc(r.asset)} · ${pct(r.apy)} APY</small></div>
+      <div class="loanacts"><button class="btn" ${r.open} data-mode="withdraw">Withdraw</button><button class="btn primary" ${r.open} data-mode="deposit">Deposit more</button></div>
+    </div>`).join("");
+  }
+  $("mine").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-mode]"); if (!b) return;
+    if (b.dataset.mineA != null) return aave && aave.open({ mode: b.dataset.mode, a1: Number(b.dataset.mineA) });
+    openSheet(vaults[Number(b.dataset.mineV)]).then(() => { if (b.dataset.mode === "withdraw") $("tabWd").click(); });
+  });
   document.querySelectorAll(".chip[data-f]").forEach((c) => c.onclick = () => {
     document.querySelectorAll(".chip[data-f]").forEach((x) => x.classList.toggle("on", x === c));
     filter = c.dataset.f; render();
@@ -1329,7 +1351,7 @@ Time: ${new Date().toISOString()}`;
   if (net === "mainnet") import("./aave.js").then((m) => {
     aave = m.initAave({ ethers, cfg: cfg.aave || {}, explorer: arcCfg.explorer, readProviders: () => READ_URLS.map(readProvider), poolProvider,
       account: () => account, wallet, ensureArc: () => (activeKind !== "google" && activeKind !== "walletconnect" ? ensureArc() : null),
-      ensureAck, openPicker, filter: () => filter, fmt, money, pct, esc, GAS_RESERVE });
+      ensureAck, openPicker, filter: () => filter, onChange: () => renderMine(), fmt, money, pct, esc, GAS_RESERVE });
   }).catch((e) => console.warn("aave", e));
 </script>
 <script src="../shell.js"></script>
