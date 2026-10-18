@@ -23,7 +23,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 </script>
 <title>A NEW ONE Docs · Real-world assets on Arc | anewone.xyz</title>
 <link rel="canonical" href="https://anewone.xyz/docs.html">
-<meta name="description" content="How A NEW ONE works: a launch and distribution front end for real-world assets on Arc. Earn and Borrow on Morpho through Circle's kits, tokenized funds, credit and stocks from regulated issuers, and AnewOne.Fun, the launchpad.">
+<meta name="description" content="How A NEW ONE works: a launch and distribution front end for real-world assets on Arc. Earn and Borrow on Morpho through Circle's kits and on Aave V4, tokenized funds, credit and stocks from regulated issuers, and AnewOne.Fun, the launchpad.">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <meta name="theme-color" content="#07080b">
@@ -109,14 +109,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     found and bought, settled in USDC.</p>
   <p><strong>Mission.</strong> To be the <strong>launch and distribution front end</strong> for real-world assets on Arc.
     The issuer is always a regulated entity, and we never issue anything ourselves: Centrifuge rails carry funds and
-    credit, licensed issuers bring stocks, Morpho carries the lending. We build the interface: wallet onboarding,
+    credit, licensed issuers bring stocks, Morpho and Aave carry the lending. We build the interface: wallet onboarding,
     USDC settlement, bridging from other chains, and a page for every asset that shows who stands behind it,
     on what terms, with what on-chain data.</p>
   <div class="grid">
-    <div class="card"><span class="tag good">live</span><h3>DeFi · Earn</h3><p>USDC and EURC into Morpho vaults on Arc, run by
-      curators such as Bitwise, Gauntlet and Steakhouse. Your money stays in the vault contract. <a href="earn/">Open Earn →</a></p></div>
+    <div class="card"><span class="tag good">live</span><h3>DeFi · Earn</h3><p>USDC and EURC into Aave V4 and into Morpho vaults on Arc run by
+      curators such as Bitwise, Gauntlet and Steakhouse. Your money stays in the protocol's contracts. <a href="earn/">Open Earn →</a></p></div>
     <div class="card"><span class="tag good">live</span><h3>DeFi · Borrow</h3><p>USDC or EURC against cirBTC, ETH and tokenized
-      assets on Morpho markets, from your own wallet, with the health factor and liquidation price shown before you sign. <a href="earn/#borrow">Open Borrow →</a></p></div>
+      assets on Aave V4 and Morpho markets, euros against dollars and back on Aave's Forex market, from your own wallet, with the health factor and liquidation price shown before you sign. <a href="earn/#borrow">Open Borrow →</a></p></div>
     <div class="card"><span class="tag good">live</span><h3>RWA</h3><p>Tokenized funds from Janus Henderson and New York
       Life Investment Management on Centrifuge rails, live on Arc: JTRSY, JAAA and HYB, each with its issuer, its terms and
       its live price. <a href="assets/stocks/">RWA · Stocks / ETF</a> lists over a thousand xStocks with live prices and reserves; they trade here the moment Backed deploys on Arc. <a href="assets/">Open RWA →</a></p></div>
@@ -132,7 +132,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     over-collateralised markets. Every card shows the current APY, total deposits, withdrawable liquidity, the vault's
     performance and management fees, and the curator. You deposit and withdraw from your own wallet; the vault shares
     (ERC-4626) sit in your address and the balance shown is read from the chain. Vault fees go to the curator, none to
-    us. Yields are variable and a vault marked <em>low liquidity</em> may not let you withdraw at once.</p>
+    us. Yields are variable and a vault marked <em>low liquidity</em> may not let you withdraw at once. A vault can also
+    refuse a deposit by its curator's own caps; the deposit is simulated first, and the page says so before your wallet
+    opens. Vaults holding under 1,000 are shown only under <em>Show unlisted</em>.</p>
+  <p><strong>Aave V4.</strong> Aave's Main market sits first on the page: supply USDC or EURC (cirBTC and WETH too, which
+    earn close to nothing because few borrow them), withdraw any time the hub has the cash. Aave's reserve fee goes to the
+    Aave DAO; supplying and withdrawing cost nothing on our side. <strong>Your deposits</strong>, at the top of the page,
+    lists everything the connected wallet holds across Morpho and Aave.</p>
 
   <h2 id="borrow">Borrow</h2>
   <p>Borrow lists Morpho markets on Arc through Circle's Borrow Kit: collateral on one side (cirBTC, WETH, sUSDai, PST and
@@ -142,6 +148,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     add or withdraw collateral, or close. If the collateral's price falls until the health factor reaches 1.0, Morpho
     liquidates part of it with a penalty, so keep an eye on the band. On a new loan A NEW ONE takes an origination fee
     of 0.15% (15 bps), shown in the quote; 90% of it goes to the site and 10% to Arc.</p>
+  <p><strong>Aave V4.</strong> Two Aave markets, each a separate account with its own health factor.
+    <strong>Crypto-backed loans</strong> (the Main market): USDC or EURC against cirBTC or WETH, the loan follows the crypto
+    price. <strong>Currency loans</strong> (the Forex market): EURC against USDC or USDC against EURC, up to 90%, the loan
+    follows the EUR/USD rate. Each action (supply collateral, enable it, borrow, repay, withdraw) is one signature, batched
+    on Arc and simulated before your wallet opens; the quote shows the health factor before and after and the liquidation
+    price. The site refuses a borrow or withdrawal that would leave the health factor under 1.15. Repaying more than you
+    owe is safe: Aave takes only the debt. On each amount borrowed on Aave through the site (a first loan or a later draw)
+    A NEW ONE takes an interface fee of 0.15%, sent in the same transaction and shown in the quote; supplying,
+    withdrawing and repaying are free.</p>
 
   <h2 id="assets">Real-world assets</h2>
   <p><a href="assets/">RWA · Funds</a> lists the tokenized funds that <a href="https://centrifuge.io" target="_blank" rel="noopener">Centrifuge</a>
