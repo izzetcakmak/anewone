@@ -25,8 +25,10 @@ const LOAN_ASSETS = ["USDC", "EURC"];
 // earns exactly what a Main one does; only Main is offered there, Forex deposits still list under
 // "Your deposits". `col`: which reserves the Borrow cards offer as collateral.
 const SPOKES = [
-  { key: "main", name: "Main market", address: "0xB843bdC3a87A05E77E07Df9FE48928b3A34b134d", earn: true, col: (r) => !r.stable },
-  { key: "forex", name: "Forex market", address: "0x4164EBCAF74670aa74C8D4F59de6157c0780F1bB", earn: false, col: (r) => r.stable },
+  { key: "main", name: "Main market", address: "0xB843bdC3a87A05E77E07Df9FE48928b3A34b134d", earn: true, col: (r) => !r.stable,
+    title: "Crypto-backed loans · Main market", blurb: "Borrow USDC or EURC against cirBTC or WETH. The loan follows the crypto price." },
+  { key: "forex", name: "Forex market", address: "0x4164EBCAF74670aa74C8D4F59de6157c0780F1bB", earn: false, col: (r) => r.stable,
+    title: "Currency loans · Forex market", blurb: "Borrow euros against dollars, or dollars against euros, up to 90%. The loan follows the EUR/USD rate." },
 ];
 const MIN_HF = 1.15;    // a borrow or withdrawal that leaves less is refused here
 const MAX_HF = 1.25;    // what MAX sizes to
@@ -246,8 +248,12 @@ export function initAave(ctx) {
     B("aaveBorrowWrap").hidden = !loaded;
     if (!loaded) return;
     const U = ctx.account();
-    const pos = U ? SPOKES.filter((s) => hasLoan(s.key)).map(positionCard).join("") : "";
-    g.innerHTML = pos + SPOKES.flatMap((s) => collaterals(s.key).flatMap((c) => loanAssets(s.key, c).map((d) => pairCard(c, d)))).join("");
+    // one section per market, its own position card first: the two are separate accounts
+    g.innerHTML = SPOKES.map((s) => {
+      const pairs = collaterals(s.key).flatMap((c) => loanAssets(s.key, c).map((d) => pairCard(c, d))).join("");
+      if (!pairs) return "";
+      return `<div class="gsec">${esc(s.title)}<span>${esc(s.blurb)}</span></div>${U && hasLoan(s.key) ? positionCard(s) : ""}${pairs}`;
+    }).join("");
   }
 
   // ---- the sheet ----------------------------------------------------------------------------

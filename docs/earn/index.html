@@ -126,6 +126,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .quote[hidden] { display: none; }
   .sheet .tabs.four button { padding: 8px 4px; font-size: 12px; }
   #aaveOverlay [hidden] { display: none !important; }
+  .gsec { grid-column: 1 / -1; margin: 6px 0 -4px; font: 600 15px 'Space Grotesk', sans-serif; color: var(--text); }
+  .gsec span { display: block; margin-top: 2px; font: 400 13px Inter, sans-serif; color: var(--dim); }
+  .gsec:not(:first-child) { margin-top: 18px; }
 
   .legal { margin: 40px 0 56px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--faint); font-size: 12px; max-width: 860px; }
   .legal a { color: var(--dim); text-decoration: underline; }
@@ -250,9 +253,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <div class="view" id="earnView">
   <div class="filters">
-    <button class="chip on" data-f="USDC">USDC</button>
+    <button class="chip on" data-f="all">All</button>
+    <button class="chip" data-f="USDC">USDC</button>
     <button class="chip" data-f="EURC">EURC</button>
-    <button class="chip" data-f="all">All</button>
     <button class="chip" id="showAllBtn" title="Vaults with no named curator, test deployments and vaults Circle flags">Show unlisted</button>
     <span class="count" id="count">loading vaults…</span>
   </div>
@@ -428,7 +431,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   }
 
   // ---- vaults ----
-  let vaults = [], filter = "USDC", positions = {}, showAll = false, aave = null;
+  let vaults = [], filter = "all", positions = {}, showAll = false, aave = null;
   // "Curated" means what the page promises: a named curator, no risk warning from Circle,
   // and not a test deployment. Circle's list also carries look-alikes ("Steakhouse Prime
   // USDC" run by a plain wallet at 15% performance fee) and "Test" vaults; those only show
