@@ -78,7 +78,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="nx-eyebrow">Legal · Terms of Use</div>
     <h1 class="nx-h1">Terms of <em>Use</em></h1>
     <p class="nx-lead">By using anewone.xyz you agree to these terms. Please read them; a Turkish summary (<a href="#tr">Türkçe özet</a>) is at the end, and for users in Türkiye the Turkish text prevails.</p>
-    <p class="nx-updated">Last updated: 30 September 2026</p>
+    <p class="nx-updated">Last updated: 18 October 2026</p>
   </div></div>
 </section>
 
@@ -89,8 +89,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     (“we”, “us”), reachable at <a href="mailto:support@anewone.xyz">support@anewone.xyz</a>. A NEW ONE is a
     <strong>non-custodial software interface</strong>: a website that lets you read public blockchain data and
     build transactions for open-source smart contracts on the Arc network, which you sign and send from your own
-    wallet. It has four parts: <strong>Earn</strong> (deposits into third-party Morpho lending vaults),
-    <strong>Borrow</strong> (loans from third-party Morpho markets), <strong>Assets</strong> (pages for tokenized
+    wallet. It has four parts: <strong>Earn</strong> (deposits into third-party Morpho lending vaults and the Aave V4 market),
+    <strong>Borrow</strong> (loans from third-party Morpho markets and the Aave V4 market), <strong>Assets</strong> (pages for tokenized
     real-world assets issued by regulated third parties, as they arrive) and <strong>AnewOne.Fun</strong> (the
     token launchpad). The contracts are public and their source is on
     <a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">GitHub</a>.</p>
@@ -138,7 +138,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       predict future ones. Vaults carry smart-contract and credit risk, including loss of principal, and a vault
       marked <em>low liquidity</em> may not let you withdraw at once.</li>
     <li><strong>Borrow:</strong> a loan is over-collateralised. If the collateral's price falls until the health factor
-      reaches 1.0, the Morpho protocol liquidates part or all of it with a penalty, automatically and without notice.
+      reaches 1.0, the Morpho or Aave protocol liquidates part or all of it with a penalty, automatically and without notice.
       Borrow rates are variable. You alone monitor your position.</li>
     <li><strong>Assets:</strong> a tokenized fund, credit pool or stock carries the risks of its underlying and of its
       issuer; redemption depends on the issuer's terms.</li>
@@ -157,7 +157,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <strong>Borrow:</strong> when a new loan is opened, an origination fee of 0.15% (15 basis points) of the amount
     borrowed is withheld from the proceeds; 90% of it goes to us and 10% to Arc. It is shown in the quote before
     you sign, applies only at origination, and is not charged on repayments, added collateral or later draws.
-    Interest goes to the market's lenders under the Morpho protocol. <strong>Swap &amp; Bridge:</strong> non-USDC
+    Interest goes to the market's lenders under the Morpho protocol. <strong>Aave V4:</strong> nothing on supply,
+    withdrawal or repayment; on each amount borrowed through this website (a first loan or a later draw) an interface
+    fee of 0.15% is sent to us from the borrowed funds, in the same transaction, and shown in the quote before you
+    sign. Interest goes to Aave's suppliers, with Aave's reserve fee to the Aave DAO. <strong>Swap &amp; Bridge:</strong> non-USDC
     payments carry a 0.25% integrator fee on LI.FI routes. <strong>AnewOne.Fun:</strong> every trade on a curve pays a 1.5% fee: 0.5% to the token's creator and 1% to the platform. A creator's fees
     collect in a pot that must be claimed within 7 days of the pot starting to accrue. A creator who claims before
     the deadline shown in the app keeps the full pot; a pot left unclaimed past that window goes to the platform,
@@ -178,7 +181,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <h2>Software as is</h2>
   <p>The website and the contracts are provided as is, without warranties of any kind. Smart contracts cannot be
-    changed once deployed and may contain bugs; third-party protocols (Morpho, Uniswap, Circle, LI.FI, Centrifuge and
+    changed once deployed and may contain bugs; third-party protocols (Morpho, Aave, Uniswap, Circle, LI.FI, Centrifuge and
     issuers) are outside our control. To the extent the law allows, we are not liable for losses from using the
     website or the contracts, including losses from bugs, liquidations, network problems, oracle or price failures,
     or wallet or third-party failures. Nothing in these terms limits liability for intent or gross negligence, or
@@ -208,7 +211,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <p><strong>Hizmetin niteliği.</strong> A NEW ONE, saklama hizmeti vermeyen (non-custodial) bir yazılım arayüzüdür.
     Arc ağındaki açık kaynaklı akıllı sözleşmeler için işlem hazırlamanızı sağlar; her işlemi kendi cüzdanınızda
     siz onaylar ve gönderirsiniz. Fonlarınızı ve anahtarlarınızı hiçbir zaman tutmayız, alamayız, aktaramayız.
-    Earn (üçüncü taraf Morpho kasalarına mevduat), Borrow (üçüncü taraf Morpho piyasalarından kredi), Assets
+    Earn (üçüncü taraf Morpho kasalarına ve Aave V4 piyasasına mevduat), Borrow (üçüncü taraf Morpho piyasalarından ve Aave V4 piyasasından kredi), Assets
     (düzenlemeye tabi üçüncü kişilerce ihraç edilen tokenize varlıkların sayfaları) ve AnewOne.Fun (token
     başlatma platformu) bölümlerinden oluşur.</p>
   <p><strong>Ne değiliz.</strong> Hiçbir varlığı ihraç etmeyiz, satmayız, geri almayız. Yatırım, finans, hukuk veya
@@ -224,16 +227,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     açık olabilir; bunu ihraççı belirler.</p>
   <p><strong>Riskler.</strong> Kripto varlıklar, DeFi kredileri ve memecoin'ler yüksek risklidir; fiyatlar sıfıra
     düşebilir ve yatırdığınızın tamamını kaybedebilirsiniz. Getiriler değişkendir, geçmiş getiri geleceği
-    göstermez. Kredilerde teminatın değeri düştüğünde Morpho protokolü teminatı ceza uygulayarak otomatik olarak
+    göstermez. Kredilerde teminatın değeri düştüğünde Morpho veya Aave protokolü teminatı ceza uygulayarak otomatik olarak
     tasfiye eder; pozisyonunuzu yalnızca siz izlersiniz. Buradaki hiçbir mevduat banka mevduatı değildir ve
     mevduat sigortası kapsamında değildir. Test ağı tokenlerinin değeri yoktur.</p>
   <p><strong>Ücretler.</strong> Earn kasalarının ücretleri küratöre gider, bize gitmez. Borrow'da yeni kredi
     açılışında kredi tutarının %0,15'i (15 baz puan) kredi tutarından kesilir; %90'ı bize, %10'u Arc'a gider ve
-    imzadan önce teklifte gösterilir. Köprü ve takas işlemlerinde USDC dışı ödemelerde %0,25 entegratör ücreti
+    imzadan önce teklifte gösterilir. Aave V4'te yatırma, çekme ve geri ödemeden ücret alınmaz; bu siteden
+    yapılan her borç alımında (ilk kredi veya sonraki çekiş) borç alınan tutarın %0,15'i aynı işlem içinde bize
+    aktarılır ve imzadan önce teklifte gösterilir. Köprü ve takas işlemlerinde USDC dışı ödemelerde %0,25 entegratör ücreti
     alınır. AnewOne.Fun'da her işlemde %1,5 ücret alınır (%0,5 token yaratıcısına, %1 platforma). Ağ ücreti (gas)
     ayrıca USDC olarak ödenir.</p>
   <p><strong>Sorumluluk.</strong> Site ve sözleşmeler “olduğu gibi” sunulur. Akıllı sözleşmeler dağıtıldıktan
-    sonra değiştirilemez ve hata içerebilir; Morpho, Uniswap, Circle, LI.FI, Centrifuge ve ihraççılar gibi üçüncü
+    sonra değiştirilemez ve hata içerebilir; Morpho, Aave, Uniswap, Circle, LI.FI, Centrifuge ve ihraççılar gibi üçüncü
     taraflar kontrolümüz dışındadır. Kanunun izin verdiği ölçüde, hatalar, tasfiyeler, ağ sorunları, fiyat veya
     oracle hataları ya da cüzdan ve üçüncü taraf arızalarından doğan zararlardan sorumlu değiliz. Kast ve ağır
     ihmalden doğan sorumluluk ile emredici hukuk ve tüketici mevzuatı gereği sınırlanamayan sorumluluk saklıdır.</p>
