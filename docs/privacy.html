@@ -78,7 +78,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="nx-eyebrow">Legal · Privacy · KVKK</div>
     <h1 class="nx-h1"><em>Privacy</em></h1>
     <p class="nx-lead">A NEW ONE is a static website with a handful of small server functions, each listed below. There are no accounts, no cookies or cross-site trackers, and we will never ask for your seed phrase or private key. The data controller is İzzet Çakmak (Türkiye), <a href="mailto:support@anewone.xyz">support@anewone.xyz</a>. The privacy notice required by Türkiye's Personal Data Protection Law No. 6698 (KVKK) is at the end of this page, in Turkish: <a href="#kvkk">KVKK Aydınlatma Metni</a>.</p>
-    <p class="nx-updated">Last updated: 14 October 2026</p>
+    <p class="nx-updated">Last updated: 19 October 2026</p>
   </div></div>
 </section>
 
@@ -170,7 +170,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       repayment are fetched from Circle's Earn and Borrow services (api.circle.com), which see the wallet address
       and amounts involved under Circle's privacy policy. The transactions themselves go from your wallet to the
       Morpho contracts on Arc. When a loan is opened, Circle records the loan against your wallet address so it can
-      show you its state; we hold no copy.</li>
+      show you its state; we hold no copy. Aave V4 involves no extra service: its markets and your position are read
+      straight from the chain through the Arc RPC providers listed here, and Aave transactions go from your wallet to
+      the Aave contracts on Arc.</li>
     <li><strong>Wallet apps over WalletConnect:</strong> if you connect a phone wallet, the pairing runs through
       WalletConnect's relay (Reown) under its policy; only signing requests travel over it.</li>
     <li><strong>Regulated issuers:</strong> where an asset requires eligibility or identity checks, those happen with
