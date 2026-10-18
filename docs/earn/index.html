@@ -945,6 +945,42 @@ Time: ${new Date().toISOString()}`;
   const trim6 = (s) => { const [a, b = ""] = String(s).split("."); return b ? `${a}.${b.slice(0, 6)}`.replace(/\.?0+$/, "") : a; };
   function setStatus(t, cls) { const s = $("status"); s.textContent = t; s.className = "status " + (cls || ""); }
 
+  // A Morpho V2 vault hands each deposit on to its curator's markets and reverts when that would
+  // break the curator's own caps (Flowmark USDC Turbo, 18 Oct 2026: a 20% relative cap already
+  // full, so anything above 0.001 USDC reverted and the wallet only showed a failure). The
+  // deposit is simulated first, as the user, through Arc's sender-preserving batcher, so a vault
+  // that cannot take it says so before the wallet opens. Anything else (an RPC hiccup) lets the
+  // deposit go ahead as before.
+  const VAULT_REFUSALS = { "0x44e1772c": "its curator's allocation limit is full", "0x4616e4af": "its curator's deposit cap is reached",
+    "0x861a96d6": "it does not accept new depositors", "0x8181c5ea": "it is not accepting deposits" };
+  const iProbe = new ethers.Interface(["function approve(address, uint256)", "function deposit(uint256, address)", "function decimals() view returns (uint8)",
+    "function aggregate3((address target, bool allowFailure, bytes callData)[] calls) payable returns ((bool success, bytes returnData)[])"]);
+  async function depositRefusal(v, amount) {
+    try {
+      const dec = Number(iProbe.decodeFunctionResult("decimals", await rawRpc("eth_call", [{ to: v.assetAddress, data: iProbe.encodeFunctionData("decimals") }, "latest"]))[0]);
+      const amt = ethers.parseUnits(amount, dec);
+      const data = iProbe.encodeFunctionData("aggregate3", [[[v.assetAddress, false, iProbe.encodeFunctionData("approve", [v.vaultAddress, amt])],
+        [v.vaultAddress, false, iProbe.encodeFunctionData("deposit", [amt, account])]]]);
+      await rawRpc("eth_call", [{ from: account, to: "0x522fAf9A91c41c443c66765030741e4AaCe147D0", data }, "latest"]);
+      return null;
+    } catch (e) {
+      let s = ""; try { s = JSON.stringify(e, Object.getOwnPropertyNames(e)); } catch {}
+      const sel = (s.match(/0x[0-9a-f]{8}(?![0-9a-f])/gi) || []).map((x) => x.toLowerCase()).find((x) => VAULT_REFUSALS[x]);
+      return sel ? VAULT_REFUSALS[sel] : null;
+    }
+  }
+  const refusalText = (v, why) => `${v.name} cannot take this deposit right now: ${why}. Nothing was sent. This is the vault's own setting, set by its curator; pick another vault.`;
+  let refuseTimer = null;
+  $("amt").addEventListener("input", () => {
+    clearTimeout(refuseTimer);
+    refuseTimer = setTimeout(async () => {
+      const amount = trim6($("amt").value.trim());
+      if (mode !== "deposit" || src || !account || !cur || !(Number(amount) > 0)) return;
+      const why = await depositRefusal(cur, amount);
+      if (why && trim6($("amt").value.trim()) === amount) setStatus(refusalText(cur, why), "err");
+    }, 600);
+  });
+
   // From another chain: the wallet switches to the source, signs one ERC-3009 authorization
   // (no gas there), Circle pulls the USDC, bridges it over CCTP and deposits into the vault
   // for this same address on Arc. The bridge is followed by its execution id until it lands.
@@ -994,6 +1030,7 @@ Time: ${new Date().toISOString()}`;
     const amount = trim6($("amt").value.trim());
     if (!(Number(amount) > 0)) { setStatus("Enter an amount.", "err"); return; }
     if (!(await ensureAck())) { setStatus("Accept the terms to continue.", "err"); return; }
+    if (mode === "deposit" && !src) { const why = await depositRefusal(cur, amount); if (why) { setStatus(refusalText(cur, why), "err"); return; } }
     $("goBtn").disabled = true;
     setStatus(mode === "deposit" ? "Confirm the approval and the deposit in your wallet…" : "Confirm the withdrawal in your wallet…");
     const before = vaultBal;
