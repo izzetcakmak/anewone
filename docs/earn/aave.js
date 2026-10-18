@@ -1,29 +1,38 @@
-// Aave V4 on Arc, straight from this page: supply and withdraw on Earn, a cross-collateral loan
-// on Borrow. Both sit on Aave's Main spoke (hub-and-spoke: the Core hub holds the liquidity, the
-// spoke keeps the positions). Every action is ONE transaction through Arc's sender-preserving
-// batcher (Multicall3From, the one Circle's kit uses for Morpho): each call inside runs with the
-// user's own address as msg.sender, so approve + supply + borrow + the interface fee land
-// together or not at all. Each batch is simulated (eth_estimateGas) before the wallet is asked.
+// Aave V4 on Arc, straight from this page: supply and withdraw on Earn, cross-collateral loans on
+// Borrow. Aave V4 is hub-and-spoke: the Core hub holds the liquidity, each spoke is a market with
+// its own positions and risk settings. Two spokes are shown: Main (cirBTC and WETH collateral for
+// USDC/EURC loans) and Forex (USDC against EURC and back, 90% collateral factor). A wallet has a
+// separate account, and a separate health factor, on each.
+//
+// Every action is ONE transaction through Arc's sender-preserving batcher (Multicall3From, the
+// one Circle's kit uses for Morpho): each call inside runs with the user's own address as
+// msg.sender, so approve + supply + borrow + the interface fee land together or not at all.
+// Each batch is simulated (eth_estimateGas) before the wallet is asked.
 //
 // Addresses: bgd-labs/aave-address-book src/AaveV4Arc.sol, code checked on-chain 18 Oct 2026.
 const BATCHER = "0x522fAf9A91c41c443c66765030741e4AaCe147D0";
-const SPOKE = "0xB843bdC3a87A05E77E07Df9FE48928b3A34b134d"; // Main spoke
 const HUB = "0x17288dfc86205301064577b98B02b81017e6F79C"; // Core hub
 const USDC = "0x3600000000000000000000000000000000000000";
-// only reserves we know are shown; anything else the spoke lists later stays out until reviewed
+// only reserves we know are shown; anything else a spoke lists later stays out until reviewed
 const TOKENS = {
   [USDC]: { symbol: "USDC", stable: true, dp: 2 },
   "0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1": { symbol: "EURC", stable: true, dp: 2 },
   "0x171a4217b86a807a64eb94757db6849fb4bdbaa0": { symbol: "cirBTC", stable: false, dp: 6 },
   "0x128cc466b61f542da60c70e3aa11c10e19b84edb": { symbol: "WETH", stable: false, dp: 5 },
 };
-// stablecoins under their own filter chip; cirBTC and WETH (near-zero supply rates, few borrowers) under "All"
-const EARN_ASSETS = ["USDC", "EURC", "cirBTC", "WETH"];
 const LOAN_ASSETS = ["USDC", "EURC"];
+// `earn`: the spoke's supply cards go on Earn. Both spokes draw on the same hub, so a Forex supply
+// earns exactly what a Main one does; only Main is offered there, Forex deposits still list under
+// "Your deposits". `col`: which reserves the Borrow cards offer as collateral.
+const SPOKES = [
+  { key: "main", name: "Main market", address: "0xB843bdC3a87A05E77E07Df9FE48928b3A34b134d", earn: true, col: (r) => !r.stable },
+  { key: "forex", name: "Forex market", address: "0x4164EBCAF74670aa74C8D4F59de6157c0780F1bB", earn: false, col: (r) => r.stable },
+];
 const MIN_HF = 1.15;    // a borrow or withdrawal that leaves less is refused here
 const MAX_HF = 1.25;    // what MAX sizes to
 const WARN_HF = 1.5;
 const MAX_UINT = (1n << 256n) - 1n;
+const UNCAPPED = 2 ** 40 - 1; // the hub's caps are uint40 whole tokens; the max means no cap
 
 const SPOKE_ABI = [
   "function getReserveCount() view returns (uint256)",
@@ -47,6 +56,9 @@ const HUB_ABI = [
   "function getAssetLiquidity(uint256) view returns (uint256)",
   "function getAssetDrawnRate(uint256) view returns (uint256)",
   "function getAssetConfig(uint256) view returns (address feeReceiver, uint256 liquidityFee, address irStrategy, address reinvestmentController)",
+  "function getSpokeConfig(uint256, address) view returns (uint256 addCap, uint256 drawCap, uint256 riskPremiumThreshold, bool active, bool paused)",
+  "function getSpokeAddedAssets(uint256, address) view returns (uint256)",
+  "function getSpokeTotalOwed(uint256, address) view returns (uint256)",
 ];
 const ORACLE_ABI = ["function getReservesPrices(uint256[]) view returns (uint256[])"];
 const ERC20_ABI = ["function balanceOf(address) view returns (uint256)", "function approve(address, uint256)", "function transfer(address, uint256)"];
@@ -65,11 +77,17 @@ export function initAave(ctx) {
   const bps = (x) => Math.max(0, Math.min(100, Math.floor(Number(x) || 0)));
   const BORROW_FEE = feeTo ? bps(fc.borrowFeeBps) : 0, SUPPLY_FEE = feeTo ? bps(fc.supplyFeeBps) : 0;
 
+  // reserves of every spoke, each tagged with its spoke; user positions keyed "spoke:id"
   let reserves = [], user = {}, gasBal = 0, loaded = false, loadErr = null;
-  const bySym = (s) => reserves.find((r) => r.symbol === s);
-  const byId = (id) => reserves.find((r) => r.id === id);
+  const spokeOf = (k) => SPOKES.find((s) => s.key === k);
+  const inSpoke = (k) => reserves.filter((r) => r.spoke === k);
+  const res = (k, id) => reserves.find((r) => r.spoke === k && r.id === id);
+  const bySym = (k, s) => reserves.find((r) => r.spoke === k && r.symbol === s);
   const num = (raw, dec) => Number(ethers.formatUnits(raw, dec));
   const show = (r, x) => `${fmt(x, r.dp)} ${r.symbol}`;
+  const price = (x) => (x < 10 ? "$" + fmt(x, 4) : money(x));
+  // the hub's cap on what this spoke may hold or lend, in tokens left; Infinity when uncapped
+  const room = (cap, used, dec) => (Number(cap) >= UNCAPPED ? Infinity : Math.max(0, Number(cap) - num(used, dec)));
 
   async function withRead(fn) {
     let last = null;
@@ -77,147 +95,174 @@ export function initAave(ctx) {
     throw last || new Error("no RPC answered");
   }
 
-  // ---- market: rates, liquidity, prices, collateral factors -------------------------------
+  // ---- markets: rates, liquidity, caps, prices, collateral factors -------------------------
+  async function loadSpoke(p, s) {
+    const sp = new ethers.Contract(s.address, SPOKE_ABI, p), hub = new ethers.Contract(HUB, HUB_ABI, p);
+    const n = Number(await sp.getReserveCount());
+    const rows = (await Promise.all([...Array(n).keys()].map(async (id) => {
+      const [r, rc] = await Promise.all([sp.getReserve(id), sp.getReserveConfig(id)]);
+      const t = TOKENS[r.underlying.toLowerCase()];
+      if (!t || r.hub.toLowerCase() !== HUB.toLowerCase()) return null;
+      const a = r.assetId, dec = Number(r.decimals);
+      const [dyn, added, owed, liq, rate, ac, sc, sAdded, sOwed] = await Promise.all([sp.getDynamicReserveConfig(id, r.dynamicConfigKey),
+        hub.getAddedAssets(a), hub.getAssetTotalOwed(a), hub.getAssetLiquidity(a), hub.getAssetDrawnRate(a), hub.getAssetConfig(a),
+        hub.getSpokeConfig(a, s.address), hub.getSpokeAddedAssets(a, s.address), hub.getSpokeTotalOwed(a, s.address)]);
+      const addedN = num(added, dec), owedN = num(owed, dec), drawn = Number(rate) / 1e27, liquidity = num(liq, dec);
+      const util = addedN > 0 ? owedN / addedN : 0;
+      return { spoke: s.key, market: s.name, spokeAddress: s.address, id, address: r.underlying, ...t, decimals: dec, cf: Number(dyn.collateralFactor), risk: Number(rc.collateralRisk),
+        paused: rc.paused || sc.paused || !sc.active, frozen: rc.frozen, borrowable: rc.borrowable, added: addedN, owed: owedN, liquidity, util,
+        // what can actually be borrowed here: the hub's free cash, within this spoke's draw cap
+        available: Math.min(liquidity, room(sc.drawCap, sOwed, dec)), supplyRoom: room(sc.addCap, sAdded, dec),
+        spokeOwed: num(sOwed, dec), drawn, borrowApy: Math.expm1(drawn), supplyApy: Math.expm1(drawn * util * (1 - Number(ac.liquidityFee) / 1e4)) };
+    }))).filter(Boolean);
+    const oracle = new ethers.Contract(await sp.ORACLE(), ORACLE_ABI, p);
+    const px = await oracle.getReservesPrices(rows.map((r) => r.id));
+    rows.forEach((r, i) => { r.price = Number(px[i]) / 1e8; });
+    return rows;
+  }
   async function loadMarket() {
     try {
-      reserves = await withRead(async (p) => {
-        const sp = new ethers.Contract(SPOKE, SPOKE_ABI, p), hub = new ethers.Contract(HUB, HUB_ABI, p);
-        const n = Number(await sp.getReserveCount());
-        const rows = (await Promise.all([...Array(n).keys()].map(async (id) => {
-          const [r, rc] = await Promise.all([sp.getReserve(id), sp.getReserveConfig(id)]);
-          const t = TOKENS[r.underlying.toLowerCase()];
-          if (!t || r.hub.toLowerCase() !== HUB.toLowerCase()) return null;
-          const a = r.assetId, dec = Number(r.decimals);
-          const [dyn, added, owed, liq, rate, ac] = await Promise.all([sp.getDynamicReserveConfig(id, r.dynamicConfigKey),
-            hub.getAddedAssets(a), hub.getAssetTotalOwed(a), hub.getAssetLiquidity(a), hub.getAssetDrawnRate(a), hub.getAssetConfig(a)]);
-          const addedN = num(added, dec), owedN = num(owed, dec), drawn = Number(rate) / 1e27;
-          const util = addedN > 0 ? owedN / addedN : 0;
-          return { id, address: r.underlying, ...t, decimals: dec, cf: Number(dyn.collateralFactor), risk: Number(rc.collateralRisk),
-            paused: rc.paused, frozen: rc.frozen, borrowable: rc.borrowable, added: addedN, owed: owedN, liquidity: num(liq, dec), util,
-            drawn, borrowApy: Math.expm1(drawn), supplyApy: Math.expm1(drawn * util * (1 - Number(ac.liquidityFee) / 1e4)) };
-        }))).filter(Boolean);
-        const oracle = new ethers.Contract(await sp.ORACLE(), ORACLE_ABI, p);
-        const px = await oracle.getReservesPrices(rows.map((r) => r.id));
-        rows.forEach((r, i) => { r.price = Number(px[i]) / 1e8; });
-        return rows;
-      });
+      reserves = await withRead(async (p) => (await Promise.all(SPOKES.map((s) => loadSpoke(p, s)))).flat());
       loaded = true; loadErr = null;
     } catch (e) { loadErr = e; console.warn("aave market", e); }
   }
 
-  // ---- the user's position on the spoke, and the wallet balances it needs ------------------
+  // ---- the user's positions, and the wallet balances they need -----------------------------
   async function loadUser() {
     const U = ctx.account();
     if (!U || !reserves.length) { user = {}; return; }
     try {
       await withRead(async (p) => {
-        const sp = new ethers.Contract(SPOKE, SPOKE_ABI, p);
-        const out = {};
+        const out = {}, wallet = {};
         await Promise.all(reserves.map(async (r) => {
-          const [sup, debt, st, pos, wal] = await Promise.all([sp.getUserSuppliedAssets(r.id, U), sp.getUserTotalDebt(r.id, U),
-            sp.getUserReserveStatus(r.id, U), sp.getUserPosition(r.id, U), new ethers.Contract(r.address, ERC20_ABI, p).balanceOf(U)]);
+          const sp = new ethers.Contract(r.spokeAddress, SPOKE_ABI, p);
+          const [sup, debt, st, pos] = await Promise.all([sp.getUserSuppliedAssets(r.id, U), sp.getUserTotalDebt(r.id, U), sp.getUserReserveStatus(r.id, U), sp.getUserPosition(r.id, U)]);
           // a collateral keeps the factor it was enabled under (its own config key), not today's
           const cf = st.collateral ? Number((await sp.getDynamicReserveConfig(r.id, pos.dynamicConfigKey)).collateralFactor) : r.cf;
-          out[r.id] = { supRaw: sup, debtRaw: debt, supplied: num(sup, r.decimals), debt: num(debt, r.decimals), collateral: st.collateral, cf, wallet: num(wal, r.decimals) };
+          out[r.spoke + ":" + r.id] = { supRaw: sup, debtRaw: debt, supplied: num(sup, r.decimals), debt: num(debt, r.decimals), collateral: st.collateral, cf };
         }));
+        const toks = [...new Set(reserves.map((r) => r.address))];
+        await Promise.all(toks.map(async (t) => { wallet[t] = await new ethers.Contract(t, ERC20_ABI, p).balanceOf(U); }));
+        for (const r of reserves) out[r.spoke + ":" + r.id].wallet = num(wallet[r.address], r.decimals);
         gasBal = Number(ethers.formatEther(await p.getBalance(U)));
         user = out;
       });
     } catch (e) { console.warn("aave user", e); }
   }
-  const u = (id) => user[id] || { supRaw: 0n, debtRaw: 0n, supplied: 0, debt: 0, collateral: false, cf: 0, wallet: 0 };
+  const u = (r) => (r && user[r.spoke + ":" + r.id]) || { supRaw: 0n, debtRaw: 0n, supplied: 0, debt: 0, collateral: false, cf: 0, wallet: 0 };
 
-  // Health factor the way the spoke counts it: collateral value x collateral factor over debt
-  // value, at the oracle's prices. `adj` is a what-if: supply/debt deltas and collateral turned on.
-  function health(adj = {}) {
-    let S = 0, D = 0, vol = [];
-    for (const r of reserves) {
-      const p = u(r.id), sup = p.supplied + ((adj.supply || {})[r.id] || 0), on = p.collateral || (adj.enable || []).includes(r.id);
+  // Health factor the way a spoke counts it: collateral value x collateral factor over debt
+  // value, at its oracle's prices, for one spoke. `adj` is a what-if: supply/debt deltas by
+  // reserve id and collateral turned on.
+  function health(k, adj = {}) {
+    let S = 0, D = 0;
+    const cols = [], debts = [];
+    for (const r of inSpoke(k)) {
+      const p = u(r), sup = p.supplied + ((adj.supply || {})[r.id] || 0), on = p.collateral || (adj.enable || []).includes(r.id);
       const cf = p.collateral ? p.cf : r.cf;
-      if (on && sup > 0) { S += sup * r.price * cf / 1e4; if (!r.stable) vol.push({ r, sup, cf }); }
-      D += Math.max(0, p.debt + ((adj.debt || {})[r.id] || 0)) * r.price;
+      if (on && sup > 0) { S += sup * r.price * cf / 1e4; cols.push({ r, sup, cf }); }
+      const d = Math.max(0, p.debt + ((adj.debt || {})[r.id] || 0));
+      if (d > 0) { D += d * r.price; debts.push({ r, d }); }
     }
     const hf = D > 1e-9 ? S / D : Infinity;
-    // one volatile collateral against stable debt has a single liquidation price: where HF = 1
-    let liq = null;
-    if (vol.length === 1 && D > 1e-9) { const v = vol[0], rest = S - v.sup * v.r.price * v.cf / 1e4; liq = (D - rest) / (v.sup * v.cf / 1e4); if (!(liq > 0)) liq = null; }
-    return { S, D, hf, liq, liqSym: vol.length === 1 ? vol[0].r.symbol : null };
+    // one collateral against other assets has a single liquidation price: where HF reaches 1.
+    // A Forex loan moves with the euro: EURC collateral against USDC liquidates when EURC falls
+    // to its price; USDC collateral against EURC when EURC rises to it.
+    let liq = null, liqSym = null, rise = false;
+    if (cols.length === 1 && D > 1e-9 && !debts.some((x) => x.r.id === cols[0].r.id)) {
+      const c = cols[0];
+      if (c.r.stable && debts.length === 1 && debts[0].r.stable && debts[0].r.symbol !== "USDC") { liq = S / debts[0].d; liqSym = debts[0].r.symbol; rise = true; }
+      else { liq = D / (c.sup * c.cf / 1e4); liqSym = c.r.symbol; }
+      if (!(liq > 0)) liq = null;
+    }
+    return { S, D, hf, liq, liqSym, liqLabel: liqSym ? (rise ? `Liquidates if ${liqSym} rises to` : `Liquidation price ${liqSym}`) : "" };
   }
   const hfText = (h) => (h === Infinity ? "∞" : fmt(h, 2));
-  const hasLoan = () => reserves.some((r) => u(r.id).debt > 0 || (u(r.id).collateral && u(r.id).supplied > 0));
+  const hasLoan = (k) => inSpoke(k).some((r) => u(r).debt > 0 || (u(r).collateral && u(r).supplied > 0));
   // the borrow rate a loan pays: the hub's drawn rate plus Aave V4's risk premium, which is the
   // collateral's risk weight (0 on every Arc reserve today)
   const borrowApy = (debtR, colR) => Math.expm1(debtR.drawn * (1 + ((colR && colR.risk) || 0) / 1e4));
+  // the Borrow cards' pairs: collateral the spoke offers, against a different loan asset
+  const loanAssets = (k, col) => inSpoke(k).filter((r) => r.borrowable && LOAN_ASSETS.includes(r.symbol) && (!col || r.id !== col.id));
+  const collaterals = (k) => inSpoke(k).filter((r) => r.cf > 0 && spokeOf(k).col(r));
 
   // ---- cards ------------------------------------------------------------------------------
   function earnCard(r) {
-    const p = u(r.id);
+    const p = u(r);
     return `<div class="vault">
-      <div class="head"><div><h3>Aave V4 · ${esc(r.symbol)}</h3><div class="curator">Main market · Aave on Arc</div></div>
+      <div class="head"><div><h3>Aave V4 · ${esc(r.symbol)}</h3><div class="curator">${esc(r.market)} · Aave on Arc</div></div>
         <span class="tag ${r.symbol === "USDC" ? "usdc" : ""}">${esc(r.symbol)}</span></div>
       <div class="apy">${pct(r.supplyApy)}<small>SUPPLY APY</small></div>
       <div class="stats"><div>${money(r.added * r.price)}<span>Supplied</span></div><div>${money(r.liquidity * r.price)}<span>Liquidity</span></div><div>${fmt(r.util * 100, 1)}%<span>Utilisation</span></div></div>
       ${r.stable ? "" : `<div class="curator">Few borrow ${esc(r.symbol)}, so supplying it earns close to nothing. Its use is as collateral: borrow USDC against it on the Borrow tab.</div>`}
       ${r.paused || r.frozen ? `<span class="tag warn">⚠ ${r.paused ? "paused" : "frozen"} by Aave governance</span>` : ""}
       <div class="pos ${ctx.account() && p.supplied > 0 ? "show" : ""}">You: ${esc(show(r, p.supplied))}${p.collateral ? " · used as collateral" : ""}</div>
-      <button class="btn primary" data-aave-earn="${r.id}">Deposit ${esc(r.symbol)}</button>
+      <button class="btn primary" data-aave-earn="${r.spoke}:${r.id}">Deposit ${esc(r.symbol)}</button>
     </div>`;
   }
   function renderEarn() {
     const g = B("aaveEarn"); if (!g) return;
     const f = ctx.filter();
-    const list = EARN_ASSETS.map(bySym).filter((r) => r && (f === "all" || r.symbol === f));
+    const list = reserves.filter((r) => spokeOf(r.spoke).earn && (f === "all" || r.symbol === f) && (r.stable || f === "all"));
     B("aaveEarnWrap").hidden = !loaded || !list.length;
     g.innerHTML = list.map(earnCard).join("");
     if (ctx.onChange) ctx.onChange();
+  }
+  function positionCard(s) {
+    const h = health(s.key);
+    const band = h.hf === Infinity || h.hf >= WARN_HF ? "SAFE" : h.hf >= MIN_HF ? "WARN" : "URGENT";
+    const colTxt = inSpoke(s.key).filter((r) => u(r).collateral && u(r).supplied > 0).map((r) => show(r, u(r).supplied)).join(" + ") || "none";
+    const debtTxt = inSpoke(s.key).filter((r) => u(r).debt > 0).map((r) => show(r, u(r).debt)).join(" + ") || "none";
+    return `<div class="vault">
+      <div class="head"><div><div class="pair">Your Aave position</div><div class="curator">${esc(s.name)} · its collateral counts together, apart from other markets</div></div>
+        <span class="hf ${band}">${band === "SAFE" ? "healthy" : band === "WARN" ? "watch" : "at risk"}</span></div>
+      <div class="apy">${hfText(h.hf)}<small>HEALTH FACTOR</small></div>
+      <div class="stats"><div>${esc(debtTxt)}<span>Debt</span></div><div>${esc(colTxt)}<span>Collateral</span></div><div>${h.liq ? price(h.liq) : "—"}<span>Liq. price${h.liqSym ? " " + esc(h.liqSym) : ""}</span></div></div>
+      <div class="loanacts">
+        <button class="btn" data-aave-loan="repay" data-aave-spoke="${s.key}">Repay</button>
+        <button class="btn" data-aave-loan="borrow" data-aave-spoke="${s.key}">Borrow more</button>
+        <button class="btn" data-aave-loan="add" data-aave-spoke="${s.key}">Add collateral</button>
+        <button class="btn" data-aave-loan="wcol" data-aave-spoke="${s.key}">Withdraw</button>
+      </div>
+    </div>`;
+  }
+  function pairCard(c, d) {
+    const U = ctx.account();
+    const fx = c.stable && d.stable;
+    return `<div class="vault">
+      <div class="head"><div><div class="pair">${esc(c.symbol)} <span class="arrow">→</span> ${esc(d.symbol)}</div>
+        <div class="curator">collateral ${esc(c.symbol)}, borrow ${esc(d.symbol)} · Aave V4 ${esc(c.market.replace(" market", ""))}</div></div>
+        <span class="tag ${d.symbol === "USDC" ? "usdc" : ""}">${esc(d.symbol)}</span></div>
+      <div class="apy">${pct(borrowApy(d, c))}<small>BORROW APY</small></div>
+      <div class="stats"><div>${money(d.available * d.price)}<span>Available to borrow</span></div><div>${money(d.spokeOwed * d.price)}<span>Borrowed here</span></div><div>${fmt(c.cf / 100, 0)}%<span>Max LTV</span></div></div>
+      ${fx ? `<div class="curator">A currency loan: the health factor moves with the EUR/USD rate, not with crypto prices.</div>` : ""}
+      ${c.paused || d.paused || d.frozen ? `<span class="tag warn">⚠ paused by Aave governance</span>` : ""}
+      ${U && u(c).wallet > 0 ? `<div class="pos show">In your wallet: ${esc(show(c, u(c).wallet))}</div>` : ""}
+      <button class="btn primary" data-aave-col="${c.id}" data-aave-debt="${d.id}" data-aave-spoke="${c.spoke}">Borrow ${esc(d.symbol)}</button>
+    </div>`;
   }
   function renderBorrow() {
     const g = B("aaveMarkets"); if (!g) return;
     B("aaveBorrowWrap").hidden = !loaded;
     if (!loaded) return;
-    const cols = reserves.filter((r) => !r.stable && r.cf > 0), debts = LOAN_ASSETS.map(bySym).filter((r) => r && r.borrowable);
     const U = ctx.account();
-    let pos = "";
-    if (U && hasLoan()) {
-      const h = health();
-      const band = h.hf === Infinity || h.hf >= WARN_HF ? "SAFE" : h.hf >= MIN_HF ? "WARN" : "URGENT";
-      const colTxt = reserves.filter((r) => u(r.id).collateral && u(r.id).supplied > 0).map((r) => show(r, u(r.id).supplied)).join(" + ") || "none";
-      const debtTxt = reserves.filter((r) => u(r.id).debt > 0).map((r) => show(r, u(r.id).debt)).join(" + ") || "none";
-      pos = `<div class="vault">
-        <div class="head"><div><div class="pair">Your Aave position</div><div class="curator">Main market · one account, all collateral counts together</div></div>
-          <span class="hf ${band}">${band === "SAFE" ? "healthy" : band === "WARN" ? "watch" : "at risk"}</span></div>
-        <div class="apy">${hfText(h.hf)}<small>HEALTH FACTOR</small></div>
-        <div class="stats"><div>${esc(debtTxt)}<span>Debt</span></div><div>${esc(colTxt)}<span>Collateral</span></div><div>${h.liq ? money(h.liq) : "—"}<span>Liq. price${h.liqSym ? " " + esc(h.liqSym) : ""}</span></div></div>
-        <div class="loanacts">
-          <button class="btn" data-aave-loan="repay">Repay</button>
-          <button class="btn" data-aave-loan="borrow">Borrow more</button>
-          <button class="btn" data-aave-loan="add">Add collateral</button>
-          <button class="btn" data-aave-loan="wcol">Withdraw</button>
-        </div>
-      </div>`;
-    }
-    g.innerHTML = pos + cols.flatMap((c) => debts.map((d) => `<div class="vault">
-      <div class="head"><div><div class="pair">${esc(c.symbol)} <span class="arrow">→</span> ${esc(d.symbol)}</div>
-        <div class="curator">collateral ${esc(c.symbol)}, borrow ${esc(d.symbol)} · Aave V4 Main</div></div>
-        <span class="tag ${d.symbol === "USDC" ? "usdc" : ""}">${esc(d.symbol)}</span></div>
-      <div class="apy">${pct(borrowApy(d, c))}<small>BORROW APY</small></div>
-      <div class="stats"><div>${money(d.liquidity * d.price)}<span>Available to borrow</span></div><div>${money(d.owed * d.price)}<span>Borrowed</span></div><div>${fmt(c.cf / 100, 0)}%<span>Max LTV</span></div></div>
-      ${U && u(c.id).wallet > 0 ? `<div class="pos show">In your wallet: ${esc(show(c, u(c.id).wallet))}</div>` : ""}
-      <button class="btn primary" data-aave-col="${c.id}" data-aave-debt="${d.id}">Borrow ${esc(d.symbol)}</button>
-    </div>`)).join("");
+    const pos = U ? SPOKES.filter((s) => hasLoan(s.key)).map(positionCard).join("") : "";
+    g.innerHTML = pos + SPOKES.flatMap((s) => collaterals(s.key).flatMap((c) => loanAssets(s.key, c).map((d) => pairCard(c, d)))).join("");
   }
 
   // ---- the sheet ----------------------------------------------------------------------------
-  // modes: deposit / withdraw (Earn, one asset); borrow / repay / add / wcol (the loan)
-  let sh = { mode: "deposit", a1: 0, a2: 0 }, qTimer = null, blocked = false;
+  // modes: deposit / withdraw (Earn, one asset); borrow / repay / add / wcol (a loan on one spoke)
+  let sh = { mode: "deposit", spoke: "main", a1: 0, a2: 0 }, qTimer = null, blocked = false;
   const TABS = { earn: [["deposit", "Deposit"], ["withdraw", "Withdraw"]], loan: [["borrow", "Borrow"], ["repay", "Repay"], ["add", "Add collateral"], ["wcol", "Withdraw"]] };
   const isEarn = () => sh.mode === "deposit" || sh.mode === "withdraw";
+  const R1 = () => res(sh.spoke, sh.a1), R2 = () => res(sh.spoke, sh.a2), SP = () => spokeOf(sh.spoke);
   const status = (t, cls) => { const s = B("aaStatus"); s.textContent = t; s.className = "status " + (cls || ""); };
   function choices() {
-    if (sh.mode === "borrow") return reserves.filter((r) => !r.stable && r.cf > 0);
-    if (sh.mode === "repay") return reserves.filter((r) => u(r.id).debt > 0);
-    if (sh.mode === "add") return reserves.filter((r) => r.cf > 0 && (!r.stable || u(r.id).collateral));
-    if (sh.mode === "wcol") return reserves.filter((r) => u(r.id).collateral && u(r.id).supplied > 0);
+    const k = sh.spoke;
+    if (sh.mode === "borrow") return collaterals(k);
+    if (sh.mode === "repay") return inSpoke(k).filter((r) => u(r).debt > 0);
+    if (sh.mode === "add") return inSpoke(k).filter((r) => r.cf > 0 && (spokeOf(k).col(r) || u(r).collateral));
+    if (sh.mode === "wcol") return inSpoke(k).filter((r) => u(r).collateral && u(r).supplied > 0);
     return [];
   }
   function chips(el, list, sel, key) {
@@ -238,48 +283,48 @@ export function initAave(ctx) {
     if (!isEarn()) {
       const list = choices();
       if (!list.some((r) => r.id === sh.a1)) sh.a1 = list.length ? list[0].id : -1;
-      if (m === "borrow" && !LOAN_ASSETS.includes((byId(sh.a2) || {}).symbol)) sh.a2 = bySym("USDC").id;
+      if (m === "borrow") { const ds = loanAssets(sh.spoke, R1()); if (!ds.some((r) => r.id === sh.a2)) sh.a2 = ds.length ? ds[0].id : -1; }
     }
-    const r1 = byId(sh.a1), r2 = byId(sh.a2);
-    B("aaName").textContent = isEarn() ? `Aave V4 · ${r1.symbol}` : m === "borrow" ? `Borrow ${r2.symbol} on Aave` : "Your Aave position";
-    B("aaSub").textContent = isEarn() ? `${pct(r1.supplyApy)} supply APY · Main market · Aave on Arc` : m === "borrow" && r1 ? `${pct(borrowApy(r2, r1))} borrow APY · max LTV ${fmt(r1.cf / 100, 0)}% · Aave V4 Main` : "Aave V4 Main market";
+    const r1 = R1(), r2 = R2(), mk = SP().name;
+    B("aaName").textContent = isEarn() ? `Aave V4 · ${r1.symbol}` : m === "borrow" && r2 ? `Borrow ${r2.symbol} on Aave` : "Your Aave position";
+    B("aaSub").textContent = isEarn() ? `${pct(r1.supplyApy)} supply APY · ${mk} · Aave on Arc` : m === "borrow" && r1 && r2 ? `${pct(borrowApy(r2, r1))} borrow APY · max LTV ${fmt(r1.cf / 100, 0)}% · Aave V4 ${mk}` : `Aave V4 ${mk}`;
     const label = { borrow: "Collateral", repay: "Repay", add: "Collateral", wcol: "Withdraw" }[m];
     B("aaPick1").hidden = isEarn(); B("aaPick1L").textContent = label || "";
     if (!isEarn()) chips(B("aaPick1C"), choices(), sh.a1, "aa1");
     const two = m === "borrow";
     B("aaPick2").hidden = !two; B("aaAmt2Row").hidden = !two; B("aaBal2").hidden = !two;
-    if (two) chips(B("aaPick2C"), LOAN_ASSETS.map(bySym).filter(Boolean), sh.a2, "aa2");
+    if (two) chips(B("aaPick2C"), loanAssets(sh.spoke, r1), sh.a2, "aa2");
     B("aaAmt1").value = ""; B("aaAmt2").value = "";
     B("aaAmt1").placeholder = two ? "0.00 (optional)" : "0.00";
     B("aaGo").textContent = { deposit: "Deposit", withdraw: "Withdraw", borrow: "Borrow", repay: "Repay", add: "Add collateral", wcol: "Withdraw collateral" }[m];
     B("aaQuote").hidden = true; status("");
-    if (!isEarn() && !r1) { status(m === "repay" ? "No debt to repay." : "No collateral to withdraw.", ""); B("aaGo").disabled = true; } else B("aaGo").disabled = false;
+    if (!isEarn() && (!r1 || (two && !r2))) { status(m === "repay" ? "No debt to repay in this market." : m === "wcol" ? "No collateral in this market." : "Nothing to borrow against here.", ""); B("aaGo").disabled = true; } else B("aaGo").disabled = false;
     balances();
   }
   function balances() {
-    const r1 = byId(sh.a1), r2 = byId(sh.a2), m = sh.mode;
+    const r1 = R1(), r2 = R2(), m = sh.mode;
     if (!ctx.account()) { B("aaBal1L").textContent = "Wallet: connect first"; B("aaBal1R").textContent = ""; return; }
     if (!r1) { B("aaUnit1").textContent = ""; B("aaBal1L").textContent = ""; B("aaBal1R").textContent = ""; return; }
-    const p = u(r1.id);
+    const p = u(r1);
     B("aaUnit1").textContent = r1.symbol;
     B("aaBal1L").textContent = m === "withdraw" || m === "wcol" ? `Supplied: ${show(r1, p.supplied)}` : `Wallet: ${show(r1, p.wallet)}`;
     B("aaBal1R").textContent = m === "repay" ? `Debt: ${show(r1, p.debt)}` : m === "borrow" ? `Collateral in: ${show(r1, p.collateral ? p.supplied : 0)}` : m === "deposit" ? `Supplied: ${show(r1, p.supplied)}` : "";
-    if (m === "borrow" && r2) { B("aaUnit2").textContent = r2.symbol; B("aaBal2L").textContent = `Available: ${show(r2, r2.liquidity)}`; B("aaBal2R").textContent = u(r2.id).debt > 0 ? `Debt: ${show(r2, u(r2.id).debt)}` : ""; }
+    if (m === "borrow" && r2) { B("aaUnit2").textContent = r2.symbol; B("aaBal2L").textContent = `Available: ${show(r2, r2.available)}`; B("aaBal2R").textContent = u(r2).debt > 0 ? `Debt: ${show(r2, u(r2).debt)}` : ""; }
   }
   const floorTo = (x, d) => { const k = 10 ** d; return Math.max(0, Math.floor(x * k) / k); };
   const gasKeep = (r) => (r.address.toLowerCase() === USDC ? ctx.GAS_RESERVE : 0);
   function maxFor(which) {
-    const r1 = byId(sh.a1), r2 = byId(sh.a2), m = sh.mode, p = u(r1.id), dp = Math.min(r1.decimals, 6);
+    const r1 = R1(), r2 = R2(), m = sh.mode, p = u(r1), dp = Math.min(r1.decimals, 6);
     if (which === 2) {
-      // the most this collateral (plus what is typed above) can carry at HF 1.25, within the hub's cash
+      // the most this collateral (plus what is typed above) can carry at HF 1.25, within what is free
       const add = Number(B("aaAmt1").value) || 0;
-      const h = health({ supply: { [r1.id]: add }, enable: [r1.id] });
-      return floorTo(Math.min(r2.liquidity, (h.S / MAX_HF - h.D) / r2.price), Math.min(r2.decimals, 6));
+      const h = health(sh.spoke, { supply: { [r1.id]: add }, enable: [r1.id] });
+      return floorTo(Math.min(r2.available, (h.S / MAX_HF - h.D) / r2.price), Math.min(r2.decimals, 6));
     }
-    if (m === "deposit" || m === "add" || m === "borrow") return floorTo(p.wallet - gasKeep(r1), dp);
+    if (m === "deposit" || m === "add" || m === "borrow") return floorTo(Math.min(p.wallet - gasKeep(r1), r1.supplyRoom), dp);
     if (m === "repay") return floorTo(Math.min(p.debt * 1.0005 + 10 ** -dp, p.wallet - gasKeep(r1)), dp);
     // a withdrawal: everything when no debt leans on it, otherwise down to HF 1.25
-    const h = health();
+    const h = health(sh.spoke);
     if (!p.collateral || h.D <= 1e-9) return Math.min(p.supplied, r1.liquidity);
     return floorTo(Math.min(p.supplied, r1.liquidity, (h.S - MAX_HF * h.D) / (r1.price * p.cf / 1e4)), dp);
   }
@@ -294,45 +339,49 @@ export function initAave(ctx) {
   // the quote: what moves, the fee, and the health factor before and after
   function quote() {
     B("aaQuote").hidden = true; blocked = false; status("");
-    const r1 = byId(sh.a1), r2 = byId(sh.a2), m = sh.mode;
-    if (!r1) return null;
+    const r1 = R1(), r2 = R2(), m = sh.mode, k = sh.spoke;
+    if (!r1 || (m === "borrow" && !r2)) return null;
     const a1 = units(B("aaAmt1").value, r1.decimals), a2 = m === "borrow" ? units(B("aaAmt2").value, r2.decimals) : null;
     const x1 = a1 ? num(a1, r1.decimals) : 0, x2 = a2 ? num(a2, r2.decimals) : 0;
     if (m === "borrow" ? !x2 : !x1) return null;
-    const p = u(r1.id), before = health();
+    const p = u(r1), before = health(k);
     const rows = [], stop = (t) => { status(t, "err"); blocked = true; };
+    const gasNote = gasKeep(r1) ? ` (${ctx.GAS_RESERVE} USDC stays back for gas)` : "";
     let after = before, fee = 0n;
     if (m === "deposit") {
       fee = SUPPLY_FEE ? a1 * BigInt(SUPPLY_FEE) / 10000n : 0n;
       rows.push(["You supply", show(r1, x1)], ["Supply APY", pct(r1.supplyApy)]);
-      if (x1 + num(fee, r1.decimals) > p.wallet - gasKeep(r1) + 1e-9) stop(`Not enough ${r1.symbol} in the wallet${gasKeep(r1) ? ` (${ctx.GAS_RESERVE} USDC stays back for gas)` : ""}.`);
+      if (x1 + num(fee, r1.decimals) > p.wallet - gasKeep(r1) + 1e-9) stop(`Not enough ${r1.symbol} in the wallet${gasNote}.`);
+      else if (x1 > r1.supplyRoom) stop(`This market takes only ${show(r1, r1.supplyRoom)} more ${r1.symbol} (Aave's supply cap).`);
     } else if (m === "withdraw" || m === "wcol") {
       if (x1 > p.supplied + 1e-9) stop(`You have ${show(r1, p.supplied)} supplied.`);
       else if (x1 > r1.liquidity) stop(`The hub has ${show(r1, r1.liquidity)} free right now; withdraw less, or wait for borrowers to repay.`);
-      if (p.collateral) after = health({ supply: { [r1.id]: -x1 } });
+      if (p.collateral) after = health(k, { supply: { [r1.id]: -x1 } });
       rows.push(["You receive", show(r1, x1)]);
     } else if (m === "add") {
-      if (x1 > p.wallet - gasKeep(r1) + 1e-9) stop(`Not enough ${r1.symbol} in the wallet.`);
-      after = health({ supply: { [r1.id]: x1 }, enable: [r1.id] });
+      if (x1 > p.wallet - gasKeep(r1) + 1e-9) stop(`Not enough ${r1.symbol} in the wallet${gasNote}.`);
+      else if (x1 > r1.supplyRoom) stop(`This market takes only ${show(r1, r1.supplyRoom)} more ${r1.symbol} (Aave's supply cap).`);
+      after = health(k, { supply: { [r1.id]: x1 }, enable: [r1.id] });
       rows.push(["Collateral added", show(r1, x1)]);
     } else if (m === "repay") {
       const pay = Math.min(x1, p.debt);
-      if (x1 > p.wallet - gasKeep(r1) + 1e-9) stop(`Not enough ${r1.symbol} in the wallet${gasKeep(r1) ? ` (${ctx.GAS_RESERVE} USDC stays back for gas)` : ""}.`);
-      after = health({ debt: { [r1.id]: -pay } });
+      if (x1 > p.wallet - gasKeep(r1) + 1e-9) stop(`Not enough ${r1.symbol} in the wallet${gasNote}.`);
+      after = health(k, { debt: { [r1.id]: -pay } });
       rows.push(["Repay", show(r1, pay)]);
       if (x1 >= p.debt) rows.push(["Note", "Aave takes only what is owed at the moment the transaction lands; the rest stays in your wallet."]);
     } else if (m === "borrow") {
-      if (x1 && x1 > p.wallet - gasKeep(r1) + 1e-9) stop(`Not enough ${r1.symbol} in the wallet.`);
-      if (x2 > r2.liquidity) stop(`Only ${show(r2, r2.liquidity)} is free to borrow right now.`);
+      if (x1 && x1 > p.wallet - gasKeep(r1) + 1e-9) stop(`Not enough ${r1.symbol} in the wallet${gasNote}.`);
+      else if (x1 && x1 > r1.supplyRoom) stop(`This market takes only ${show(r1, r1.supplyRoom)} more ${r1.symbol} as collateral (Aave's supply cap).`);
+      if (x2 > r2.available) stop(`Only ${show(r2, r2.available)} is free to borrow in this market right now.`);
       fee = BORROW_FEE ? a2 * BigInt(BORROW_FEE) / 10000n : 0n;
-      after = health({ supply: { [r1.id]: x1 }, enable: [r1.id], debt: { [r2.id]: x2 } });
+      after = health(k, { supply: { [r1.id]: x1 }, enable: [r1.id], debt: { [r2.id]: x2 } });
       if (x1) rows.push(["Collateral added", show(r1, x1)]);
       rows.push(["Debt added", show(r2, x2)], ["To your wallet", show(r2, x2 - num(fee, r2.decimals))], ["Borrow APY", pct(borrowApy(r2, r1)) + " variable"]);
     }
     if (fee > 0n) { const fr = m === "borrow" ? r2 : r1; rows.push([`Interface fee · ${fmt((m === "borrow" ? BORROW_FEE : SUPPLY_FEE) / 100, 2)}%`, `${fmt(num(fee, fr.decimals), 4)} ${fr.symbol}`]); }
     if (before.D > 1e-9 || after.D > 1e-9) {
       rows.push(["Health factor", `${hfText(before.hf)} → ${hfText(after.hf)}`]);
-      if (after.liq) rows.push([`Liquidation price ${after.liqSym}`, money(after.liq)]);
+      if (after.liq) rows.push([after.liqLabel, price(after.liq)]);
       if (!blocked && after.hf < MIN_HF && after.hf < before.hf) stop(`This would leave the health factor at ${hfText(after.hf)}. Below ${MIN_HF} is refused here: a small price move would liquidate it. Ask for less, or add collateral.`);
       else if (!blocked && after.hf < WARN_HF && after.hf < before.hf) status(`Careful: health factor ${hfText(after.hf)}. At 1.0 Aave liquidates part of the collateral, with a penalty.`, "err");
     }
@@ -343,7 +392,7 @@ export function initAave(ctx) {
 
   // the batch for the current sheet
   function build(q) {
-    const U = ctx.account(), m = sh.mode, { r1, r2, a1, a2, fee } = q, p = u(r1.id), calls = [];
+    const U = ctx.account(), m = sh.mode, SPOKE = SP().address, { r1, r2, a1, a2, fee } = q, p = u(r1), calls = [];
     const approve = (r, amt) => calls.push(call(r.address, iErc, "approve", [SPOKE, amt]));
     const sp = (fn, args) => calls.push(call(SPOKE, iSpoke, fn, args));
     if (m === "deposit") {
@@ -352,7 +401,7 @@ export function initAave(ctx) {
     } else if (m === "withdraw" || m === "wcol") {
       // all of it when the user asked for (about) all and nothing leans on it: the spoke reads an
       // amount above the balance as "everything", interest to the second included
-      const all = q.x1 >= p.supplied * 0.9999 && (!p.collateral || health().D <= 1e-9);
+      const all = q.x1 >= p.supplied * 0.9999 && (!p.collateral || health(sh.spoke).D <= 1e-9);
       sp("withdraw", [r1.id, all ? MAX_UINT : a1, U]);
     } else if (m === "add") {
       approve(r1, a1); sp("supply", [r1.id, a1, U]);
@@ -414,18 +463,18 @@ export function initAave(ctx) {
   }
 
   // ---- wiring -------------------------------------------------------------------------------
-  B("aaveEarn").addEventListener("click", (e) => { const b = e.target.closest("[data-aave-earn]"); if (b) open({ mode: "deposit", a1: Number(b.dataset.aaveEarn) }); });
+  B("aaveEarn").addEventListener("click", (e) => { const b = e.target.closest("[data-aave-earn]"); if (b) { const [k, id] = b.dataset.aaveEarn.split(":"); open({ mode: "deposit", spoke: k, a1: Number(id) }); } });
   B("aaveMarkets").addEventListener("click", (e) => {
     const b = e.target.closest("[data-aave-col]");
-    if (b) return open({ mode: "borrow", a1: Number(b.dataset.aaveCol), a2: Number(b.dataset.aaveDebt) });
+    if (b) return open({ mode: "borrow", spoke: b.dataset.aaveSpoke, a1: Number(b.dataset.aaveCol), a2: Number(b.dataset.aaveDebt) });
     const l = e.target.closest("[data-aave-loan]");
-    if (l) open({ mode: l.dataset.aaveLoan });
+    if (l) open({ mode: l.dataset.aaveLoan, spoke: l.dataset.aaveSpoke });
   });
   B("aaTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-aam]"); if (b) setMode(b.dataset.aam); });
   B("aaPick1C").addEventListener("click", (e) => { const b = e.target.closest("[data-aa1]"); if (b) { sh.a1 = Number(b.dataset.aa1); setMode(sh.mode); } });
   B("aaPick2C").addEventListener("click", (e) => { const b = e.target.closest("[data-aa2]"); if (b) { sh.a2 = Number(b.dataset.aa2); setMode(sh.mode); } });
-  B("aaMax1").onclick = () => { if (byId(sh.a1)) { B("aaAmt1").value = String(maxFor(1)); quote(); } };
-  B("aaMax2").onclick = () => { B("aaAmt2").value = String(Math.max(0, maxFor(2))); quote(); };
+  B("aaMax1").onclick = () => { if (R1()) { B("aaAmt1").value = String(maxFor(1)); quote(); } };
+  B("aaMax2").onclick = () => { if (R2()) { B("aaAmt2").value = String(Math.max(0, maxFor(2))); quote(); } };
   for (const id of ["aaAmt1", "aaAmt2"]) B(id).addEventListener("input", () => { clearTimeout(qTimer); qTimer = setTimeout(quote, 300); });
   B("aaGo").onclick = go;
   const close = () => B("aaveOverlay").classList.remove("open");
@@ -441,7 +490,7 @@ export function initAave(ctx) {
   // the rates move by the block; a quiet re-read every two minutes keeps the cards honest
   setInterval(async () => { if (document.hidden) return; await loadMarket(); await loadUser(); renderEarn(); renderBorrow(); }, 120000);
 
-  // what this wallet has supplied, for the page's "Your deposits" list
-  const deposits = () => (ctx.account() ? reserves.filter((r) => u(r.id).supplied > 0).map((r) => ({ id: r.id, symbol: r.symbol, supplied: u(r.id).supplied, dp: r.dp, apy: r.supplyApy, collateral: u(r.id).collateral })) : []);
+  // what this wallet has supplied, on any spoke, for the page's "Your deposits" list
+  const deposits = () => (ctx.account() ? reserves.filter((r) => u(r).supplied > 0).map((r) => ({ key: r.spoke + ":" + r.id, market: r.market, symbol: r.symbol, supplied: u(r).supplied, dp: r.dp, apy: r.supplyApy, collateral: u(r).collateral })) : []);
   return { refresh, renderEarn, renderBorrow, deposits, open, get error() { return loadErr; } };
 }

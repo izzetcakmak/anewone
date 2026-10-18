@@ -22,7 +22,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 </script>
 <title>Earn &amp; Borrow · USDC on Arc | A NEW ONE</title>
 <link rel="canonical" href="https://anewone.xyz/earn/">
-<meta name="description" content="Earn on USDC and EURC on Arc, or borrow USDC against cirBTC, ETH and tokenized assets. Morpho vaults and markets through Circle's kits, and the Aave V4 market; your money stays in the contracts. A NEW ONE is the interface, never the issuer.">
+<meta name="description" content="Earn on USDC and EURC on Arc, or borrow USDC against cirBTC, ETH and tokenized assets. Morpho vaults and markets through Circle's kits, and Aave V4 markets; your money stays in the contracts. A NEW ONE is the interface, never the issuer.">
 <meta property="og:title" content="Earn · USDC yield on Arc">
 <meta property="og:description" content="Curated Morpho vaults and Aave V4 on Arc, deposit and withdraw from your own wallet.">
 <meta property="og:url" content="https://anewone.xyz/earn/">
@@ -227,7 +227,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="nx-hero-in"><div class="nx-hero-t">
     <div class="nx-eyebrow">DeFi · Earn &amp; Borrow · Morpho &amp; Aave on Arc</div>
     <h1 class="nx-h1">Put your USDC <em>to work</em>,<br>or borrow against what you hold.</h1>
-    <p class="nx-lead">Curated Morpho vaults and the Aave V4 market on Arc. Deposit and borrow from your own wallet; the money stays in the protocol contracts, <b>never with us</b>.</p>
+    <p class="nx-lead">Curated Morpho vaults and Aave V4 markets on Arc. Deposit and borrow from your own wallet; the money stays in the protocol contracts, <b>never with us</b>.</p>
     <div class="nx-views" role="tablist">
       <button id="viewEarn" class="on" role="tab">Earn</button>
       <button id="viewBorrow" role="tab">Borrow</button>
@@ -496,7 +496,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     const rows = account ? vaults.filter((v) => positions[v.vaultAddress] && Number(positions[v.vaultAddress].currentBalance) > 0).map((v) => ({
       name: v.name, by: `by ${(v.manager && v.manager.name) || "unlisted curator"} · Morpho`, asset: v.asset, amount: Number(positions[v.vaultAddress].currentBalance), dp: 2,
       apy: Number(v.currentApy), open: `data-mine-v="${vaults.indexOf(v)}"` })) : [];
-    if (account && aave) for (const d of aave.deposits()) rows.push({ name: `Aave V4 · ${d.symbol}`, by: `Main market · Aave${d.collateral ? " · used as collateral" : ""}`, asset: d.symbol, amount: d.supplied, dp: d.dp, apy: d.apy, open: `data-mine-a="${d.id}"` });
+    if (account && aave) for (const d of aave.deposits()) rows.push({ name: `Aave V4 · ${d.symbol}`, by: `${d.market} · Aave${d.collateral ? " · used as collateral" : ""}`, asset: d.symbol, amount: d.supplied, dp: d.dp, apy: d.apy, open: `data-mine-a="${d.key}"` });
     $("mineWrap").hidden = !rows.length;
     $("mine").innerHTML = rows.map((r) => `<div class="vault">
       <div class="head"><div><h3>${esc(r.name)}</h3><div class="curator">${esc(r.by)}</div></div><span class="tag ${r.asset === "USDC" ? "usdc" : ""}">${esc(r.asset)}</span></div>
@@ -506,7 +506,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   }
   $("mine").addEventListener("click", (e) => {
     const b = e.target.closest("[data-mode]"); if (!b) return;
-    if (b.dataset.mineA != null) return aave && aave.open({ mode: b.dataset.mode, a1: Number(b.dataset.mineA) });
+    if (b.dataset.mineA != null) { const [spoke, id] = b.dataset.mineA.split(":"); return aave && aave.open({ mode: b.dataset.mode, spoke, a1: Number(id) }); }
     openSheet(vaults[Number(b.dataset.mineV)]).then(() => { if (b.dataset.mode === "withdraw") $("tabWd").click(); });
   });
   document.querySelectorAll(".chip[data-f]").forEach((c) => c.onclick = () => {
