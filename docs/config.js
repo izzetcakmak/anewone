@@ -98,6 +98,10 @@ window.ANEWONE_CONFIG = {
   // MetaMask mobile and the rest, from any phone browser. A public identifier, allowlisted to
   // anewone.xyz at dashboard.walletconnect.com; empty => the WalletConnect row stays hidden.
   walletConnect: { projectId: "5808bca9b4de2d02fae56788e1ded303" },
+  // Aave V4 on the Earn page (docs/earn/aave.js). The interface fee is a transfer to feeTo inside
+  // the same batched transaction, shown in the quote before signing. Empty feeTo => no fee at all.
+  // Basis points, capped at 100 in code: 15 = 0.15% of a new borrow.
+  aave: { feeTo: "", borrowFeeBps: 15, supplyFeeBps: 0 },
   web3auth: {
     testnet: {
       clientId: "BHMuvLRDj0_XO7RJoviuCgjbSLcvMWUgAgdCCSrStDO41bmuiyXZw9haSXuNDTtwqwR7IpqqZ_KKjqc-Jlvjqqk",
