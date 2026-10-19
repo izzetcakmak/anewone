@@ -40,6 +40,15 @@ Aave V4 on Arc (from [bgd-labs/aave-address-book](https://github.com/bgd-labs/aa
 Core hub `0x17288dfc86205301064577b98B02b81017e6F79C`, Main spoke `0xB843bdC3a87A05E77E07Df9FE48928b3A34b134d`,
 Forex spoke `0x4164EBCAF74670aa74C8D4F59de6157c0780F1bB`.
 
+## Swap & Bridge
+
+`docs/bridge/` brings money onto Arc as USDC from Base, Ethereum, Arbitrum, OP Mainnet, Polygon, Avalanche, Unichain, Linea, World Chain, Sonic, Monad, Sei, HyperEVM, Ink, Solana and Sui, with no gas needed on Arc: USDC over
+Circle's CCTP V2 and its Forwarding Service, anything else swapped into USDC by LI.FI on the way (the EVM and
+Solana routing lives in [gangway-kit](https://github.com/izzetcakmak/gangway-kit)). From **Solana**, SOL or any Solana token is one
+LI.FI route signed in Phantom, Solflare or Backpack (Wallet Standard). From **Sui**, USDC crosses on CCTP signed in
+Slush, Phantom or Suiet; other Sui tokens are swapped into USDC first. A non-USDC payment carries a 0.25% fee to the
+site, shown in the quote.
+
 ## AnewOne.Fun at a glance
 
 | | A NEW ONE |
