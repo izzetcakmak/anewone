@@ -97,6 +97,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="tg"><span>Start here</span><a href="#vision">What we are</a></div>
   <div class="tg"><span>DeFi</span><a href="#earn">Earn</a><a href="#borrow">Borrow</a></div>
   <div class="tg"><span>RWA</span><a href="#assets">Real-world assets</a></div>
+  <div class="tg"><span>Funding</span><a href="#bridge">Swap &amp; Bridge</a></div>
   <div class="tg"><span>AnewOne.Fun</span><a href="#fun">AnewOne.Fun</a><a href="#what">The launchpad</a><a href="#curve">The bonding curve</a><a href="#fees">Fees &amp; creator earnings</a><a href="#safety">Safety by design</a><a href="#launch">Launch a token</a><a href="#trade">Trade</a></div>
   <div class="tg"><span>Using the site</span><a href="#wallets">Wallets &amp; funding</a><a href="#deckhand">Deckhand</a><a href="#trust">Trust signals</a></div>
   <div class="tg"><span>Reference</span><a href="#faq">FAQ</a><a href="#addresses">Contracts</a></div>
@@ -176,6 +177,24 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <p>Stocks from licensed issuers are next. In every case the issuer creates and legally stands behind the asset, runs
     eligibility and KYC, holds the underlying and handles redemptions; we build the page, the wallet access and the USDC
     settlement.</p>
+
+  <h2 id="bridge">Swap &amp; Bridge</h2>
+  <p><a href="bridge/">Swap &amp; Bridge</a> brings money onto Arc from Base, Ethereum, Arbitrum, OP Mainnet, Polygon, Avalanche, Unichain, Linea, World Chain, Sonic, Monad, Sei, HyperEVM, Ink, Solana and Sui: you pay with what you
+    hold, it lands on Arc as USDC at your address, and you never need gas on Arc to bring it in. USDC crosses on
+    Circle's CCTP, whose Forwarding Service mints it on Arc for you; fast transfers arrive in about 20 seconds where
+    Circle offers them. Anything else (ETH, SOL, a token) is swapped into USDC on the way by LI.FI.</p>
+  <ul>
+    <li><strong>From Solana:</strong> SOL or any Solana token becomes USDC on Arc in one LI.FI route, signed in Phantom,
+      Solflare or Backpack. The USDC lands at your Arc address: Phantom carries one, or you type it in. On a phone with
+      no Solana wallet, the page offers to open itself inside Phantom or Solflare.</li>
+    <li><strong>From Sui:</strong> USDC goes over Circle's CCTP and lands in seconds, signed in Slush, Phantom or Suiet.
+      SUI and other Sui tokens are swapped into USDC first by LI.FI, which makes two signatures. Sui's network fee is
+      paid in SUI; about 0.01 SUI in the wallet is enough.</li>
+    <li><strong>Swap on Arc:</strong> the same page swaps USDC for tokens already on Arc (cirBTC, WETH and more), which is
+      how the Borrow tab gets you collateral.</li>
+  </ul>
+  <p>Fees: USDC brought as USDC carries only Circle's own transfer fees, shown in the quote. A payment in anything other
+    than USDC carries a 0.25% fee to A NEW ONE, shown as its own line before you sign.</p>
 
   <h2 id="fun">AnewOne.Fun</h2>
   <p>The launchpad lives on at <a href="fun/">anewone.xyz/fun</a>, unchanged: a free, permissionless place to launch a
@@ -286,7 +305,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <p>A fresh wallet needs USDC on Arc (it's the gas <em>and</em> the money). On testnet, the app shows a
     <strong>Get test USDC</strong> button that opens <a href="https://faucet.circle.com" target="_blank" rel="noopener">Circle's faucet</a>
     (20 USDC every 2h, pick <em>Arc Testnet</em>). The funding panel disappears automatically once the balance lands.</p>
-  <div class="note">Arc mainnet is live (since 16 Sep 2026) and the floor runs there, and there are two ways to fund a wallet on it. <strong>Buy USDC with a card</strong>: the app opens Circle's onramp in place, so you go from a card to USDC on Arc without leaving the page or owning any crypto first. It asks for one wallet signature to start, and a Google sign-in wallet works exactly like an injected one. <strong>Or bring what you already hold</strong> through <a href="bridge/">Swap &amp; Bridge</a>: pay with ETH, USDC or almost anything on Base, Ethereum, Arbitrum and more, and it lands on Arc as USDC. The testnet faucet flow above only applies to the testnet build.</div>
+  <div class="note">Arc mainnet is live (since 16 Sep 2026) and the floor runs there, and there are two ways to fund a wallet on it. <strong>Buy USDC with a card</strong>: the app opens Circle's onramp in place, so you go from a card to USDC on Arc without leaving the page or owning any crypto first. It asks for one wallet signature to start, and a Google sign-in wallet works exactly like an injected one. <strong>Or bring what you already hold</strong> through <a href="bridge/">Swap &amp; Bridge</a>: pay with ETH, SOL, USDC or almost anything on Base, Ethereum, Arbitrum, Solana, Sui and more, and it lands on Arc as USDC. The testnet faucet flow above only applies to the testnet build.</div>
 
   <h2 id="deckhand">Deckhand: the AI assistant that remembers</h2>
   <p><a href="chat/">anewone.xyz/chat</a> is an assistant that answers from the live floor index (every coin, its price,
