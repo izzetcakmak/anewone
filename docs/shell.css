@@ -364,7 +364,19 @@
 .nx-bd.warn { color: var(--nx-warn); border-color: rgba(var(--nx-warn-rgb),.4); background: rgba(var(--nx-warn-rgb),.08); }
 .nx-bd.ok { color: var(--nx-mint); border-color: rgba(var(--nx-mint-rgb), .4); background: rgba(var(--nx-mint-rgb), .08); }
 
-/* the Portfolio door beside the wallet button (docs/shell.js adds it to every bar) */
-.nx-icon.nx-pf { text-decoration: none; }
-.nx-icon.nx-pf[aria-current="page"] { color: var(--nx-on-mint); background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .98), rgba(var(--nx-mint-rgb), .82)); border-color: transparent; }
-@media (max-width: 980px) { .nx-nav .nx-actions .nx-icon.nx-pf { display: none; } }
+/* the Portfolio door beside the wallet button (docs/shell.js adds it to every bar): a wallet and the
+   word, "My portfolio" under it while the pointer is on it; just the wallet where the bar is tight */
+.nx-pf { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 18px; border-radius: 999px;
+  border: 1px solid var(--nx-line2); color: var(--nx-ink); font: 700 14px "JetBrains Mono", ui-monospace, monospace; text-decoration: none; transition: color .2s, border-color .2s; }
+.nx-pf:hover { color: rgb(var(--nx-mint-rgb)); border-color: rgba(var(--nx-mint-rgb), .55); text-decoration: none; }
+.nx-pf svg { flex: none; }
+.nx-pf[aria-current="page"] { color: var(--nx-on-mint); background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .98), rgba(var(--nx-mint-rgb), .82)); border-color: transparent; }
+.nx-pf::after { content: attr(data-tip); position: absolute; top: calc(100% + 8px); left: 50%; transform: translate(-50%, -4px); opacity: 0; pointer-events: none;
+  white-space: nowrap; padding: 6px 11px; border-radius: 9px; font: 500 12px Inter, system-ui, sans-serif; color: var(--nx-ink);
+  background: var(--nx-card, #151519); border: 1px solid var(--nx-line2); box-shadow: 0 10px 26px rgba(0,0,0,.35); transition: opacity .15s, transform .15s; z-index: 5; }
+.nx-pf:hover::after, .nx-pf:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+/* the home bar already carries five links and three doors: there the wallet goes without the word */
+.nx-nav .nx-pf { height: 52px; width: 52px; padding: 0; } .nx-nav .nx-pf .pl { display: none; }
+@media (max-width: 1180px) { .nx-pf { width: 48px; padding: 0; } .nx-pf .pl { display: none; } .nx-nav .nx-pf { width: 52px; } }
+@media (max-width: 980px) { .nx-nav .nx-actions .nx-pf { display: none; } }
+@media (max-width: 640px) { .nx-pf { width: 46px; height: 46px; } }

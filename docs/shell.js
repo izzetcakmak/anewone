@@ -85,10 +85,11 @@
   var acts = bar && !embedded ? qs(".nx-actions", bar) : null;
   if (acts && !qs(".nx-pf", acts)) {
     var pf = doc.createElement("a");
-    pf.className = "nx-icon nx-pf"; pf.href = new URL("portfolio/", BASE).href;
-    pf.setAttribute("aria-label", "Portfolio: everything this wallet holds"); pf.title = "Portfolio";
+    pf.className = "nx-pf"; pf.href = new URL("portfolio/", BASE).href;
+    // the label under it on hover is CSS (data-tip), so no title: a native tooltip would double it
+    pf.setAttribute("aria-label", "My portfolio: everything this wallet holds"); pf.setAttribute("data-tip", "My portfolio");
     if (doc.body && doc.body.hasAttribute("data-nx-portfolio")) pf.setAttribute("aria-current", "page");
-    pf.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12A9 9 0 1 1 12 3v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>';
+    pf.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8v-3a1 1 0 0 0 -1 -1h-10a2 2 0 0 0 0 4h12a1 1 0 0 1 1 1v3m0 4v3a1 1 0 0 1 -1 1h-12a2 2 0 0 1 -2 -2v-12"/><path d="M20 12v4h-4a2 2 0 0 1 0 -4h4"/></svg><span class="pl">Portfolio</span>';
     // right before the wallet button, or the box it sits in (the floor wraps it with its menu)
     var cb = qs("#connectBtn", acts) || qs(".nx-btn", acts);
     while (cb && cb.parentNode !== acts) cb = cb.parentNode;
