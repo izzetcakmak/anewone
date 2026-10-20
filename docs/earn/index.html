@@ -247,11 +247,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </section>
 
 <main class="nx-main"><div class="nx-wrap">
-  <div id="mineWrap" hidden><h2 class="sec" style="margin-top:0">Your deposits</h2><div class="grid" id="mine"></div></div>
   <div class="nx-strip"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17c0-5 4-9 9-9s9 4 9 9"/><path d="M3 17h18M7.5 17v-4M12 17V8M16.5 17v-4"/></svg></span><div><b>Need USDC on Arc?</b><span class="t">Bring it from Base, Ethereum, Arbitrum and more with Swap &amp; Bridge, or buy it with a card.</span></div>
     <div class="acts"><a class="nx-btn lit" href="../bridge/" target="_blank" rel="noopener">Swap &amp; Bridge <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a><a class="nx-btn" href="../bridge/?way=card" target="_blank" rel="noopener">Buy with card</a></div></div>
 
   <div class="view" id="earnView">
+  <div id="mineWrap" hidden><h2 class="sec" style="margin-top:0">Your deposits</h2><div class="grid" id="mine"></div></div>
   <div class="filters">
     <button class="chip on" data-f="all">All</button>
     <button class="chip" data-f="USDC">USDC</button>
@@ -503,7 +503,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     const rows = account ? vaults.filter((v) => positions[v.vaultAddress] && Number(positions[v.vaultAddress].currentBalance) > 0).map((v) => ({
       name: v.name, by: `by ${(v.manager && v.manager.name) || "unlisted curator"} · Morpho`, asset: v.asset, amount: Number(positions[v.vaultAddress].currentBalance), dp: 2,
       apy: Number(v.currentApy), open: `data-mine-v="${vaults.indexOf(v)}"` })) : [];
-    if (account && aave) for (const d of aave.deposits()) rows.push({ name: `Aave V4 · ${d.symbol}`, by: `${d.market} · Aave${d.collateral ? " · used as collateral" : ""}`, asset: d.symbol, amount: d.supplied, dp: d.dp, apy: d.apy, open: `data-mine-a="${d.key}"` });
+    // collateral behind a loan belongs to Borrow (its Aave position card), not to the earning list
+    if (account && aave) for (const d of aave.deposits().filter((x) => !x.collateral)) rows.push({ name: `Aave V4 · ${d.symbol}`, by: `${d.market} · Aave`, asset: d.symbol, amount: d.supplied, dp: d.dp, apy: d.apy, open: `data-mine-a="${d.key}"` });
     $("mineWrap").hidden = !rows.length;
     $("mine").innerHTML = rows.map((r) => `<div class="vault">
       <div class="head"><div><h3>${esc(r.name)}</h3><div class="curator">${esc(r.by)}</div></div><span class="tag ${r.asset === "USDC" ? "usdc" : ""}">${esc(r.asset)}</span></div>

@@ -17,7 +17,7 @@ const USDC = "0x3600000000000000000000000000000000000000";
 const TOKENS = {
   [USDC]: { symbol: "USDC", stable: true, dp: 2 },
   "0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1": { symbol: "EURC", stable: true, dp: 2 },
-  "0x171a4217b86a807a64eb94757db6849fb4bdbaa0": { symbol: "cirBTC", stable: false, dp: 6 },
+  "0x171a4217b86a807a64eb94757db6849fb4bdbaa0": { symbol: "cirBTC", stable: false, dp: 8 },
   "0x128cc466b61f542da60c70e3aa11c10e19b84edb": { symbol: "WETH", stable: false, dp: 5 },
 };
 const LOAN_ASSETS = ["USDC", "EURC"];
@@ -225,7 +225,7 @@ export function initAave(ctx) {
       <div class="stats"><div>${money(r.added * r.price)}<span>Supplied</span></div><div>${money(r.liquidity * r.price)}<span>Liquidity</span></div><div>${fmt(r.util * 100, 1)}%<span>Utilisation</span></div></div>
       ${r.stable ? "" : `<div class="curator">Few borrow ${esc(r.symbol)}, so supplying it earns close to nothing. Its use is as collateral: borrow USDC against it on the Borrow tab.</div>`}
       ${r.paused || r.frozen ? `<span class="tag warn">⚠ ${r.paused ? "paused" : "frozen"} by Aave governance</span>` : ""}
-      <div class="pos ${ctx.account() && p.supplied > 0 ? "show" : ""}">You: ${esc(show(r, p.supplied))}${p.collateral ? " · used as collateral" : ""}</div>
+      <div class="pos ${ctx.account() && p.supplied > 0 && !p.collateral ? "show" : ""}">You: ${esc(show(r, p.supplied))}</div>
       <button class="btn primary" data-aave-earn="${r.spoke}:${r.id}">Deposit ${esc(r.symbol)}</button>
     </div>`;
   }
@@ -336,6 +336,8 @@ export function initAave(ctx) {
     B("aaAmt1").placeholder = two ? "0.00 (optional)" : "0.00";
     B("aaGo").textContent = { deposit: "Deposit", withdraw: "Withdraw", borrow: "Borrow", repay: "Repay", add: "Add collateral", wcol: "Withdraw collateral" }[m];
     B("aaQuote").hidden = true; status("");
+    // collateral is managed from Borrow: Earn does not pull it out from under a loan
+    if (m === "withdraw" && r1 && u(r1).collateral) { status(`Your ${r1.symbol} here is collateral for an Aave loan. Manage it on the Borrow tab, under Your Aave position.`, ""); B("aaGo").disabled = true; balances(); return; }
     if (!isEarn() && (!r1 || (two && !r2))) { status(m === "repay" ? "No debt to repay in this market." : m === "wcol" ? "No collateral in this market." : "Nothing to borrow against here.", ""); B("aaGo").disabled = true; } else B("aaGo").disabled = false;
     balances();
   }
@@ -516,7 +518,15 @@ export function initAave(ctx) {
   B("aaTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-aam]"); if (b) setMode(b.dataset.aam); });
   B("aaPick1C").addEventListener("click", (e) => { const b = e.target.closest("[data-aa1]"); if (b) { sh.a1 = Number(b.dataset.aa1); setMode(sh.mode); } });
   B("aaPick2C").addEventListener("click", (e) => { const b = e.target.closest("[data-aa2]"); if (b) { sh.a2 = Number(b.dataset.aa2); setMode(sh.mode); } });
-  B("aaMax1").onclick = () => { if (R1()) { B("aaAmt1").value = String(maxFor(1)); quote(); } };
+  B("aaMax1").onclick = () => {
+    const r1 = R1(); if (!r1) return;
+    const v = maxFor(1), p = u(r1);
+    B("aaAmt1").value = String(v); quote();
+    // a withdrawal held back by a loan: say why the box shows less than what is supplied
+    if ((sh.mode === "withdraw" || sh.mode === "wcol") && p.collateral && v < p.supplied * 0.9999 && health(sh.spoke).D > 1e-9)
+      status(v > 0 ? `Only ${show(r1, v)} can come out while the loan stays healthy (health factor ${MAX_HF} after). Repay some debt to free more.`
+                   : `This ${r1.symbol} backs an open loan (health factor ${hfText(health(sh.spoke).hf)}). Repay the debt first, then withdraw it.`, "err");
+  };
   B("aaMax2").onclick = () => { if (R2()) { B("aaAmt2").value = String(Math.max(0, maxFor(2))); quote(); } };
   for (const id of ["aaAmt1", "aaAmt2"]) B(id).addEventListener("input", () => { clearTimeout(qTimer); qTimer = setTimeout(quote, 300); });
   B("aaGo").onclick = go;
