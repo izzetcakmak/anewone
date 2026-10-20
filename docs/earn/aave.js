@@ -10,11 +10,12 @@
 // Each batch is simulated (eth_estimateGas) before the wallet is asked.
 //
 // Addresses: bgd-labs/aave-address-book src/AaveV4Arc.sol, code checked on-chain 18 Oct 2026.
+// The address and ABI constants are exported for the Portfolio page, which reads the same markets.
 const BATCHER = "0x522fAf9A91c41c443c66765030741e4AaCe147D0";
-const HUB = "0x17288dfc86205301064577b98B02b81017e6F79C"; // Core hub
+export const HUB = "0x17288dfc86205301064577b98B02b81017e6F79C"; // Core hub
 const USDC = "0x3600000000000000000000000000000000000000";
 // only reserves we know are shown; anything else a spoke lists later stays out until reviewed
-const TOKENS = {
+export const TOKENS = {
   [USDC]: { symbol: "USDC", stable: true, dp: 2 },
   "0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1": { symbol: "EURC", stable: true, dp: 2 },
   "0x171a4217b86a807a64eb94757db6849fb4bdbaa0": { symbol: "cirBTC", stable: false, dp: 8 },
@@ -24,7 +25,7 @@ const LOAN_ASSETS = ["USDC", "EURC"];
 // `earn`: the spoke's supply cards go on Earn. Both spokes draw on the same hub, so a Forex supply
 // earns exactly what a Main one does; only Main is offered there, Forex deposits still list under
 // "Your deposits". `col`: which reserves the Borrow cards offer as collateral.
-const SPOKES = [
+export const SPOKES = [
   { key: "main", name: "Main market", address: "0xB843bdC3a87A05E77E07Df9FE48928b3A34b134d", earn: true, col: (r) => !r.stable,
     title: "Crypto-backed loans · Main market", blurb: "Borrow USDC or EURC against cirBTC or WETH. The loan follows the crypto price." },
   { key: "forex", name: "Forex market", address: "0x4164EBCAF74670aa74C8D4F59de6157c0780F1bB", earn: false, col: (r) => r.stable,
@@ -36,7 +37,7 @@ const WARN_HF = 1.5;
 const MAX_UINT = (1n << 256n) - 1n;
 const UNCAPPED = 2 ** 40 - 1; // the hub's caps are uint40 whole tokens; the max means no cap
 
-const SPOKE_ABI = [
+export const SPOKE_ABI = [
   "function getReserveCount() view returns (uint256)",
   "function getReserve(uint256) view returns (address underlying, address hub, uint256 assetId, uint256 decimals, uint256 collateralRisk, uint256 flags, uint256 dynamicConfigKey)",
   "function getReserveConfig(uint256) view returns (uint256 collateralRisk, bool paused, bool frozen, bool borrowable, bool receiveSharesEnabled)",
@@ -52,7 +53,7 @@ const SPOKE_ABI = [
   "function repay(uint256 reserveId, uint256 amount, address onBehalfOf)",
   "function setUsingAsCollateral(uint256 reserveId, bool usingAsCollateral, address onBehalfOf)",
 ];
-const HUB_ABI = [
+export const HUB_ABI = [
   "function getAddedAssets(uint256) view returns (uint256)",
   "function getAssetTotalOwed(uint256) view returns (uint256)",
   "function getAssetLiquidity(uint256) view returns (uint256)",
@@ -62,7 +63,7 @@ const HUB_ABI = [
   "function getSpokeAddedAssets(uint256, address) view returns (uint256)",
   "function getSpokeTotalOwed(uint256, address) view returns (uint256)",
 ];
-const ORACLE_ABI = ["function getReservesPrices(uint256[]) view returns (uint256[])"];
+export const ORACLE_ABI = ["function getReservesPrices(uint256[]) view returns (uint256[])"];
 const ERC20_ABI = ["function balanceOf(address) view returns (uint256)", "function approve(address, uint256)", "function transfer(address, uint256)"];
 const BATCH_ABI = ["function aggregate3((address target, bool allowFailure, bytes callData)[] calls) payable returns ((bool success, bytes returnData)[])"];
 
