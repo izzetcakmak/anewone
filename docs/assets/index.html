@@ -103,6 +103,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .fund .btn:hover:not(:disabled) { transform: translateY(-1px); }
   .fund .btn:disabled { opacity: .5; cursor: default; }
   .empty { grid-column: 1 / -1; color: var(--dim); text-align: center; padding: 40px 0; }
+  .fund .val { font: 600 34px/1 'Space Grotesk', sans-serif; letter-spacing: -.03em; }
+  .fund .val small { display: block; margin-top: 8px; font: 500 11px var(--mono); letter-spacing: .08em; color: var(--faint); }
+  .fund .acts2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; }
+  .fund .acts2 .btn { margin-top: 0; }
   @media (max-width: 520px) { .fund { padding: 22px; } .apy { font-size: 34px; } }
 
   /* how an order works: the same glass, quieter */
@@ -194,6 +198,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
   <div class="nx-strip"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17c0-5 4-9 9-9s9 4 9 9"/><path d="M3 17h18M7.5 17v-4M12 17V8M16.5 17v-4"/></svg></span><div><b>Need USDC on Arc?</b><span class="t">Orders are placed in USDC. Bring it from Base, Ethereum, Arbitrum and more with Swap &amp; Bridge, or buy it with a card.</span></div>
     <div class="acts"><a class="nx-btn lit" href="../bridge/" target="_blank" rel="noopener">Swap &amp; Bridge <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a><a class="nx-btn" href="../bridge/?way=card" target="_blank" rel="noopener">Buy with card</a></div></div>
+
+  <div id="mineWrap" hidden><h2 class="sec" style="margin-top:34px">Your funds</h2><div class="grid" id="mine"></div></div>
 
   <div class="filters"><span class="count" id="count">loading funds from Arc…</span></div>
   <div class="grid" id="grid"><div class="empty">Loading funds from Arc…</div></div>
@@ -493,7 +499,42 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         ${action}
       </div>`;
     }).join("");
+    renderMine();
   }
+  // Every fund this wallet has something in, at the top: shares held, orders the issuer has
+  // not filled yet, and fills waiting to be claimed, valued at the fund's NAV
+  function renderMine() {
+    const rows = account ? FUNDS.map((f, i) => ({ f, i, p: positions[f.key], l: live[f.key] || {} }))
+      .filter(({ p }) => p && (p.shares > 0 || p.pendingDep > 0 || p.claimShares > 0 || p.pendingRed > 0 || p.claimAssets > 0)) : [];
+    $("mineWrap").hidden = !rows.length;
+    $("mine").innerHTML = rows.map(({ f, i, p, l }) => {
+      const px = l.price || 0;
+      const value = (p.shares + p.claimShares + p.pendingRed) * px + p.pendingDep + p.claimAssets;
+      const lines = [
+        p.shares > 0 ? `${fmt(p.shares, 4)} ${f.key} held` : "",
+        p.pendingDep > 0 ? `${fmt(p.pendingDep, 2)} USDC deposit pending with the issuer` : "",
+        p.claimShares > 0 ? `${fmt(p.claimShares, 4)} ${f.key} filled, ready to claim` : "",
+        p.pendingRed > 0 ? `${fmt(p.pendingRed, 4)} ${f.key} redemption pending with the issuer` : "",
+        p.claimAssets > 0 ? `${fmt(p.claimAssets, 2)} USDC redeemed, ready to claim` : "",
+      ].filter(Boolean);
+      const claim = p.claimShares > 0 || p.claimAssets > 0;
+      const first = claim ? `<button class="btn primary" data-mine="${i}" data-mode="claim">Claim</button>`
+        : p.shares > 0 ? `<button class="btn" data-mine="${i}" data-mode="redeem">Redeem</button>` : `<button class="btn" disabled>Waiting for the issuer</button>`;
+      const second = p.allowed ? `<button class="btn${claim ? "" : " primary"}" data-mine="${i}" data-mode="deposit">Deposit more</button>` : `<button class="btn" disabled>Not whitelisted</button>`;
+      return `<div class="fund">
+        <div class="head"><div><h3>${esc(f.name)}</h3><div class="by">${esc(f.key)} · ${esc(f.issuer ? "Circle" : "Centrifuge")} on Arc</div></div><span class="tag usdc">${esc(f.key)}</span></div>
+        <div class="val">${px ? (value < 1e5 ? "$" + fmt(value, 2) : money(value)) : "—"}<small>${px ? `AT NAV ${fmt(px, 4)} · ${pct(l.apy)} 30D` : "NAV loading"}</small></div>
+        <div class="pos show">${lines.map(esc).join("<br>")}</div>
+        <div class="acts2">${first}${second}</div>
+      </div>`;
+    }).join("");
+  }
+  $("mine").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-mine]");
+    if (!b) return;
+    openSheet(FUNDS[Number(b.dataset.mine)]);
+    setMode(b.dataset.mode);
+  });
   $("grid").addEventListener("click", (e) => {
     const b = e.target.closest("[data-open]");
     if (!b) return;
