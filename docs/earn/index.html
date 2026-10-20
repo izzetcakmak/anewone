@@ -1086,6 +1086,16 @@ Time: ${new Date().toISOString()}`;
   const B = (id) => $(id);
   async function loadBorrowKit() { await loadKit(); if (!bkit) bkit = new kitMod.BorrowKit(); return bkit; }
   const from = () => ({ adapter: vadapter || adapter, chain: CHAIN });
+  // The borrow quote and the borrow itself go through this site (api/borrow-fee.js, which adds the
+  // Circle key that carries the 0.15% origination fee); every other Borrow Service call goes to
+  // Circle directly. The kit appends its own path (/v1/borrowKit/...) to this base.
+  const FEE_ROUTE = { baseUrl: location.origin };
+  // what reaches the wallet: the borrowed amount less any fee taken in the same token
+  const netOfFee = (q) => {
+    const a = q.loanAssetAmount; if (!a) return a;
+    const fee = (q.fees || []).filter((f) => f.amount && f.amount.tokenAddress?.toLowerCase() === a.tokenAddress?.toLowerCase()).reduce((t, f) => t + Number(f.amount.amount), 0);
+    return fee ? { ...a, amount: String(Math.max(0, Number(a.amount) - fee)) } : a;
+  };
   const amt = (a, d = 2) => (a ? `${fmt(a.amount, d)} ${a.token}` : "—");
   const usd = (a) => (a ? money(a.amount) : "—");
   const hfBand = (b) => b ? `<span class="hf ${esc(b)}">${esc(b === "SAFE" ? "healthy" : b.toLowerCase())}</span>` : "";
@@ -1327,9 +1337,9 @@ Time: ${new Date().toISOString()}`;
     try {
       let q, rows = [];
       if (lnMode === "borrow") {
-        q = ln.loan ? await k.getBorrowQuote({ loanId: ln.loan.loanId, borrowAmount: v })
-                    : await k.getBorrowQuote({ walletAddress: account, chain: CHAIN, marketId: lnMarket().marketId, borrowAmount: v });
-        rows = [["Collateral locked", amt(q.collateralAmount, 6)], ["You receive", amt(q.loanAssetAmount)], ["Borrow APY", pct(q.borrowApy)],
+        q = ln.loan ? await k.getBorrowQuote({ loanId: ln.loan.loanId, borrowAmount: v, config: FEE_ROUTE })
+                    : await k.getBorrowQuote({ walletAddress: account, chain: CHAIN, marketId: lnMarket().marketId, borrowAmount: v, config: FEE_ROUTE });
+        rows = [["Collateral locked", amt(q.collateralAmount, 6)], ["You receive", amt(netOfFee(q), 4)], ["Debt added", amt(q.loanAssetAmount)], ["Borrow APY", pct(q.borrowApy)],
           ["Health factor", q.resultingHealthFactor == null ? "—" : fmt(q.resultingHealthFactor, 2)], ["Liquidation price", q.liquidationPrice ? money(q.liquidationPrice.amount) : "—"]];
       } else if (lnMode === "repay") {
         q = await k.getRepayQuote({ loanId: ln.loan.loanId, chain: CHAIN, repayAmount: v });
@@ -1343,7 +1353,8 @@ Time: ${new Date().toISOString()}`;
         rows = [["Collateral released", amt(q.collateralAmount, 6)], ["Repaid to stay healthy", q.bundledRepayment ? amt(q.bundledRepayment) : "0"],
           ["Health factor after", q.resultingHealthFactor == null ? "—" : fmt(q.resultingHealthFactor, 2)]];
       }
-      for (const f of q.fees || []) rows.push([`Fee · ${f.type}`, amt(f.amount, 4)]);
+      // the integrator fee is the 0.15% origination fee, withheld from what the loan pays out
+      for (const f of q.fees || []) rows.push([f.type === "integrator" ? `Origination fee · ${fmt(Number(f.amount.amount) / Number(q.loanAssetAmount?.amount || NaN) * 100, 2)}%` : `Fee · ${f.type}`, amt(f.amount, 4)]);
       B("lnQuote").innerHTML = rows.map(([a, b]) => `<span>${esc(a)}</span><b>${esc(b)}</b>`).join("");
       B("lnQuote").hidden = false;
       if (q.resultingBand && q.resultingBand !== "SAFE") lnStatus(`Careful: this leaves the loan ${q.resultingBand.toLowerCase()}.`, "err"); else lnStatus("");
@@ -1381,7 +1392,7 @@ Time: ${new Date().toISOString()}`;
     const k = await loadBorrowKit();
     if (activeKind !== "google" && activeKind !== "walletconnect") await ensureArc();
     const id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
-    if (lnMode === "borrow") await runLoan(() => k.borrow(ln.loan ? { from: from(), loanId: ln.loan.loanId, borrowAmount: v, idempotencyKey: id } : { from: from(), marketId: lnMarket().marketId, borrowAmount: v, idempotencyKey: id }), `Borrowed ${v} ${lnLoanAsset().symbol}`);
+    if (lnMode === "borrow") await runLoan(() => k.borrow(ln.loan ? { from: from(), loanId: ln.loan.loanId, borrowAmount: v, idempotencyKey: id, config: FEE_ROUTE } : { from: from(), marketId: lnMarket().marketId, borrowAmount: v, idempotencyKey: id, config: FEE_ROUTE }), `Borrowed ${v} ${lnLoanAsset().symbol}`);
     else if (lnMode === "repay") await runLoan(() => k.repay({ from: from(), loanId: ln.loan.loanId, repayAmount: v, idempotencyKey: id }), `Repaid ${v} ${lnLoanAsset().symbol}`);
     else if (lnMode === "add") await runLoan(() => k.addCollateral({ from: from(), loanId: ln.loan.loanId, collateralAmount: v, idempotencyKey: id }), `Added ${v} ${lnCol().symbol}`);
     else await runLoan(() => k.withdrawCollateralRepayIfNeeded({ from: from(), loanId: ln.loan.loanId, collateralAmount: v, idempotencyKey: id }), `Withdrew ${v} ${lnCol().symbol}`);
