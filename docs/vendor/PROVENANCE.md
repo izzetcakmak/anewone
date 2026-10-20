@@ -153,17 +153,17 @@ To re-verify after an update: `curl -s https://anewone.xyz/vendor/gangway-kit.js
 | | |
 |---|---|
 | Package | `@circle-fin/onramp-kit` (Circle, Apache-2.0), browser surface only |
-| Version | 1.0.3 |
+| Version | 1.0.4 (server half in `package.json` pinned to the same) |
 | File | `onramp-kit.js` (ESM, minified) |
-| Size | 98,209 bytes |
-| SHA-256 | `eaa614ccec073e3956d3f77f5188e701a14c38169662c12a33c1e8f7242da64b` |
-| SRI (sha384) | `TOpBOKdQYBtYavc2RdmrIFoDPN2WjJTyNlhQkW7cl9/lJJxuxSBWQdan2Uvg1R/O` |
+| Size | 98,242 bytes |
+| SHA-256 | `2b9d3a5a6ee5fd583b5716b4359ab7b4117111bd32397fed4b7692681d68558c` |
+| SRI (sha384) | `INekUwH6zEGVUq4kY5GEwSEtLDOFSW31FYzcg4MkDMB8BYJFJrxoGiWySWa3AIqt` |
 
 **Not an upstream release file**: Circle ships the kit as npm modules that import `zod` and
 `pino`, so it is bundled locally with esbuild from the official npm package. The recipe is
 committed in `build-onramp/`:
 
-- `package.json` / `package-lock.json`: `@circle-fin/onramp-kit@1.0.3` pinned, every package
+- `package.json` / `package-lock.json`: `@circle-fin/onramp-kit@1.0.4` pinned, every package
   resolved from `registry.npmjs.org` with an integrity hash
 - `entry.mjs`: re-exports exactly four symbols, `createOnrampKit`, `KitError`,
   `ONRAMP_EVENT_TYPES`, `ONRAMP_EVENT_CODES`
@@ -186,10 +186,10 @@ To re-verify:
 
 | | |
 |---|---|
-| Package | `@circle-fin/earn-kit` 1.8.1 + `@circle-fin/borrow-kit` 1.0.0 + `@circle-fin/adapter-ethers-v6` + `@circle-fin/adapter-viem-v2` 1.19 (`/next`, with viem) (Circle, Apache-2.0) |
+| Package | `@circle-fin/earn-kit` 1.9.0 + `@circle-fin/borrow-kit` 1.1.0 + `@circle-fin/adapter-ethers-v6` 1.12.2 + `@circle-fin/adapter-viem-v2` 1.19.1 (`/next`, with viem) (Circle, Apache-2.0) |
 | File | `earn-kit.js` (ESM, minified) |
-| Size | 2,002,407 bytes |
-| SHA-256 | `76ef39488c455d7f8e1f551b931dd9af2288eb27ff6d9033c06e90ac2fa4a118` |
+| Size | 2,010,856 bytes |
+| SHA-256 | `5070025b36c1e15c0162b1bf70e34d3ac5ad07bcb096efecf749316091bfd5d3` |
 
 **Not an upstream release file**: bundled locally with esbuild from the official npm packages,
 recipe in `build-earn/` (`entry.mjs` re-exports `EarnKit`, `BorrowKit`, `KitError`,
@@ -206,3 +206,7 @@ Loaded lazily, only on `/earn/`.
 To re-verify:
 
     cd build-earn && npm ci && node build.mjs
+
+Updated 20 Oct 2026 from earn-kit 1.8.1 / borrow-kit 1.0.0: 152 packages, all from
+`registry.npmjs.org` with integrity hashes, and the remote hosts the bundle references are
+unchanged (192, the same set as before).
