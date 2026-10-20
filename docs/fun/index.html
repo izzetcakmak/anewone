@@ -941,6 +941,15 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .cpanel .grade.d { color: var(--red); background: rgba(var(--red-rgb),.10); border: 1px solid rgba(var(--red-rgb),.4); }
   .cpanel .grade.new { color: var(--dim); background: var(--surface); border: 1px solid var(--border-2); }
   .cpanel .cnote { font-size: 11px; color: var(--faint); margin-top: 10px; line-height: 1.5; }
+  .mycoins .mrow { display: grid; grid-template-columns: minmax(0, 1.6fr) 1fr 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); }
+  .mycoins .mrow:first-of-type { border-top: 0; }
+  .mycoins .msym { font-weight: 700; } .mycoins .mname { font-size: 11px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mycoins .mnum { font-family: var(--mono); font-size: 13px; } .mycoins .msub { font-size: 11px; color: var(--faint); }
+  .mycoins .mrow button { padding: 8px 14px; font-size: 12px; min-height: 0; }
+  .mycoins .mtotal { margin-left: auto; font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--accent); }
+  .mycoins .mfee { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(var(--gold-rgb), .08); border: 1px solid rgba(var(--gold-rgb), .3); font-size: 12px; }
+  .mycoins .mfee button { margin-left: auto; padding: 8px 14px; font-size: 12px; min-height: 0; }
+  @media (max-width: 560px) { .mycoins .mrow { grid-template-columns: minmax(0, 1fr) auto; } .mycoins .mrow .mval { display: none; } }
   .devlink { color: var(--dim); font-family: var(--mono); font-size: 12px; cursor: pointer; text-decoration: underline; }
   .gmailbtn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
     padding: 13px; margin-bottom: 14px; font-size: 15px; font-weight: 600; color: var(--text);
@@ -1676,6 +1685,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button id="fClear">Clear</button>
   </div>
 
+  <div id="myCoins" class="cpanel mycoins" style="display:none"></div>
   <div id="creatorPanel" class="cpanel" style="display:none"></div>
 
   <div id="fundBanner" class="fundbox" style="display:none">
@@ -3446,6 +3456,7 @@ async function connect(forcePicker, silent) {
   syncTradeAuth();
   refreshFees();
   refreshNativeBalance();
+  refreshMyCoins();
   checkWalletRpc(w);
 }
 
@@ -3650,6 +3661,7 @@ function disconnect() {
   try { localStorage.removeItem(LAST_WALLET_KEY); } catch {}
   syncTradeAuth();
   userNativeBal = 0n; userTokenBal = 0n; exactWei = null;
+  myBal = {}; myBalFor = null; renderMyCoins();
   $("connectBtn").textContent = "Connect";
   $("wmAddr").textContent = "";
   $("walletMenu").style.display = "none";
@@ -3705,6 +3717,7 @@ async function refreshFees() {
   } catch (e) { console.error(e); }
 }
 function renderCreatorFee() {
+  renderMyCoins();
   $("cfAmt").textContent = fmt(cfPot, 4) + " USDC";
   if (cfPot === 0n) { $("cfNote").textContent = ""; $("cfClaim").disabled = true; return; }
   const left = cfDeadlineTs - Math.floor(Date.now() / 1000);
@@ -4565,6 +4578,62 @@ function renderCreatorPanel() {
   if (btn) btn.onclick = clearCreator;
 }
 
+// ---- Your coins: what the connected wallet holds on the floor, read in one Multicall3 call
+// however many coins there are, valued at each curve's (or pool's) last price
+const MC3_ADDR = "0xcA11bde05977b3631167028862bE2a173976CA11";
+const mc3 = new ethers.Contract(MC3_ADDR, ["function aggregate3((address target, bool allowFailure, bytes callData)[] calls) view returns ((bool success, bytes returnData)[])"], readProvider);
+const balIface = new ethers.Interface(["function balanceOf(address) view returns (uint256)"]);
+let myBal = {}, myBalFor = null, myBalTry = 0;
+async function refreshMyCoins() {
+  if (!userAddr) { myBal = {}; myBalFor = null; renderMyCoins(); return; }
+  const who = userAddr, addrs = Object.keys(tokenInfo);
+  if (!addrs.length) return;
+  myBalTry = Date.now();
+  try {
+    const out = {};
+    for (let i = 0; i < addrs.length; i += 300) {
+      const part = addrs.slice(i, i + 300);
+      const res = await rpc(() => mc3.aggregate3(part.map((a) => [a, true, balIface.encodeFunctionData("balanceOf", [who])])));
+      res.forEach((r, j) => { if (r.success && r.returnData !== "0x") { const b = balIface.decodeFunctionResult("balanceOf", r.returnData)[0]; if (b > 0n) out[part[j]] = b; } });
+    }
+    if (userAddr !== who) return;   // the wallet changed while this was reading
+    myBal = out; myBalFor = who;
+  } catch (e) { console.warn("my coins", e); }
+  renderMyCoins();
+}
+function renderMyCoins() {
+  const box = $("myCoins");
+  if (!box) return;
+  if (!userAddr || myBalFor !== userAddr) { box.style.display = "none"; return; }
+  const rows = Object.entries(myBal).filter(([a]) => tokenInfo[a]).map(([a, b]) => {
+    const inf = tokenInfo[a], value = (b * priceOf(inf)) / WAD;
+    return { a, b, inf, value, meta: tokenMeta[a] || {} };
+  }).sort((x, y) => (y.value > x.value ? 1 : y.value < x.value ? -1 : 0));
+  if (!rows.length && cfPot === 0n) { box.style.display = "none"; return; }
+  const total = rows.reduce((t, r) => t + r.value, 0n);
+  const status = (r) => migratedSet.has(r.a) ? "on Uniswap" : r.inf.graduated ? "graduated" : gradTarget ? `${Math.min(100, Number((r.inf.raised * 1000n) / gradTarget) / 10).toFixed(1)}% to graduation` : "";
+  let fee = "";
+  if (cfPot > 0n) {
+    const left = cfDeadlineTs - Math.floor(Date.now() / 1000);
+    fee = left > 0
+      ? `<div class="mfee">💰 <b>${fmt(cfPot, 4)} USDC</b> in creator fees, collect within ${Math.floor(left / 86400)}d ${Math.floor((left % 86400) / 3600)}h <button id="myFeeCollect" type="button">Collect</button></div>`
+      : `<div class="mfee">${fmt(cfPot, 4)} USDC in creator fees expired to the platform.</div>`;
+  }
+  box.style.display = "block";
+  box.innerHTML = `<div class="chead2"><span class="caddr">🎒 Your coins</span><span class="mtotal">${esc(compactUsd(total))}</span></div>
+    ${rows.map((r) => `<div class="mrow">
+      <div><div class="msym">$${esc(r.meta.symbol || "?")}</div><div class="mname">${esc(r.meta.name || r.a)}</div></div>
+      <div><div class="mnum">${fmt(r.b, 2)}</div><div class="msub">${esc(status(r))}</div></div>
+      <div class="mval"><div class="mnum">${esc(compactUsd(r.value))}</div><div class="msub">at the last price</div></div>
+      <button type="button" data-mytrade="${esc(r.a)}">Trade</button>
+    </div>`).join("") || `<div class="cnote">No coins in this wallet yet.</div>`}
+    ${fee}`;
+  const c = document.getElementById("myFeeCollect");
+  if (c) c.onclick = () => $("cfClaim").click();
+}
+document.addEventListener("click", (e) => { const b = e.target.closest && e.target.closest("[data-mytrade]"); if (b) openTrade(b.dataset.mytrade); });
+setInterval(() => { if (!document.hidden && userAddr) refreshMyCoins(); }, 60_000);
+
 function visibleAddrs() {
   const q = searchQ.trim().toLowerCase();
   const f = filterState;
@@ -4643,6 +4712,8 @@ function paintGrid() {
 }
 function renderGrid() {
   renderCreatorPanel();
+  // the first time the floor has coins and a wallet is on, read what it holds; afterwards just repaint
+  if (userAddr && myBalFor !== userAddr && Date.now() - myBalTry > 15_000) refreshMyCoins(); else renderMyCoins();
   renderLiveRail(); renderLeaders();
   const list = paintGrid();
   $("empty").style.display = shownAddrs.length && !list.length ? "block" : ($("empty").dataset.none === "1" ? "block" : "none");
@@ -5435,6 +5506,7 @@ $("tGo").onclick = async () => {
     dirtyTokens.add(currentToken);
     refreshNativeBalance();
     refreshFees();
+    refreshMyCoins();
     refreshTrade(); loadTokens();
     // and the tail reconciles with whatever else landed in the same blocks
     liveTail();
