@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Google Tag Manager, in Consent Mode with every storage denied: no cookies are written, Google
+     gets cookieless pings only. There is no consent banner because nothing here asks for consent;
+     anything that would set a cookie must not be turned on in the GTM container. -->
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',functionality_storage:'denied',personalization_storage:'denied',security_storage:'denied'});</script>
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KDQSQQKH');</script>
+<!-- End Google Tag Manager -->
+<script>
+  (function () {
+    try { document.documentElement.setAttribute("data-theme", localStorage.getItem("anewone_theme") || "dark"); }
+    catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+  })();
+</script>
+<title>Portfolio · Everything you hold on A NEW ONE</title>
+<link rel="canonical" href="https://anewone.xyz/portfolio/">
+<meta name="description" content="One page for everything a wallet holds on A NEW ONE: stablecoins on Arc, Aave and Morpho deposits and loans, tokenized fund shares and AnewOne.Fun coins, valued in USD and read straight from the chain.">
+<meta property="og:title" content="Portfolio · A NEW ONE">
+<meta property="og:description" content="Your wallet, DeFi, RWA and Fun positions on Arc in one place.">
+<meta property="og:url" content="https://anewone.xyz/portfolio/">
+<meta property="og:image" content="https://anewone.xyz/brand/logo-1024.png">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* The floor's theme system, verbatim: one accent, neutral everything else. */
+  :root {
+    --accent-rgb: 0,184,119; --green-rgb: 0,165,104; --red-rgb: 224,51,79; --gold-rgb: 200,138,0;
+    --accent: rgb(var(--accent-rgb)); --green: rgb(var(--green-rgb)); --red: rgb(var(--red-rgb)); --gold: rgb(var(--gold-rgb));
+    --r: 20px; --r-md: 14px; --r-sm: 10px; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  :root, :root[data-theme="light"] {
+    --bg: #f4f4f5; --bg-2: #ffffff; --card: #ececee; --bg-rgb: 244,244,245; --ink-rgb: 16,16,24;
+    --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16);
+    --text: #111116; --dim: #5f5f6d; --faint: #8b8b98; --accent-soft: #e8f9f1; --accent-ink: #ffffff;
+    --shadow: 0 1px 2px rgba(16,16,24,.06); --warn-ink: #946300;
+  }
+  :root[data-theme="dim"], :root[data-theme="dark"] {
+    --bg: #0d0d10; --bg-2: #151519; --card: #1b1b20; --bg-rgb: 13,13,16; --ink-rgb: 255,255,255;
+    --border: rgba(var(--ink-rgb),0.09); --border-2: rgba(var(--ink-rgb),0.16);
+    --text: #f2f2f5; --dim: #a0a0ae; --faint: #6e6e7c; --accent-rgb: 62,230,160; --green-rgb: 62,230,160; --red-rgb: 255,84,112; --gold-rgb: 255,194,77;
+    --accent-soft: rgba(62,230,160,.10); --accent-ink: #04140d; --shadow: 0 1px 2px rgba(0,0,0,.4); --warn-ink: #ffc96b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 Inter, system-ui, sans-serif; min-height: 100vh; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  button { font: inherit; cursor: pointer; }
+
+  /* who is being shown: the connected wallet, or an address typed in */
+  .who { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 6px 0 22px; padding: 14px 16px; border-radius: 18px; background: var(--nx-card); border: 1px solid var(--nx-line2); }
+  .who .addr { font: 600 13px var(--mono); color: var(--text); word-break: break-all; }
+  .who .src { font: 500 11px var(--mono); color: var(--faint); letter-spacing: .06em; }
+  .who input { flex: 1 1 260px; min-width: 0; padding: 11px 14px; border-radius: 999px; border: 1px solid var(--border-2); background: var(--bg); color: var(--text); font: 500 13px var(--mono); outline: none; }
+  .who input:focus { border-color: var(--accent); }
+  .who .sp { flex: 1; }
+  .pbtn { height: 42px; padding: 0 18px; border-radius: 999px; font: 700 12.5px var(--mono); color: var(--accent); border: 1px solid rgba(var(--accent-rgb), .45); background: linear-gradient(180deg, rgba(var(--accent-rgb), .2), rgba(var(--accent-rgb), .07)); }
+  .pbtn.primary, .pbtn:hover { color: var(--accent-ink); background: linear-gradient(180deg, rgba(var(--accent-rgb), .98), rgba(var(--accent-rgb), .82)); }
+  .pbtn.ghost { color: var(--dim); border-color: var(--border-2); background: transparent; }
+
+  /* the totals */
+  .tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+  @media (max-width: 900px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tiles .tile.big { grid-column: 1 / -1; } }
+  .tile { padding: 18px 20px; border-radius: 20px; background: var(--nx-card); border: 1px solid var(--nx-line2); min-width: 0; }
+  .tile .k { font: 500 10.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .tile .v { margin-top: 8px; font: 600 26px/1.1 'Space Grotesk', sans-serif; letter-spacing: -.02em; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; }
+  .tile.big .v { color: var(--accent); }
+  .tile .v.neg { color: var(--red); }
+
+  .alerts { display: grid; gap: 10px; margin-top: 18px; }
+  .alert { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 16px; border-radius: 14px; font-size: 13.5px; line-height: 1.45; color: var(--warn-ink); border: 1px solid rgba(var(--gold-rgb), .35); background: rgba(var(--gold-rgb), .07); }
+  .alert.bad { color: var(--red); border-color: rgba(var(--red-rgb), .4); background: rgba(var(--red-rgb), .07); }
+  .alert.ok { color: var(--accent); border-color: rgba(var(--accent-rgb), .35); background: rgba(var(--accent-rgb), .07); }
+  .alert a { margin-left: auto; font: 700 12px var(--mono); white-space: nowrap; }
+
+  /* one block per door, one row per thing held */
+  h2.sec { display: flex; align-items: baseline; gap: 12px; margin: 44px 0 12px; font: 600 clamp(22px, 2.4vw, 28px)/1.15 'Space Grotesk', sans-serif; letter-spacing: -.025em; }
+  h2.sec .sv { margin-left: auto; font: 600 16px var(--mono); color: var(--dim); }
+  h2.sec a { font: 700 12px var(--mono); }
+  .rows { border-radius: 20px; background: var(--nx-card); border: 1px solid var(--nx-line2); overflow: hidden; }
+  .row { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, .8fr) auto; gap: 14px; align-items: center; padding: 14px 18px; border-top: 1px solid var(--nx-line); }
+  .row:first-child { border-top: 0; }
+  .row .n { font-weight: 600; } .row .s { font: 500 11.5px var(--mono); color: var(--faint); margin-top: 2px; }
+  .row .q { font: 500 13px var(--mono); } .row .val { font: 600 14px var(--mono); text-align: right; }
+  .row .val.neg { color: var(--red); }
+  .row .go { font: 700 12px var(--mono); white-space: nowrap; }
+  .row.none { display: block; color: var(--faint); font-size: 13px; }
+  .hf { font: 700 11px var(--mono); padding: 3px 8px; border-radius: 6px; margin-left: 6px; }
+  .hf.ok { color: var(--green); background: rgba(var(--green-rgb), .12); } .hf.warn { color: var(--gold); background: rgba(var(--gold-rgb), .12); } .hf.bad { color: var(--red); background: rgba(var(--red-rgb), .12); }
+  @media (max-width: 640px) { .row { grid-template-columns: minmax(0, 1fr) auto; } .row .q { display: none; } .row .go { grid-column: 1 / -1; } }
+
+  .legal { margin: 44px 0 56px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--faint); font-size: 12px; max-width: 860px; }
+  .legal a { color: var(--dim); text-decoration: underline; }
+  .picker { display: none; flex-basis: 100%; gap: 8px; flex-wrap: wrap; }
+  .picker.open { display: flex; }
+  .picker button { display: inline-flex; gap: 8px; align-items: center; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border-2); background: var(--bg); color: var(--text); font-weight: 600; }
+  .picker img { width: 20px; height: 20px; border-radius: 5px; }
+  .muted { color: var(--faint); font-size: 12.5px; }
+</style>
+<link rel="stylesheet" href="../shell.css">
+</head>
+<body data-nx-portfolio>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KDQSQQKH"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<header class="nx-bar" id="nxBar"><div class="nx-bar-in">
+  <a class="nx-brand" href="../" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
+  <nav class="nx-seg" aria-label="Apps"><a href="../earn/">DeFi</a><a href="../assets/stocks/">RWA</a><a href="../fun/" class="f">Fun</a></nav>
+  <div class="nx-actions">
+    <button type="button" class="nx-icon" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
+    <button type="button" class="nx-btn lit" id="connectBtn">Connect</button>
+  </div>
+</div></header>
+
+<section class="nx-hero">
+  <div class="nx-hero-in"><div class="nx-hero-t">
+    <div class="nx-eyebrow">Portfolio · read from Arc</div>
+    <h1 class="nx-h1">Everything you hold,<br><em>in one place.</em></h1>
+    <p class="nx-lead">Stablecoins in the wallet, Aave and Morpho deposits and loans, fund shares and AnewOne.Fun coins, valued in USD. This page only reads; every action opens on the page it belongs to.</p>
+  </div></div>
+</section>
+
+<main class="nx-main"><div class="nx-wrap">
+  <div class="who" id="who">
+    <div><div class="src" id="whoSrc">NO WALLET YET</div><div class="addr" id="whoAddr">Connect a wallet, or paste any Arc address to look at it.</div></div>
+    <span class="sp"></span>
+    <input id="addrIn" placeholder="0x… any address on Arc" autocomplete="off" spellcheck="false" aria-label="Address to show">
+    <button type="button" class="pbtn" id="viewBtn">Show</button>
+    <button type="button" class="pbtn ghost" id="refreshBtn" hidden>Refresh</button>
+    <div class="picker" id="picker"></div>
+  </div>
+
+  <div id="body" hidden>
+    <div class="tiles">
+      <div class="tile big"><div class="k">Net value</div><div class="v" id="tTotal">…</div></div>
+      <div class="tile"><div class="k">Wallet</div><div class="v" id="tWallet">…</div></div>
+      <div class="tile"><div class="k">DeFi, net of debt</div><div class="v" id="tDefi">…</div></div>
+      <div class="tile"><div class="k">RWA funds</div><div class="v" id="tRwa">…</div></div>
+      <div class="tile"><div class="k">Fun coins</div><div class="v" id="tFun">…</div></div>
+    </div>
+    <div class="alerts" id="alerts"></div>
+
+    <h2 class="sec">Wallet <span class="sv" id="sWallet"></span></h2>
+    <div class="rows" id="rWallet"><div class="row none">Reading balances…</div></div>
+
+    <h2 class="sec">DeFi · Earn <a href="../earn/">Open Earn →</a><span class="sv" id="sEarn"></span></h2>
+    <div class="rows" id="rEarn"><div class="row none">Reading Aave and Morpho…</div></div>
+
+    <h2 class="sec">DeFi · Borrow <a href="../earn/#borrow">Open Borrow →</a><span class="sv" id="sBorrow"></span></h2>
+    <div class="rows" id="rBorrow"><div class="row none">Reading loans…</div></div>
+
+    <h2 class="sec">RWA · Funds <a href="../assets/">Open RWA →</a><span class="sv" id="sRwa"></span></h2>
+    <div class="rows" id="rRwa"><div class="row none">Reading fund shares…</div></div>
+
+    <h2 class="sec">AnewOne.Fun <a href="../fun/">Open the floor →</a><span class="sv" id="sFun"></span></h2>
+    <div class="rows" id="rFun"><div class="row none">Reading coins…</div></div>
+  </div>
+
+  <p class="legal">Read-only: this page signs nothing and moves nothing. Values are read from the Arc chain at the protocols' own prices (Aave's oracles, the funds' NAV, each coin's last curve price), and Morpho positions come from Circle's Earn and Borrow services; they are estimates, not quotes, and a coin may not sell for its last price. A NEW ONE does not custody funds and does not give advice. <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></p>
+</div></main>
+<footer class="nx-foot"><div class="nx-foot-in"><span>© 2026 A NEW ONE</span><a href="../docs.html">Docs</a><a href="../about.html">About</a><a href="../terms.html">Terms</a><a href="../privacy.html">Privacy</a><a href="mailto:support@anewone.xyz">Contact</a><span class="sp">Nothing here is investment advice.</span></div></footer>
+
+<script src="../config.js"></script>
+<script src="../vendor/ethers.umd.min.js"></script>
+<script type="module">
+  import { HUB, TOKENS, SPOKES, SPOKE_ABI, HUB_ABI, ORACLE_ABI } from "../earn/aave.js";
+  const cfg = window.ANEWONE_CONFIG;
+  const arcCfg = cfg.mainnet;
+  const $ = (id) => document.getElementById(id);
+  $("themeSw").onclick = () => {
+    const t = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+    try { localStorage.setItem("anewone_theme", t); } catch {}
+  };
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const fmt = (n, d = 2) => Number(n).toLocaleString("en-US", { maximumFractionDigits: d });
+  const usd = (n) => { if (n == null || !isFinite(n)) return "—"; const a = Math.abs(n), d = a >= 1e5 ? 0 : 2;
+    return (n < 0 ? "−" : "") + "$" + a.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }); };
+  const num = (raw, dec) => Number(ethers.formatUnits(raw, dec));
+
+  // ---- reads: the site's RPC pool, and Multicall3 so each door is one or two calls ----
+  const READ_URLS = [arcCfg.rpc, ...(arcCfg.rpcs || []).map((r) => (typeof r === "string" ? r : r.hosts && r.hosts.includes(location.hostname) ? r.url : null))].filter((u, i, a) => u && a.indexOf(u) === i);
+  const providers = new Map();
+  const provider = (u) => { let p = providers.get(u); if (!p) { const r = new ethers.FetchRequest(u); r.timeout = 8000; p = new ethers.JsonRpcProvider(r, Number(arcCfg.chainId), { staticNetwork: true }); providers.set(u, p); } return p; };
+  async function viaPool(fn) {
+    let last = null;
+    for (let round = 0; round < 2; round++) {
+      for (const u of READ_URLS) { try { return await fn(provider(u)); } catch (e) { last = e; } }
+      await new Promise((r) => setTimeout(r, 1200));
+    }
+    throw last || new Error("no RPC answered");
+  }
+  const MC3 = "0xcA11bde05977b3631167028862bE2a173976CA11";
+  const iMc = new ethers.Interface(["function aggregate3((address target, bool allowFailure, bytes callData)[] calls) view returns ((bool success, bytes returnData)[])"]);
+  const iErc = new ethers.Interface(["function balanceOf(address) view returns (uint256)"]);
+  const iSpoke = new ethers.Interface(SPOKE_ABI), iHub = new ethers.Interface(HUB_ABI), iOracle = new ethers.Interface(ORACLE_ABI);
+  const q = (to, iface, fn, args = []) => ({ to, iface, fn, args });
+  // one aggregate3 per 200 calls; a call that fails comes back null instead of sinking the batch
+  async function multi(p, list) {
+    const out = [];
+    for (let i = 0; i < list.length; i += 200) {
+      const part = list.slice(i, i + 200);
+      const raw = await p.call({ to: MC3, data: iMc.encodeFunctionData("aggregate3", [part.map((c) => [c.to, true, c.iface.encodeFunctionData(c.fn, c.args)])]) });
+      const [res] = iMc.decodeFunctionResult("aggregate3", raw);
+      res.forEach((r, j) => { try { out.push(r.success ? part[j].iface.decodeFunctionResult(part[j].fn, r.returnData) : null); } catch { out.push(null); } });
+    }
+    return out;
+  }
+
+  // ---- what is being shown ----
+  let addr = null, src = "", gen = 0;
+  let prices = { USDC: 1, EURC: null, cirBTC: null, WETH: null };
+  const totals = { wallet: null, earn: null, borrow: null, rwa: null, fun: null };
+  const alerts = {};   // door -> [{cls, text, href, link}]
+
+  function setWho(a, how) {
+    addr = a; src = how;
+    $("whoSrc").textContent = how === "wallet" ? "CONNECTED WALLET" : "VIEWING AN ADDRESS";
+    $("whoAddr").textContent = a;
+    $("refreshBtn").hidden = false;
+    $("body").hidden = false;
+    try { localStorage.setItem("anewone_portfolio_addr", a); } catch {}
+    loadAll();
+  }
+  $("viewBtn").onclick = () => {
+    const v = $("addrIn").value.trim();
+    if (!ethers.isAddress(v)) { $("addrIn").focus(); $("addrIn").style.borderColor = "var(--red)"; return; }
+    $("addrIn").style.borderColor = ""; $("addrIn").value = "";
+    setWho(ethers.getAddress(v), "address");
+  };
+  $("addrIn").addEventListener("keydown", (e) => { if (e.key === "Enter") $("viewBtn").click(); });
+  $("refreshBtn").onclick = () => addr && loadAll();
+
+  // ---- wallets: a browser wallet the other pages used last is picked up silently; Connect
+  // offers every injected wallet. WalletConnect and email sign-in users paste their address.
+  const found = new Map();
+  window.addEventListener("eip6963:announceProvider", (e) => { const d = e.detail; if (d && d.info && d.provider) found.set(d.info.rdns, d); });
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  async function useWallet(d, ask) {
+    try {
+      const a = await d.provider.request({ method: ask ? "eth_requestAccounts" : "eth_accounts" });
+      if (!a || !a[0]) return false;
+      try { localStorage.setItem("anewone_last_wallet", d.info.rdns); } catch {}
+      $("connectBtn").textContent = a[0].slice(0, 6) + "…" + a[0].slice(-4);
+      $("picker").classList.remove("open");
+      setWho(ethers.getAddress(a[0]), "wallet");
+      d.provider.on && d.provider.on("accountsChanged", (x) => { if (x && x[0]) setWho(ethers.getAddress(x[0]), "wallet"); });
+      return true;
+    } catch { return false; }
+  }
+  $("connectBtn").onclick = () => {
+    const list = [...found.values()];
+    if (!list.length) { $("whoAddr").textContent = "No browser wallet found. Paste your address instead: WalletConnect and email sign-in wallets have one too."; $("addrIn").focus(); return; }
+    if (list.length === 1) return useWallet(list[0], true);
+    $("picker").innerHTML = list.map((d, i) => `<button type="button" data-w="${i}"><img src="${esc(d.info.icon)}" alt="">${esc(d.info.name)}</button>`).join("");
+    $("picker").classList.toggle("open");
+  };
+  $("picker").addEventListener("click", (e) => { const b = e.target.closest("[data-w]"); if (b) useWallet([...found.values()][Number(b.dataset.w)], true); });
+  (async () => {
+    await new Promise((r) => setTimeout(r, 400));
+    let last = null, saved = null;
+    try { last = localStorage.getItem("anewone_last_wallet"); saved = localStorage.getItem("anewone_portfolio_addr"); } catch {}
+    if (last && found.has(last) && (await useWallet(found.get(last), false))) return;
+    if (saved && ethers.isAddress(saved)) setWho(ethers.getAddress(saved), "address");
+  })();
+
+  // ---- painting ----
+  function rowsHtml(rows, empty) {
+    if (!rows.length) return `<div class="row none">${esc(empty)}</div>`;
+    return rows.map((r) => `<div class="row"><div><div class="n">${r.n}</div><div class="s">${r.s || ""}</div></div>
+      <div class="q">${r.q || ""}</div><div class="val${r.v < 0 ? " neg" : ""}">${r.v == null ? (r.vt || "—") : usd(r.v)}</div>
+      ${r.href ? `<a class="go" href="${esc(r.href)}">${esc(r.link || "Manage →")}</a>` : "<span></span>"}</div>`).join("");
+  }
+  function paintTotals() {
+    const t = (v) => (v == null ? "…" : usd(v));
+    $("tWallet").textContent = t(totals.wallet); $("tRwa").textContent = t(totals.rwa); $("tFun").textContent = t(totals.fun);
+    const defi = totals.earn == null && totals.borrow == null ? null : (totals.earn || 0) + (totals.borrow || 0);
+    $("tDefi").textContent = t(defi); $("tDefi").classList.toggle("neg", defi < 0);
+    const parts = [totals.wallet, defi, totals.rwa, totals.fun];
+    $("tTotal").textContent = parts.every((x) => x == null) ? "…" : usd(parts.reduce((a, x) => a + (x || 0), 0));
+    const all = Object.values(alerts).flat();
+    $("alerts").innerHTML = all.map((a) => `<div class="alert ${a.cls || ""}">${a.text}${a.href ? `<a href="${esc(a.href)}">${esc(a.link || "Open →")}</a>` : ""}</div>`).join("");
+  }
+  function paint(door, el, rows, empty, total) {
+    $(el).innerHTML = rowsHtml(rows, empty);
+    totals[door] = total;
+    const s = { wallet: "sWallet", earn: "sEarn", borrow: "sBorrow", rwa: "sRwa", fun: "sFun" }[door];
+    $(s).textContent = total == null ? "" : usd(total);
+    paintTotals();
+  }
+  function failed(door, el, what) { $(el).innerHTML = `<div class="row none">Could not read ${esc(what)} just now. <a href="#" data-retry>Try again</a></div>`; }
+  document.addEventListener("click", (e) => { if (e.target.closest("[data-retry]")) { e.preventDefault(); loadAll(); } });
+
+  async function loadAll() {
+    const my = ++gen, U = addr;
+    for (const k of Object.keys(totals)) totals[k] = null;
+    for (const k of Object.keys(alerts)) delete alerts[k];
+    paintTotals();
+    // Aave first: its oracles price the wallet's EURC, cirBTC and WETH too
+    const aave = readAave(U).catch((e) => { console.warn("aave", e); return null; });
+    aave.then((a) => { if (my === gen) readWallet(U, my).catch((e) => { console.warn("wallet", e); failed("wallet", "rWallet", "the wallet"); }); });
+    readRwa(U, my).catch((e) => { console.warn("rwa", e); failed("rwa", "rRwa", "the funds"); });
+    readFun(U, my).catch((e) => { console.warn("fun", e); failed("fun", "rFun", "the floor"); });
+    const a = await aave;
+    if (my !== gen) return;
+    readDefi(U, my, a).catch((e) => { console.warn("defi", e); failed("earn", "rEarn", "the Earn side"); });
+  }
+
+  // ---- wallet: USDC, EURC, cirBTC and WETH, priced by Aave's Main oracle ----
+  const WALLET_TOKENS = Object.entries(TOKENS).map(([address, t]) => ({ address, ...t }));
+  async function readWallet(U, my) {
+    const res = await viaPool((p) => multi(p, WALLET_TOKENS.map((t) => q(t.address, iErc, "balanceOf", [U]))));
+    if (my !== gen) return;
+    const dec = { USDC: 6, EURC: 6, cirBTC: 8, WETH: 18 };
+    const rows = WALLET_TOKENS.map((t, i) => ({ t, amt: res[i] ? num(res[i][0], dec[t.symbol]) : 0 })).filter((x) => x.amt > 0).map(({ t, amt }) => {
+      const px = prices[t.symbol];
+      return { n: esc(t.symbol), s: t.symbol === "USDC" ? "also Arc's gas" : px ? `at $${fmt(px, px < 10 ? 4 : 0)}` : "", q: `${fmt(amt, t.dp)} ${esc(t.symbol)}`, v: px ? amt * px : null };
+    });
+    paint("wallet", "rWallet", rows, "No USDC, EURC, cirBTC or WETH in this wallet.", rows.reduce((a, r) => a + (r.v || 0), 0));
+    if (!rows.some((r) => r.n === "USDC")) (alerts.wallet = [{ text: "No USDC in this wallet: on Arc it pays the gas for every action.", href: "../bridge/", link: "Get USDC →" }]), paintTotals();
+  }
+
+  // ---- Aave V4: both spokes, three Multicall3 calls for the markets and one for the wallet ----
+  async function readAave(U) {
+    return viaPool(async (p) => {
+      const head = await multi(p, SPOKES.flatMap((s) => [q(s.address, iSpoke, "getReserveCount"), q(s.address, iSpoke, "ORACLE")]));
+      const ids = SPOKES.flatMap((s, i) => [...Array(Number(head[2 * i][0])).keys()].map((id) => ({ s, id, oracle: head[2 * i + 1][0] })));
+      const base = await multi(p, ids.map(({ s, id }) => q(s.address, iSpoke, "getReserve", [id])));
+      const kept = ids.map((x, i) => ({ ...x, r: base[i] })).filter(({ r }) => r && TOKENS[r.underlying.toLowerCase()] && r.hub.toLowerCase() === HUB.toLowerCase());
+      const per = 6;
+      const d = await multi(p, [...kept.flatMap(({ s, id, r }) => [q(s.address, iSpoke, "getUserSuppliedAssets", [id, U]), q(s.address, iSpoke, "getUserTotalDebt", [id, U]),
+        q(s.address, iSpoke, "getUserReserveStatus", [id, U]), q(HUB, iHub, "getAssetDrawnRate", [r.assetId]), q(HUB, iHub, "getAddedAssets", [r.assetId]),
+        q(s.address, iSpoke, "getDynamicReserveConfig", [id, r.dynamicConfigKey])]),
+        ...SPOKES.map((s) => q(kept.find((k) => k.s === s)?.oracle || MC3, iOracle, "getReservesPrices", [kept.filter((k) => k.s === s).map((k) => k.id)])),
+        ...kept.map(({ r }) => q(HUB, iHub, "getAssetTotalOwed", [r.assetId]))]);
+      const out = kept.map(({ s, id, r }, i) => {
+        const dyn = d[i * per + 5];
+        const t = TOKENS[r.underlying.toLowerCase()], dec = Number(r.decimals);
+        const pxArr = d[kept.length * per + SPOKES.indexOf(s)], j = kept.filter((k) => k.s === s).findIndex((k) => k.id === id);
+        const price = pxArr ? Number(pxArr[0][j]) / 1e8 : null;
+        const drawn = Number(d[i * per + 3][0]) / 1e27, added = num(d[i * per + 4][0], dec), owed = num(d[kept.length * per + SPOKES.length + i][0], dec);
+        return { spoke: s, id, symbol: t.symbol, dp: t.dp, price, cf: dyn ? Number(dyn.collateralFactor) : 0,
+          supplied: num(d[i * per][0], dec), debt: num(d[i * per + 1][0], dec), collateral: d[i * per + 2] ? d[i * per + 2].collateral : false,
+          supplyApy: Math.expm1(drawn * (added > 0 ? owed / added : 0) * 0.9), borrowApy: Math.expm1(drawn) };
+      });
+      for (const x of out) if (x.spoke.key === "main" && x.price) prices[x.symbol] = x.price;
+      return out;
+    });
+  }
+
+  // ---- DeFi: Aave from above, Morpho through Circle's kits (the Earn page's own bundle) ----
+  async function readDefi(U, my, aave) {
+    const earn = [], loans = [];
+    let earnTotal = 0, borrowTotal = 0;
+    if (aave) {
+      for (const x of aave) if (x.supplied > 0 && !x.collateral) {
+        const v = x.price ? x.supplied * x.price : null; earnTotal += v || 0;
+        earn.push({ n: `Aave V4 · ${esc(x.symbol)}`, s: `${esc(x.spoke.name)} · ${(x.supplyApy * 100).toFixed(2)}% APY`, q: `${fmt(x.supplied, x.dp)} ${esc(x.symbol)}`, v, href: "../earn/" });
+      }
+      for (const s of SPOKES) {
+        const mine = aave.filter((x) => x.spoke === s && (x.debt > 0 || (x.collateral && x.supplied > 0)));
+        if (!mine.length) continue;
+        let S = 0, C = 0, D = 0;
+        for (const x of mine) { const px = x.price || 0; if (x.collateral) { C += x.supplied * px; S += x.supplied * px * x.cf / 1e4; } D += x.debt * px; }
+        const hf = D > 0 ? S / D : Infinity, net = C - D; borrowTotal += net;
+        const col = mine.filter((x) => x.collateral && x.supplied > 0).map((x) => `${fmt(x.supplied, x.dp)} ${esc(x.symbol)}`).join(" + ") || "none";
+        const debt = mine.filter((x) => x.debt > 0).map((x) => `${fmt(x.debt, x.dp)} ${esc(x.symbol)}`).join(" + ") || "none";
+        const band = hf === Infinity || hf >= 1.5 ? "ok" : hf >= 1.15 ? "warn" : "bad";
+        loans.push({ n: `Aave V4 · ${esc(s.name)}<span class="hf ${band}">HF ${hf === Infinity ? "∞" : fmt(hf, 2)}</span>`, s: `collateral ${col} · debt ${debt}`, q: `debt ${usd(D)}`, v: net, href: "../earn/#borrow" });
+        if (band !== "ok") (alerts.borrow = alerts.borrow || []).push({ cls: band === "bad" ? "bad" : "", text: `Aave ${esc(s.name)} health factor ${fmt(hf, 2)}: at 1.0 part of the collateral is liquidated. Repay some debt or add collateral.`, href: "../earn/#borrow", link: "Manage →" });
+      }
+    }
+    paint("earn", "rEarn", earn, "Reading Morpho vaults…", earnTotal);
+    paint("borrow", "rBorrow", loans, "Reading Morpho loans…", borrowTotal);
+    // Morpho: the vault list and the loans come from Circle's services; the shares are read from the chain
+    let kitMod;
+    try { kitMod = await import("../vendor/earn-kit.js"); } catch (e) { console.warn("kit", e); }
+    if (my !== gen) return;
+    if (kitMod) {
+      try {
+        const k = new kitMod.EarnKit(), vaults = [];
+        for await (const v of k.exploreVaultsIterator({ chain: "Arc", sortBy: "apy" })) vaults.push(v);
+        const iV = new ethers.Interface(["function balanceOf(address) view returns (uint256)", "function convertToAssets(uint256) view returns (uint256)"]);
+        const sh = await viaPool((p) => multi(p, vaults.map((v) => q(v.vaultAddress, iV, "balanceOf", [U]))));
+        const held = vaults.map((v, i) => ({ v, s: sh[i] ? sh[i][0] : 0n })).filter((x) => x.s > 0n);
+        const as = held.length ? await viaPool((p) => multi(p, held.map(({ v, s }) => q(v.vaultAddress, iV, "convertToAssets", [s])))) : [];
+        held.forEach(({ v }, i) => {
+          const amt = as[i] ? num(as[i][0], v.asset === "EURC" || v.asset === "USDC" ? 6 : 18) : 0, px = prices[v.asset] ?? (v.asset === "USDC" ? 1 : null);
+          const val = px ? amt * px : null; earnTotal += val || 0;
+          earn.push({ n: `${esc(v.name)}`, s: `Morpho · by ${esc((v.manager && v.manager.name) || "unlisted curator")} · ${(Number(v.currentApy) * 100).toFixed(2)}% APY`, q: `${fmt(amt, 2)} ${esc(v.asset)}`, v: val, href: "../earn/" });
+        });
+      } catch (e) { console.warn("morpho vaults", e); }
+      if (my !== gen) return;
+      paint("earn", "rEarn", earn, "No deposits on Aave or Morpho.", earnTotal);
+      try {
+        const b = new kitMod.BorrowKit();
+        const r = await b.getLoans({ walletAddress: U, chain: "Arc", pageSize: 50 });
+        for (const l of (r.loans || []).filter((l) => l.status === "active" || Number(l.collateral?.amount || 0) > 0)) {
+          const debtAmt = Number(l.borrowed?.amount || 0), colAmt = Number(l.collateral?.amount || 0);
+          const dPx = prices[l.borrowed?.token] ?? null, cPx = prices[l.collateral?.token] ?? null;
+          const net = dPx != null && cPx != null ? colAmt * cPx - debtAmt * dPx : null; borrowTotal += net || 0;
+          const band = l.healthFactorBand === "SAFE" || !debtAmt ? "ok" : l.healthFactorBand === "WARN" ? "warn" : "bad";
+          loans.push({ n: `Morpho · ${esc(l.collateral?.token || "")} → ${esc(l.borrowed?.token || "")}${debtAmt ? `<span class="hf ${band}">HF ${l.healthFactor == null ? "—" : fmt(l.healthFactor, 2)}</span>` : ""}`,
+            s: `collateral ${fmt(colAmt, 6)} ${esc(l.collateral?.token || "")} · debt ${fmt(debtAmt, 2)} ${esc(l.borrowed?.token || "")}`, q: debtAmt ? `${(Number(l.borrowApy) * 100).toFixed(2)}% APY` : "debt repaid",
+            v: net, vt: net == null ? "not priced" : undefined, href: "../earn/#borrow" });
+          if (debtAmt && band !== "ok") (alerts.borrow = alerts.borrow || []).push({ cls: band === "bad" ? "bad" : "", text: `Morpho ${esc(l.collateral?.token)} → ${esc(l.borrowed?.token)} loan is ${esc(String(l.healthFactorBand).toLowerCase())}.`, href: "../earn/#borrow", link: "Manage →" });
+          if (!debtAmt && colAmt > 0) (alerts.borrow = alerts.borrow || []).push({ cls: "ok", text: `${fmt(colAmt, 6)} ${esc(l.collateral?.token)} is still in a repaid Morpho loan. You can withdraw it.`, href: "../earn/#borrow", link: "Withdraw →" });
+        }
+      } catch (e) { console.warn("morpho loans", e); }
+    }
+    if (my !== gen) return;
+    paint("earn", "rEarn", earn, "No deposits on Aave or Morpho.", earnTotal);
+    paint("borrow", "rBorrow", loans, "No open loans on Aave or Morpho.", borrowTotal);
+  }
+
+  // ---- RWA: the RWA page's four funds (addresses kept in step with docs/assets/index.html) ----
+  const FUNDS = [
+    { key: "JTRSY", name: "Janus Henderson Treasury Fund", share: "0xC18e6f730896971a79D748E8deA61067A9Bc6040", vault: "0x12774f79be1a24dbea8f20ae0b38c2667b672bb1", dec: 6 },
+    { key: "JAAA", name: "Janus Henderson AAA CLO Fund", share: "0xAD48F183E586e92A591A610397ebf534609DF797", vault: "0x2dc7a732f9acf50a024445536e89c0670b80e5c4", dec: 6 },
+    { key: "HYB", name: "NYLIM US High Yield Bond Fund", share: "0x4827C7ecce4f07ADfe44A97165f06A199e7d2505", vault: "0xcf0c41d1bf0ae06e11bbff62deabd4b7595aa9ba", dec: 18 },
+    { key: "USYC", name: "Hashnote International Short Duration Yield Fund", share: "0x8a5D989Bbb96929F689B0200f435f53dA42bF490", oracle: "0x4BC8d5aCD3d040d2903dD9C5B7048520c6ff537A", dec: 6 },
+  ];
+  const iVault = new ethers.Interface(["function pricePerShare() view returns (uint256)", "function pendingDepositRequest(uint256,address) view returns (uint256)", "function pendingRedeemRequest(uint256,address) view returns (uint256)",
+    "function maxMint(address) view returns (uint256)", "function maxWithdraw(address) view returns (uint256)"]);
+  const iOr = new ethers.Interface(["function latestRoundData() view returns (uint80,int256,uint256,uint256,uint80)"]);
+  async function readRwa(U, my) {
+    const calls = FUNDS.flatMap((f) => f.oracle
+      ? [q(f.share, iErc, "balanceOf", [U]), q(f.oracle, iOr, "latestRoundData")]
+      : [q(f.share, iErc, "balanceOf", [U]), q(f.vault, iVault, "pricePerShare"), q(f.vault, iVault, "pendingDepositRequest", [0, U]), q(f.vault, iVault, "maxMint", [U]), q(f.vault, iVault, "pendingRedeemRequest", [0, U]), q(f.vault, iVault, "maxWithdraw", [U])]);
+    const r = await viaPool((p) => multi(p, calls));
+    if (my !== gen) return;
+    let i = 0, total = 0;
+    const rows = [], al = [];
+    for (const f of FUNDS) {
+      const v = (k) => r[i + k], big = (k) => (v(k) ? v(k)[0] : 0n);
+      let shares, px, pendDep = 0, claimSh = 0, pendRed = 0, claimUsdc = 0;
+      if (f.oracle) { shares = num(big(0), f.dec); px = v(1) ? Number(ethers.formatUnits(v(1)[1], 18)) : null; i += 2; }
+      else { shares = num(big(0), f.dec); px = v(1) ? Number(ethers.formatUnits(v(1)[0], 6)) : null; pendDep = num(big(2), 6); claimSh = num(big(3), f.dec); pendRed = num(big(4), f.dec); claimUsdc = num(big(5), 6); i += 6; }
+      if (!(shares > 0 || pendDep > 0 || claimSh > 0 || pendRed > 0 || claimUsdc > 0)) continue;
+      const val = (shares + claimSh + pendRed) * (px || 0) + pendDep + claimUsdc; total += val;
+      const bits = [shares > 0 ? `${fmt(shares, 4)} ${f.key}` : "", pendDep > 0 ? `${fmt(pendDep, 2)} USDC deposit pending` : "", pendRed > 0 ? `${fmt(pendRed, 4)} ${f.key} redemption pending` : ""].filter(Boolean).join(" · ");
+      rows.push({ n: esc(f.name), s: `${f.key}${px ? ` · NAV ${fmt(px, 4)}` : ""}`, q: esc(bits), v: val, href: "../assets/" });
+      if (claimSh > 0 || claimUsdc > 0) al.push({ cls: "ok", text: `${f.key}: ${claimSh > 0 ? `${fmt(claimSh, 4)} ${f.key}` : `${fmt(claimUsdc, 2)} USDC`} filled by the issuer and waiting to be claimed.`, href: "../assets/", link: "Claim →" });
+    }
+    alerts.rwa = al;
+    paint("rwa", "rRwa", rows, "No fund shares or open orders.", total);
+  }
+
+  // ---- AnewOne.Fun: the floor index for the coin list and curve prices, one call for balances ----
+  const iPlat = new ethers.Interface(["function creatorFees(address) view returns (uint256)", "function creatorFeeDeadline(address) view returns (uint256)"]);
+  async function readFun(U, my) {
+    const floor = await fetch("../data/floor.json", { cache: "no-cache" }).then((r) => r.json());
+    const toks = floor.tokens || [], plat = floor.platform || arcCfg.platform;
+    const r = await viaPool((p) => multi(p, [...toks.map((t) => q(t.addr, iErc, "balanceOf", [U])), q(plat, iPlat, "creatorFees", [U]), q(plat, iPlat, "creatorFeeDeadline", [U])]));
+    if (my !== gen) return;
+    const WAD = 10n ** 18n, grad = floor.gradTarget ? BigInt(floor.gradTarget) : 0n;
+    const rows = [];
+    let total = 0;
+    toks.forEach((t, i) => {
+      const bal = r[i] ? r[i][0] : 0n;
+      if (!(bal > 0n)) return;
+      const px = Number(ethers.formatUnits((BigInt(t.vUsdc) * WAD) / BigInt(t.tReserve), 18)), amt = num(bal, 18), v = amt * px;
+      total += v;
+      const st = t.graduated ? "graduated" : grad ? `${(Number((BigInt(t.raised) * 1000n) / grad) / 10).toFixed(1)}% to graduation` : "";
+      rows.push({ n: `$${esc(t.symbol)}`, s: `${esc(t.name)} · ${st}`, q: fmt(amt, 2), v, href: `../fun/#t=${t.addr}`, link: "Trade →" });
+    });
+    rows.sort((a, b) => b.v - a.v);
+    const pot = r[toks.length] ? r[toks.length][0] : 0n, deadline = r[toks.length + 1] ? Number(r[toks.length + 1][0]) : 0;
+    const al = [];
+    if (pot > 0n) {
+      const left = deadline - Math.floor(Date.now() / 1000), amt = num(pot, 18);
+      if (left > 0) al.push({ cls: left < 2 * 86400 ? "bad" : "", text: `${fmt(amt, 4)} USDC in creator fees to collect within ${Math.floor(left / 86400)}d ${Math.floor((left % 86400) / 3600)}h; after that they go to the platform.`, href: "../fun/", link: "Collect →" });
+      else al.push({ cls: "bad", text: `${fmt(amt, 4)} USDC in creator fees expired to the platform.` });
+    }
+    alerts.fun = al;
+    paint("fun", "rFun", rows, "No coins from the floor in this wallet.", total);
+  }
+</script>
+<script src="../shell.js"></script>
+</body>
+</html>
