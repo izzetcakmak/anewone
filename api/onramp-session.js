@@ -36,6 +36,10 @@ const statusFor = (type) =>
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
+  // GET /api/onramp-config is rewritten here (vercel.json): whether card purchases are on for this
+  // deployment, never the key. It was its own function until 20 Oct 2026; folding it in freed the
+  // Hobby plan's twelfth function slot for api/borrow-fee.js.
+  if (req.query?.config) return res.status(200).json({ enabled: !!process.env.ONRAMP_API_KEY, endpoint: "/api/onramp-session" });
   const origin = req.headers.origin || "", referer = req.headers.referer || "";
   const fromSite = ORIGINS.has(origin) || [...ORIGINS].some((o) => referer.startsWith(o + "/")) || process.env.CHAT_ALLOW_ANY_ORIGIN === "1";
   if (!fromSite) return res.status(403).json({ error: "this endpoint serves anewone.xyz" });

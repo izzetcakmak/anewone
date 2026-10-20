@@ -3524,7 +3524,7 @@ $("fundCopy").onclick = async () => {
 };
 
 // ---- Buy USDC with card (Circle Onramp Kit). The button only exists when the deployment
-// holds an Onramp key (api/onramp-config.js). Pressing it: one wallet signature proving the
+// holds an Onramp key (api/onramp-session.js, as /api/onramp-config). Pressing it: one wallet signature proving the
 // address (the same Sign-In with Ethereum message the chat uses, traded at /api/auth for a
 // day's session token kept in localStorage, so a Google sign-in wallet works too), then
 // /api/onramp-session mints a session pinned to Arc USDC for exactly that address, and the
