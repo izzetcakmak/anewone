@@ -973,6 +973,13 @@ Time: ${new Date().toISOString()}`;
       return sel ? VAULT_REFUSALS[sel] : null;
     }
   }
+  // A refusal in the wallet reaches the page wrapped by the kit ("RPC endpoint error on Arc"); the
+  // wallet's own code 4001 / ACTION_REJECTED is further down the cause chain
+  function walletRefused(e) {
+    let s = "";
+    for (let x = e, i = 0; x && i < 8; x = x.cause || x.error || (x.info && x.info.error), i++) s += ` ${x.code ?? ""} ${x.name ?? ""} ${x.message ?? ""} ${x.shortMessage ?? ""}`;
+    return /\b4001\b|ACTION_REJECTED|user rejected|user denied|rejected the request/i.test(s);
+  }
   const refusalText = (v, why) => `${v.name} cannot take this deposit right now: ${why}. Nothing was sent. This is the vault's own setting, set by its curator; pick another vault.`;
   let refuseTimer = null;
   $("amt").addEventListener("input", () => {
@@ -1062,7 +1069,9 @@ Time: ${new Date().toISOString()}`;
       refreshPositions();
     } catch (e) {
       const m = kitMod && kitMod.getErrorMessage ? kitMod.getErrorMessage(e) : (e.shortMessage || e.message || String(e));
-      setStatus(/user rejected|user denied|4001/i.test(m) ? "Refused in the wallet. Nothing was sent." : m, "err");
+      // earn-kit 1.9: some vaults (Veda) lock new shares for a while after a deposit; it can last hours
+      if (e && (e.code === 1107 || e.name === "EARN_SHARES_LOCKED")) setStatus(`${cur.name} locks new deposits for a while before they can be withdrawn. Nothing was sent; try again once the lock period ends.`, "err");
+      else setStatus(/user rejected|user denied|4001/i.test(m) || walletRefused(e) ? "Refused in the wallet. Nothing was sent." : m, "err");
     } finally { $("goBtn").disabled = false; }
   };
 
@@ -1358,7 +1367,7 @@ Time: ${new Date().toISOString()}`;
       await lnBalances();
       ok = true;
     } catch (e) {
-      lnStatus(kitMod.getErrorMessage ? kitMod.getErrorMessage(e) : (e.shortMessage || e.message || String(e)), "err");
+      lnStatus(walletRefused(e) ? "Refused in the wallet. Nothing was sent." : kitMod.getErrorMessage ? kitMod.getErrorMessage(e) : (e.shortMessage || e.message || String(e)), "err");
     } finally { B("lnGo").disabled = false; B("lnClose2").disabled = false; }
     return ok;
   }
