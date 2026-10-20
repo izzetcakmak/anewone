@@ -760,6 +760,18 @@ Time: ${new Date().toISOString()}`;
   };
   $("ackClose").onclick = () => { $("ackModal").classList.remove("open"); if (ackResolve) { ackResolve(false); ackResolve = null; } };
 
+  // The wallet as the Borrow kit sees it, minus EIP-5792 batching (see use()): every call passes
+  // through except the four batch methods, which answer "unsupported" the way a wallet without
+  // them does, so the kit falls back to Arc's sender-preserving batcher
+  const BATCH_METHODS = new Set(["wallet_getCapabilities", "wallet_sendCalls", "wallet_getCallsStatus", "wallet_showCallsStatus"]);
+  function batcherOnly(p) {
+    return new Proxy(p, { get(t, k) {
+      if (k === "request") return (args) => BATCH_METHODS.has(args && args.method)
+        ? Promise.reject(Object.assign(new Error("Method not supported"), { code: 4200 }))
+        : t.request(args);
+      const v = t[k]; return typeof v === "function" ? v.bind(t) : v;
+    } });
+  }
   async function use(provider, kind) {
     active = provider; activeKind = kind;
     const accts = await provider.request({ method: kind === "walletconnect" ? "eth_accounts" : "eth_requestAccounts" });
@@ -783,9 +795,19 @@ Time: ${new Date().toISOString()}`;
       return srcProviders.get(c.chainId);
     } });
     // Borrow needs an atomic batch: the viem "next" adapter gives a plain wallet one on Arc
-    // through the chain's sender-preserving batcher (the ethers adapter has no batching)
+    // through the chain's sender-preserving batcher (the ethers adapter has no batching).
+    // A wallet that offers its own batch (EIP-5792 wallet_sendCalls) gets that instead, and
+    // MetaMask's smart accounts (EIP-7702, on by default) do: on 21 Oct 2026 such a borrow
+    // reverted on chain while the same account's batches through Arc's batcher, Aave's, all
+    // landed. So for an address that is an EOA, plain or 7702-delegated, the kit is not told
+    // about wallet batching and takes the batcher; a real contract wallet keeps its own.
+    let borrowProvider = provider;
     try {
-      vadapter = kitMod.createViemNextAdapterFromProvider({ provider,
+      const code = await rawRpc("eth_getCode", [accts[0], "latest"]);
+      if (!code || code === "0x" || /^0xef0100/i.test(code)) borrowProvider = batcherOnly(provider);
+    } catch { borrowProvider = batcherOnly(provider); }
+    try {
+      vadapter = kitMod.createViemNextAdapterFromProvider({ provider: borrowProvider,
         getPublicClient: ({ chain }) => kitMod.createPublicClient({ chain, transport: kitMod.fallback(READ_URLS.map((u) => kitMod.http(u, { timeout: 15000 })), { rank: false }) }) });
     } catch (e) { console.warn("viem adapter", e); vadapter = null; }
     $("connectBtn").textContent = account.slice(0, 6) + "…" + account.slice(-4);
