@@ -368,7 +368,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (aave) {
       for (const x of aave) if (x.supplied > 0 && !x.collateral) {
         const v = x.price ? x.supplied * x.price : null; earnTotal += v || 0;
-        earn.push({ n: `Aave V4 · ${esc(x.symbol)}`, s: `${esc(x.spoke.name)} · ${(x.supplyApy * 100).toFixed(2)}% APY`, q: `${fmt(x.supplied, x.dp)} ${esc(x.symbol)}`, v, href: "../earn/" });
+        earn.push({ n: esc(x.symbol), s: `Aave V4 · ${esc(x.spoke.name)} · ${(x.supplyApy * 100).toFixed(2)}% APY`, q: `${fmt(x.supplied, x.dp)} ${esc(x.symbol)}`, v, href: "../earn/" });
       }
       for (const s of SPOKES) {
         const mine = aave.filter((x) => x.spoke === s && (x.debt > 0 || (x.collateral && x.supplied > 0)));
@@ -379,7 +379,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         const col = mine.filter((x) => x.collateral && x.supplied > 0).map((x) => `${fmt(x.supplied, x.dp)} ${esc(x.symbol)}`).join(" + ") || "none";
         const debt = mine.filter((x) => x.debt > 0).map((x) => `${fmt(x.debt, x.dp)} ${esc(x.symbol)}`).join(" + ") || "none";
         const band = hf === Infinity || hf >= 1.5 ? "ok" : hf >= 1.15 ? "warn" : "bad";
-        loans.push({ n: `Aave V4 · ${esc(s.name)}<span class="hf ${band}">HF ${hf === Infinity ? "∞" : fmt(hf, 2)}</span>`, s: `collateral ${col} · debt ${debt}`, q: `debt ${usd(D)}`, v: net, href: "../earn/#borrow" });
+        const syms = (f) => [...new Set(mine.filter(f).map((x) => x.symbol))].join(" + ") || "—";
+        loans.push({ n: `${esc(syms((x) => x.collateral && x.supplied > 0))} → ${esc(syms((x) => x.debt > 0))}<span class="hf ${band}">HF ${hf === Infinity ? "∞" : fmt(hf, 2)}</span>`,
+          s: `Aave V4 · ${esc(s.name)} · collateral ${col} · debt ${debt}`, q: mine.filter((x) => x.debt > 0).map((x) => `${(x.borrowApy * 100).toFixed(2)}% APY`).join(" · ") || "debt repaid", v: net, href: "../earn/#borrow" });
         if (band !== "ok") (alerts.borrow = alerts.borrow || []).push({ cls: band === "bad" ? "bad" : "", text: `Aave ${esc(s.name)} health factor ${fmt(hf, 2)}: at 1.0 part of the collateral is liquidated. Repay some debt or add collateral.`, href: "../earn/#borrow", link: "Manage →" });
       }
     }
@@ -413,8 +415,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           const dPx = prices[l.borrowed?.token] ?? null, cPx = prices[l.collateral?.token] ?? null;
           const net = dPx != null && cPx != null ? colAmt * cPx - debtAmt * dPx : null; borrowTotal += net || 0;
           const band = l.healthFactorBand === "SAFE" || !debtAmt ? "ok" : l.healthFactorBand === "WARN" ? "warn" : "bad";
-          loans.push({ n: `Morpho · ${esc(l.collateral?.token || "")} → ${esc(l.borrowed?.token || "")}${debtAmt ? `<span class="hf ${band}">HF ${l.healthFactor == null ? "—" : fmt(l.healthFactor, 2)}</span>` : ""}`,
-            s: `collateral ${fmt(colAmt, 6)} ${esc(l.collateral?.token || "")} · debt ${fmt(debtAmt, 2)} ${esc(l.borrowed?.token || "")}`, q: debtAmt ? `${(Number(l.borrowApy) * 100).toFixed(2)}% APY` : "debt repaid",
+          loans.push({ n: `${esc(l.collateral?.token || "")} → ${esc(l.borrowed?.token || "")}${debtAmt ? `<span class="hf ${band}">HF ${l.healthFactor == null ? "—" : fmt(l.healthFactor, 2)}</span>` : ""}`,
+            s: `Morpho · loan ${esc(String(l.loanId || "").slice(0, 8))}… · collateral ${fmt(colAmt, 6)} ${esc(l.collateral?.token || "")} · debt ${fmt(debtAmt, 2)} ${esc(l.borrowed?.token || "")}`, q: debtAmt ? `${(Number(l.borrowApy) * 100).toFixed(2)}% APY` : "debt repaid",
             v: net, vt: net == null ? "not priced" : undefined, href: "../earn/#borrow" });
           if (debtAmt && band !== "ok") (alerts.borrow = alerts.borrow || []).push({ cls: band === "bad" ? "bad" : "", text: `Morpho ${esc(l.collateral?.token)} → ${esc(l.borrowed?.token)} loan is ${esc(String(l.healthFactorBand).toLowerCase())}.`, href: "../earn/#borrow", link: "Manage →" });
           if (!debtAmt && colAmt > 0) (alerts.borrow = alerts.borrow || []).push({ cls: "ok", text: `${fmt(colAmt, 6)} ${esc(l.collateral?.token)} is still in a repaid Morpho loan. You can withdraw it.`, href: "../earn/#borrow", link: "Withdraw →" });
