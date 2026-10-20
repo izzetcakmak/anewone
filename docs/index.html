@@ -448,7 +448,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         var bs = $("nxRibbon").children; for (var i = 0; i < bs.length; i++) bs[i].firstChild.textContent = "#" + fmt(n - 7 + i + 1);
       }).catch(function () {});
   }
-  block(); setInterval(function () { if (document.visibilityState === "visible") block(); }, 15000);
+  block(); setInterval(function () { if (document.visibilityState === "visible") block(); }, 60000);
   // JTRSY's trailing 30-day yield from Centrifuge's indexer, which is open to browsers (27-decimal fixed point)
   var q = '{ s: tokenSnapshots(where:{id:"0x00010000000000060000000000000001"}, orderBy:"timestamp", orderDirection:"desc", limit:1){ items { yield30d365 } } }';
   fetch("https://api.centrifuge.io", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: q }) })
