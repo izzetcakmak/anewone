@@ -248,8 +248,10 @@ export function initAave(ctx) {
     const band = h.hf === Infinity || h.hf >= WARN_HF ? "SAFE" : h.hf >= MIN_HF ? "WARN" : "URGENT";
     const colTxt = inSpoke(s.key).filter((r) => u(r).collateral && u(r).supplied > 0).map((r) => show(r, u(r).supplied)).join(" + ") || "none";
     const debtTxt = inSpoke(s.key).filter((r) => u(r).debt > 0).map((r) => show(r, u(r).debt)).join(" + ") || "none";
+    const syms = (f) => [...new Set(inSpoke(s.key).filter(f).map((r) => r.symbol))].join(" + ") || "—";
+    const pair = `${esc(syms((r) => u(r).collateral && u(r).supplied > 0))} <span class="arrow">→</span> ${esc(syms((r) => u(r).debt > 0))}`;
     return `<div class="vault">
-      <div class="head"><div><div class="pair">Your Aave position</div><div class="curator">${esc(s.name)} · its collateral counts together, apart from other markets</div></div>
+      <div class="head"><div><div class="pair">${pair}</div><div class="curator">Aave V4 · ${esc(s.name)}</div></div>
         <span class="hf ${band}">${band === "SAFE" ? "healthy" : band === "WARN" ? "watch" : "at risk"}</span></div>
       <div class="apy">${hfText(h.hf)}<small>HEALTH FACTOR</small></div>
       <div class="stats"><div>${esc(debtTxt)}<span>Debt</span></div><div>${esc(colTxt)}<span>Collateral</span></div><div>${h.liq ? price(h.liq) : "—"}<span>Liq. price${h.liqSym ? " " + esc(h.liqSym) : ""}</span></div></div>
@@ -281,11 +283,15 @@ export function initAave(ctx) {
     B("aaveBorrowWrap").hidden = false;
     if (!loaded) { g.innerHTML = placeholder(); return; }
     const U = ctx.account();
-    // one section per market, its own position card first: the two are separate accounts
+    // the wallet's Aave positions sit with its Morpho loans under "Your loans", one card per
+    // market (each its own account); this section keeps to the markets one can borrow from
+    const mine = B("aaveLoans");
+    if (mine) mine.innerHTML = U ? SPOKES.filter((s) => hasLoan(s.key)).map(positionCard).join("") : "";
+    if (ctx.onLoans) ctx.onLoans();
     g.innerHTML = SPOKES.map((s) => {
       const pairs = collaterals(s.key).flatMap((c) => loanAssets(s.key, c).map((d) => pairCard(c, d))).join("");
       if (!pairs) return "";
-      return `<div class="gsec">${esc(s.title)}<span>${esc(s.blurb)}</span></div>${U && hasLoan(s.key) ? positionCard(s) : ""}${pairs}`;
+      return `<div class="gsec">${esc(s.title)}<span>${esc(s.blurb)}</span></div>${pairs}`;
     }).join("");
   }
 
@@ -510,6 +516,7 @@ export function initAave(ctx) {
     await loadMarket(); await loadUser(); renderEarn(); renderBorrow();
   });
   B("aaveEarn").addEventListener("click", (e) => { const b = e.target.closest("[data-aave-earn]"); if (b) { const [k, id] = b.dataset.aaveEarn.split(":"); open({ mode: "deposit", spoke: k, a1: Number(id) }); } });
+  B("aaveLoans").addEventListener("click", (e) => { const l = e.target.closest("[data-aave-loan]"); if (l) open({ mode: l.dataset.aaveLoan, spoke: l.dataset.aaveSpoke }); });
   B("aaveMarkets").addEventListener("click", (e) => {
     const b = e.target.closest("[data-aave-col]");
     if (b) return open({ mode: "borrow", spoke: b.dataset.aaveSpoke, a1: Number(b.dataset.aaveCol), a2: Number(b.dataset.aaveDebt) });

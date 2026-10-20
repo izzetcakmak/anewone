@@ -267,7 +267,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="view" id="borrowView" hidden>
     <div id="loansWrap" hidden>
       <h2 class="sec">Your loans</h2>
-      <div class="grid" id="loans"></div>
+      <!-- Morpho loans (this page) and Aave positions (aave.js) flow into one grid -->
+      <div class="grid"><div id="loans" style="display:contents"></div><div id="aaveLoans" style="display:contents"></div></div>
     </div>
     <div class="filters">
       <span class="count" id="mcount">loading markets…</span>
@@ -1204,6 +1205,8 @@ Time: ${new Date().toISOString()}`;
     } catch { loans = []; }
     renderLoans(); renderMarkets();
   }
+  // "Your loans" shows when either protocol has something there
+  function syncLoansWrap() { B("loansWrap").hidden = !loans.length && !B("aaveLoans").children.length; }
   function marketOf(l) { return markets.find((m) => m.marketId === l.marketId); }
   // loans this session just opened: a fresh one is PENDING for a minute while Circle indexes
   // the receipt, and only that one is worth a "pending" card. Any other empty record is a
@@ -1212,10 +1215,10 @@ Time: ${new Date().toISOString()}`;
   function renderLoans() {
     const ghost = (l) => l.dataStatus === "PENDING" && !l.borrowed && !l.collateral;
     loans = loans.filter((l) => !ghost(l) || (fresh.has(l.loanId) && Date.now() - fresh.get(l.loanId) < 3 * 60 * 1000));
-    B("loansWrap").hidden = !loans.length;
+    syncLoansWrap();
     const notes = loans.filter(ghost).map((l) => { const m = marketOf(l); return `<div class="vault ghost">
       <div class="head"><div><div class="pair">${m ? esc(m.collateralAsset.symbol) + ' <span class="arrow">→</span> ' + esc(m.loanAsset.symbol) : "Loan"}</div>
-        <div class="curator">record ${esc(l.loanId.slice(0, 8))}… · just opened</div></div><span class="tag warn">⏳ indexing</span></div>
+        <div class="curator">Morpho · record ${esc(l.loanId.slice(0, 8))}… · just opened</div></div><span class="tag warn">⏳ indexing</span></div>
       <div class="curator">Your loan is confirmed on-chain; Circle is still indexing it. The figures appear here within a minute.</div>
     </div>`; }).join("");
     B("loans").innerHTML = notes + loans.map((l, i) => {
@@ -1226,7 +1229,7 @@ Time: ${new Date().toISOString()}`;
       const repaid = l.status !== "active" || !(Number(l.borrowed?.amount || 0) > 0);
       return `<div class="vault">
         <div class="head"><div><div class="pair">${esc(col)} <span class="arrow">→</span> ${esc(debt)}</div>
-          <div class="curator">loan ${esc(l.loanId.slice(0, 10))}… ${l.dataStatus === "PENDING" ? "· updating" : ""}</div></div>${repaid ? `<span class="tag warn">debt repaid · collateral still in market</span>` : hfBand(l.healthFactorBand)}</div>
+          <div class="curator">Morpho · loan ${esc(l.loanId.slice(0, 10))}… ${l.dataStatus === "PENDING" ? "· updating" : ""}</div></div>${repaid ? `<span class="tag warn">debt repaid · collateral still in market</span>` : hfBand(l.healthFactorBand)}</div>
         <div class="apy">${l.healthFactor == null ? "—" : fmt(l.healthFactor, 2)}<small>HEALTH FACTOR</small></div>
         <div class="stats"><div>${amt(l.borrowed)}<span>Debt</span></div><div>${amt(l.collateral, 6)}<span>Collateral</span></div><div>${l.liquidationPrice ? money(l.liquidationPrice.amount) : "—"}<span>Liq. price</span></div></div>
         <div class="curator">${pct(l.borrowApy)} borrow APY · LTV ${l.ltv == null ? "—" : fmt(l.ltv * 100, 1) + "%"} · interest ${amt(l.accruedInterest, 4)}</div>
@@ -1418,7 +1421,7 @@ Time: ${new Date().toISOString()}`;
   else import("./aave.js").then((m) => {
     aave = m.initAave({ ethers, cfg: cfg.aave || {}, explorer: arcCfg.explorer, readProviders: () => READ_URLS.map(readProvider), poolProvider,
       account: () => account, wallet, ensureArc: () => (activeKind !== "google" && activeKind !== "walletconnect" ? ensureArc() : null),
-      ensureAck, openPicker, filter: () => filter, onChange: () => renderMine(), fmt, money, pct, esc, GAS_RESERVE });
+      ensureAck, openPicker, filter: () => filter, onChange: () => renderMine(), onLoans: () => syncLoansWrap(), fmt, money, pct, esc, GAS_RESERVE });
   }).catch((e) => { console.warn("aave", e); $("aaveEarnWrap").hidden = true; $("aaveBorrowWrap").hidden = true; });
 </script>
 <script src="../shell.js"></script>
