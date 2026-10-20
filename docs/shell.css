@@ -124,9 +124,13 @@
 .nx-panel .nx-btn { margin-top: 8px; width: 100%; }
 .nx-panel.open { display: flex; }
 @media (max-width: 1180px) { .nx-links { display: none; } .nx-burger { display: grid; } }
-@media (max-width: 980px) { .nx-nav .nx-actions .nx-btn.fun, .nx-nav .nx-actions .nx-icon.th { display: none; } }
+/* the three doors stay in the bar at every width; on a narrow screen Fun says just "Fun", the arrows go,
+   and the menu keeps the rest */
+@media (max-width: 980px) { .nx-nav .nx-actions .nx-icon.th { display: none; } .nx-nav .nx-actions .nx-btn .fl { display: none; } .nx-nav .nx-btn.sep { margin-left: 0; } }
 @media (max-width: 640px) { .nx-nav-in { padding: 0 18px; gap: 12px; } .nx-nav { height: 76px; } .nx-panel { top: 82px; }
   .nx-nav .nx-actions .nx-btn { padding: 0 16px; height: 46px; font-size: 14px; min-width: 84px; } .nx-nav .nx-icon { width: 46px; height: 46px; } }
+/* after the rule above, so the three doors fit a phone: no arrows, no minimum width */
+@media (max-width: 640px) { .nx-nav .nx-actions .nx-btn { min-width: 0; padding: 0 15px; } .nx-nav .nx-actions .nx-btn svg { display: none; } .nx-nav .nx-actions { gap: 8px; } }
 @media (max-width: 360px) { .nx-nav-in { gap: 8px; padding: 0 14px; } .nx-nav .nx-actions { gap: 8px; } .nx-nav .nx-actions .nx-btn { min-width: 0; padding: 0 12px; } .nx-nav .nx-actions .nx-btn svg { display: none; } }
 
 /* ---- the hero: a night sky with the arch laid flat beneath it ---- */
