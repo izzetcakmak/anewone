@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Bundles the browser half of @circle-fin/onramp-kit into docs/vendor/onramp-kit.js. Recipe in build.mjs.",
   "dependencies": {
-    "@circle-fin/onramp-kit": "1.0.3",
+    "@circle-fin/onramp-kit": "1.0.4",
     "esbuild": "^0.28.1"
   }
 }
