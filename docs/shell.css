@@ -359,3 +359,8 @@
 .nx-bd { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font: 500 11.5px "JetBrains Mono", ui-monospace, monospace; border: 1px solid var(--nx-line2); color: var(--nx-mute); }
 .nx-bd.warn { color: var(--nx-warn); border-color: rgba(var(--nx-warn-rgb),.4); background: rgba(var(--nx-warn-rgb),.08); }
 .nx-bd.ok { color: var(--nx-mint); border-color: rgba(var(--nx-mint-rgb), .4); background: rgba(var(--nx-mint-rgb), .08); }
+
+/* the Portfolio door beside the wallet button (docs/shell.js adds it to every bar) */
+.nx-icon.nx-pf { text-decoration: none; }
+.nx-icon.nx-pf[aria-current="page"] { color: var(--nx-on-mint); background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .98), rgba(var(--nx-mint-rgb), .82)); border-color: transparent; }
+@media (max-width: 980px) { .nx-nav .nx-actions .nx-icon.nx-pf { display: none; } }

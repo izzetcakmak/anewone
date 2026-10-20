@@ -81,6 +81,20 @@
   var bar = qs(".nx-bar") || qs(".nx-nav");
   if (bar) { var onScroll = function () { bar.classList.toggle("stuck", (window.pageYOffset || root.scrollTop) > 20); }; onScroll(); addEventListener("scroll", onScroll, { passive: true }); }
 
+  // ---- Portfolio: one door to everything a wallet holds, beside the wallet button on every page ----
+  var acts = bar && !embedded ? qs(".nx-actions", bar) : null;
+  if (acts && !qs(".nx-pf", acts)) {
+    var pf = doc.createElement("a");
+    pf.className = "nx-icon nx-pf"; pf.href = new URL("portfolio/", BASE).href;
+    pf.setAttribute("aria-label", "Portfolio: everything this wallet holds"); pf.title = "Portfolio";
+    if (doc.body && doc.body.hasAttribute("data-nx-portfolio")) pf.setAttribute("aria-current", "page");
+    pf.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12A9 9 0 1 1 12 3v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>';
+    // right before the wallet button, or the box it sits in (the floor wraps it with its menu)
+    var cb = qs("#connectBtn", acts) || qs(".nx-btn", acts);
+    while (cb && cb.parentNode !== acts) cb = cb.parentNode;
+    try { acts.insertBefore(pf, cb || null); } catch (e) { acts.appendChild(pf); }
+  }
+
   // ---- the theme switch for pages whose own script does not have one (home, docs); the key is the site's ----
   function flip() { var next = root.getAttribute("data-theme") === "light" ? "dark" : "light"; root.setAttribute("data-theme", next); try { localStorage.setItem("anewone_theme", next); } catch (e) {} }
   qsa("[data-nx-theme]").forEach(function (b) { b.addEventListener("click", flip); });
