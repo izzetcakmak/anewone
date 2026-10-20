@@ -8,7 +8,9 @@
   "rewrites": [
     { "source": "/api/agent", "destination": "/api/basedbot?door=agent" },
     { "source": "/api/agent/:path", "destination": "/api/basedbot/agent-:path" },
-    { "source": "/api/onramp-config", "destination": "/api/onramp-session?config=1" }
+    { "source": "/api/onramp-config", "destination": "/api/onramp-session?config=1" },
+    { "source": "/v1/borrowKit/loans/borrow/quote", "destination": "/api/borrow-fee?op=quote" },
+    { "source": "/v1/borrowKit/loans/borrow", "destination": "/api/borrow-fee?op=execute" }
   ],
   "redirects": [
     {
