@@ -1553,6 +1553,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .modal-bg { background: rgba(2,4,3,.72); }
 </style>
 <link rel="stylesheet" href="shell.css">
+<link rel="stylesheet" href="fun/vote.css">
 </head>
 <body>
 <!-- Google Tag Manager (noscript) -->
@@ -1574,6 +1575,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <a class="nx-brand" href="./" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
   <nav class="nx-seg" aria-label="Apps"><a href="earn/">DeFi</a><a href="assets/stocks/">RWA</a><a href="fun/" class="f on">Fun</a></nav>
   <div class="nx-actions">
+    <button type="button" class="vt-pill" id="vtPill" hidden aria-haspopup="dialog" title="Community vote: how the Ecosystem Budget is spent"><span class="vt-dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13h16v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 13 6 8h12l2 5"/><path d="m9 6 3 3 5-6"/></svg><span class="vt-pill-t">Vote</span></button>
     <button type="button" class="nx-icon" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
     <span id="balChip" class="nx-pill" hidden title="Your USDC on Arc. Pays gas and trades"></span>
     <button id="createBtn" class="nx-btn lit" type="button">+ Create<span class="x"> Coin</span></button>
@@ -1638,6 +1640,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </aside>
 
   <div class="col-main">
+  <!-- Community vote (fun/vote.js): hidden until the poll answers, so a failing API leaves no hole here -->
+  <div class="vt-card" id="vtCard" hidden>
+    <div class="vt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13h16v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 13 6 8h12l2 5"/><path d="m9 6 3 3 5-6"/></svg></div>
+    <div><b class="vt-card-t"></b><p class="vt-card-s"></p></div>
+    <button type="button" aria-haspopup="dialog">Cast your vote</button>
+  </div>
 <div class="fstats">
     <div><b id="statCount">–</b><span>Tokens live</span></div>
     <div><b id="statFee">1.5%</b><span id="statFeeSplit">Fee · ⅓ to creators</span></div>
@@ -6009,5 +6017,6 @@ setInterval(liveTail, 15_000);
 restoreWallet();
 </script>
 <script src="shell.js"></script>
+<script src="fun/vote.js"></script>
 </body>
 </html>

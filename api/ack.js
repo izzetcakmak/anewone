@@ -7,6 +7,7 @@
 import { getAddress, verifyMessage, keccak256, toUtf8Bytes } from "ethers";
 import { kv, kvAvailable } from "./_kv.js";
 import { tooMany } from "./_ratelimit.js";
+import vote from "./_vote.js";
 
 const ORIGINS = new Set(["https://anewone.xyz", "https://www.anewone.xyz"]);
 const VERSION_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -15,8 +16,12 @@ const key = (addr) => `ack:${addr.toLowerCase()}`;
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   const origin = req.headers.origin || "", referer = req.headers.referer || "";
-  const fromSite = ORIGINS.has(origin) || [...ORIGINS].some((o) => referer.startsWith(o + "/")) || process.env.CHAT_ALLOW_ANY_ORIGIN === "1";
+  // a preview deployment of this project is a site too, so it can be tried before it goes live; production never takes this branch
+  const preview = process.env.VERCEL_ENV === "preview" && /^https:\/\/anewone-[a-z0-9]+-izzetcs-projects\.vercel\.app(\/|$)/.test(origin || referer);
+  const fromSite = ORIGINS.has(origin) || [...ORIGINS].some((o) => referer.startsWith(o + "/")) || preview || process.env.CHAT_ALLOW_ANY_ORIGIN === "1";
   if (!fromSite) return res.status(403).json({ error: "forbidden" });
+  // /api/vote (a rewrite in vercel.json) lands here: the plan caps functions, so the poll shares this one
+  if (req.query && req.query.poll) return vote(req, res);
 
   if (req.method === "GET") {
     if (await tooMany(req, res, "ack-get", 60)) return;

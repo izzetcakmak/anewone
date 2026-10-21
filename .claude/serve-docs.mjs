@@ -4,6 +4,7 @@ import http from "node:http"; import fs from "node:fs"; import path from "node:p
 process.env.CHAT_ALLOW_ANY_ORIGIN = "1"; // the preview has no anewone.xyz origin
 const xstocks = (await import("../api/xstocks.js")).default; // the real function, run in-process
 const usyc = (await import("../api/usyc.js")).default;
+const ack = (await import("../api/ack.js")).default; // carries /api/vote behind the rewrite
 const borrowFee = (await import("../api/borrow-fee.js")).default; // keyless here unless the env carries one
 // vercel.json's rewrites for the kit's fee-bearing Borrow Service paths
 const BORROW_PATHS = { "/v1/borrowKit/loans/borrow/quote": "quote", "/v1/borrowKit/loans/borrow": "execute" };
@@ -18,6 +19,15 @@ http.createServer((req, res) => {
     req.on("end", () => {
       const r = { setHeader: (k, v) => res.setHeader(k, v), status(c) { res.statusCode = c; return r; }, json(o) { res.setHeader("content-type", "application/json"); res.end(JSON.stringify(o)); }, send(t) { res.end(t); } };
       borrowFee({ method: req.method, headers: req.headers, query: { op: BORROW_PATHS[u] }, body, socket: req.socket }, r).catch((e) => { res.writeHead(500).end(String(e)); });
+    });
+    return;
+  }
+  if (u === "/api/vote") { // the community vote: Vercel rewrites this to ack.js?poll=1; keeps votes in memory here
+    let body = ""; req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      let parsed = {}; try { parsed = JSON.parse(body || "{}"); } catch {}
+      const r = { setHeader: (k, v) => res.setHeader(k, v), status(c) { res.statusCode = c; return r; }, json(o) { res.setHeader("content-type", "application/json"); res.end(JSON.stringify(o)); } };
+      ack({ method: req.method, headers: req.headers, query: { poll: "1" }, body: parsed, socket: req.socket }, r).catch((e) => { res.writeHead(500).end(String(e)); });
     });
     return;
   }
