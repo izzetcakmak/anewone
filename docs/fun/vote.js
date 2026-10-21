@@ -11,7 +11,7 @@
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch {} },
   };
-  const track = (event, extra) => { try { (window.dataLayer = window.dataLayer || []).push({ event, ...extra }); } catch {} };
+  const track = (event, extra) => { try { window.plausible && window.plausible(event, extra ? { props: extra } : undefined); } catch {} };
 
   // ---- the three models, as the visitor reads them
   const MODELS = {

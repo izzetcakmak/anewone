@@ -3,17 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- Google Tag Manager, in Consent Mode with every storage denied: no cookies are written, Google
-     gets cookieless pings only. There is no consent banner because nothing here asks for consent;
-     anything that would set a cookie must not be turned on in the GTM container. -->
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
-gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',functionality_storage:'denied',personalization_storage:'denied',security_storage:'denied'});</script>
-<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-KDQSQQKH');</script>
-<!-- End Google Tag Manager -->
+<!-- Plausible Analytics: cookieless, no personal data, so no consent banner. The stub lets events fire before the script loads. -->
+<script defer data-domain="anewone.xyz" src="https://plausible.io/js/script.js"></script>
+<script>window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments)}</script>
 <script>
   // Same key as the main page, so a visitor's theme carries across the site.
   (function () {
@@ -52,10 +44,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="stylesheet" href="shell.css">
 </head>
 <body>
-<!-- Google Tag Manager (noscript) -->
-<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KDQSQQKH"
-height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-<!-- End Google Tag Manager (noscript) -->
 <header class="nx-nav" id="nxNav"><div class="nx-nav-in">
   <a class="nx-brand" href="./" aria-label="A NEW ONE, home"><svg class="nx-crest" viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M50 10 L82 88 H18 Z M50 46 m-11.5 0 a11.5 11.5 0 1 1 23 0 a11.5 11.5 0 1 1 -23 0 M34 64 H66 V88 H34 Z"/></svg><span>A NEW ONE</span></a>
   <nav class="nx-links" aria-label="Main"><a href="./#ask">Ask</a><a href="docs.html">Docs</a><a href="about.html">About</a><a href="./#trust">Trust</a><a href="https://github.com/izzetcakmak/anewone" target="_blank" rel="noopener">GitHub</a></nav>
