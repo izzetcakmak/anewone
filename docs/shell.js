@@ -80,6 +80,12 @@
   // ---- the bar turns to glass once the page moves under it ----
   var bar = qs(".nx-bar") || qs(".nx-nav");
   if (bar) { var onScroll = function () { bar.classList.toggle("stuck", (window.pageYOffset || root.scrollTop) > 20); }; onScroll(); addEventListener("scroll", onScroll, { passive: true }); }
+  // the hero starts below the bar however tall a phone wraps it (a connected wallet or the vote pill can add a row)
+  if (bar) {
+    var barH = function () { root.style.setProperty("--nx-bar-h", bar.offsetHeight + "px"); };
+    barH(); addEventListener("resize", barH);
+    if (window.ResizeObserver) new ResizeObserver(barH).observe(bar);
+  }
 
   // ---- Portfolio: one door to everything a wallet holds, beside the wallet button on every page ----
   var acts = bar && !embedded ? qs(".nx-actions", bar) : null;
