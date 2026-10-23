@@ -187,9 +187,12 @@ Steps, in order, once the chain is up:
    chain at execution, per chain and token). Registered at portal.li.fi as "A New One"
    (integration string `a-new-one`, 25 bps) and verified on 14 Sep 2026: fee quotes accepted on
    Base, Ethereum, Arbitrum and OP; LI.FI shows the integrator share folded into its own
-   "LIFI Fixed Fee" line (0.50% total = 0.25% LI.FI + 0.25% ours). Withdraw from the portal
-   dashboard with the fee wallet. If the integration is ever renamed, the kit falls back to
-   fee-less quotes (the swap keeps working, revenue stops).
+   "LIFI Fixed Fee" line (0.50% total = 0.25% LI.FI + 0.25% ours). Nothing to withdraw: on EVM
+   LI.FI's FeeForwarder pays the fee wallet in the swap's own transaction, and on Solana and Sui
+   the fee goes straight to the portal's wallet for that VM. Only legacy FeeCollector balances
+   need claiming (portal, or `GET li.quest/v1/integrators/a-new-one`; empty on 23 Oct 2026).
+   If the integration is ever renamed, the kit falls back to fee-less quotes (the swap keeps
+   working, revenue stops).
 9. LI.FI into Arc: the kit's `router: "auto"` asks LI.FI for a route into chain 5042 on every
    quote (cached 10 min). Today it answers "not supported"; the day it does, any-token → USDC on
    Arc becomes one LI.FI transaction and CCTP stays the fallback, no redeploy needed. Check with
