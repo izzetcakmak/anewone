@@ -890,6 +890,45 @@
   .trow .usd { color: var(--text); } .trow .qty { color: var(--dim); }
   .trow .who { color: var(--dim); cursor: pointer; } .trow .who:hover { color: var(--text); }
   .trow .when { margin-left: auto; color: var(--faint); font-size: 11.5px; }
+  /* top holders, under the trade form in the side column: the list scrolls inside its own box so
+     the sticky column still fits a laptop screen */
+  .tholders { margin-top: 16px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px 10px; }
+  .th-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0 4px 8px; }
+  .th-head b { font: 700 11.5px var(--mono); letter-spacing: .9px; text-transform: uppercase; color: var(--text); }
+  .th-head span { font: 11px var(--mono); color: var(--faint); }
+  .th-list { position: relative; overflow-y: auto; overscroll-behavior: contain; }
+  .th-pager { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .th-pg { min-height: 0; min-width: 30px; height: 28px; padding: 0 8px; border-radius: 8px; font: 600 11.5px var(--mono); background: transparent; border: 1px solid var(--border); color: var(--dim); }
+  .th-pg:hover { color: var(--text); border-color: var(--border-2); }
+  .th-pg.on { color: var(--accent); border-color: rgba(var(--accent-rgb), .5); background: rgba(var(--accent-rgb), .08); }
+  .th-gap { color: var(--faint); font: 11.5px var(--mono); padding: 0 2px; }
+  .th-wait { color: var(--faint); font: 11px var(--mono); margin-left: 6px; }
+  .th-row { position: relative; display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px;
+    font: 12.5px var(--mono); color: var(--text); text-decoration: none; overflow: hidden; }
+  .th-row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: var(--w, 0%); background: rgba(var(--accent-rgb), .09); }
+  .th-row > * { position: relative; }
+  .th-row:hover { background: rgba(var(--accent-rgb), .06); text-decoration: none; }
+  .th-row .rk { width: 20px; flex: none; color: var(--faint); font-size: 11px; }
+  .th-row .ad { white-space: nowrap; }
+  .th-row.sys .ad { color: var(--dim); font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12.5px; }
+  .th-row .tg { flex: none; font: 700 9.5px var(--mono); letter-spacing: .6px; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border-2); color: var(--dim); }
+  .th-row .tg.dev { color: var(--accent); border-color: rgba(var(--accent-rgb), .45); }
+  .th-row .tg.you { color: var(--green); border-color: rgba(var(--green-rgb), .45); }
+  .th-row .pc { margin-left: auto; flex: none; color: var(--dim); }
+  .th-row .go { flex: none; color: var(--faint); font-size: 11px; }
+  .th-row:hover .go { color: var(--accent); }
+  .th-sep { height: 1px; background: var(--border); margin: 4px 8px; }
+  .th-more { display: block; margin-top: 8px; text-align: center; font: 11.5px var(--mono); color: var(--dim); }
+  .th-more:hover { color: var(--accent); }
+  /* phones: the list sits at the foot of the page, under the trade form, so the HOLDERS card leads there */
+  @media (max-width: 900px) {
+    #tHoldersStat { cursor: pointer; border-color: rgba(var(--accent-rgb), .45); position: relative; padding-right: 26px; }
+    #tHoldersStat::after { content: "›"; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 700 18px var(--mono); color: var(--accent); }
+    #tHoldersStat:active { background: rgba(var(--accent-rgb), .08); }
+  }
+  .tholders.flash { animation: th-flash 1.4s ease-out; }
+  @keyframes th-flash { 0%, 30% { border-color: rgba(var(--accent-rgb), .9); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .18); } 100% { border-color: var(--border); box-shadow: none; } }
+  @media (prefers-reduced-motion: reduce) { .tholders.flash { animation: none; } }
   @media (max-width: 900px) {
     .tp-grid { grid-template-columns: 1fr; }
     .tp-side { position: static; }
@@ -1841,7 +1880,7 @@
       <div class="stat" title="Fully diluted value: price × the 1B supply">FDV <b id="tFdv">–</b></div>
       <div class="stat" title="Price × the tokens people actually hold; the rest still sits on the curve" id="tMcapStat">MARKET CAP <b id="tMcap">–</b></div>
       <div class="stat" title="Real USDC backing the coin: locked in its curve, or in its Uniswap pool" id="tLiqStat">LIQUIDITY <b id="tLiq">–</b></div>
-      <div class="stat">HOLDERS <b id="tHolders">–</b></div>
+      <div class="stat" id="tHoldersStat">HOLDERS <b id="tHolders">–</b></div>
       <div class="stat">24H VOL <b id="tVol">–</b></div>
       <div class="stat">YOU HOLD <b id="tHold">–</b></div>
     </div>
@@ -1932,6 +1971,12 @@
       <button id="tShare">🔗 Share</button>
     </div>
     <div class="hint" id="tLinks"></div>
+    <div class="tholders" id="tHoldersBox" style="display:none">
+      <div class="th-head"><b>Top holders</b><span>% of supply</span></div>
+      <div class="th-list" id="thList"></div>
+      <div class="th-pager" id="thPager" style="display:none"></div>
+      <a class="th-more" id="thMore" target="_blank" rel="noopener">every holder on the explorer ↗</a>
+    </div>
     </div><!-- /tp-side -->
     </div><!-- /tp-grid -->
   </div>
@@ -5309,6 +5354,7 @@ async function openTrade(addr) {
   renderPosition(addr);
   computeTrust(addr);
   renderComments(addr);
+  renderHolders(addr);
   const md = metaOf(addr);
   $("tDesc").textContent = md.d || "";
   $("tDesc").style.display = md.d ? "block" : "none";
@@ -5332,6 +5378,154 @@ async function openTrade(addr) {
   if (!inHash || inHash.toLowerCase() !== addr.toLowerCase()) location.hash = "t=" + addr;
   refreshTrade();
 }
+// ---- top holders. The scanner keeps wallets out of floor.json, so the list is read from Arc's
+// explorer (Blockscout), whose holder index is public anyway; every row opens that wallet there.
+// The curve, the coin's pool and burned coins are shown apart, above page 1: they hold coins but
+// are not holders. The box shows ten wallets and scrolls to its page's fifty; the 51st wallet opens
+// page 2, and the numbered pages under the box appear on their own once there is one. Blockscout
+// pages by cursor (the last row's balance and address), not by number, so reaching page k reads the
+// explorer's pages before it once, in order; whatever was read stays cached for the coin.
+const HOLDERS_PER_PAGE = 50;
+const holdersState = {}; // token -> { at, total, pool, raw: [{ a, v }], next, cur, busy }
+const DEAD_ADDR = "0x000000000000000000000000000000000000dead";
+const holdersBase = () => CFG.explorer.replace(/\/$/, "") + "/api/v2/tokens/";
+async function holdersPage(addr, cursor) {
+  const q = cursor ? "?" + new URLSearchParams(cursor).toString() : "";
+  const r = await fetch(holdersBase() + addr + "/holders" + q, { signal: AbortSignal.timeout(9000) });
+  if (!r.ok) throw new Error("explorer " + r.status);
+  const j = await r.json();
+  const items = (j.items || [])
+    .map((it) => ({ a: String((it.address && it.address.hash) || ""), v: (() => { try { return BigInt(it.value || "0"); } catch { return 0n; } })() }))
+    .filter((x) => ethers.isAddress(x.a) && x.v > 0n);
+  return { items, next: j.next_page_params || null };
+}
+const holderSysName = (st, a) => {
+  a = String(a || "").toLowerCase();
+  return a === String(CFG.platform).toLowerCase() ? "Bonding curve" : st.pool && a === st.pool ? "Uniswap pool" : a === DEAD_ADDR ? "Burned" : "";
+};
+const holderWallets = (st) => st.raw.filter((x) => !holderSysName(st, x.a));
+/** Reads the explorer's next pages until page k's wallets are all in, or the list ends. */
+async function holdersFill(addr, st, k) {
+  while (st.next && holderWallets(st).length < (k + 1) * HOLDERS_PER_PAGE) {
+    if (currentToken !== addr) return;
+    const pg = await holdersPage(addr, st.next);
+    st.raw.push(...pg.items); st.next = pg.next;
+  }
+}
+async function renderHolders(addr) {
+  const box = $("tHoldersBox");
+  if (!CFG.explorer) { box.style.display = "none"; return; }
+  box.style.display = "block";
+  $("thMore").href = CFG.explorer.replace(/\/$/, "") + "/token/" + addr + "?tab=holders";
+  const c = holdersState[addr];
+  // read again at most once a minute, and only while page 1 is on screen
+  if (c && (Date.now() - c.at < 60_000 || c.cur > 0 || c.busy)) { if (c.raw.length) paintHolders(addr); return; }
+  if (!c) { $("thList").innerHTML = `<div class="hint" style="padding:6px 8px">Reading holders…</div>`; $("thPager").innerHTML = ""; }
+  const st = holdersState[addr] = { ...(c || { raw: [], next: null, cur: 0, total: 0, pool: "" }), at: Date.now(), busy: true };
+  try {
+    const poolP = migratedSet.has(addr) ? poolOf(addr).then((p) => String(p || "").toLowerCase()).catch(() => "") : Promise.resolve("");
+    const countP = fetch(holdersBase() + addr, { signal: AbortSignal.timeout(9000) }).then((r) => r.ok ? r.json() : null).catch(() => null);
+    const first = await holdersPage(addr, null);
+    const info = await countP;
+    const fresh = { raw: first.items, next: first.next, pool: await poolP };
+    fresh.total = Number((info && (info.holders_count ?? info.holders)) || 0);
+    await holdersFill(addr, fresh, 0); // the curve takes a row of the explorer's first fifty
+    Object.assign(st, fresh, { cur: 0 });
+    if (currentToken === addr) paintHolders(addr);
+  } catch {
+    if (currentToken === addr && !st.raw.length) {
+      $("thList").innerHTML = `<div class="hint" style="padding:6px 8px">The explorer did not answer just now. The link below opens the full list there.</div>`;
+    }
+  } finally { st.busy = false; }
+}
+async function goHoldersPage(addr, k) {
+  const st = holdersState[addr];
+  if (!st || st.busy || k < 0 || k === st.cur) return;
+  st.busy = true;
+  $("thPager").insertAdjacentHTML("beforeend", `<span class="th-wait">reading…</span>`);
+  try { await holdersFill(addr, st, k); } catch {} // pages already read stay; the pager lets the visitor try again
+  finally { st.busy = false; }
+  const pages = Math.max(1, Math.ceil(holderWallets(st).length / HOLDERS_PER_PAGE));
+  st.cur = Math.min(k, pages - 1);
+  if (currentToken === addr) { paintHolders(addr); $("thList").scrollTop = 0; }
+}
+function paintHolders(addr) {
+  const st = holdersState[addr];
+  if (!st) return;
+  const ex = CFG.explorer.replace(/\/$/, "");
+  const lc = (x) => String(x || "").toLowerCase();
+  const dev = lc(tokenInfo[addr] && tokenInfo[addr].creator), me = lc(userAddr);
+  const pct = (v) => { const bp = Number((v * 1_000_000n) / TOTAL_SUPPLY_WEI) / 10_000; return bp > 0 && bp < 0.01 ? "<0.01%" : bp.toFixed(2) + "%"; };
+  const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
+  const wallets = holderWallets(st);
+  const sys = st.raw.filter((x) => holderSysName(st, x.a));
+  const page = wallets.slice(st.cur * HOLDERS_PER_PAGE, (st.cur + 1) * HOLDERS_PER_PAGE);
+  const top = wallets.length ? wallets[0].v : 1n; // bars are drawn against the largest wallet
+  const row = (x, rank) => {
+    const a = lc(x.a), name = holderSysName(st, a), full = ethers.getAddress(x.a);
+    const tags = (a === dev ? `<span class="tg dev">DEV</span>` : "") + (me && a === me ? `<span class="tg you">YOU</span>` : "");
+    const w = name ? 0 : Math.min(100, Number((x.v * 1000n) / (top || 1n)) / 10);
+    return `<a class="th-row${name ? " sys" : ""}" style="--w:${w}%" href="${esc(ex)}/address/${esc(full)}" target="_blank" rel="noopener" title="${esc(full)}">`
+      + `<span class="rk">${name ? "" : rank}</span><span class="ad">${name ? esc(name) : esc(short(full))}</span>${tags}`
+      + `<span class="pc">${pct(x.v)}</span><span class="go">↗</span></a>`;
+  };
+  const head = st.cur === 0 ? sys : [];
+  $("thList").innerHTML = head.map((x) => row(x)).join("")
+    + (head.length && page.length ? `<div class="th-sep"></div>` : "")
+    + (page.map((x, i) => row(x, st.cur * HOLDERS_PER_PAGE + i + 1)).join("") || `<div class="hint" style="padding:6px 8px">Nobody holds this coin yet.</div>`);
+  // how many pages: the explorer's count less the curve/pool/burn rows, or what was read if more
+  const walletTotal = Math.max(wallets.length + (st.next ? 1 : 0), st.total - sys.length);
+  const n = Math.max(1, Math.ceil(walletTotal / HOLDERS_PER_PAGE));
+  let pager = "";
+  if (n > 1) {
+    // first, last, and the pages either side of the current one, with gaps between
+    const show = [...new Set([0, n - 1, st.cur - 1, st.cur, st.cur + 1].filter((i) => i >= 0 && i < n))].sort((x, y) => x - y);
+    const btn = (i, label, cls = "", aria = "") => `<button type="button" class="th-pg${cls}" data-pg="${i}"${aria}>${label}</button>`;
+    if (st.cur > 0) pager += btn(st.cur - 1, "‹", " nav", ' aria-label="Previous page"');
+    show.forEach((i, j) => {
+      if (j && i - show[j - 1] > 1) pager += `<span class="th-gap">…</span>`;
+      pager += btn(i, i + 1, i === st.cur ? " on" : "", i === st.cur ? ' aria-current="page"' : "");
+    });
+    if (st.cur < n - 1) pager += btn(st.cur + 1, "›", " nav", ' aria-label="Next page"');
+  }
+  $("thPager").innerHTML = pager;
+  $("thPager").style.display = pager ? "flex" : "none";
+  fitHolders();
+}
+// phones: the HOLDERS card on the coin's page scrolls down to the list
+$("tHoldersStat").addEventListener("click", () => {
+  const box = $("tHoldersBox");
+  if (!matchMedia("(max-width: 900px)").matches || box.style.display === "none") return;
+  const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  box.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+  box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash");
+});
+$("thPager").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-pg]");
+  if (b && currentToken) goHoldersPage(currentToken, Number(b.dataset.pg));
+});
+// The box shows ten wallets and scrolls for the rest of its page. On a wide screen the side column
+// is sticky; when the trade form (taller by the connect card before a wallet is in) and those ten
+// rows do not fit the screen, the column scrolls with the page instead, so its foot stays in reach.
+function fitHolders() {
+  const list = $("thList"), side = document.querySelector(".tp-side");
+  if (!list || !side || $("tHoldersBox").style.display === "none") return;
+  const rows = list.querySelectorAll(".th-row:not(.sys)");
+  const ten = rows.length > 10 ? rows[9].offsetTop + rows[9].offsetHeight + 2 : Infinity;
+  let pos = "";
+  if (innerWidth > 900) {
+    // ten rows always; the column stays sticky only while the form and those ten fit the screen
+    const rest = side.getBoundingClientRect().height - list.getBoundingClientRect().height;
+    const need = Number.isFinite(ten) ? ten : list.scrollHeight;
+    if (innerHeight - 16 - rest < need) pos = "static";
+  }
+  const h = ten;
+  const hs = Number.isFinite(h) ? Math.round(h) + "px" : "";
+  if (list.style.maxHeight !== hs) list.style.maxHeight = hs;
+  if (side.style.position !== pos) side.style.position = pos;
+}
+addEventListener("resize", fitHolders);
+if (window.ResizeObserver) { const s = document.querySelector(".tp-side"); if (s) new ResizeObserver(() => fitHolders()).observe(s); }
 async function refreshTrade() {
   if (!currentToken) return;
   tokenInfo[currentToken] = normInfo(await rpc(() => platform.info(currentToken)));
@@ -5340,6 +5534,7 @@ async function refreshTrade() {
   paintCaps(inf, currentToken);
   $("tHolders").textContent = fullyIndexed ? (st.holders || 0) : "…";
   $("tVol").textContent = covers24h ? compactUsd(st.vol24 || 0n) : "…";
+  renderHolders(currentToken);
   const pct = Number(progBps(inf)) / 100;
   $("tBar").style.width = Math.min(Math.max(pct, 1.5), 100) + "%";
   await checkMigrated([currentToken]);
