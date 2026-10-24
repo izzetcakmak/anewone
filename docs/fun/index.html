@@ -1829,6 +1829,7 @@
   <div class="modal">
     <button class="modal-x" onclick="closeModals()" aria-label="Close">✕</button>
     <h2>Launch a token</h2>
+    <div class="hint" id="cRef" style="display:none"></div>
     <label>Name</label><input id="cName" placeholder="Noah's Ark" maxlength="48">
     <label>Symbol</label><input id="cSymbol" placeholder="NOAH" maxlength="12">
     <div class="dupe" id="cDupe" style="display:none"></div>
@@ -3498,6 +3499,7 @@ async function connect(forcePicker, silent) {
   refreshFees();
   refreshNativeBalance();
   refreshMyCoins();
+  openLaunchIfAsked();
   checkWalletRpc(w);
 }
 
@@ -5231,6 +5233,7 @@ async function openImage(f) {
 // ~78x cheaper per byte than storage), which is what keeps launches around ~2M gas.
 function buildMetadata() {
   const doc = { v: 1 };
+  if (partnerRef) doc.r = partnerRef.code;
   const d = $("cDesc").value.trim();
   if (d) doc.d = d.slice(0, 280);
   for (const [id, key] of [["cX", "x"], ["cTg", "t"], ["cWeb", "w"]]) {
@@ -5257,6 +5260,7 @@ function updateMetaSize() {
 // same document, but without the toasts — used for the live size readout
 function buildMetadataQuiet() {
   const doc = { v: 1 };
+  if (partnerRef) doc.r = partnerRef.code;
   const d = $("cDesc").value.trim();
   if (d) doc.d = d.slice(0, 280);
   for (const [id, key] of [["cX", "x"], ["cTg", "t"], ["cWeb", "w"]]) {
@@ -5266,6 +5270,29 @@ function buildMetadataQuiet() {
   return Object.keys(doc).length > 1 ? JSON.stringify(doc) : "";
 }
 ["cDesc", "cX", "cTg", "cWeb"].forEach((id) => { $(id).oninput = updateMetaSize; });
+
+// ------- partner launches
+// A partner app links its users to the launch form as fun/?ref=<code>&launch=1. The code rides in
+// the coin's metadata ("r"), which the launch transaction itself emits in TokenCreated, so which
+// coins came through a partner is public and permanent on Arc: the revenue share is computed from
+// the chain (monitor/partner-report.mjs), not from a list either side keeps. Only codes listed
+// here are written; a code is remembered for 30 days so a visitor who connects first still counts.
+const PARTNERS = { kairo: { name: "Kairo" } };
+const REF_KEY = "anewone_ref", REF_DAYS = 30;
+const partnerRef = (() => {
+  try {
+    const q = new URLSearchParams(location.search), code = (q.get("ref") || "").toLowerCase();
+    if (PARTNERS[code]) { localStorage.setItem(REF_KEY, JSON.stringify({ code, at: Date.now() })); return { code, ...PARTNERS[code] }; }
+    const saved = JSON.parse(localStorage.getItem(REF_KEY) || "null");
+    if (saved && PARTNERS[saved.code] && Date.now() - saved.at < REF_DAYS * 86400e3) return { code: saved.code, ...PARTNERS[saved.code] };
+  } catch {}
+  return null;
+})();
+if (partnerRef) { $("cRef").textContent = `Launching through ${partnerRef.name}. The coin records this on-chain; nothing changes for you or your fees.`; $("cRef").style.display = "block"; }
+// fun/?launch=1 opens the form straight away, once a wallet is on
+let wantLaunch = new URLSearchParams(location.search).get("launch") === "1";
+function openLaunchIfAsked() { if (wantLaunch && signer) { wantLaunch = false; $("createModal").classList.add("open"); updateMetaSize(); } }
+if (wantLaunch) setTimeout(() => { if (!signer) { toast("Connect a wallet to launch a coin"); openWalletPicker(); } }, 1800);
 
 // ------- create
 // One wallet minted the same coin four times in a row, three of them never
