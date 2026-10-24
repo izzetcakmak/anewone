@@ -165,19 +165,28 @@
 
   // ---- views
   const prog = (n) => [...bg.querySelectorAll(".vt-prog span")].forEach((s, i) => s.classList.toggle("on", i < n));
-  const pct = (n, of) => (of > 0 ? Math.round((n / of) * 100) : 0);
+  // Whole percents that add up to 100 (largest remainder): rounding each bar on its own showed 31 + 42 + 28 = 101.
+  const pcts = (ns) => {
+    const of = ns.reduce((a, b) => a + b, 0);
+    if (!of) return ns.map(() => 0);
+    const raw = ns.map((n) => (n / of) * 100), out = raw.map(Math.floor);
+    const byRest = raw.map((r, i) => [r - out[i], i]).sort((a, b) => b[0] - a[0]);
+    for (let k = 0, left = 100 - out.reduce((a, b) => a + b, 0); k < left; k++) out[byRest[k][1]]++;
+    return out;
+  };
 
   function resultsHtml() {
     const c = (state.poll && state.poll.counts) || { no: 0, alternating: 0, hybrid: 0, classic: 0 };
     const yes = c.alternating + c.hybrid + c.classic, total = yes + c.no;
     if (!total) return `<div class="vt-res"><h3>Live results <span>0 votes</span></h3><div class="vt-foot" style="margin:0;text-align:left">No votes yet. Yours could be the first.</div></div>`;
-    const bar = (label, n, of, cls) => `<div class="vt-bar ${cls || ""}"><span>${label}</span><span class="vt-trk"><span class="vt-fill" data-w="${pct(n, of)}"></span></span><span class="vt-pc">${pct(n, of)}%</span></div>`;
+    const bar = (label, p, cls) => `<div class="vt-bar ${cls || ""}"><span>${label}</span><span class="vt-trk"><span class="vt-fill" data-w="${p}"></span></span><span class="vt-pc">${p}%</span></div>`;
     const lead = yes ? ORDER.reduce((a, b) => (c[b] > c[a] ? b : a)) : null;
     const mineKey = state.mine;
+    const [pYes, pNo] = pcts([yes, c.no]), pModel = pcts(ORDER.map((k) => c[k]));
     return `<div class="vt-res"><h3>Launch the program? <span>${votes(total)}</span></h3>
-        ${bar("Yes", yes, total, yes > c.no ? "lead" : "")}${bar("No", c.no, total, c.no >= yes && c.no ? "lead" : "")}</div>
+        ${bar("Yes", pYes, yes > c.no ? "lead" : "")}${bar("No", pNo, c.no >= yes && c.no ? "lead" : "")}</div>
       <div class="vt-res"><h3>Preferred model <span>${nf(yes)} yes</span></h3>
-        ${ORDER.map((k) => bar(MODELS[k].name, c[k], yes, (k === lead && c[k] ? "lead " : "") + (k === mineKey ? "mine" : ""))).join("")}</div>`;
+        ${ORDER.map((k, i) => bar(MODELS[k].name, pModel[i], (k === lead && c[k] ? "lead " : "") + (k === mineKey ? "mine" : ""))).join("")}</div>`;
   }
   const RULE = `<p class="vt-rule"><b>How it is decided.</b> The program goes ahead only if more than half of all votes are Yes. The model with the most votes then wins; if that is Classic, nothing changes. The final count is published here and in the docs, and any change is announced before it starts.</p>`;
 
