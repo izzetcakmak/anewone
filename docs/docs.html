@@ -86,7 +86,7 @@
   <div class="tg"><span>DeFi</span><a href="#earn">Earn</a><a href="#borrow">Borrow</a></div>
   <div class="tg"><span>RWA</span><a href="#assets">Real-world assets</a></div>
   <div class="tg"><span>Funding</span><a href="#bridge">Swap &amp; Bridge</a></div>
-  <div class="tg"><span>AnewOne.Fun</span><a href="#fun">AnewOne.Fun</a><a href="#what">The launchpad</a><a href="#curve">The bonding curve</a><a href="#fees">Fees &amp; creator earnings</a><a href="#noah-burn">The $NOAH burn</a><a href="#safety">Safety by design</a><a href="#launch">Launch a token</a><a href="#trade">Trade</a></div>
+  <div class="tg"><span>AnewOne.Fun</span><a href="#fun">AnewOne.Fun</a><a href="#what">The launchpad</a><a href="#curve">The bonding curve</a><a href="#fees">Fees &amp; creator earnings</a><a href="#noah-burn">The $NOAH burn</a><a href="#weekly-prize">The prize race</a><a href="#safety">Safety by design</a><a href="#launch">Launch a token</a><a href="#trade">Trade</a></div>
   <div class="tg"><span>Using the site</span><a href="#wallets">Wallets &amp; funding</a><a href="#deckhand">Deckhand</a><a href="#trust">Trust signals</a></div>
   <div class="tg"><span>Reference</span><a href="#faq">FAQ</a><a href="#addresses">Contracts</a></div>
 </aside>
@@ -250,13 +250,15 @@
   <p>After graduation the Uniswap pool charges its own 1% fee tier. Its USDC side is split between creator and
     platform in the same proportion as a curve fee, a third to the creator; its token side is burned.</p>
 
-  <h2 id="noah-burn">The weekly $NOAH burn</h2>
+  <h2 id="noah-burn">The $NOAH buyback &amp; burn</h2>
   <p>$NOAH was the first coin launched on AnewOne.Fun and the first memecoin on Arc's public mainnet. Starting the
     week after it graduates, <strong>half of the platform's 1% fee slice</strong> on AnewOne.Fun (see the table above)
-    is used every week to buy $NOAH in its Uniswap pool and burn it. Its fixed 1B supply can only go down.</p>
+    from every buyback week is used to buy $NOAH in its Uniswap pool and burn it, on the Sunday that closes the week,
+    at 09:00 UTC. Buyback weeks take turns with prize weeks (see <a href="#weekly-prize">the prize race</a>). Its
+    fixed 1B supply can only go down.</p>
   <ul>
-    <li><strong>Weekly, onchain:</strong> each burn is a public transaction on Arc. The tx link is posted every
-      week, so anyone can check the amount against the chain.</li>
+    <li><strong>Onchain:</strong> each burn is a public transaction on Arc. The tx link is posted on the board, so
+      anyone can check the amount against the chain.</li>
     <li><strong>A platform decision, not a contract rule:</strong> the launchpad contract does not run the burn.
       The platform carries it out from its own share of the fees, and it can change or stop, in which case it is
       announced here first.</li>
@@ -266,11 +268,35 @@
   <h3 id="noah-burn-vote">Community vote, 22–24 Oct 2026</h3>
   <p>The community voted on how this budget, the Ecosystem Budget, is spent. Final count, 46 votes:
     <strong>Yes 36, No 10</strong> on adding weekly USDC prizes; among the 36 Yes votes, <strong>Hybrid 15</strong>,
-    Alternating 11, Classic 10. By the rule published with the vote, the program goes ahead and
-    <strong>Hybrid</strong> wins: every week the budget is split between this burn and USDC prizes for 3 wallets
-    drawn from the weekly Top 10 by trading volume. The split, the prize size and the start date are announced here
-    before the first draw; until then the burn above stays as written. The final count is also on the
-    <a href="fun/?vote=1">vote page</a>. Prizes are a draw, not a return.</p>
+    Alternating 11, Classic 10. By the rule published with the vote, the program goes ahead. Hybrid had the most
+    votes; the platform runs the program as <strong>alternating weeks</strong> instead, a prize week and then a
+    buyback week, in turn. As the vote said, this change is announced here before it starts. The final count is also
+    on the <a href="fun/?vote=1">vote page</a>. Prizes are a draw, not a return.</p>
+
+  <h2 id="weekly-prize">The prize race</h2>
+  <p>From <strong>Sunday 25 Oct 2026, 09:00 UTC</strong>, prize weeks and $NOAH buyback weeks take turns. In a prize
+    week, three traders on AnewOne.Fun win USDC. The pot is <strong>0.5% of that week's trading volume</strong> (half
+    of the platform's 1% fee slice, the same rate the buyback uses), paid from the platform's own share of the fees;
+    no fee changes. The first prize week runs to Sunday 1 Nov, 09:00 UTC, the first buyback week to Sunday 8 Nov,
+    the next prize week to Sunday 15 Nov, and so on.</p>
+  <ul>
+    <li><strong>The week:</strong> Sunday 09:00 UTC to the next Sunday 09:00 UTC. At 09:00 the board resets; when a
+      prize week begins, the race starts again from zero that minute.</li>
+    <li><strong>Volume:</strong> every USDC buy and sell on any AnewOne.Fun coin, at the trade's value (what a buyer
+      paid, what a seller got before the fee), read from the platform's Trade events on Arc. The board on
+      <a href="fun/?prize=1">AnewOne.Fun</a> updates with every trade, and the published list at least every 15
+      minutes.</li>
+    <li><strong>Who qualifies:</strong> the 10 wallets with the most volume when the prize week closes. Team wallets
+      are left out. No sign-up, no minimum, nothing to hold.</li>
+    <li><strong>The draw:</strong> on the Sunday that closes a prize week, at 09:00 UTC, 3 of the 10 are drawn live
+      and the draw is recorded.</li>
+    <li><strong>The payout:</strong> each winner gets a third of the pot in USDC, sent to the wallet that traded,
+      within a day of the draw. The winners, the recording and the payout transactions are posted on the board.</li>
+    <li><strong>The buyback week:</strong> no race. Its 0.5% goes to the $NOAH buyback on the closing Sunday at
+      09:00 UTC (once $NOAH has graduated, see above), posted on the board with its transaction.</li>
+    <li><strong>A platform decision, not a contract rule:</strong> like the burn, the prize is run by the platform,
+      and any change is announced here first. Prizes are a draw, not a return. Nothing here is investment advice.</li>
+  </ul>
 
   <h2 id="safety">Safety by design</h2>
   <ul>

@@ -18,6 +18,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { rpc, fetchLogs, atomicWrite, setRpcPool } from "./snapshot.mjs";
+import { indexWeek } from "./week.mjs";
 
 const MON = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.dirname(MON);
@@ -649,6 +650,11 @@ function readPublishedHold() {
   try { return JSON.parse(readFileSync(OUT_FILE, "utf8")).index.hold || null; } catch { return null; }
 }
 
+/** The weekly board of the last floor.json written ({ week, lastWeek }), or null. */
+function readPublishedWeek() {
+  try { const d = JSON.parse(readFileSync(OUT_FILE, "utf8")); return d.week ? { week: d.week, lastWeek: d.lastWeek || null } : null; } catch { return null; }
+}
+
 /** The coins of the last floor.json written, by lowercase address; empty when there is none. */
 function readPublished() {
   try {
@@ -784,6 +790,19 @@ export async function runFloor({ platform, log = console.log } = {}) {
     log(`floor: holders index failed: ${(e && e.message) || e}`);
     if (priorHold && priorHold.stats) index.hold = priorHold.stats;
   }
+  // The weekly prize board (week.mjs) from the same Trade logs; a failure keeps the last file's board.
+  const publishedWeek = readPublishedWeek();
+  let weekly = publishedWeek;
+  try {
+    if (!bNow) throw new Error("no tip timestamp");
+    weekly = await indexWeek({
+      platform, rpc, tip: Number(tip), tipTs: Number(BigInt(bNow.timestamp)), logs, logsFrom: Number(from), feeBps: FEE_BPS, log,
+      getLogs: (a, b) => fetchLogs(platform, BigInt(a), BigInt(b), TOPIC_TRADE, log),
+    });
+  } catch (e) {
+    log(`floor: week board failed: ${(e && e.message) || e}`);
+  }
+  const weekMoved = !!weekly && (!publishedWeek || weekly.week.id !== publishedWeek.week.id);
   const holdMoved = JSON.stringify((index.hold || {}).coins || null) !== JSON.stringify((readPublishedHold() || {}).coins || null);
   if (holdMoved && index.hold) log("floor: holder figures changed");
   // Publishing costs a deployment, so say plainly whether anything actually moved.
@@ -794,7 +813,8 @@ export async function runFloor({ platform, log = console.log } = {}) {
   // too: only the graduating buy leaves a Trade log.
   const moved = tokens.filter((t) => venueState(t) !== venueState(before.get(t.addr.toLowerCase())));
   if (moved.length) log(`floor: venue state moved for ${moved.map((t) => t.symbol || t.addr).join(", ")}`);
-  const changed = logs.length > 0 || poolEvents > 0 || holdMoved || !usable || tokens.length !== (prior?.tokenCount ?? -1) || prior.schema !== SCHEMA || moved.length > 0;
+  // a new week publishes on its own, so the board turns over at Monday 00:00 UTC even on a quiet chain
+  const changed = logs.length > 0 || poolEvents > 0 || holdMoved || weekMoved || !usable || tokens.length !== (prior?.tokenCount ?? -1) || prior.schema !== SCHEMA || moved.length > 0;
   saveFloorCache({ schema: SCHEMA, platform, lo, hi: Number(tip), tokenCount: tokens.length, index, hold: holdState });
 
   const payload = {
@@ -806,6 +826,7 @@ export async function runFloor({ platform, log = console.log } = {}) {
     gradTarget,
     tokens,
     index,
+    ...(weekly ? { week: weekly.week, lastWeek: weekly.lastWeek } : {}),
   };
   mkdirSync(path.dirname(OUT_FILE), { recursive: true });
   atomicWrite(OUT_FILE, JSON.stringify(payload));

@@ -28,6 +28,7 @@ monitor/snapshot-run.log
 monitor/state-cache.json
 .vercel
 monitor/floor-cache.json
+monitor/week-cache.json
 monitor/state.json.bak
 # Same for the Circle onramp bundle (docs/vendor/onramp-kit.js): recipe in, node_modules out.
 build-onramp/*

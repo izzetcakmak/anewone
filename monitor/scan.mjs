@@ -25,13 +25,14 @@ const TESTNET_RPC = "https://rpc.testnet.arc.network";
 // promoted ("every trade moves you up the board" has to be visibly true), and a
 // run that is still catching up re-runs on the next tick regardless.
 const SNAPSHOT_REFRESH_MS = 6 * 60 * 60 * 1000;
-/** The floor index is cheap to rebuild but each publish is a deployment. */
-const FLOOR_REFRESH_MS = 30 * 60 * 1000;
+/** The floor index is cheap to rebuild but each publish is a deployment. Every 15 minutes since
+ *  the weekly prize (24 Oct 2026): its volume board is promised to refresh at least that often. */
+const FLOOR_REFRESH_MS = 15 * 60 * 1000;
 /**
  * Each publish is a commit, a push and a Vercel build, so this only fires when a
- * trade actually landed — quiet hours cost nothing. At half-hourly that is at
- * most ~48 builds a day on top of the four snapshot ones; widen the interval if
- * the project ever bumps into a deployment cap.
+ * trade actually landed — quiet hours cost nothing. At every 15 minutes that is at
+ * most ~96 builds a day, close to Vercel Hobby's 100 a day if a trade lands in every
+ * window; widen the interval if the project ever bumps into that cap.
  */
 const FLOOR_AUTOPUBLISH = true;
 
@@ -466,7 +467,7 @@ function deployToVercel() {
  * Rebuilds docs/data/floor.json — the prebuilt index the front page hydrates from,
  * so a visitor makes one static fetch instead of ~80 chain calls.
  *
- * Half an hour of staleness costs the browser one extra getLogs to catch up, so
+ * A quarter hour of staleness costs the browser one extra getLogs to catch up, so
  * the cadence is set by what a deployment costs rather than by freshness. Nothing
  * is published when no trade landed: quiet hours should not burn deployments.
  */

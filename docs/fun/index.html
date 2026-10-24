@@ -211,6 +211,8 @@
   .bprow .acts { font-size: 12px; font-weight: 600; }
   .bprow .acts small { color: var(--faint); font-weight: 400; margin-left: 3px; }
   .bprow.me { background: var(--accent-soft); }
+  .bprow.cut { border-top: 1px dashed var(--border-2); }
+  .bprow.out { opacity: .55; }
   .bp-note { display: block; margin: 12px 14px 14px; background: var(--accent-soft);
     border-radius: 12px; padding: 11px 12px; font-size: 11.5px; color: var(--dim);
     line-height: 1.5; }
@@ -1603,6 +1605,7 @@
   <nav class="nx-seg" aria-label="Apps"><a href="earn/">DeFi</a><a href="assets/stocks/">RWA</a><a href="fun/" class="f on">Fun</a></nav>
   <div class="nx-actions">
     <button type="button" class="vt-pill" id="vtPill" hidden aria-haspopup="dialog" title="Community vote: how the Ecosystem Budget is spent"><span class="vt-dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13h16v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 13 6 8h12l2 5"/><path d="m9 6 3 3 5-6"/></svg><span class="vt-pill-t">Vote</span></button>
+    <button type="button" class="vt-pill" id="wkPill" hidden aria-haspopup="dialog" title="Prize race and $NOAH buyback, in turn every Sunday at 09:00 UTC"><span class="vt-dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg><span class="vt-pill-t">Prize</span></button>
     <button type="button" class="nx-icon" id="themeSw" aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
     <span id="balChip" class="nx-pill" hidden title="Your USDC on Arc. Pays gas and trades"></span>
     <button id="createBtn" class="nx-btn lit" type="button">+ Create<span class="x"> Coin</span></button>
@@ -1672,6 +1675,12 @@
     <div class="vt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13h16v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 13 6 8h12l2 5"/><path d="m9 6 3 3 5-6"/></svg></div>
     <div><b class="vt-card-t"></b><p class="vt-card-s"></p></div>
     <button type="button" aria-haspopup="dialog">Cast your vote</button>
+  </div>
+  <!-- Weekly USDC prize (fun/week.js): hidden until data/floor.json carries the week's board -->
+  <div class="vt-card" id="wkCard" hidden>
+    <div class="vt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></div>
+    <div><b class="vt-card-t"></b><p class="vt-card-s"></p></div>
+    <button type="button" aria-haspopup="dialog">How it works</button>
   </div>
 <div class="fstats">
     <div><b id="statCount">–</b><span>Tokens live</span></div>
@@ -1751,13 +1760,13 @@
 
   </div><!-- /col-main -->
 
-  <!-- RIGHT RAIL: who trades the most and who is up the most. Activity comes from the
-       published Boarding Pass snapshot (every launch and trade, all deployments); earnings
+  <!-- RIGHT RAIL: who trades the most this week and who is up the most. The week's board is
+       data/floor.json's week (USDC volume per wallet since Sunday 09:00 UTC, kept live by fun/week.js); earnings
        are computed here from the same ledger that powers holder counts: USDC out of sells,
        plus what is still held at today's curve price, minus USDC into buys. -->
   <aside class="rail rail-right" id="leaders">
     <section class="board">
-    <div class="rail-h"><h3>Most active</h3><span class="rail-count" id="activeCount">top 10</span></div>
+    <div class="rail-h"><h3>This week</h3><span class="rail-count" id="activeCount">top 10</span></div>
     <div id="activeList" class="rail-list rail-list-open"></div>
     <button class="rail-more" id="activeMore" type="button" hidden>Show more</button>
     </section>
@@ -1766,7 +1775,7 @@
     <div id="earnList" class="rail-list rail-list-open"></div>
     <button class="rail-more" id="earnMore" type="button" hidden>Show more</button>
     </section>
-    <div class="rail-foot">Earnings = sells + what is still held at today's curve price − buys. Wallet-to-wallet transfers are not seen. Team wallets are left out.</div>
+    <div class="rail-foot">This week = USDC bought and sold since Sunday 09:00 UTC, updated with every trade; in a prize week the Top 10 enter the <a href="fun/?prize=1">draw</a>. Earnings = sells + what is still held at today's curve price − buys. Wallet-to-wallet transfers are not seen. Team wallets are left out.</div>
   </aside>
   </div><!-- /shell -->
 
@@ -5030,26 +5039,25 @@ function renderLiveRail() {
   fillImages(rows.map((r) => r.a));
 }
 
-// ---- right rail: campaign standings from the published snapshot
-/* ---- the right rail: most active wallets and top earners ---------------------------
-   Activity is the Boarding Pass snapshot (launches + trades on every deployment, team
-   excluded, published by the scanner). Earnings come from statsIdx.net, the same per
-   (token, trader) ledger that gives holder counts: sells out + held × today's curve
-   price − buys in, summed over every coin. It refreshes with every ingested trade. */
+/* ---- the right rail: this week's board and top earners ------------------------------
+   This week is USDC volume per wallet since Sunday 09:00 UTC, team excluded: data/floor.json's
+   week from the scanner (monitor/week.mjs) plus the trades the page has read since, combined by
+   fun/week.js (window.anewoneWeekBoard). Prize weeks and $NOAH buyback weeks alternate; in a
+   prize week its Top 10 enter the draw, in a buyback week there is no board.
+   Earnings come from statsIdx.net, the same per (token, trader) ledger that gives holder
+   counts: sells out + held × today's curve price − buys in, summed over every coin. It
+   refreshes with every ingested trade. */
 const TEAM_WALLETS = new Set([
   "0xd4f1254c803662c46d9c21f80f4f3c15ff57e2c9", // deployer / platform owner
   "0x61a4490d589e580ec3d8b29eb87064b1bc61b33f", // second owner
 ]);
-const ACTIVE_MAX = 33, EARN_MAX = 50;
+const EARN_MAX = 50;
 const compactLeaders = matchMedia("(max-width: 900px)");
 const shortRows = () => (compactLeaders.matches ? 5 : 10); // a phone gets five a board, a desktop ten
-let standingsSnap = null, activeOpen = false, earnOpen = false;
+let activeOpen = false, earnOpen = false;
 
-async function loadStandings() {
-  try { standingsSnap = await (await fetch("boarding/snapshot.json", { cache: "no-store" })).json(); }
-  catch { standingsSnap = null; }
-  renderLeaders();
-}
+// the week's board arrives through fun/week.js, which calls renderLeaders when it lands
+function loadStandings() { renderLeaders(); }
 
 function computeEarners() {
   const per = {};
@@ -5086,15 +5094,18 @@ function renderLeaders() {
   const rowCls = (addr) => "bprow" + (addr.toLowerCase() === me ? " me" : "");
   const medal = (r) => (r <= 3 ? ` g${r}` : "");
 
-  // most active
-  const ranked = standingsSnap ? (standingsSnap.wallets || []).filter((w) => w.rank).slice(0, ACTIVE_MAX) : [];
+  // this week: the Top 10 enter the prize draw, the rows below the line are the next in.
+  // fun/week.js builds it live: the published week plus the trades this page has read since.
+  const wk = window.anewoneWeekBoard ? window.anewoneWeekBoard() : undefined;
+  // a buyback week has no race: the board waits for the next one (fun/week.js says when)
+  const ranked = wk && wk.kind !== "burn" ? wk.top : [];
   const aShow = activeOpen ? ranked : ranked.slice(0, shortRows());
-  aBox.innerHTML = aShow.length ? aShow.map((w) => `<div class="${rowCls(w.address)}">
-      <span class="rk${medal(w.rank)}">${w.rank}</span>
-      <span class="w">${walletCell(w.address)}</span>
-      <span class="acts">${w.total}<small>acts</small></span>
+  aBox.innerHTML = aShow.length ? aShow.map((w, i) => `<div class="${rowCls(w.a)}${i === 10 ? " cut" : ""}${i >= 10 ? " out" : ""}">
+      <span class="rk">${i + 1}</span>
+      <span class="w">${walletCell(w.a)}</span>
+      <span class="acts">${fmtPnl(w.v).replace("+", "")}</span>
     </div>`).join("")
-    : `<div class="bprow" style="color:var(--faint)">${standingsSnap ? "No activity yet" : "Standings unavailable"}</div>`;
+    : `<div class="bprow" style="color:var(--faint)">${wk && wk.kind === "burn" ? esc(wk.railNote) : wk ? "No trades this week yet" : wk === null ? "This week's board is unavailable" : "Loading this week…"}</div>`;
   $("activeCount").textContent = activeOpen ? `top ${aShow.length}` : `top ${Math.min(shortRows(), ranked.length) || shortRows()}`;
   const aMore = $("activeMore");
   aMore.hidden = ranked.length <= shortRows();
@@ -6228,5 +6239,6 @@ restoreWallet();
 </script>
 <script src="shell.js"></script>
 <script src="fun/vote.js"></script>
+<script src="fun/week.js"></script>
 </body>
 </html>

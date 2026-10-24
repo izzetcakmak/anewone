@@ -67,7 +67,7 @@ const TEAM_FALLBACK = [
   "0x61a4490d589e580ec3d8b29eb87064b1bc61b33f", // second owner
 ];
 
-function teamWallets() {
+export function teamWallets() {
   const set = new Set(TEAM_FALLBACK);
   try {
     for (const raw of readFileSync(path.join(ROOT, ".env"), "utf8").split(/\r?\n/)) {

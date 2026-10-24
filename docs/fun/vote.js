@@ -86,8 +86,9 @@
   function paintEntries() {
     const card = $("#vtCard"), pill = $("#vtPill");
     const done = !!state.mine, open = isOpen();
+    // once the vote closes the weekly prize (fun/week.js) takes this spot; ?vote=1 still opens the final count
     if (card) {
-      if (!state.poll || isUpcoming()) { card.hidden = true; }
+      if (!state.poll || isUpcoming() || !open) { card.hidden = true; }
       else {
         card.hidden = false;
         card.classList.toggle("is-done", done && open);
@@ -103,7 +104,7 @@
       }
     }
     if (pill) {
-      pill.hidden = !state.poll || isUpcoming();
+      pill.hidden = !state.poll || isUpcoming() || !open;
       pill.classList.toggle("is-done", done && open);
       pill.classList.toggle("is-closed", !open);
       $(".vt-pill-t", pill).textContent = !open ? "Results" : done ? "Voted" : "Vote";
