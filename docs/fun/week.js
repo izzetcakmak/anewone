@@ -129,7 +129,9 @@
           s.innerHTML = `The pot grows with every trade. The Top 10 by volume enter Sunday's draw at 09:00 UTC. ${clock()}`;
         } else if (w.kind === "burn") {
           t.textContent = state.burning ? `Buyback week: ${money(w.pot)} for $NOAH` : "Buyback week";
-          s.innerHTML = `No race this week: the week's 0.5% goes to the <b>$NOAH buyback</b> on Sunday at 09:00 UTC, and the next prize race starts that minute. ${clock()}`;
+          s.innerHTML = state.burning
+            ? `No race this week: the week's 0.5% buys and burns <b>$NOAH</b> on Sunday at 09:00 UTC, and the next prize race starts that minute. ${clock()}`
+            : `No race this week, and no burn yet: burns start once <b>$NOAH graduates</b>. The next prize race starts Sunday at 09:00 UTC. ${clock()}`;
         } else {
           t.textContent = "The first USDC prize race starts Sunday, 25 Oct";
           s.innerHTML = `For a week, the 10 wallets with the most trading volume enter a draw for <b>3 equal USDC prizes</b>. The draw is Sunday 1 Nov at 09:00 UTC. ${clock()}`;
@@ -226,34 +228,45 @@
       <li><b>Two weeks, in turn.</b> A prize week and a buyback week take turns. Each runs from Sunday 09:00 UTC to the next Sunday 09:00 UTC.</li>
       <li><b>Prize week: trade any coin.</b> Every USDC buy and sell on AnewOne.Fun counts toward your volume. The board starts from zero at 09:00 UTC and updates with every trade. When the week closes, the 10 wallets with the most volume are in. Team wallets are left out; no sign-up, nothing to hold.</li>
       <li><b>Sunday 09:00 UTC: the draw.</b> 3 of the 10 are drawn live, and the draw is recorded. Each winner gets a third of 0.5% of the week's volume in USDC, sent within a day to the wallet that traded. The recording and the payout transactions are posted here.</li>
-      <li><b>Buyback week.</b> 0.5% of that week's volume buys and burns $NOAH on the closing Sunday at 09:00 UTC, once $NOAH has graduated, and the transaction is posted here. The next prize race starts that minute.</li>
+      <li><b>Buyback week.</b> There is no race. No $NOAH is burned until $NOAH graduates. From then on, 0.5% of each buyback week's volume buys and burns $NOAH on the closing Sunday at 09:00 UTC, and the transaction is posted here. The next prize race starts that minute.</li>
     </ol></details>`;
   const RULE = `<p class="vt-rule"><b>Prizes are a draw, not a return.</b> $NOAH is a memecoin with no claim on the platform; a smaller supply sets no price. Nothing here is investment advice. <a href="${RULES}">Full rules in the docs</a>.</p>`;
   const CLOSE = `<div class="vt-row"><button class="vt-btn" type="button" data-act="close">Close</button></div>`;
 
+  // the pop-up redraws every 15 s for the live board: swap the body only when its text changed,
+  // and keep "How it works" open and the scroll where the reader left them
+  let shown = "";
+  function setBody(body, h) {
+    if (h === shown && body.firstChild) return;
+    const how = body.querySelector("details.vt-how"), wasOpen = !!(how && how.open);
+    const box = bg.querySelector(".vt"), top = box ? box.scrollTop : 0;
+    body.innerHTML = h; shown = h;
+    if (wasOpen) { const d = body.querySelector("details.vt-how"); if (d) d.open = true; }
+    if (box) box.scrollTop = top;
+  }
   function render() {
     const body = $("#wkBody", bg);
     const w = liveWeek();
     if (!w) {
-      body.innerHTML = `<h2 id="wkTitle">Prize race</h2><p class="vt-lead">${state.loaded ? "This week's board could not be loaded right now. Try again in a minute." : "Loading this week's board…"}</p>`;
+      setBody(body, `<h2 id="wkTitle">Prize race</h2><p class="vt-lead">${state.loaded ? "This week's board could not be loaded right now. Try again in a minute." : "Loading this week's board…"}</p>`);
       return tick();
     }
     if (w.kind === "prize") {
-      body.innerHTML = `<h2 id="wkTitle">3 × ${money(w.each)} in USDC</h2>
+      setBody(body, `<h2 id="wkTitle">3 × ${money(w.each)} in USDC</h2>
         <p class="vt-lead">This week's prize so far. It grows with every trade until the draw on Sunday ${day(Date.parse(w.end))}, 09:00 UTC.</p>
         ${potHtml(w, "USDC prizes (0.5% of volume)", money(w.pot), `= 3 × ${money(w.each)}`)}
         ${boardHtml(w, `Top 10 · ${span(w)}`)}
-        ${lastHtml(w)}${HOW}${RULE}${CLOSE}`;
+        ${lastHtml(w)}${HOW}${RULE}${CLOSE}`);
     } else if (w.kind === "burn") {
-      body.innerHTML = `<h2 id="wkTitle">Buyback week</h2>
-        <p class="vt-lead">No race this week. 0.5% of this week's volume goes to the <b>$NOAH buyback</b> on Sunday ${day(Date.parse(w.end))} at 09:00 UTC, and the next prize race starts that minute.</p>
+      setBody(body, `<h2 id="wkTitle">Buyback week</h2>
+        <p class="vt-lead">No race this week. ${state.burning ? `0.5% of this week's volume buys and burns <b>$NOAH</b> on Sunday ${day(Date.parse(w.end))} at 09:00 UTC` : `No burn yet either: burns start once <b>$NOAH graduates</b>`}. The next prize race starts on Sunday ${day(Date.parse(w.end))} at 09:00 UTC.</p>
         ${potHtml(w, "$NOAH buyback (0.5% of volume)", state.burning ? money(w.pot) : "once $NOAH graduates")}
-        ${lastHtml(w)}${HOW}${RULE}${CLOSE}`;
+        ${lastHtml(w)}${HOW}${RULE}${CLOSE}`);
     } else {
-      body.innerHTML = `<h2 id="wkTitle">The first prize race starts Sunday, 25 Oct</h2>
+      setBody(body, `<h2 id="wkTitle">The first prize race starts Sunday, 25 Oct</h2>
         <p class="vt-lead">From Sunday 25 Oct, 09:00 UTC, a <b>prize week</b> and a <b>$NOAH buyback week</b> take turns. In a prize week, 3 traders drawn from the week's Top 10 by volume share <b>0.5% of the week's volume</b> in USDC. The first draw is Sunday 1 Nov at 09:00 UTC.</p>
         ${boardHtml(w, "This week · warm-up, no prize")}
-        ${HOW}${RULE}${CLOSE}`;
+        ${HOW}${RULE}${CLOSE}`);
     }
     tick();
   }
