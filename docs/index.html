@@ -133,6 +133,21 @@ html[data-theme="light"] .door{box-shadow:0 30px 70px rgba(10,20,17,.1),inset 0 
 .door-cta{padding:0 26px 28px}
 .door-cta .nx-btn{width:100%;height:52px;font-size:13px}
 .hint{margin-top:26px;text-align:center;font:400 13.5px Inter,sans-serif;color:var(--faint)}
+/* the platform token: one quiet strip under the doors, the whole strip a link to its trade panel */
+.ptok{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:22px;margin-top:30px;padding:16px 22px;border-radius:24px;background:var(--card);
+  border:1px solid rgba(var(--fun-rgb),.38);color:inherit;text-decoration:none;transition:border-color .2s,transform .2s}
+.ptok:hover{border-color:rgba(var(--fun-rgb),.75);transform:translateY(-2px);text-decoration:none}
+.ptok img{width:56px;height:56px;border-radius:16px;display:block;background:#fff}
+.ptok .k{font:500 11px "JetBrains Mono",monospace;letter-spacing:.18em;color:var(--fun)}
+.ptok .n{margin-top:4px;font:600 21px/1.15 "Space Grotesk",sans-serif;letter-spacing:-.02em}
+.ptok .n small{font:400 13px Inter,sans-serif;color:var(--faint);letter-spacing:0;margin-left:6px}
+.ptok .st{display:flex;gap:26px}
+.ptok .st b{display:block;font:600 16px "JetBrains Mono",monospace}
+.ptok .st span{display:block;margin-top:2px;font:500 10.5px "JetBrains Mono",monospace;letter-spacing:.12em;color:var(--faint)}
+.ptok .bar{margin-top:8px;height:4px;width:min(240px,100%);border-radius:4px;background:rgba(var(--fun-rgb),.15);overflow:hidden}
+.ptok .bar i{display:block;height:100%;width:0;background:var(--fun);transition:width .6s}
+.ptok .go{white-space:nowrap}
+@media (max-width:860px){.ptok{grid-template-columns:auto minmax(0,1fr);gap:14px 16px}.ptok .st{grid-column:1/-1;justify-content:space-between}.ptok .go{grid-column:1/-1;justify-content:center}}
 
 /* arc */
 .two{display:grid;grid-template-columns:1fr 1.15fr;gap:72px;align-items:center}
@@ -236,7 +251,7 @@ footer{margin-top:120px;border-top:1px solid var(--line);padding:64px 0 44px}
     <button type="button" class="nx-icon th" data-nx-theme aria-label="Switch between light and dark" title="Light / dark"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg></button>
     <a class="nx-btn" href="earn/" target="_blank" rel="noopener">DeFi <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
     <a class="nx-btn" href="assets/stocks/" target="_blank" rel="noopener">RWA <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-    <a class="nx-btn fun sep" href="fun/" target="_blank" rel="noopener"><span class="fl">AnewOne.</span>Fun <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+    <a class="nx-btn fun sep" href="fun/" target="_blank" rel="noopener"><span><span class="fl">AnewOne.</span>Fun</span> <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
     <button type="button" class="nx-icon nx-burger" id="nxBurger" aria-label="Menu" aria-expanded="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
   <div class="nx-panel" id="nxPanel">
@@ -352,6 +367,13 @@ footer{margin-top:120px;border-top:1px solid var(--line);padding:64px 0 44px}
         <div class="status"><i></i>Live</div></div>
       <div class="door-cta"><a class="nx-btn fun" href="fun/" target="_blank" rel="noopener">Enter AnewOne.Fun <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div></article>
   </div>
+  <a class="ptok" href="fun/#t=0x26cc2b608df6be8ff63c64c9464b2756cc5dc128" target="_blank" rel="noopener" aria-label="Trade $NOAH, the A NEW ONE platform token, on AnewOne.Fun">
+    <img src="meta/noah.svg" alt="" width="56" height="56" loading="lazy">
+    <div><div class="k">PLATFORM TOKEN</div><div class="n">$NOAH<small>Noah's Ark · the first memecoin on Arc mainnet</small></div>
+      <div class="bar"><i id="ptBar"></i></div></div>
+    <div class="st"><div><b id="ptPx">…</b><span>PRICE</span></div><div><b id="ptCap">…</b><span>MARKET CAP</span></div><div><b id="ptGrad">…</b><span>TO GRADUATION</span></div></div>
+    <span class="nx-btn fun go">Trade $NOAH <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+  </a>
   <p class="hint">Swap &amp; Bridge brings funds from any chain · Deckhand, the AI assistant, answers questions about every door.</p>
 </div></section>
 
@@ -446,6 +468,36 @@ footer{margin-top:120px;border-top:1px solid var(--line);padding:64px 0 44px}
       var pct = Number(BigInt(it.yield30d365)) / 1e27 * 100; if (!isFinite(pct) || pct <= 0 || pct > 30) return;
       $("fyV").textContent = pct.toFixed(2) + "%"; $("fyM").hidden = false;
     }).catch(function () {});
+  // $NOAH, the platform token: its curve read live (platform.info), price = vUsdc / tReserve, market cap =
+  // price x the tokens that have left the curve, progress = raised / 5,000 USDC. 18-decimal amounts throughout.
+  var PLATFORM = "0x3DDA5AD5E74c658aff3d082AFe404a71615B1bc5", NOAH = "26cc2b608df6be8ff63c64c9464b2756cc5dc128";
+  function usd(n) { return n >= 1e6 ? "$" + (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? "$" + (n / 1e3).toFixed(1) + "K" : "$" + n.toFixed(2); }
+  function paintNoah(vUsdc, tReserve, raised, target) {
+    var px = Number(vUsdc) / Number(tReserve), held = 1e9 - Number(tReserve) / 1e18, pct = Math.min(100, Number(raised) / Number(target) * 100);
+    if (!isFinite(px) || px <= 0) return;
+    var dp = px < 1e-6 ? 10 : 8;
+    $("ptPx").textContent = "$" + px.toFixed(dp).replace(/0+$/, "");
+    $("ptCap").textContent = usd(px * held);
+    $("ptGrad").textContent = pct.toFixed(1) + "%";
+    $("ptBar").style.width = pct.toFixed(1) + "%";
+  }
+  function noah() {
+    fetch("api/rpc", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: PLATFORM, data: "0x0aae7a6b000000000000000000000000" + NOAH }, "latest"] }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var h = (j.result || "").slice(2), w = function (i) { return BigInt("0x" + h.slice(i * 64, i * 64 + 64)); };
+        if (h.length < 64 * 6) throw new Error("no info");
+        paintNoah(w(3), w(4), w(5), 5000n * 10n ** 18n);
+      })
+      .catch(function () {
+        fetch("data/floor.json").then(function (r) { return r.json(); }).then(function (d) {
+          var t = (d.tokens || []).find(function (x) { return x.addr === "0x" + NOAH; }); if (!t) return;
+          paintNoah(BigInt(t.vUsdc), BigInt(t.tReserve), BigInt(t.raised), BigInt(d.gradTarget || "5000000000000000000000"));
+        }).catch(function () {});
+      });
+  }
+  noah(); setInterval(function () { if (document.visibilityState === "visible") noah(); }, 60000);
 })();
 </script>
 </body>
