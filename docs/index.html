@@ -147,6 +147,14 @@ html[data-theme="light"] .door{box-shadow:0 30px 70px rgba(10,20,17,.1),inset 0 
 .ptok .bar{margin-top:8px;height:4px;width:min(240px,100%);border-radius:4px;background:rgba(var(--fun-rgb),.15);overflow:hidden}
 .ptok .bar i{display:block;height:100%;width:0;background:var(--fun);transition:width .6s}
 .ptok .go{white-space:nowrap}
+.ptok.hero-tok{margin:22px auto 0;max-width:720px;padding:10px 12px 10px 12px;gap:16px;border-radius:20px;text-align:left;background:var(--card);position:relative;z-index:2}
+.ptok.hero-tok img{width:44px;height:44px;border-radius:12px}
+.ptok.hero-tok .n{font-size:18px}
+.ptok.hero-tok .n small{display:none}
+.ptok.hero-tok .bar{width:140px;margin-top:6px}
+.ptok.hero-tok .st{gap:18px}
+.ptok.hero-tok .st b{font-size:14px}
+.ptok.hero-tok .go{height:40px;padding:0 16px;font-size:13px}
 @media (max-width:860px){.ptok{grid-template-columns:auto minmax(0,1fr);gap:14px 16px}.ptok .st{grid-column:1/-1;justify-content:space-between}.ptok .go{grid-column:1/-1;justify-content:center}}
 
 /* arc */
@@ -296,6 +304,13 @@ footer{margin-top:120px;border-top:1px solid var(--line);padding:64px 0 44px}
     <p class="sub">Tokenized funds and stocks from regulated issuers, plus curated USDC lending. All settled on Arc, all in your own wallet. <b>A&nbsp;NEW&nbsp;ONE is the interface, never the issuer.</b></p>
     <div class="ctas"><a class="nx-btn lit big" href="earn/" target="_blank" rel="noopener">Explore DeFi <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a><a class="nx-btn big" href="assets/stocks/" target="_blank" rel="noopener">Explore RWA <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div>
     <a class="funlink" href="fun/" target="_blank" rel="noopener">Looking for memecoins? <u>AnewOne.Fun</u> <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  <a class="ptok hero-tok" href="fun/#t=0x26cc2b608df6be8ff63c64c9464b2756cc5dc128" target="_blank" rel="noopener" aria-label="Trade $NOAH, the A NEW ONE platform token, on AnewOne.Fun">
+    <img src="meta/noah.svg" alt="" width="56" height="56" loading="lazy">
+    <div><div class="k">PLATFORM TOKEN</div><div class="n">$NOAH<small>Noah's Ark · the first memecoin on Arc mainnet</small></div>
+      <div class="bar"><i id="ptBar"></i></div></div>
+    <div class="st"><div><b id="ptPx">…</b><span>PRICE</span></div><div><b id="ptCap">…</b><span>MARKET CAP</span></div><div><b id="ptGrad">…</b><span>TO GRADUATION</span></div></div>
+    <span class="nx-btn fun go">Trade $NOAH <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+  </a>
   </div>
 
   <aside class="float l"><div class="k"><i></i>RWA · FUND · LIVE</div><div class="n">JTRSY</div><div class="d">Janus Henderson Treasury Fund</div><div class="m" id="fyM" hidden><b id="fyV">…</b><span>30D ANNUALIZED</span></div></aside>
@@ -367,13 +382,6 @@ footer{margin-top:120px;border-top:1px solid var(--line);padding:64px 0 44px}
         <div class="status"><i></i>Live</div></div>
       <div class="door-cta"><a class="nx-btn fun" href="fun/" target="_blank" rel="noopener">Enter AnewOne.Fun <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div></article>
   </div>
-  <a class="ptok" href="fun/#t=0x26cc2b608df6be8ff63c64c9464b2756cc5dc128" target="_blank" rel="noopener" aria-label="Trade $NOAH, the A NEW ONE platform token, on AnewOne.Fun">
-    <img src="meta/noah.svg" alt="" width="56" height="56" loading="lazy">
-    <div><div class="k">PLATFORM TOKEN</div><div class="n">$NOAH<small>Noah's Ark · the first memecoin on Arc mainnet</small></div>
-      <div class="bar"><i id="ptBar"></i></div></div>
-    <div class="st"><div><b id="ptPx">…</b><span>PRICE</span></div><div><b id="ptCap">…</b><span>MARKET CAP</span></div><div><b id="ptGrad">…</b><span>TO GRADUATION</span></div></div>
-    <span class="nx-btn fun go">Trade $NOAH <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
-  </a>
   <p class="hint">Swap &amp; Bridge brings funds from any chain · Deckhand, the AI assistant, answers questions about every door.</p>
 </div></section>
 
