@@ -210,3 +210,30 @@ To re-verify:
 Updated 20 Oct 2026 from earn-kit 1.8.1 / borrow-kit 1.0.0: 152 packages, all from
 `registry.npmjs.org` with integrity hashes, and the remote hosts the bundle references are
 unchanged (192, the same set as before).
+
+## gateway-kit.js
+
+| | |
+|---|---|
+| Package | `@circle-fin/unified-balance-kit` 1.9.0 + `@circle-fin/adapter-ethers-v6` 1.12.2 + `buffer` 6.0.3 (Circle, Apache-2.0; buffer MIT) |
+| File | `gateway-kit.js` (ESM, minified) |
+| Size | 1,615,053 bytes |
+| SHA-256 | `6590b55d61f9f47cace454fea01352ceaf737827d6935907549e19f44214d801` |
+
+**Not an upstream release file**: bundled locally with esbuild from the official npm packages,
+recipe in `build-gateway/` (`entry.mjs` re-exports the functional API: `createUnifiedBalanceKitContext`,
+`deposit`, `estimateDeposit`, `spend`, `estimateSpend`, `getBalances`, `getSupportedChains`,
+`getErrorMessage`, `KitError`, plus `createEthersAdapterFromProvider`; `buffer-shim.mjs` injects the
+npm `buffer` package, since the kit encodes burn intents with Node's `Buffer`; `build.mjs` prints the
+hash). No API key is bundled or needed. The functional API registers no telemetry handlers (the
+class API's analytics are not used). Balances, estimates and transfers go to
+`https://gateway-api.circle.com`; deposits and burn-intent signatures are made by the visitor's own
+wallet through the ethers adapter. The bundle carries Circle's chain table (public RPC and explorer
+URLs, incl. `@solana/web3.js`); only the EVM sources and Arc are used. Loaded lazily, only when the
+"EURC · cirBTC" way is opened on `/bridge/`.
+
+To re-verify:
+
+    cd build-gateway && npm ci && node build.mjs
+
+Added 28 Oct 2026: 154 packages, all from `registry.npmjs.org` with integrity hashes.

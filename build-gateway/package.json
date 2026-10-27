@@ -1,0 +1,13 @@
+{
+  "name": "build-gateway",
+  "private": true,
+  "type": "module",
+  "description": "Bundles @circle-fin/unified-balance-kit (Circle Gateway: unified EURC, cirBTC and USDC balances) with the ethers v6 adapter into docs/vendor/gateway-kit.js. Recipe in build.mjs.",
+  "dependencies": {
+    "@circle-fin/unified-balance-kit": "1.9.0",
+    "@circle-fin/adapter-ethers-v6": "1.12.2",
+    "buffer": "6.0.3",
+    "esbuild": "^0.28.1",
+    "ethers": "^6.13.0"
+  }
+}
