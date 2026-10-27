@@ -178,11 +178,17 @@
     <li><strong>From Sui:</strong> USDC goes over Circle's CCTP and lands in seconds, signed in Slush, Phantom or Suiet.
       SUI and other Sui tokens are swapped into USDC first by LI.FI, which makes two signatures. Sui's network fee is
       paid in SUI; about 0.01 SUI in the wallet is enough.</li>
+    <li><strong>EURC and cirBTC through Circle Gateway:</strong> under "EURC · cirBTC" they arrive on Arc as themselves,
+      not as USDC. Deposit EURC (Base, Avalanche, World Chain or Ethereum) or cirBTC (Ethereum) into your Gateway
+      balance; once that chain finalizes the deposit (seconds on Avalanche, about 15 to 20 minutes elsewhere), one
+      signature sends it to Arc and Circle mints it in your wallet there, with no gas needed on Arc.</li>
     <li><strong>Swap on Arc:</strong> the same page swaps USDC for tokens already on Arc (cirBTC, WETH and more), which is
       how the Borrow tab gets you collateral.</li>
   </ul>
   <p>Fees: USDC brought as USDC carries only Circle's own transfer fees, shown in the quote. A payment in anything other
-    than USDC carries a 0.25% fee to A NEW ONE, shown as its own line before you sign.</p>
+    than USDC carries a 0.25% fee to A NEW ONE, shown as its own line before you sign. On Gateway, Circle's fee (the
+    source chain's gas and the mint on Arc) comes from your Gateway balance; our 0.25% applies only when the extra
+    Gateway gas it causes stays under a fifth of it, so small amounts and most Ethereum balances carry none.</p>
 
   <h2 id="fun">AnewOne.Fun</h2>
   <p>The launchpad lives on at <a href="fun/">anewone.xyz/fun</a>, unchanged: a free, permissionless place to launch a

@@ -49,6 +49,11 @@ LI.FI route signed in Phantom, Solflare or Backpack (Wallet Standard). From **Su
 Slush, Phantom or Suiet; other Sui tokens are swapped into USDC first. A non-USDC payment carries a 0.25% fee to the
 site, shown in the quote.
 
+**EURC and cirBTC** arrive as themselves through Circle Gateway (Unified Balance Kit, `docs/vendor/gateway-kit.js`):
+a deposit into the wallet's Gateway balance on Base, Avalanche, World Chain or Ethereum, then one EIP-712 signature
+spends it to Arc, where Circle's forwarder mints it (no gas on Arc). The same 0.25% fee goes in as the kit's custom
+fee, but only when the extra burn intents it needs cost under a fifth of it; the quote is estimated both ways.
+
 ## AnewOne.Fun at a glance
 
 | | A NEW ONE |
