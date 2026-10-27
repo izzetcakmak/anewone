@@ -312,6 +312,18 @@
   .tcard .cardbuy .send-head .pill { display: none; }
   .tcard .cardbuy p { margin: 5px 0 0; font-size: 14px; }
   .onramp-wrap { border-radius: 20px; border-color: var(--nx-line2); }
+  .gw-tok { margin: 16px 0 0; }
+  .gw-step { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 20px 0 8px; font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--nx-faint); }
+  .gw-step span:last-child:not(:first-child) { letter-spacing: .02em; text-transform: none; color: var(--nx-mute); }
+  .gw-bal { display: grid; gap: 6px; font-size: 13.5px; color: var(--nx-mute); }
+  .gw-bal div { display: flex; justify-content: space-between; gap: 10px; }
+  .gw-bal b { color: var(--nx-ink); font: 500 13px var(--mono); }
+  .gw-bal em { font-style: normal; color: var(--nx-warn); }
+  .gw-row { display: flex; align-items: center; gap: 8px; }
+  .gw-row select.field { flex: 0 0 40%; min-width: 0; }
+  .gw-row input.field { flex: 1; min-width: 0; font-family: var(--mono); }
+  .gw-row .sw-max { flex: none; }
+  .gw .btn { margin-top: 12px; }
 
   /* Swap: two stacked boxes and a round flip */
   .sw-box { padding: 14px 16px 12px; border-radius: 20px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.035); transition: border-color .2s; }
@@ -435,6 +447,7 @@
         <div class="seg2" id="addSeg">
           <button type="button" class="on" data-way="chain">From another chain</button>
           <button type="button" data-way="card" id="waySeg" hidden>Buy with card</button>
+          <button type="button" data-way="gw">EURC · cirBTC</button>
         </div>
         <div id="wayChain">
           <div id="bridge"></div>
@@ -479,6 +492,38 @@
           <button type="button" class="btn" id="onrampGo">💳 Buy USDC with card</button>
           <div class="hint" id="onrampHint"></div>
           <div class="onramp-wrap" id="onrampWrap"></div>
+        </div>
+        </div>
+        <!-- EURC and cirBTC arrive as themselves through Circle Gateway: a deposit into the
+             wallet's Gateway balance on the chain where the coins sit, then a spend of that
+             balance to Arc, minted by Circle's forwarder (no gas on Arc) -->
+        <div id="wayGw" hidden>
+        <div class="card gw" id="gwCard">
+          <div class="cardbuy"><span class="ci" aria-hidden="true">🌐</span><div>
+            <div class="send-head"><h3>Bring EURC or cirBTC to Arc</h3><span class="pill" id="gwNet">…</span></div>
+            <p>Through Circle Gateway, as the same coin: no swap. Deposit it on the chain where it sits, then send it to Arc; Circle mints it in your wallet there, no gas needed on Arc.</p></div></div>
+          <div class="seg2 gw-tok" id="gwTok">
+            <button type="button" class="on" data-tok="EURC">EURC</button>
+            <button type="button" data-tok="cirBTC">cirBTC</button>
+          </div>
+          <div class="gw-step"><span>Your Gateway balance</span><button type="button" class="sw-max" id="gwReload">Refresh</button></div>
+          <div class="gw-bal" id="gwBal">Connect a wallet to see it.</div>
+          <div class="gw-step"><span>1 · Deposit</span><span id="gwWalletBal"></span></div>
+          <div class="gw-row">
+            <select class="field" id="gwFrom" aria-label="Deposit from chain"></select>
+            <input class="field" id="gwDepAmt" inputmode="decimal" placeholder="0" autocomplete="off" aria-label="Amount to deposit">
+            <button type="button" class="sw-max" id="gwDepMax">MAX</button>
+          </div>
+          <button type="button" class="btn" id="gwDepGo">Deposit into Gateway</button>
+          <div class="gw-step"><span>2 · Send to Arc</span><span id="gwSpendBal"></span></div>
+          <div class="gw-row">
+            <select class="field" id="gwSrc" aria-label="Send from Gateway balance on"></select>
+            <input class="field" id="gwSpAmt" inputmode="decimal" placeholder="0" autocomplete="off" aria-label="Amount to send to Arc">
+            <button type="button" class="sw-max" id="gwSpMax">MAX</button>
+          </div>
+          <div class="sw-details" id="gwQuote" hidden></div>
+          <button type="button" class="btn" id="gwSpGo" disabled>Send to Arc</button>
+          <div class="hint" id="gwHint"></div>
         </div>
         </div>
       </section>
@@ -545,13 +590,14 @@
   <div class="bx-pair">
     <section class="bx-card bx-info"><h2 class="nx-eyebrow">Supported chains</h2>
       <div class="chains" id="chainPills"></div>
-      <p>Fast transfers arrive in about 20 seconds where Circle offers them. From Solana, SOL or any Solana token becomes USDC on Arc in one LI.FI route, signed in Phantom, Solflare or Backpack; the USDC lands at your Arc address (Phantom carries one, or type it in). From Sui, USDC goes over Circle's CCTP and lands in seconds, signed in Slush, Phantom or Suiet; SUI and other Sui tokens are swapped into USDC first by LI.FI, which makes two signatures. Sui's network fee is paid in SUI; about 0.01 SUI in the wallet is enough.</p>
+      <p>Fast transfers arrive in about 20 seconds where Circle offers them. From Solana, SOL or any Solana token becomes USDC on Arc in one LI.FI route, signed in Phantom, Solflare or Backpack; the USDC lands at your Arc address (Phantom carries one, or type it in). From Sui, USDC goes over Circle's CCTP and lands in seconds, signed in Slush, Phantom or Suiet; SUI and other Sui tokens are swapped into USDC first by LI.FI, which makes two signatures. Sui's network fee is paid in SUI; about 0.01 SUI in the wallet is enough. EURC (from Base, Avalanche, World Chain or Ethereum) and cirBTC (from Ethereum) arrive as themselves through Circle Gateway, under "EURC · cirBTC": a deposit into your Gateway balance, credited once that chain finalizes it (seconds on Avalanche, about 15 to 20 minutes elsewhere), then one signature sends it to Arc.</p>
     </section>
     <section class="bx-card bx-info"><h2 class="nx-eyebrow">Fees</h2>
       <dl class="fees">
         <div><dt>Circle</dt><dd>A few basis points on fast transfers (none on standard), plus about 0.02 USDC to mint on Arc for you.</dd></div>
         <div><dt>LI.FI swaps</dt><dd>The pool's price and a fixed fee of a cent or two.</dd></div>
-        <div><dt>A NEW ONE</dt><dd>On mainnet, 0.25% of a non-USDC payment goes to the floor, shown as its own line.</dd></div>
+        <div><dt>Circle Gateway</dt><dd>EURC and cirBTC: the source chain's gas and the mint on Arc, taken from your Gateway balance and shown before you sign.</dd></div>
+        <div><dt>A NEW ONE</dt><dd>On mainnet, 0.25% of a non-USDC payment goes to the floor, shown as its own line. On Gateway the same 0.25%, only when the extra Gateway gas it causes stays under a fifth of it; otherwise nothing.</dd></div>
       </dl>
       <p>The quote shows everything before you sign, and the amount bridged after a swap is what actually arrived in your wallet, not an estimate.</p>
     </section>
@@ -1797,6 +1843,224 @@ let onrampCfg = null, onrampKit = null, onrampWidget = null, onrampBusy = false;
 
   // back from a checkout tab: the USDC may have landed
   window.addEventListener("focus", () => { try { sendRefresh(); swRefreshBalances(); } catch {} });
+  // ---- EURC and cirBTC through Circle Gateway (Unified Balance Kit, loaded on first use).
+  // Gateway keeps a balance per chain for each wallet: a deposit on the chain where the coins sit
+  // is credited once that chain finalizes it, and a spend burns from that balance and mints on Arc.
+  // With the forwarder Circle submits the Arc mint, so nothing is paid in gas on Arc. Gateway's own
+  // fee (source-chain gas plus the forwarder's) comes out of the balance on top of the amount; the
+  // interface fee comes out of the amount, as burn intents of its own.
+  // Every burn intent pays source-chain gas, and the fee adds two (ours and Circle's tenth): on
+  // 27 Oct 2026 that took Gateway's fee from 1.31 to 3.94 EURC on 100 EURC out of Ethereum to
+  // carry a 0.25 EURC fee, and added about 0.03 EURC on Base. So each quote is estimated with and
+  // without the fee, and the fee is charged only when the gas it adds stays within a fifth of it.
+  // Estimates only read the account; a spend is one EIP-712 signature with no chain switch; a
+  // deposit switches the wallet to its chain.
+  const gwCfg = cfg.gateway || {};
+  const GW_FEE_TO = net === "mainnet" && /^0x[0-9a-fA-F]{40}$/.test(gwCfg.feeTo || "") ? gwCfg.feeTo : "";
+  const GW_FEE_BPS = GW_FEE_TO ? BigInt(Math.min(Math.max(Number(gwCfg.feeBps) || 0, 0), 100)) : 0n;
+  const GW_DEST = net === "mainnet" ? "Arc" : "Arc_Testnet";
+  const GW_DP = { EURC: 6, cirBTC: 8 };
+  // token addresses as the kit 1.9.0 lists them; only used to show the wallet's balance
+  const GW_CHAINS = net === "mainnet" ? {
+    Base: { name: "Base", rpc: "https://mainnet.base.org", EURC: "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42" },
+    Avalanche: { name: "Avalanche", rpc: "https://api.avax.network/ext/bc/C/rpc", EURC: "0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD" },
+    World_Chain: { name: "World Chain", rpc: "https://worldchain-mainnet.g.alchemy.com/public", EURC: "0x1C60ba0A0eD1019e8Eb035E6daF4155A5cE2380B" },
+    Ethereum: { name: "Ethereum", rpc: "https://ethereum-rpc.publicnode.com", EURC: "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c", cirBTC: "0x72DFB2E44f59C5AD2bAFE84314E5b99a7cd5075E" },
+  } : {
+    Base_Sepolia: { name: "Base Sepolia", rpc: "https://sepolia.base.org", EURC: "0x808456652fdb597867f38412077A9182bf77359F" },
+    Avalanche_Fuji: { name: "Avalanche Fuji", rpc: "https://api.avax-test.network/ext/bc/C/rpc", EURC: "0x5E44db7996c682E92a960b65AC713a54AD815c6B" },
+    Ethereum_Sepolia: { name: "Ethereum Sepolia", rpc: "https://ethereum-sepolia-rpc.publicnode.com", EURC: "0x08210F9170F89Ab7658F0B5E3fF39b0E03C594D4", cirBTC: "0x3a3fe695F684Bf9b9e43CF43C2b895Ea5e392bB3" },
+  };
+  let gwTok = "EURC", gwKit = null, gwCtx = null, gwBal = {}, gwWallet = null, gwBusy = false, gwReady = false;
+  let gwPollT = null, gwQuoteT = null, gwQuoteRun = 0, gwQuoted = null;
+  const gwChainsFor = (tok) => Object.keys(GW_CHAINS).filter((c) => GW_CHAINS[c][tok]);
+  const gwName = (c) => (GW_CHAINS[c] || {}).name || c;
+  const gwShown = () => !S("wayGw").hidden;
+  const gwFmt = (v, tok) => fmtAmt(v, GW_DP[tok]) + " " + tok;
+  const gwSay = (html, cls) => { S("gwHint").innerHTML = html; S("gwHint").className = "hint" + (cls ? " " + cls : ""); };
+  // a typed amount in the token's minor units, or null
+  function gwParse(s, tok) {
+    s = String(s || "").trim().replace(",", ".");
+    if (!/^\d*\.?\d*$/.test(s) || !/\d/.test(s)) return null;
+    try { const v = ethers.parseUnits(s, GW_DP[tok]); return v > 0n ? v : null; } catch { return null; }
+  }
+  const gwStr = (v, tok) => ethers.formatUnits(v, GW_DP[tok]);
+  function gwErr(e) {
+    const m = String((e && (e.shortMessage || e.message)) || e || "");
+    if (e && (e.code === 4001 || e.code === "ACTION_REJECTED")) return "Refused in the wallet.";
+    if (/user (rejected|denied)|rejected the request|request rejected|cancell?ed by user/i.test(m)) return "Refused in the wallet.";
+    let k = ""; try { k = gwKit && gwKit.getErrorMessage ? gwKit.getErrorMessage(e) : ""; } catch {}
+    return swEsc(String(k || m).split(/ \(|\n/)[0].slice(0, 220));
+  }
+  async function gwLoad() {
+    if (!gwKit) { gwKit = await import("../vendor/gateway-kit.js"); gwCtx = gwKit.createUnifiedBalanceKitContext(); }
+    return gwKit;
+  }
+  const gwAdapter = async () => (await gwLoad()).createEthersAdapterFromProvider({ provider: wallet() });
+
+  function gwButtons() {
+    const dep = S("gwDepGo"), sp = S("gwSpGo");
+    dep.disabled = gwBusy; dep.textContent = sendAccount ? "Deposit into Gateway" : "Connect a wallet";
+    sp.disabled = gwBusy || !gwQuoted || !!gwQuoted.short;
+  }
+  function gwRenderFrom() {
+    const sel = S("gwFrom"), keep = sel.value;
+    sel.innerHTML = gwChainsFor(gwTok).map((c) => `<option value="${c}">${swEsc(gwName(c))}</option>`).join("");
+    if (gwChainsFor(gwTok).includes(keep)) sel.value = keep;
+  }
+  function gwRenderBal() {
+    const rows = gwChainsFor(gwTok).filter((c) => gwBal[c] && (gwBal[c].confirmed > 0n || gwBal[c].pending > 0n));
+    S("gwBal").innerHTML = !sendAccount ? "Connect a wallet to see it."
+      : !rows.length ? "Nothing in Gateway yet. Deposit below, then send it to Arc."
+      : rows.map((c) => `<div><span>${swEsc(gwName(c))}</span><span><b>${swEsc(gwFmt(gwBal[c].confirmed, gwTok))}</b>${gwBal[c].pending > 0n ? ` <em>+${swEsc(gwFmt(gwBal[c].pending, gwTok))} arriving</em>` : ""}</span></div>`).join("");
+    const src = S("gwSrc"), keep = src.value, ready = rows.filter((c) => gwBal[c].confirmed > 0n);
+    src.innerHTML = ready.length ? ready.map((c) => `<option value="${c}">${swEsc(gwName(c))}</option>`).join("") : `<option value="">Nothing ready</option>`;
+    src.disabled = !ready.length;
+    if (ready.includes(keep)) src.value = keep;
+    S("gwSpendBal").textContent = src.value && gwBal[src.value] ? "Ready: " + gwFmt(gwBal[src.value].confirmed, gwTok) : "";
+  }
+  async function gwRefresh() {
+    clearTimeout(gwPollT);
+    if (!sendAccount) { gwBal = {}; gwRenderBal(); gwButtons(); return; }
+    const tok = gwTok, who = sendAccount;
+    try {
+      const k = await gwLoad();
+      const r = await k.getBalances(gwCtx, { token: tok, sources: { address: who, chains: gwChainsFor(tok) }, includePending: true });
+      if (tok !== gwTok || who !== sendAccount) return;
+      const bal = {};
+      for (const d of r.breakdown || []) for (const c of d.breakdown || []) {
+        const b = bal[c.chain] || (bal[c.chain] = { confirmed: 0n, pending: 0n });
+        b.confirmed += ethers.parseUnits(c.confirmedBalance || "0", GW_DP[tok]);
+        b.pending += ethers.parseUnits(c.pendingBalance || "0", GW_DP[tok]);
+      }
+      gwBal = bal; gwRenderBal(); gwQuoteSoon();
+      // a deposit waits for its chain's finality: look again while one is on the way
+      if (Object.values(bal).some((b) => b.pending > 0n)) gwPollT = setTimeout(() => { if (gwShown()) gwRefresh(); }, 30000);
+    } catch (e) { S("gwBal").textContent = "Gateway balance could not load: " + String(e && e.message || e).slice(0, 120); }
+  }
+  async function gwWalletBal() {
+    const c = S("gwFrom").value, tok = gwTok, who = sendAccount, ch = GW_CHAINS[c];
+    gwWallet = null; S("gwWalletBal").textContent = "";
+    if (!who || !ch || !ch[tok]) return;
+    try {
+      const v = BigInt(await wcRead(ch.rpc, "eth_call", [{ to: ch[tok], data: "0x70a08231" + who.slice(2).toLowerCase().padStart(64, "0") }, "latest"]));
+      if (c !== S("gwFrom").value || tok !== gwTok || who !== sendAccount) return;
+      gwWallet = v; S("gwWalletBal").textContent = "In wallet: " + gwFmt(v, tok);
+    } catch {}
+  }
+  // the interface fee for this spend (0 when its extra gas would eat it), and what Gateway charges
+  // on top of the amount: everything in the estimate except the interface fee
+  async function gwEstimate(chain, tok, v) {
+    const adapter = await gwAdapter(), fee = (v * GW_FEE_BPS) / 10000n;
+    const extraOf = async (f) => {
+      const r = await gwKit.estimateSpend(gwCtx, gwSpendParams(adapter, chain, tok, v, f));
+      let x = 0n;
+      for (const e of r.fees || []) if (e.type !== "kit" && e.token === tok) x += ethers.parseUnits(e.amount, GW_DP[tok]);
+      return x;
+    };
+    const [bare, withFee] = await Promise.all([extraOf(0n), fee > 0n ? extraOf(fee) : null]);
+    if (withFee != null && (withFee - bare) * 5n <= fee) return { fee, extra: withFee, waived: false };
+    return { fee: 0n, extra: bare, waived: fee > 0n };
+  }
+  const gwSpendParams = (adapter, chain, tok, v, fee) => ({
+    from: { adapter, allocations: { amount: gwStr(v, tok), chain } },
+    to: { chain: GW_DEST, recipientAddress: sendAccount, useForwarder: true },
+    amount: gwStr(v, tok), token: tok,
+    ...(fee > 0n ? { config: { customFee: { value: gwStr(fee, tok), recipientAddress: GW_FEE_TO } } } : {}),
+  });
+  function gwQuoteSoon() { clearTimeout(gwQuoteT); gwQuoteRun++; gwQuoted = null; S("gwQuote").hidden = true; gwButtons(); gwQuoteT = setTimeout(gwQuote, 500); }
+  async function gwQuote() {
+    const run = ++gwQuoteRun, chain = S("gwSrc").value, tok = gwTok, v = gwParse(S("gwSpAmt").value, tok);
+    if (!chain || !v || !sendAccount) return;
+    try {
+      const { fee, extra, waived } = await gwEstimate(chain, tok, v);
+      if (run !== gwQuoteRun) return;
+      const have = (gwBal[chain] || {}).confirmed || 0n, short = v + extra > have;
+      gwQuoted = { chain, tok, v, fee, short };
+      const feeRow = fee > 0n ? `<b>${swEsc(gwFmt(fee, tok))}</b>` : `<b>none${waived ? " on this amount" : ""}</b>`;
+      S("gwQuote").innerHTML = [
+        ["You receive on Arc", `<b>${swEsc(gwFmt(v - fee, tok))}</b>`],
+        ["Gateway fee, from your balance", `<b>${swEsc(gwFmt(extra, tok))}</b>`],
+        [`Interface fee${fee > 0n ? " (" + Number(GW_FEE_BPS) / 100 + "%)" : ""}`, feeRow],
+        ["Gas on Arc", "<b>none, Circle mints it</b>"],
+      ].map(([k, val]) => `<div><span>${k}</span>${val}</div>`).join("");
+      S("gwQuote").hidden = false;
+      if (short) gwSay(`Not enough on ${swEsc(gwName(chain))}: this needs ${swEsc(gwFmt(v + extra, tok))} with Gateway's fee. MAX leaves room for it.`, "bad");
+      else if (/^Not enough on /.test(S("gwHint").textContent)) gwSay("");
+      gwButtons();
+    } catch (e) { if (run === gwQuoteRun) gwSay(gwErr(e), "bad"); }
+  }
+
+  function gwSetup() {
+    if (gwReady) return; gwReady = true;
+    S("gwNet").textContent = net === "mainnet" ? "ARC MAINNET" : "ARC TESTNET";
+    S("gwNet").classList.toggle("test", net !== "mainnet");
+    document.querySelectorAll("#gwTok button").forEach((b) => b.addEventListener("click", () => {
+      if (gwBusy || b.dataset.tok === gwTok) return;
+      gwTok = b.dataset.tok;
+      document.querySelectorAll("#gwTok button").forEach((x) => x.classList.toggle("on", x === b));
+      S("gwDepAmt").value = ""; S("gwSpAmt").value = ""; gwSay(""); gwBal = {};
+      gwRenderFrom(); gwRenderBal(); gwRefresh(); gwWalletBal();
+    }));
+    S("gwFrom").addEventListener("change", gwWalletBal);
+    S("gwSrc").addEventListener("change", () => { gwRenderBal(); gwQuoteSoon(); });
+    S("gwSpAmt").addEventListener("input", gwQuoteSoon);
+    S("gwReload").onclick = () => { gwRefresh(); gwWalletBal(); };
+    S("gwDepMax").onclick = () => { if (gwWallet) S("gwDepAmt").value = gwStr(gwWallet, gwTok); };
+    S("gwSpMax").onclick = async () => {
+      const chain = S("gwSrc").value, tok = gwTok, have = (gwBal[chain] || {}).confirmed || 0n;
+      if (!chain || !have) return;
+      try {
+        // Gateway's fee hardly moves with the amount; a 5% margin covers what it does
+        const { extra } = await gwEstimate(chain, tok, have);
+        const v = have - (extra * 105n) / 100n;
+        if (v <= 0n) { gwSay(`The ${swEsc(gwName(chain))} balance does not cover Gateway's fee of ${swEsc(gwFmt(extra, tok))}.`, "bad"); return; }
+        S("gwSpAmt").value = gwStr(v, tok); gwQuoteSoon();
+      } catch (e) { gwSay(gwErr(e), "bad"); }
+    };
+    S("gwDepGo").onclick = async () => {
+      if (gwBusy) return;
+      if (!sendAccount) { await sendConnect(); gwRefresh(); gwWalletBal(); gwButtons(); return; }
+      const chain = S("gwFrom").value, tok = gwTok, v = gwParse(S("gwDepAmt").value, tok);
+      if (!v) { gwSay("Enter an amount to deposit.", "bad"); return; }
+      if (gwWallet != null && v > gwWallet) { gwSay(`Your wallet holds ${swEsc(gwFmt(gwWallet, tok))} on ${swEsc(gwName(chain))}.`, "bad"); return; }
+      gwBusy = true; gwButtons();
+      gwSay(`Confirm in your wallet. It switches to ${swEsc(gwName(chain))} and pays that chain's gas for the deposit.`);
+      try {
+        const adapter = await gwAdapter();
+        const r = await gwKit.deposit(gwCtx, { from: { adapter, chain }, amount: gwStr(v, tok), token: tok });
+        const link = r.explorerUrl ? ` <a href="${swEsc(r.explorerUrl)}" target="_blank" rel="noopener noreferrer">View the deposit</a>` : "";
+        gwSay(`Deposited ${swEsc(gwFmt(v, tok))} on ${swEsc(gwName(chain))}. Gateway credits it once ${swEsc(gwName(chain))} finalizes the block: seconds on Avalanche, about 15 to 20 minutes on Ethereum, Base and World Chain. Then send it to Arc in step 2; this page checks by itself.${link}`, "good");
+        S("gwDepAmt").value = "";
+        gwRefresh(); gwWalletBal();
+      } catch (e) { gwSay(gwErr(e), "bad"); }
+      finally { gwBusy = false; gwButtons(); }
+    };
+    S("gwSpGo").onclick = async () => {
+      const q = gwQuoted;
+      if (gwBusy || !q || q.short || !sendAccount) return;
+      gwBusy = true; gwButtons();
+      gwSay("Sign once in your wallet. Circle then mints on Arc; this takes a minute or two.");
+      try {
+        const adapter = await gwAdapter();
+        const r = await gwKit.spend(gwCtx, gwSpendParams(adapter, q.chain, q.tok, q.v, q.fee));
+        const link = r.explorerUrl ? ` <a href="${swEsc(r.explorerUrl)}" target="_blank" rel="noopener noreferrer">View on Arc</a>` : "";
+        gwSay(`Sent: ${swEsc(gwFmt(q.v - q.fee, q.tok))} to ${swEsc(sendAccount.slice(0, 6) + "…" + sendAccount.slice(-4))} on Arc.${link}`, "good");
+        S("gwSpAmt").value = ""; gwQuoted = null; S("gwQuote").hidden = true;
+        gwRefresh();
+        try { sendRefresh(); swRefreshBalances(); swLoadHeld(); } catch {}
+      } catch (e) { gwSay(gwErr(e), "bad"); }
+      finally { gwBusy = false; gwButtons(); }
+    };
+    if (wallet() && wallet().on) wallet().on("accountsChanged", () => setTimeout(() => { if (gwShown()) { gwRefresh(); gwWalletBal(); } }, 0));
+    gwRenderFrom();
+  }
+  window.gwShow = async () => {
+    gwSetup();
+    if (!sendAccount) await sendConnectSilently();
+    gwButtons(); gwRenderBal(); gwRefresh(); gwWalletBal();
+  };
+
   sendPick();
   sendConnectSilently();
   (async () => {
@@ -1814,9 +2078,12 @@ let onrampCfg = null, onrampKit = null, onrampWidget = null, onrampBusy = false;
     }));
     const way = (w) => {
       document.querySelectorAll("#addSeg button").forEach((x) => x.classList.toggle("on", x.dataset.way === w));
-      $$("wayChain").hidden = w !== "chain"; $$("wayCard").hidden = w !== "card";
+      $$("wayChain").hidden = w !== "chain"; $$("wayCard").hidden = w !== "card"; $$("wayGw").hidden = w !== "gw";
+      if (w === "gw") window.gwShow();
     };
-    let wantCard = new URLSearchParams(location.search).get("way") === "card";
+    const wantWay = new URLSearchParams(location.search).get("way");
+    let wantCard = wantWay === "card";
+    if (wantWay === "gw") way("gw");
     document.querySelectorAll("#addSeg button").forEach((b) => b.addEventListener("click", () => { wantCard = false; way(b.dataset.way); }));
     // "Buy with card" is offered only when the page can open the onramp (config and a wallet)
     const oc = $$("onrampCard");

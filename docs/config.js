@@ -102,6 +102,10 @@ window.ANEWONE_CONFIG = {
   // the same batched transaction, shown in the quote before signing. Empty feeTo => no fee at all.
   // Basis points, capped at 100 in code: 15 = 0.15% of a new borrow.
   aave: { feeTo: "0xD4F1254C803662c46D9c21f80F4F3c15FF57e2c9", borrowFeeBps: 15, supplyFeeBps: 0 },
+  // Circle Gateway on Swap & Bridge (EURC and cirBTC to Arc). The kit's customFee mints feeBps of
+  // a spend to feeTo on Arc (Circle keeps a tenth of it); mainnet only, and only when the Gateway gas
+  // the fee adds stays within a fifth of it (see the bridge page). Empty feeTo => no fee at all.
+  gateway: { feeTo: "0xD4F1254C803662c46D9c21f80F4F3c15FF57e2c9", feeBps: 25 },
   web3auth: {
     testnet: {
       clientId: "BHMuvLRDj0_XO7RJoviuCgjbSLcvMWUgAgdCCSrStDO41bmuiyXZw9haSXuNDTtwqwR7IpqqZ_KKjqc-Jlvjqqk",
