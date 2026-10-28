@@ -83,11 +83,11 @@
 :root[data-app="fun"][data-theme="light"] { --nx-brand-rgb: 0,168,110; }
 .nx-seg { display: flex; gap: 4px; padding: 5px; border-radius: 999px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.04); margin-left: 26px; }
 :root[data-theme="light"] .nx-seg { background: rgba(255,255,255,.6); }
-.nx-seg a { display: inline-flex; align-items: center; height: 42px; padding: 0 24px; border-radius: 999px; font: 700 14px "JetBrains Mono", ui-monospace, monospace; color: var(--nx-mute); text-decoration: none; transition: color .2s, background .2s; }
-.nx-seg a:hover { color: var(--nx-ink); text-decoration: none; }
+.nx-seg a { display: inline-flex; align-items: center; height: 42px; padding: 0 24px; border-radius: 999px; font: 700 14px "JetBrains Mono", ui-monospace, monospace; color: var(--nx-mint); text-decoration: none; transition: color .2s, background .2s; }
+.nx-seg a:hover { background: rgba(var(--nx-mint-rgb), .1); text-decoration: none; }
 .nx-seg a.on { color: var(--nx-on-mint); background: linear-gradient(180deg, rgba(var(--nx-mint-rgb), .98), rgba(var(--nx-mint-rgb), .82)); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 6px 20px rgba(var(--nx-mint-rgb), .3); }
 .nx-seg a.f { color: var(--nx-fun); }
-.nx-seg a.f:hover { color: var(--nx-fun2); }
+.nx-seg a.f:hover { color: var(--nx-fun2); background: rgba(var(--nx-fun-rgb), .1); }
 .nx-seg a.f.on { color: var(--nx-on-mint); }
 .nx-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .nx-bar .nx-btn, .nx-nav .nx-actions .nx-btn { height: 48px; padding: 0 26px; font-size: 14px; }
