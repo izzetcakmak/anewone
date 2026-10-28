@@ -1024,6 +1024,7 @@
     transition: border-color .15s, background .15s; }
   .wrow:hover { border-color: var(--accent); background: var(--bg-2); }
   .wrow img { width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; }
+  .wrow .wglyph { width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; display: grid; place-items: center; color: var(--dim); background: rgba(var(--accent-rgb), .08); border: 1px solid var(--border-2); }
   .wrow .wname { font-weight: 600; }
   /* the funding row: Copy address, the bridge link and the card button share one height */
   #fundAddr, #fundCopy, #fundLink, #fundCard { height: 44px; min-height: 44px; box-sizing: border-box;
@@ -3060,6 +3061,11 @@ window.addEventListener("eip6963:announceProvider", (ev) => {
 });
 window.dispatchEvent(new Event("eip6963:requestProvider"));
 
+// A wallet's EIP-6963 icon is a data URI from the visitor's own extension, most often an SVG (Rabby,
+// MetaMask, Talisman, Leap). safeImgSrc refuses SVG because coin artwork comes from strangers; here
+// the source is the wallet itself and the sink is an <img>, where an SVG runs no script.
+const walletIconSrc = (u) => { const s = String(u || "").trim(); return /^data:image\/(svg\+xml|png|jpeg|jpg|gif|webp)[;,]/i.test(s) ? s : ""; };
+const WALLET_GLYPH = '<span class="wglyph" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V5a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2"/><path d="M3 6v12a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-3"/></svg></span>';
 function walletChoices() {
   const list = [...discovered.values()];
   // legacy fallback: a window.ethereum that never announced via 6963
@@ -3090,9 +3096,9 @@ function showWallets() {
   if (list.length === 1 && !pickerShowAll) { selectWallet(list[0]); return; }
   const last = localStorage.getItem(LAST_WALLET_KEY);
   $("walletList").innerHTML = list.map((d) => {
-    const icon = safeImgSrc(d.info.icon) || "";
+    const icon = walletIconSrc(d.info.icon);
     return `<button class="wrow" data-rdns="${esc(d.info.rdns)}">
-      ${icon ? `<img src="${esc(icon)}" alt="">` : "🦊"}
+      ${icon ? `<img src="${esc(icon)}" alt="">` : WALLET_GLYPH}
       <span class="wname">${esc(d.info.name)}</span>
       ${d.info.rdns === last ? '<span class="wlast">last used</span>' : ""}
     </button>`;
