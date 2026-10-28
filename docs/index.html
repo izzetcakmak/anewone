@@ -282,6 +282,7 @@ html[data-theme="light"] .hs-card,html[data-theme="light"] .hs-list{box-shadow:0
 .hs-r .nm span,.hs-it .nm span{display:block;font-size:11.5px;line-height:1.3;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hs-r .v{text-align:right;font:500 12.5px "JetBrains Mono",monospace;white-space:nowrap}
 .hs-r .v span{display:block;font-size:10.5px;color:var(--faint)}
+.hs-r .v sup{font-size:.72em;line-height:0;vertical-align:.45em;margin:0 1px}
 .hs-r .nx-btn{height:30px;padding:0 13px;font-size:12px}
 /* $NOAH, pinned above the ranked rows and outside their scroll */
 .hs-r.pin{margin-bottom:4px;background:rgba(var(--fun-rgb),.07);box-shadow:inset 0 0 0 1px rgba(var(--fun-rgb),.25)}
@@ -619,7 +620,14 @@ html[data-theme="light"] .hs-card,html[data-theme="light"] .hs-list{box-shadow:0
   function add(t) { var k = t.a.toLowerCase(), c = toks[k] || { a: k }; for (var p in t) if (p !== "a" && t[p] != null && t[p] !== "") c[p] = t[p]; toks[k] = c; return c; }
   function list() { return Object.keys(toks).map(function (k) { return toks[k]; }); }
   function usd(n) { return n >= 1e9 ? "$" + (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? "$" + (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? "$" + (n / 1e3).toFixed(1) + "K" : "$" + n.toFixed(0); }
-  function price(n) { if (!(n > 0)) return ""; if (n >= 1) return "$" + n.toLocaleString("en-US", { maximumFractionDigits: 2 }); return "$" + n.toFixed(Math.min(12, 3 - Math.floor(Math.log10(n)))); }
+  // A price below $0.0001 folds its run of zeros: $0.00000777 reads $0.0⁴777 (four more zeros after
+  // "0.0"). Returns HTML.
+  function price(n) {
+    if (!(n > 0)) return ""; if (n >= 1) return "$" + n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+    if (n >= 1e-4) return "$" + n.toFixed(Math.min(12, 3 - Math.floor(Math.log10(n))));
+    var e = n.toExponential(3).split("e"); // "7.770e-6": the digits, and how many zeros lead them
+    return "$0.0<sup>" + (-Number(e[1]) - 2) + "</sup>" + e[0].replace(".", "").replace(/0+$/, "");
+  }
   function amount(n) { return n >= 1 ? n.toLocaleString("en-US", { maximumFractionDigits: n >= 1000 ? 2 : 4 }) : String(Number(n.toPrecision(4))); }
   // LI.FI's logo first, then the site's map of the ones it lacks, GeckoTerminal's, a coin's own art
   function logo(t) { return t.lifi || LOGOS[t.a] || t.gk || t.img || t.def || ""; }
@@ -685,7 +693,7 @@ html[data-theme="light"] .hs-card,html[data-theme="light"] .hs-list{box-shadow:0
   // ---- the list
   // $NOAH stays on top whatever the volumes say. It trades on its curve, which GeckoTerminal does not
   // index, so its row shows the strip above the copy (price and market cap, read live each minute).
-  function noahVal() { var p = $("ptPx").textContent, c = $("ptCap").textContent; return p === "…" ? "" : esc(p) + "<span>mcap " + esc(c) + "</span>"; }
+  function noahVal() { var p = Number($("ptPx").textContent.replace(/[^\d.]/g, "")), c = $("ptCap").textContent; return p > 0 ? price(p) + "<span>mcap " + esc(c) + "</span>" : ""; }
   function paintPin() {
     var t = toks[NOAH] || { a: NOAH, sym: "NOAH", name: "Noah's Ark", dec: 18 };
     $("hsPin").innerHTML = '<div class="hs-r pin"><span class="rk"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-label="Pinned"><path d="M16 3l5 5-3 1-4 4 1 5-2 2-4-4-5 5-1-1 5-5-4-4 2-2 5 1 4-4z"/></svg></span>'
@@ -703,7 +711,11 @@ html[data-theme="light"] .hs-card,html[data-theme="light"] .hs-list{box-shadow:0
         + '<span class="v">' + usd(t.vol) + "<span>" + price(t.price) + "</span></span>"
         + '<a class="nx-btn" href="' + esc(link(toks[USDC], t)) + '" target="_blank" rel="noopener" aria-label="Trade ' + esc(t.sym) + ' with USDC">Trade</a></div>';
     }).join("") : '<div class="hs-empty">Arc\'s volumes did not load just now. <a href="https://www.geckoterminal.com/arc/pools" target="_blank" rel="noopener">GeckoTerminal</a> has the full board.</div>';
+    alignPin();
   }
+  // the ranked rows lose their scrollbar's width; the pinned row gives up the same, so the Trade buttons line up
+  function alignPin() { var l = $("hsTop"); $("hsPin").style.paddingRight = (l.offsetWidth - l.clientWidth) + "px"; }
+  addEventListener("resize", alignPin);
 
   // ---- a coin launched here carries its picture on chain, in the TokenImage event of its creation
   // block. The Fun page caches what it read under IMG_KEY; this reads the same cache and fills the
