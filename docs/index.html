@@ -283,6 +283,10 @@ html[data-theme="light"] .hs-card,html[data-theme="light"] .hs-list{box-shadow:0
 .hs-r .v{text-align:right;font:500 12.5px "JetBrains Mono",monospace;white-space:nowrap}
 .hs-r .v span{display:block;font-size:10.5px;color:var(--faint)}
 .hs-r .nx-btn{height:30px;padding:0 13px;font-size:12px}
+/* $NOAH, pinned above the ranked rows and outside their scroll */
+.hs-r.pin{margin-bottom:4px;background:rgba(var(--fun-rgb),.07);box-shadow:inset 0 0 0 1px rgba(var(--fun-rgb),.25)}
+.hs-r.pin .rk{color:var(--fun);display:grid;place-items:end}
+.hs-r.pin .nm span{color:var(--fun)}
 .hs-empty{padding:10px 8px;font-size:13px;color:var(--faint)}
 .hs-empty a{color:var(--mint)}
 .hs-pick{position:fixed;inset:0;z-index:300;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
@@ -389,6 +393,7 @@ html[data-theme="light"] .hs-card,html[data-theme="light"] .hs-list{box-shadow:0
     </div>
     <div class="hs-list">
       <div class="hs-lh"><span>TOP ON ARC · 24H VOLUME</span><a href="https://www.geckoterminal.com/arc/pools" target="_blank" rel="noopener">GeckoTerminal ↗</a></div>
+      <div id="hsPin"></div>
       <div class="hs-rows" id="hsTop"><div class="hs-empty">Reading Arc's 24h volumes…</div></div>
     </div>
   </aside>
@@ -678,8 +683,20 @@ html[data-theme="light"] .hs-card,html[data-theme="light"] .hs-list{box-shadow:0
   addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("hsPick").hidden) closePick(); });
 
   // ---- the list
+  // $NOAH stays on top whatever the volumes say. It trades on its curve, which GeckoTerminal does not
+  // index, so its row shows the strip above the copy (price and market cap, read live each minute).
+  function noahVal() { var p = $("ptPx").textContent, c = $("ptCap").textContent; return p === "…" ? "" : esc(p) + "<span>mcap " + esc(c) + "</span>"; }
+  function paintPin() {
+    var t = toks[NOAH] || { a: NOAH, sym: "NOAH", name: "Noah's Ark", dec: 18 };
+    $("hsPin").innerHTML = '<div class="hs-r pin"><span class="rk"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-label="Pinned"><path d="M16 3l5 5-3 1-4 4 1 5-2 2-4-4-5 5-1-1 5-5-4-4 2-2 5 1 4-4z"/></svg></span>'
+      + av({ a: NOAH, sym: "NOAH", img: "meta/noah.svg" }) + '<span class="nm"><b>NOAH</b><span>Platform token</span></span>'
+      + '<span class="v" id="hsNoahV">' + noahVal() + "</span>"
+      + '<a class="nx-btn fun" href="' + esc(link(toks[USDC], t)) + '" target="_blank" rel="noopener" aria-label="Trade NOAH with USDC">Trade</a></div>';
+  }
+  if (window.MutationObserver) new MutationObserver(function () { var v = $("hsNoahV"); if (v) v.innerHTML = noahVal(); }).observe($("ptCap"), { childList: true, characterData: true, subtree: true });
   function paintTop() {
-    var rows = list().filter(function (t) { return t.vol > 0 && t.a !== USDC && (t.listed || t.floor); })
+    paintPin();
+    var rows = list().filter(function (t) { return t.vol > 0 && t.a !== USDC && t.a !== NOAH && (t.listed || t.floor); })
       .sort(function (x, y) { return y.vol - x.vol; }).slice(0, 10);
     $("hsTop").innerHTML = rows.length ? rows.map(function (t, i) {
       return '<div class="hs-r"><span class="rk">' + (i + 1) + "</span>" + av(t) + '<span class="nm"><b>' + esc(t.sym) + "</b><span>" + esc(t.name || "") + "</span></span>"
@@ -726,18 +743,21 @@ html[data-theme="light"] .hs-card,html[data-theme="light"] .hs-list{box-shadow:0
   }
 
   // ---- data: LI.FI's Arc list (routable tokens, logos), the floor's coins (curve prices),
-  // GeckoTerminal's 24h volume and price for all of them; five minutes in localStorage
+  // GeckoTerminal's 24h volume and price for all of them; read once an hour, kept in localStorage
+  // for that hour, and read again when an open tab's hour is up
+  var HOUR = 3600e3, loadedAt = 0;
   function ready() {
-    from = toks[USDC]; paintCard(); paintTop();
+    from = from || toks[USDC]; paintCard(); paintTop();
     if (list().some(function (t) { return t.floor && t.vol > 0; })) floorImgs();
   }
-  function load() {
+  function load(fresh) {
     try {
       var c = JSON.parse(localStorage.getItem(CACHE) || "null");
-      if (c && c.toks && Date.now() - c.at < 5 * 60e3) { toks = c.toks; ready(); return; }
+      if (!fresh && c && c.toks && Date.now() - c.at < HOUR) { toks = c.toks; loadedAt = c.at; ready(); return; }
     } catch (e) {}
+    loadedAt = Date.now(); // a failed read waits for the next hour too, rather than retrying every minute
     add({ a: USDC, sym: "USDC", name: "USD Coin", dec: 6, price: 1, listed: 1, def: "https://cdn.morpho.org/assets/logos/usdc.svg" });
-    from = toks[USDC]; paintCard();
+    from = from || toks[USDC]; paintCard(); paintPin();
     Promise.all([
       fetch("https://li.quest/v1/tokens?chains=5042", { signal: AbortSignal.timeout(10000) }).then(function (r) { return r.json(); }).catch(function () { return null; }),
       fetch("data/floor.json").then(function (r) { return r.json(); }).catch(function () { return null; })
@@ -766,11 +786,12 @@ html[data-theme="light"] .hs-card,html[data-theme="light"] .hs-list{box-shadow:0
           t.gk = https(x.image_url).replace("/large/", "/small/");
         });
       });
-      if (got) try { localStorage.setItem(CACHE, JSON.stringify({ at: Date.now(), toks: toks })); } catch (e) {}
+      if (got) try { localStorage.setItem(CACHE, JSON.stringify({ at: loadedAt, toks: toks })); } catch (e) {}
       ready();
     });
   }
   load();
+  setInterval(function () { if (document.visibilityState === "visible" && Date.now() - loadedAt >= HOUR) load(true); }, 60000);
 })();
 </script>
 </body>
