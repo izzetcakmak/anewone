@@ -89,7 +89,7 @@
   <h2>What stays in your browser</h2>
   <p>To remember your settings and load faster, the site keeps a few items in your browser's local storage:
     your colour theme, the wallet you last connected, the address last shown on the Portfolio page, your watchlist, cached copies of public chain data and
-    token images, the Deck Hand chat thread, and the sign-in session described below (for a day). These never
+    token images, the Deck Hand chat thread, a partner ref code from a launch link (30 days), and the sign-in session described below (for a day). These never
     leave your device except where this page says so. You can remove them at any time by clearing this site's
     data in your browser settings.</p>
 
@@ -125,6 +125,17 @@
     <li><strong>Swap &amp; Bridge quotes</strong> (<code>/api/lifi</code>): forwards bridge and swap quote requests to LI.FI
       with our partner key. A quote request carries the amount and the wallet addresses involved, which LI.FI sees
       under its own privacy policy.</li>
+    <li><strong>Morpho loan quotes</strong> (<code>/api/borrow-fee</code>): forwards the two calls that quote and open a
+      Morpho loan to Circle's Borrow service with our integrator key, which is how the origination fee is charged. The
+      request carries the wallet address, the markets and the amounts, which Circle sees under its own privacy policy;
+      nothing is stored here.</li>
+    <li><strong>Price relays</strong> (<code>/api/xstocks</code>, <code>/api/usyc</code>): fetch the xStocks catalog and
+      quotes and USYC's price report, public feeds that browsers cannot read directly, and cache them. They carry no
+      wallet address.</li>
+    <li><strong>Agent API</strong> (<code>/api/basedbot</code>, <code>/api/agent</code>): serves the public floor index
+      to programs, free or priced per call in USDC under x402. A paid call carries a signed USDC authorization, which
+      Circle's Facilitator settles on Arc; the payer, the amount and the transaction are therefore public on chain, and a
+      short-lived record of the authorization's nonce is kept in the Redis store to refuse a replay.</li>
   </ul>
   <p>Vercel keeps standard request logs for these functions (IP address, time, path) for a short period, as it
     does for every page. Every function is rate limited per IP address: a counter keyed by your IP address lives
@@ -146,6 +157,9 @@
     <li><strong>Arc network providers:</strong> your browser reads chain data from Arc RPC endpoints (such as
       Arc's public RPC, QuickNode, Blockdaemon and dRPC), which see those requests.</li>
     <li><strong>Fonts:</strong> typefaces load from Google Fonts.</li>
+    <li><strong>Market data and logos:</strong> the home page reads Arc's 24h token volumes from GeckoTerminal, and some
+      token logos load from CoinGecko's image server; both see your IP address as any website does. Neither receives a
+      wallet address.</li>
     <li><strong>Your wallet:</strong> MetaMask, OKX, Rabby or any wallet you connect handles your keys and
       transactions under its own policy.</li>
     <li><strong>Continue with Email or Social:</strong> if you choose it, sign-in (Google, X, Discord, Apple or a
@@ -214,7 +228,7 @@
   <p><strong>Aktarım.</strong> Veriler şu alıcı gruplarına, yalnızca ilgili özelliği kullandığınızda aktarılır:
     barındırma (Vercel), hız sınırlama ve oturum deposu (Upstash), dil modeli (Groq), şifreli hafıza (Walrus/MemWal),
     kart ile alım, Earn ve Borrow servisleri (Circle), köprü ve takas fiyatları (LI.FI), cüzdan eşleştirme (WalletConnect/Reown),
-    e-posta veya sosyal hesapla giriş (Web3Auth), yazı tipleri (Google), çerezsiz ziyaret ölçümü (Plausible Analytics, Plausible Insights OÜ) ve Arc ağı RPC sağlayıcıları. Bu
+    e-posta veya sosyal hesapla giriş (Web3Auth), yazı tipleri (Google), piyasa verisi ve logolar (GeckoTerminal, CoinGecko), çerezsiz ziyaret ölçümü (Plausible Analytics, Plausible Insights OÜ) ve Arc ağı RPC sağlayıcıları. Bu
     sağlayıcıların sunucuları yurt dışındadır (AB ve ABD). Yurt dışına aktarım KVKK m. 9 çerçevesinde, ilgili
     özelliği kendi tercihinizle kullanmanız suretiyle verdiğiniz açık rızaya ve/veya sağlayıcılarla yapılan
     sözleşmelere dayanır; bu özellikleri kullanmadığınızda aktarım gerçekleşmez. Çerezsiz ziyaret ölçümü her sayfada çalışır; tarayıcınızda
