@@ -3,8 +3,8 @@
 **Real assets. Launched on a new one.**
 
 The launch and distribution front end for real-world assets on **Arc Network**, Circle's stablecoin L1 where gas
-is paid in USDC. Funds and credit on Centrifuge rails, stocks from licensed issuers, and, live today, USDC that
-earns and USDC you can borrow on Aave V4 and on Morpho (`docs/earn/`). The issuer is always a regulated entity;
+is paid in USDC. Funds and credit on Centrifuge rails and Circle's USYC (`docs/assets/`), stocks from licensed
+issuers, and, live today, USDC that earns and USDC you can borrow on Aave V4 and on Morpho (`docs/earn/`). The issuer is always a regulated entity;
 A NEW ONE never issues, never custodies and never advises. It is the interface.
 
 The memecoin launchpad the project started as lives on as **AnewOne.Fun** (`docs/fun/`): coins launch on a USDC
@@ -40,6 +40,24 @@ Aave V4 on Arc (from [bgd-labs/aave-address-book](https://github.com/bgd-labs/aa
 Core hub `0x17288dfc86205301064577b98B02b81017e6F79C`, Main spoke `0xB843bdC3a87A05E77E07Df9FE48928b3A34b134d`,
 Forex spoke `0x4164EBCAF74670aa74C8D4F59de6157c0780F1bB`.
 
+## Funds and stocks
+
+`docs/assets/` lists four tokenized funds live on Arc, each card reading its price from the chain: **JTRSY**, **JAAA**
+and **HYB** (Janus Henderson and NYLIM, issued by Anemoy on Centrifuge rails, for non-US professional investors) and
+**USYC** (Circle's own money market fund, for institutions outside the United States). The issuer runs KYC and
+whitelists the wallet; the page cannot skip that. Centrifuge funds are bought with a deposit request and claimed once
+the issuer fills it (the cross-chain message fee is shown in the quote); USYC is minted and burned against USDC at
+once by the issuer's Teller. A connected wallet sees its own shares at NAV, pending orders and fills to claim at the
+top. A NEW ONE takes no fee on any of them. `docs/assets/stocks/` lists the xStocks catalog (Backed, a Kraken
+company) with live prices; the page checks the chain and turns each card live when Backed's token has code on Arc.
+`api/xstocks.js` and `api/usyc.js` relay the two public feeds that send no CORS headers.
+
+## Portfolio
+
+`docs/portfolio/` is one read-only page for a wallet (the connected one, or any pasted Arc address): stablecoins,
+Aave and Morpho deposits and loans, fund shares and AnewOne.Fun coins, valued in USD, with alerts for a health factor
+nearing 1.0 or a wallet with no USDC for gas. It asks for no signature; every action opens on the page it belongs to.
+
 ## Swap & Bridge
 
 `docs/bridge/` brings money onto Arc as USDC from Base, Ethereum, Arbitrum, OP Mainnet, Polygon, Avalanche, Unichain, Linea, World Chain, Sonic, Monad, Sei, HyperEVM, Ink, Solana and Sui, with no gas needed on Arc: USDC over
@@ -48,6 +66,9 @@ Solana routing lives in [gangway-kit](https://github.com/izzetcakmak/gangway-kit
 LI.FI route signed in Phantom, Solflare or Backpack (Wallet Standard). From **Sui**, USDC crosses on CCTP signed in
 Slush, Phantom or Suiet; other Sui tokens are swapped into USDC first. A non-USDC payment carries a 0.25% fee to the
 site, shown in the quote.
+
+The home page carries a *Swap on Arc* card that prices a trade from 24h prices and opens this page for the exact
+route, beside Arc's busiest tokens by 24h volume (GeckoTerminal, restricted to tokens LI.FI routes, $NOAH pinned).
 
 **EURC and cirBTC** arrive as themselves through Circle Gateway (Unified Balance Kit, `docs/vendor/gateway-kit.js`):
 a deposit into the wallet's Gateway balance on Base, Avalanche, World Chain or Ethereum, then one EIP-712 signature
@@ -66,6 +87,20 @@ fee, but only when the extra burn intents it needs cost under a fifth of it; the
 | Liquidity | The pool position stays in the platform contract forever; there is no function that can withdraw it |
 | Sign-in | Any browser wallet (MetaMask, OKX, Rabby), WalletConnect to a wallet app from a phone or by QR, or Continue with Email or Social (Google, X, Discord, Apple, email code) for a non-custodial wallet |
 | Deck Hand | `/chat/`: an assistant over the live floor that remembers you across sessions and devices, memory Seal-encrypted on Walrus mainnet via [MemWal](https://github.com/MystenLabs/MemWal); model Qwen3.8 27B on Groq |
+
+## The weekly program and partner links
+
+Every Sunday at 09:00 UTC a week closes, and prize weeks and **$NOAH buyback weeks** take turns, starting 25 Oct 2026
+(`monitor/week.mjs` builds the board). In a prize week the 10 wallets with the most trading volume enter a live draw
+and 3 win USDC, a pot of 0.5% of the week's volume paid from the platform's own share of the fees; in a buyback week
+the same 0.5% buys $NOAH, which is burned only once $NOAH has graduated. Both are platform decisions, not contract
+rules, announced in the docs before they change. The community vote that shaped them (22 to 24 Oct, 46 votes) is
+recorded in the docs.
+
+A partner app links its users to `fun/?launch=1&ref=<code>`. A code on the short list in `docs/fun/index.html` is
+written into the coin's metadata by the launch transaction, so which coins came through a partner is public on Arc and
+`monitor/partner-report.mjs` computes the platform fee they earned from the chain alone. Nothing changes for the
+creator or the fees they pay.
 
 ## How the launchpad works
 
@@ -97,8 +132,9 @@ The full runbook is in [MIGRATION.md](MIGRATION.md).
 
 - The site never asks for a seed phrase, private key or password. Every transaction is shown and approved in
   the user's own wallet.
-- The launchpad is static: no accounts, no trackers. The server functions in `api/` (RPC relay, Deck Hand, card
-  onramp, LI.FI proxy) each do one thing and are described on the [privacy page](https://anewone.xyz/privacy.html);
+- The site is static: no accounts and no cookies. Visits are counted with Plausible (cookieless, no profile). The
+  server functions in `api/` (RPC relay, Deck Hand, card onramp, LI.FI proxy, Morpho loan fee proxy, price relays,
+  the agent API) each do one thing and are described on the [privacy page](https://anewone.xyz/privacy.html);
   see also the [terms](https://anewone.xyz/terms.html).
 - Creator links must be https; X and Telegram links are restricted to their own domains. Names, descriptions
   and comments are escaped, and images are raster only (no SVG).
@@ -109,7 +145,7 @@ The full runbook is in [MIGRATION.md](MIGRATION.md).
 
 ## Selling to agents (x402)
 
-The index API has a second door, `/api/agent` (a rewrite onto the same function, so it costs no extra
+The index API (`/api/basedbot`, free, 240 requests a minute per IP) has a second door, `/api/agent` (a rewrite onto the same function, so it costs no extra
 serverless function), which serves the very same answers as `/api/basedbot`
 priced per call in USDC under the [x402 protocol](https://developers.circle.com/x402-facilitators/x402)
 (v2) and settled by Circle's Facilitator Service on Arc mainnet. An agent calls a priced endpoint,
@@ -151,7 +187,7 @@ On Arc mainnet the platform points at Uniswap's official v3 deployment: factory
 - `test/`: the forge test suite and the Uniswap v3 fixtures (provenance in `test/fixtures/uniswap-v3/PROVENANCE.md`).
 - `docs/`: the static site, deployed by Vercel on every push: Earn & Borrow (`earn/`, with the Aave V4 module
   `earn/aave.js`), real-world assets (`assets/`), the launchpad (`fun/`), docs, the ark, the Boarding Pass,
-  Swap & Bridge (`bridge/`), Deck Hand (`chat/`), privacy and terms. Every page shares one look through two files:
+  Swap & Bridge (`bridge/`), Portfolio (`portfolio/`), Deck Hand (`chat/`), privacy and terms. Every page shares one look through two files:
   `docs/shell.css` (the colours, the bar, the hero, the glass pills, the Deck Hand widget; its classes are prefixed `nx-`
   and it loads after a page's own `<style>`) and `docs/shell.js` (the sky and arch under each hero, the bar, the theme
   switch, and the Deck Hand launcher and inline chat). The home page `docs/index.html` is the wallet-free front door.
@@ -170,6 +206,8 @@ On Arc mainnet the platform points at Uniswap's official v3 deployment: factory
   - `private-rpc.mjs` lets an optional `ARC_MAINNET_RPC` carry the launch transactions; `--check` tests it
   - `snapshot.mjs` builds the Boarding Pass leaderboard, `floor.mjs` the prebuilt front-page index,
     `ark-card.mjs` the ark's share image
+  - `week.mjs` builds the weekly prize and buyback board, `partner-report.mjs` the partner fee report,
+    `traction.mjs` a one-off traction report
   - `chat-smoke.mjs` exercises `api/chat.js` locally, `--signed` for a full remember-then-recall round trip
 - `MIGRATION.md`: the mainnet runbook for Uniswap v3 migrations.
 

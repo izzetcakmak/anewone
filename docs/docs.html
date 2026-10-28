@@ -87,8 +87,8 @@
   <div class="tg"><span>RWA</span><a href="#assets">Real-world assets</a></div>
   <div class="tg"><span>Funding</span><a href="#bridge">Swap &amp; Bridge</a></div>
   <div class="tg"><span>AnewOne.Fun</span><a href="#fun">AnewOne.Fun</a><a href="#what">The launchpad</a><a href="#curve">The bonding curve</a><a href="#fees">Fees &amp; creator earnings</a><a href="#noah-burn">The $NOAH burn</a><a href="#weekly-prize">The prize race</a><a href="#safety">Safety by design</a><a href="#launch">Launch a token</a><a href="#trade">Trade</a></div>
-  <div class="tg"><span>Using the site</span><a href="#wallets">Wallets &amp; funding</a><a href="#deckhand">Deckhand</a><a href="#trust">Trust signals</a></div>
-  <div class="tg"><span>Reference</span><a href="#faq">FAQ</a><a href="#addresses">Contracts</a></div>
+  <div class="tg"><span>Using the site</span><a href="#wallets">Wallets &amp; funding</a><a href="#portfolio">Portfolio</a><a href="#deckhand">Deckhand</a><a href="#trust">Trust signals</a></div>
+  <div class="tg"><span>Reference</span><a href="#api">Agent API</a><a href="#faq">FAQ</a><a href="#addresses">Contracts</a></div>
 </aside>
 <article class="nx-doc numbered">
   <h2 id="vision">What we are</h2>
@@ -107,7 +107,7 @@
     <div class="card"><span class="tag good">live</span><h3>DeFi · Borrow</h3><p>USDC or EURC against cirBTC, ETH and tokenized
       assets on Aave V4 and Morpho markets, euros against dollars and back on Aave's Forex market, from your own wallet, with the health factor and liquidation price shown before you sign. <a href="earn/#borrow">Open Borrow →</a></p></div>
     <div class="card"><span class="tag good">live</span><h3>RWA</h3><p>Tokenized funds from Janus Henderson and New York
-      Life Investment Management on Centrifuge rails, live on Arc: JTRSY, JAAA and HYB, each with its issuer, its terms and
+      Life Investment Management on Centrifuge rails, and Circle's own USYC, live on Arc: JTRSY, JAAA, HYB and USYC, each with its issuer, its terms and
       its live price. <a href="assets/stocks/">RWA · Stocks / ETF</a> lists over a thousand xStocks with live prices and reserves; they trade here the moment Backed deploys on Arc. <a href="assets/">Open RWA →</a></p></div>
     <div class="card"><span class="tag good">live</span><h3>AnewOne.Fun</h3><p>The memecoin launchpad we started with,
       now the fun side of the house: bonding curves in USDC, liquidity locked for good. <a href="fun/">Open the floor →</a></p></div>
@@ -153,8 +153,9 @@
     AAA CLO Fund (JAAA) and the NYLIM US High Yield Bond Fund (HYB), all issued by Anemoy Capital SPC Limited, a BVI
     professional fund. Each card reads the share price from the vault contract on Arc and the fund size and trailing
     30-day yield from Centrifuge's indexer, and names the manager, the fees, the minimum, the liquidity terms and the
-    ratings from the issuer's factsheet, with a link to the executive summary.</p>
-  <p>These funds are for non-US professional investors, and the issuer decides who qualifies: it runs KYC and marks the
+    ratings from the issuer's factsheet, with a link to the executive summary. A fourth card, <strong>USYC</strong>, is
+    Circle's own tokenized money market fund (see below), so the page lists four funds in all.</p>
+  <p>The Centrifuge funds are for non-US professional investors, and the issuer decides who qualifies: it runs KYC and marks the
     wallet as a member of the fund on Arc, after which the share tokens accept transfers to it. Until then the page says
     the wallet is not whitelisted and sends you to the issuer; nothing on this site can skip that step. A whitelisted
     wallet places a deposit request in USDC on Arc from the page (the vault router's <code>requestDeposit</code>), the
@@ -162,6 +163,15 @@
     same way in reverse. Every request carries a message to the fund's hub on Ethereum, and that delivery fee, paid in
     USDC on Arc with the transaction, is shown in the quote before you sign. A NEW ONE takes no fee on these funds and
     never custodies anything: USDC goes from your wallet to the fund's escrow, shares come back to your wallet.</p>
+  <p><strong>USYC</strong> is a share of the Hashnote International Short Duration Yield Fund, a Cayman fund that holds
+    reverse repo on US government securities, run by Circle International Bermuda, and it has been on Arc since launch
+    day. It is for institutions outside the United States, with a 100,000 USD minimum; Circle onboards the investor and
+    whitelists the wallet, and the card stays locked until it does. There is no hub on Ethereum and no message fee: the
+    issuer's Teller mints USYC against your USDC in the same transaction, at the price its oracle sets each business
+    day, and burns it back into USDC at once when you redeem. Price, yield and the Arc supply are read from the chain;
+    the fund's global size comes from the issuer's public price report, relayed by a small function of ours.</p>
+  <p><strong>Your funds.</strong> At the top of the Funds page, a connected wallet sees its shares in each fund valued at
+    NAV, its pending orders and the fills waiting to be claimed, with redeem, claim and deposit one click away.</p>
   <p>Stocks from licensed issuers are next. In every case the issuer creates and legally stands behind the asset, runs
     eligibility and KYC, holds the underlying and handles redemptions; we build the page, the wallet access and the USDC
     settlement.</p>
@@ -183,7 +193,9 @@
       balance; once that chain finalizes the deposit (seconds on Avalanche, about 15 to 20 minutes elsewhere), one
       signature sends it to Arc and Circle mints it in your wallet there, with no gas needed on Arc.</li>
     <li><strong>Swap on Arc:</strong> the same page swaps USDC for tokens already on Arc (cirBTC, WETH and more), which is
-      how the Borrow tab gets you collateral.</li>
+      how the Borrow tab gets you collateral. The <a href="./">home page</a> carries a small <em>Swap on Arc</em> card
+      that prices a trade from 24h prices and hands it to this page for the exact route, next to a list of Arc's busiest
+      tokens by 24h volume (from GeckoTerminal, limited to tokens the router lists, with $NOAH pinned on top).</li>
   </ul>
   <p>Fees: USDC brought as USDC carries only Circle's own transfer fees, shown in the quote. A payment in anything other
     than USDC carries a 0.25% fee to A NEW ONE, shown as its own line before you sign. On Gateway, Circle's fee (the
@@ -325,6 +337,12 @@
     <li>Confirm. You pay only gas. Launching is free. Your token is live and tradable instantly.</li>
   </ol>
   <div class="note">Metadata is stored fully on-chain, so your token's image and links can't rot or be swapped out from under holders.</div>
+  <p><strong>Partner launch links.</strong> An app that wants its users to launch here can link to
+    <code>fun/?launch=1&amp;ref=&lt;code&gt;</code>: <code>launch=1</code> opens the form as soon as a wallet is
+    connected, and a ref code from our short list of partners is written into the coin's own metadata by the launch
+    transaction. Which coins came through a partner is therefore public and permanent on Arc, and a partner's share is
+    computed from the chain, not from a list either side keeps. Nothing changes for the person launching or for the
+    fees they pay. The code is remembered in the browser for 30 days.</p>
 
   <h2 id="trade">Trade</h2>
   <ul>
@@ -333,6 +351,7 @@
     <li>Set a <strong>max slippage</strong> (1 / 2 / 5% or custom). The contract enforces a minimum-output so a fast-moving curve can't fill you far from the quote.</li>
     <li>Your <strong>position card</strong> shows real cost basis and P&amp;L using a live sell quote (fees + curve impact included), not an optimistic price × balance.</li>
     <li>Discover coins via <strong>Trending / Newest / Top FDV / Graduating</strong>, search, advanced filters, a live trade feed, and a watchlist.</li>
+    <li><strong>Your coins</strong> lists every coin the connected wallet holds, valued at its last price, with trade links and any creator fees waiting to be collected. A coin's page also lists its <strong>top holders</strong>, largest first, with the curve, the pool and burned coins set apart and the creator and you tagged.</li>
   </ul>
 
   <h2 id="wallets">Wallets &amp; funding</h2>
@@ -349,10 +368,18 @@
     (20 USDC every 2h, pick <em>Arc Testnet</em>). The funding panel disappears automatically once the balance lands.</p>
   <div class="note">Arc mainnet is live (since 16 Sep 2026) and the floor runs there, and there are two ways to fund a wallet on it. <strong>Buy USDC with a card</strong>: the app opens Circle's onramp in place, so you go from a card to USDC on Arc without leaving the page or owning any crypto first. It asks for one wallet signature to start, and a Google sign-in wallet works exactly like an injected one. <strong>Or bring what you already hold</strong> through <a href="bridge/">Swap &amp; Bridge</a>: pay with ETH, SOL, USDC or almost anything on Base, Ethereum, Arbitrum, Solana, Sui and more, and it lands on Arc as USDC. The testnet faucet flow above only applies to the testnet build.</div>
 
+  <h2 id="portfolio">Portfolio</h2>
+  <p><a href="portfolio/">anewone.xyz/portfolio</a> is one read-only page for everything a wallet holds on A NEW ONE: the
+    stablecoins in the wallet, Aave V4 and Morpho deposits and loans, shares in the tokenized funds, and AnewOne.Fun
+    coins, each valued in USD and read straight from the chain. Connect a wallet or paste any Arc address to look at it
+    (WalletConnect and email sign-in wallets have an address too). The page only reads: it asks for no signature, and every
+    action opens on the page it belongs to. It also raises alerts, for example when an Aave or Morpho health factor
+    nears 1.0 or when a wallet has no USDC to pay gas. The last address shown stays in your browser only.</p>
+
   <h2 id="deckhand">Deckhand: the AI assistant that remembers</h2>
   <p><a href="chat/">anewone.xyz/chat</a> is an assistant that answers from the live floor index (every coin, its price,
     USDC raised and distance to graduation, stamped with the Arc block it read) and explains how launching, trading
-    and Swap &amp; Bridge work. It cannot trade, sign or move funds. It is an interface to public on-chain data, not an adviser: it will not tell you what to buy, sell or hold and will not predict prices.</p>
+    and Swap &amp; Bridge work. It also knows $NOAH, the Gateway route and the Aave markets. A lighter version of it sits in the corner of every page and answers questions about the whole site without any sign-in and without memory, within a daily allowance per visitor. It cannot trade, sign or move funds. It is an interface to public on-chain data, not an adviser: it will not tell you what to buy, sell or hold and will not predict prices.</p>
   <h3>Memory on Walrus</h3>
   <p>Sign in with your wallet by signing one plain message (no transaction, no gas, no Sui wallet) and the deck hand
     keeps what you tell it across sessions, browsers and devices. Each fact is extracted from your words, Seal-encrypted
@@ -375,6 +402,16 @@
     <li><strong>Creator profile &amp; reputation score</strong> covers a wallet's past launches, graduation rate and whether they exited their own tokens.</li>
     <li><strong>On-chain comments</strong> are a per-token thread; you must hold the token (or be its creator) to post, so it resists comment-bot spam.</li>
   </ul>
+
+  <h2 id="api">Agent API</h2>
+  <p>The index behind the floor is open to programs. <code>/api/basedbot</code> serves it free: every coin with price,
+    caps, liquidity and volume, one coin with its holder concentration and last trades, the 24h trade tape, the
+    distribution and OHLCV candles, rate limited per IP. <code>/api/agent</code> serves the same answers priced per call
+    in USDC under the <a href="https://developers.circle.com/x402-facilitators/x402" target="_blank" rel="noopener">x402</a>
+    protocol, settled by Circle's Facilitator Service on Arc mainnet: an agent calls an endpoint, receives a
+    <code>402</code> with the accepted options, signs a USDC authorization and retries. The list, a coin, the tape and
+    the distribution cost $0.001 a call, candles $0.002. No wallet is ever named in the data: holders are a count and
+    concentration shares. The full contract is the <a href="openapi.yaml">OpenAPI spec</a>.</p>
 
   <h2 id="faq">FAQ</h2>
   <details class="qa" open><summary>Is it really rug-proof?</summary><p>"Rug-proof" means one specific thing here: <strong>the liquidity cannot be pulled.</strong> Curve reserves
