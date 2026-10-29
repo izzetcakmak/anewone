@@ -1240,7 +1240,7 @@ Time: ${new Date().toISOString()}`;
       const repaid = l.status !== "active" || !(Number(l.borrowed?.amount || 0) > 0);
       return `<div class="vault">
         <div class="head"><div><div class="pair">${esc(col)} <span class="arrow">→</span> ${esc(debt)}</div>
-          <div class="curator">Morpho · loan ${esc(l.loanId.slice(0, 10))}… ${l.dataStatus === "PENDING" ? "· updating" : ""}</div></div>${repaid ? `<span class="tag warn">debt repaid · collateral still in market</span>` : hfBand(l.healthFactorBand)}</div>
+          <div class="curator">Morpho · loan ${esc(l.loanId.slice(0, 10))}… ${l.dataStatus === "PENDING" ? "· updating" : ""}</div></div>${repaid ? `<span class="tag warn">debt repaid</span>` : hfBand(l.healthFactorBand)}</div>
         <div class="apy">${l.healthFactor == null ? "—" : fmt(l.healthFactor, 2)}<small>HEALTH FACTOR</small></div>
         <div class="stats"><div>${amt(l.borrowed)}<span>Debt</span></div><div>${amt(l.collateral, 6)}<span>Collateral</span></div><div>${l.liquidationPrice ? money(l.liquidationPrice.amount) : "—"}<span>Liq. price</span></div></div>
         <div class="curator">${pct(l.borrowApy)} borrow APY · LTV ${l.ltv == null ? "—" : fmt(l.ltv * 100, 1) + "%"} · interest ${amt(l.accruedInterest, 4)}</div>
