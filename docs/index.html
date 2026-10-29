@@ -317,7 +317,9 @@ html[data-theme="light"] .cap-cert{background:rgba(255,255,255,.55);box-shadow:0
 .cc-who{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line2)}
 .cc-who b{font:600 16px "Space Grotesk",sans-serif;letter-spacing:.02em}
 .cc-who span{font:500 10.5px "JetBrains Mono",monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--mint)}
-@media (max-width:1559px){.cap-cert{display:none}}
+/* a laptop has no free side for it; a phone or tablet takes it in the flow, under the copy and flat */
+@media (min-width:1100px) and (max-width:1559px){.cap-cert{display:none}}
+@media (max-width:1099px){.cap-cert{position:relative;left:auto;top:auto;width:calc(100% - 40px);max-width:340px;margin:40px auto 0;transform:none}}
 /* not enough room beside centered copy: the copy moves left of the column */
 @media (min-width:1100px) and (max-width:1559px){
   .hero-copy.wrap{padding-right:448px}
