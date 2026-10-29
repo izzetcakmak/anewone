@@ -319,7 +319,7 @@ html[data-theme="light"] .cap-cert{background:rgba(255,255,255,.55);box-shadow:0
 .cc-who span{font:500 10.5px "JetBrains Mono",monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--mint)}
 /* a laptop has no free side for it, so a script moves it under the swap list, small: the picture on the
    left, our name beside it. A phone or tablet takes it in the flow, under the copy and flat. */
-@media (min-width:1100px) and (max-width:1559px){
+@media (min-width:1100px) and (max-width:1439px){
   .hero-side .cap-cert{position:relative;left:auto;top:auto;width:auto;transform:none;display:grid;grid-template-columns:120px minmax(0,1fr);align-items:center;gap:4px 14px;padding:10px 14px 10px 10px}
   .hero-side .cap-cert::before{inset:4px;border-radius:16px}
   .hero-side .cc-img{grid-row:1/3;margin:0;border-radius:8px}
@@ -329,10 +329,17 @@ html[data-theme="light"] .cap-cert{background:rgba(255,255,255,.55);box-shadow:0
 }
 @media (max-width:1099px){.cap-cert{position:relative;left:auto;top:auto;width:calc(100% - 40px);max-width:340px;margin:40px auto 0;transform:none}}
 /* not enough room beside centered copy: the copy moves left of the column */
-@media (min-width:1100px) and (max-width:1559px){
+@media (min-width:1100px) and (max-width:1439px){
   .hero-copy.wrap{padding-right:448px}
   .hero-side{left:auto;right:max(28px,calc(50% - 592px));width:390px}
   .float.l{display:none}
+}
+/* 1440-1559: the copy stays centred with the certificate beside it, as on a wide screen; the copy's
+   strip and paragraph narrow a little and the column takes what is left on the right */
+@media (min-width:1440px) and (max-width:1559px){
+  .ptok.hero-tok,.sub{max-width:640px}
+  .ptok.hero-tok{gap:12px}.ptok.hero-tok .k{font-size:10px;letter-spacing:.1em;white-space:nowrap}.ptok.hero-tok .st{gap:12px}.ptok.hero-tok .go{padding:0 12px}
+  .hero-side{left:auto;right:24px;width:min(390px,calc(50% - 368px))}
 }
 /* narrower: the card and the list follow the copy */
 @media (max-width:1099px){
@@ -747,7 +754,7 @@ html[data-theme="light"] .cap-cert{background:rgba(255,255,255,.55);box-shadow:0
   addEventListener("resize", alignPin);
   // the Circle Alliance certificate: beside the copy on a wide screen, in the flow on a phone, and on a
   // laptop (no free side there) under the swap list, in its small form
-  var cert = document.querySelector(".cap-cert"), certHome = cert.nextElementSibling, certMq = matchMedia("(min-width:1100px) and (max-width:1559px)");
+  var cert = document.querySelector(".cap-cert"), certHome = cert.nextElementSibling, certMq = matchMedia("(min-width:1100px) and (max-width:1439px)");
   function placeCert() { if (certMq.matches) document.querySelector(".hero-side").appendChild(cert); else certHome.parentNode.insertBefore(cert, certHome); }
   placeCert(); certMq.addEventListener("change", placeCert);
 
