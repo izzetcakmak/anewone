@@ -304,6 +304,20 @@ html[data-theme="light"] .hs-card,html[data-theme="light"] .hs-list{box-shadow:0
 .hs-it .nm{flex:1}
 .hs-it .tag{flex:none;padding:2px 7px;border-radius:999px;border:1px solid rgba(var(--fun-rgb),.45);font:600 9.5px "JetBrains Mono",monospace;letter-spacing:.08em;color:var(--fun)}
 .hs-it .v{flex:none;font:500 11.5px "JetBrains Mono",monospace;color:var(--faint)}
+/* Circle Alliance membership, a certificate above the JTRSY card. Circle's own card goes in as is
+   (never cropped or written on); our name sits under it. */
+.cap-cert{position:absolute;z-index:4;left:calc(50% - 660px);top:196px;width:300px;padding:14px 14px 16px;border-radius:20px;text-align:left;
+  background:rgba(255,255,255,.035);border:1px solid var(--line2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  box-shadow:0 30px 70px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.08);transform:perspective(900px) rotateY(14deg) rotate(-2deg)}
+.cap-cert::before{content:"";position:absolute;inset:5px;border-radius:15px;border:1px dashed rgba(var(--mint-rgb),.28);pointer-events:none}
+html[data-theme="light"] .cap-cert{background:rgba(255,255,255,.55);box-shadow:0 20px 50px rgba(10,20,17,.1),inset 0 1px 0 #fff}
+.cc-k{display:flex;align-items:center;gap:8px;font:500 10px "JetBrains Mono",monospace;letter-spacing:.14em;color:var(--mint)}
+.cc-k i{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px var(--mint)}
+.cc-img{display:block;width:100%;height:auto;margin-top:10px;border-radius:10px}
+.cc-who{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line2)}
+.cc-who b{font:600 16px "Space Grotesk",sans-serif;letter-spacing:.02em}
+.cc-who span{font:500 10.5px "JetBrains Mono",monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--mint)}
+@media (max-width:1559px){.cap-cert{display:none}}
 /* not enough room beside centered copy: the copy moves left of the column */
 @media (min-width:1100px) and (max-width:1559px){
   .hero-copy.wrap{padding-right:448px}
@@ -382,6 +396,11 @@ html[data-theme="light"] .hs-card,html[data-theme="light"] .hs-list{box-shadow:0
     <a class="funlink" href="fun/" target="_blank" rel="noopener">Looking for memecoins? <u>AnewOne.Fun</u> <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
   </div>
 
+  <aside class="cap-cert" aria-label="A NEW ONE is a member of the Circle Alliance Program">
+    <div class="cc-k"><i></i>MEMBER SINCE OCT 2026</div>
+    <img class="cc-img" src="brand/circle-alliance-member.jpg" alt="Certified Member of the Circle Alliance Program" width="1200" height="628" loading="lazy">
+    <div class="cc-who"><b>A NEW ONE</b><span>Member</span></div>
+  </aside>
   <aside class="float l"><div class="k"><i></i>RWA · FUND · LIVE</div><div class="n">JTRSY</div><div class="d">Janus Henderson Treasury Fund</div><div class="m" id="fyM" hidden><b id="fyV">…</b><span>30D ANNUALIZED</span></div></aside>
   <aside class="hero-side" aria-label="Swap on Arc">
     <div class="hs-card">
