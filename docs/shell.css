@@ -89,6 +89,9 @@
 .nx-seg a.f { color: var(--nx-fun); }
 .nx-seg a.f:hover { color: var(--nx-fun2); background: rgba(var(--nx-fun-rgb), .1); }
 .nx-seg a.f.on { color: var(--nx-on-mint); }
+/* on the pink floor, DeFi and RWA keep the brand's green */
+:root[data-app="fun"] .nx-seg a:not(.f) { color: var(--nx-brand); }
+:root[data-app="fun"] .nx-seg a:not(.f):hover { background: rgba(62,232,163,.1); }
 .nx-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .nx-bar .nx-btn, .nx-nav .nx-actions .nx-btn { height: 48px; padding: 0 26px; font-size: 14px; }
 .nx-pill { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--nx-line2); background: rgba(255,255,255,.04); color: var(--nx-ink); font: 700 12.5px "JetBrains Mono", ui-monospace, monospace; white-space: nowrap; }
