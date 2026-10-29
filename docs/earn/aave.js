@@ -273,7 +273,7 @@ export function initAave(ctx) {
       <div class="apy">${pct(borrowApy(d, c))}<small>BORROW APY</small></div>
       <div class="stats"><div>${money(d.available * d.price)}<span>Available to borrow</span></div><div>${money(d.spokeOwed * d.price)}<span>Borrowed here</span></div><div>${fmt(c.cf / 100, 0)}%<span>Max LTV</span></div></div>
       ${fx ? `<div class="curator">A currency loan: the health factor moves with the EUR/USD rate, not with crypto prices.</div>` : ""}
-      ${c.paused || d.paused || d.frozen ? `<span class="tag warn">⚠ paused by Aave governance</span>` : ""}
+      ${c.paused || d.paused || d.frozen ? `<span class="tag warn">⚠ ${c.paused || d.paused ? "paused" : "frozen"} by Aave governance</span>` : ""}
       ${U && u(c).wallet > 0 ? `<div class="pos show">In your wallet: ${esc(show(c, u(c).wallet))}</div>` : ""}
       <button class="btn primary" data-aave-col="${c.id}" data-aave-debt="${d.id}" data-aave-spoke="${c.spoke}">Borrow ${esc(d.symbol)}</button>
     </div>`;
@@ -321,7 +321,18 @@ export function initAave(ctx) {
     B("aaTabs").innerHTML = TABS[kind].map(([m, t]) => `<button type="button" data-aam="${m}">${t}</button>`).join("");
     B("aaveOverlay").classList.add("open");
     setMode(sh.mode);
+    rebalance(); // money may have arrived since the last read (a swap, a bridge, another tab)
   }
+  // the wallet line follows the chain while the sheet is open: read on opening, then every 8 s
+  // while it stays open and the tab is in view; only the balance lines repaint, typed amounts stay
+  const sheetOpen = () => B("aaveOverlay").classList.contains("open");
+  let rebalancing = false;
+  async function rebalance() {
+    if (rebalancing || !ctx.account()) return;
+    rebalancing = true;
+    try { await loadUser(); if (sheetOpen()) balances(); } finally { rebalancing = false; }
+  }
+  setInterval(() => { if (sheetOpen() && !document.hidden) rebalance(); }, 8000);
   function setMode(m) {
     sh.mode = m;
     B("aaTabs").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.aam === m));
@@ -346,7 +357,20 @@ export function initAave(ctx) {
     // collateral is managed from Borrow: Earn does not pull it out from under a loan
     if (m === "withdraw" && r1 && u(r1).collateral) { status(`Your ${r1.symbol} here is collateral for an Aave loan. Manage it on the Borrow tab, under Your Aave position.`, ""); B("aaGo").disabled = true; balances(); return; }
     if (!isEarn() && (!r1 || (two && !r2))) { status(m === "repay" ? "No debt to repay in this market." : m === "wcol" ? "No collateral in this market." : "Nothing to borrow against here.", ""); B("aaGo").disabled = true; } else B("aaGo").disabled = false;
+    const halt = halted();
+    if (halt) { status(halt, ""); B("aaGo").disabled = true; }
     balances();
+  }
+  // A frozen reserve takes no new supply and lends nothing more (Aave V4 reverts ReserveFrozen,
+  // 0x6d305815); withdrawals and repayments stay open. A paused one moves nothing at all.
+  // Said before the amount is typed, not after a failed simulation (30 Oct 2026: Main USDC).
+  function halted() {
+    const m = sh.mode, r1 = R1(), r2 = R2(), mk = SP().name;
+    const say = (r, what) => `Aave governance has ${what} ${r.symbol} in the ${mk}: ` + (what === "paused" ? "nothing can move until it is unpaused." : "new deposits and loans are closed for now. Withdrawals and repayments still work.");
+    for (const r of [r1, m === "borrow" ? r2 : null]) if (r && r.paused) return say(r, "paused");
+    if (r1 && r1.frozen && (m === "deposit" || m === "add")) return say(r1, "frozen");
+    if (m === "borrow" && r2 && r2.frozen) return say(r2, "frozen");
+    return "";
   }
   function balances() {
     const r1 = R1(), r2 = R2(), m = sh.mode;
@@ -467,13 +491,15 @@ export function initAave(ctx) {
 
   // Simulate, then sign once, then wait for the receipt. A revert in simulation never reaches
   // the wallet, so no gas is spent on a transaction the spoke would refuse.
-  const KNOWN = { "0x851aedc1": "Aave refused it: the health factor would fall too low.", "0x82b42900": "Aave refused it: not enough of the token in the wallet, or the position does not allow it." };
+  const KNOWN = { "0x851aedc1": "Aave refused it: the health factor would fall too low.", "0x82b42900": "Aave refused it: not enough of the token in the wallet, or the position does not allow it.",
+    "0x6d305815": "Aave governance has frozen this asset here: new deposits and loans are closed for now. Withdrawals and repayments still work.",
+    "0xd37f5f1c": "Aave governance has paused this asset here: nothing can move until it is unpaused." };
   function why(e) {
     const s = (() => { try { return JSON.stringify(e, Object.getOwnPropertyNames(e)); } catch { return String(e && e.message); } })();
     const sel = (s.match(/0x[0-9a-f]{8}(?![0-9a-f])/i) || [])[0];
     if (sel && KNOWN[sel.toLowerCase()]) return KNOWN[sel.toLowerCase()];
     if (/insufficient funds/i.test(s)) return "Not enough USDC for gas.";
-    return "Simulation failed, so nothing was sent: Aave would revert this" + (sel ? ` (${sel})` : "") + ". Try a smaller amount.";
+    return "Simulation failed, so nothing was sent: Aave would revert this" + (sel ? ` (${sel})` : "") + ". Check the amount, or try again later.";
   }
   async function send(calls) {
     const U = ctx.account(), prov = ctx.poolProvider();
@@ -492,6 +518,8 @@ export function initAave(ctx) {
     const q = quote();
     if (!q) { status("Enter an amount.", "err"); return; }
     if (blocked) return;
+    const halt = halted();
+    if (halt) { status(halt, "err"); return; }
     if (gasBal < 0.005) { status("You need a little USDC in this wallet for gas on Arc.", "err"); return; }
     if (!(await ctx.ensureAck())) { status("Accept the terms to continue.", "err"); return; }
     B("aaGo").disabled = true;
