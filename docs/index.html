@@ -258,6 +258,13 @@ html[data-theme="light"] .hs-card,html[data-theme="light"] .hs-list{box-shadow:0
 .hs-card{padding:16px 16px 14px}
 .hs-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .hs-h b{font:600 18px "Space Grotesk",sans-serif;letter-spacing:-.01em}
+/* the card’s title as a neon sign: green, blue, red, white, a second each; it opens Swap & Bridge */
+.hs-neon{display:inline-flex;align-items:center;height:36px;padding:0 16px;border-radius:999px;font:600 17px "Space Grotesk",sans-serif;letter-spacing:-.01em;
+  color:#3ee8a3;background:rgba(4,10,8,.88);border:1.5px solid currentColor;text-decoration:none;
+  text-shadow:0 0 6px currentColor,0 0 16px currentColor;box-shadow:0 0 8px currentColor,0 0 22px currentColor,inset 0 0 10px currentColor;
+  animation:hsNeon 4s step-end infinite;transition:transform .15s}
+.hs-neon:hover{transform:translateY(-1px) scale(1.03);text-decoration:none}
+@keyframes hsNeon{0%{color:#3ee8a3}25%{color:#4da3ff}50%{color:#ff4d5e}75%{color:#ffffff}}
 .hs-net{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px;border-radius:999px;font:600 10.5px "JetBrains Mono",monospace;letter-spacing:.1em;color:var(--mint);border:1px solid rgba(var(--mint-rgb),.4);background:rgba(var(--mint-rgb),.08)}
 .hs-net i{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px var(--mint)}
 .hs-box{margin-top:10px;padding:10px 12px 12px;border-radius:16px;border:1px solid var(--line2);background:color-mix(in srgb,var(--ink) 3%,transparent)}
@@ -424,7 +431,7 @@ html[data-theme="light"] .cap-cert{background:rgba(255,255,255,.55);box-shadow:0
   <aside class="float l"><div class="k"><i></i>RWA · FUND · LIVE</div><div class="n">JTRSY</div><div class="d">Janus Henderson Treasury Fund</div><div class="m" id="fyM" hidden><b id="fyV">…</b><span>30D ANNUALIZED</span></div></aside>
   <aside class="hero-side" aria-label="Swap on Arc">
     <div class="hs-card">
-      <div class="hs-h"><b>Swap on Arc</b><span class="hs-net"><i></i>ARC MAINNET</span></div>
+      <div class="hs-h"><a class="hs-neon" href="bridge/?tab=swap" target="_blank" rel="noopener">Swap on Arc</a><span class="hs-net"><i></i>ARC MAINNET</span></div>
       <div class="hs-box"><small>SELL</small><div class="hs-row"><input id="hsAmt" inputmode="decimal" placeholder="0" autocomplete="off" aria-label="Amount to sell"><button type="button" class="hs-tok" id="hsFrom">USDC</button></div></div>
       <button type="button" class="hs-flip" id="hsFlip" aria-label="Swap the two tokens"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
       <div class="hs-box"><small>BUY</small><div class="hs-row"><output id="hsOut">0</output><button type="button" class="hs-tok empty" id="hsTo">Select token</button></div></div>
