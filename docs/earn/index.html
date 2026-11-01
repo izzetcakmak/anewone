@@ -1184,7 +1184,7 @@ Time: ${new Date().toISOString()}`;
     B("swapFrame").src = "../bridge/?" + q.toString();
     B("swapOverlay").classList.add("open");
   }
-  function closeSwap() { B("swapOverlay").classList.remove("open"); B("swapFrame").src = "about:blank"; if (account) refreshLoans(); }
+  function closeSwap() { B("swapOverlay").classList.remove("open"); B("swapFrame").src = "about:blank"; if (account) { refreshLoans(); if (aave) aave.refresh(); } }
   B("swapLink").onclick = () => openSwap(null);
   B("swapX").onclick = closeSwap;
   B("swapOverlay").addEventListener("click", (e) => { if (e.target === B("swapOverlay")) closeSwap(); });
