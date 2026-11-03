@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Arc Day 48 Cover</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --mint: #3ee6a0; --bg: #0b0d0c; --text: #f2f5f3; --dim: #a7b0ab; --faint: #6d7772; --line: rgba(255,255,255,.055); }
+  html, body { margin: 0; width: 1500px; height: 600px; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; }
+  #page { position: relative; width: 1500px; height: 600px; overflow: hidden; box-sizing: border-box; padding: 54px 72px;
+    background:
+      radial-gradient(620px 420px at 77% 78%, rgba(62,230,160,.13), transparent 65%),
+      radial-gradient(520px 320px at 0% 0%, rgba(62,230,160,.06), transparent 70%),
+      linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 60px 60px,
+      linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 60px 60px,
+      var(--bg); }
+  .top { display: flex; gap: 22px; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 3px; color: var(--faint); }
+  .top .live { display: inline-flex; align-items: center; gap: 10px; color: var(--mint); }
+  .top .live i { width: 9px; height: 9px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 12px var(--mint); }
+  h1 { position: absolute; left: 72px; top: 118px; margin: 0; width: 720px; font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: 66px; line-height: 1.0; letter-spacing: -2.4px; }
+  h1 span { color: var(--mint); }
+  .sub { position: absolute; left: 72px; top: 268px; margin: 0; width: 640px; font-size: 20px; line-height: 1.4; color: var(--dim); }
+  .stats { position: absolute; left: 72px; bottom: 54px; display: flex; gap: 0; }
+  .stat { padding: 0 34px; border-left: 1px solid rgba(255,255,255,.10); }
+  .stat:first-child { padding-left: 0; border-left: 0; }
+  .stat b { display: block; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 34px; letter-spacing: -1px; color: var(--text); }
+  .stat span { display: block; margin-top: 6px; font-size: 14px; color: var(--dim); }
+  svg { position: absolute; left: 0; top: 0; }
+  .lbl { font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 2px; fill: var(--faint); }
+  .lbl.on { fill: var(--mint); }
+  .lbl.sm { font-size: 11.5px; letter-spacing: 1.5px; fill: var(--faint); }
+  .num { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 150px; letter-spacing: -6px; fill: var(--text); }
+  .cap { font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 3px; fill: var(--mint); }
+</style></head>
+<body><div id="page">
+  <div class="top"><span class="live"><i></i>ARC MAINNET · LIVE</span><span>ENGINEERING &amp; ECOSYSTEM REPORT</span><span>NOV 3, 2026</span></div>
+  <h1>What the data says after the <span>launch rush.</span></h1>
+  <p class="sub">Oracles, agent escrow, native liquidity and post-quantum: what held, what needed correcting, where to build next.</p>
+  <div class="stats">
+    <div class="stat"><b>$1.09B</b><span>USDC on Arc</span></div>
+    <div class="stat"><b>~20K</b><span>real daily senders</span></div>
+    <div class="stat"><b>97%</b><span>Morpho USDC utilization</span></div>
+  </div>
+  <svg id="g" width="1500" height="600" viewBox="0 0 1500 600"></svg>
+</div>
+<script>
+  const NS = "http://www.w3.org/2000/svg", svg = document.getElementById("g");
+  const cx = 1150, cy = 468, r = 268, TOTAL = 100, DAY = 48;
+  const ang = d => Math.PI - (d / TOTAL) * Math.PI;           // day 0 at the left end, day 100 at the right
+  const pt = (d, rad) => [cx + rad * Math.cos(ang(d)), cy - rad * Math.sin(ang(d))];
+  const el = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text) e.textContent = text; svg.appendChild(e); return e; };
+  const arcPath = (d0, d1, rad) => { const [x0, y0] = pt(d0, rad), [x1, y1] = pt(d1, rad); return `M${x0} ${y0} A${rad} ${rad} 0 0 1 ${x1} ${y1}`; };
+
+  const defs = el("defs", {});
+  defs.innerHTML = `<linearGradient id="pg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3ee6a0" stop-opacity=".35"/><stop offset="1" stop-color="#3ee6a0"/></linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6"/></filter>`;
+
+  // tracks
+  el("path", { d: arcPath(0, TOTAL, r - 44), fill: "none", stroke: "rgba(255,255,255,.07)", "stroke-width": 14, "stroke-linecap": "round" });
+  el("path", { d: arcPath(0, TOTAL, r - 78), fill: "none", stroke: "rgba(255,255,255,.05)", "stroke-width": 1, "stroke-dasharray": "2 7" });
+  // progress (day 0 to today)
+  el("path", { d: arcPath(0, DAY, r - 44), fill: "none", stroke: "#3ee6a0", "stroke-width": 14, "stroke-linecap": "round", filter: "url(#glow)", opacity: .55 });
+  el("path", { d: arcPath(0, DAY, r - 44), fill: "none", stroke: "url(#pg)", "stroke-width": 14, "stroke-linecap": "round" });
+
+  // one tick per day
+  for (let d = 0; d <= TOTAL; d++) {
+    const major = d % 10 === 0, on = d <= DAY;
+    const [x0, y0] = pt(d, r - (major ? 22 : 14)), [x1, y1] = pt(d, r);
+    el("line", { x1: x0, y1: y0, x2: x1, y2: y1, stroke: on ? "#3ee6a0" : "rgba(255,255,255,.16)", "stroke-width": major ? 2.4 : 1.4, opacity: on ? (major ? 1 : .8) : 1 });
+  }
+
+  // markers
+  const dot = (d, big) => { const [x, y] = pt(d, r - 44); el("circle", { cx: x, cy: y, r: big ? 9 : 5.5, fill: big ? "#3ee6a0" : "#0b0d0c", stroke: "#3ee6a0", "stroke-width": big ? 0 : 2.5 }); if (big) el("circle", { cx: x, cy: y, r: 17, fill: "none", stroke: "#3ee6a0", "stroke-opacity": .35, "stroke-width": 1.5 }); };
+  dot(25, false); dot(DAY, true);
+
+  // labels
+  const [s0x] = pt(0, r - 22);
+  el("text", { x: s0x - 12, y: cy + 34, class: "lbl on" }, "SEP 16");
+  el("text", { x: s0x - 12, y: cy + 52, class: "lbl sm" }, "MAINNET");
+  const [ex] = pt(TOTAL, r);
+  el("text", { x: ex + 6, y: cy + 34, class: "lbl", "text-anchor": "end" }, "DAY 100");
+  const [d25x, d25y] = pt(25, r + 18);
+  el("text", { x: d25x - 6, y: d25y - 4, class: "lbl", "text-anchor": "end" }, "DAY 25");
+  el("text", { x: d25x - 6, y: d25y + 13, class: "lbl sm", "text-anchor": "end" }, "LAST REPORT");
+  const [tx, ty] = pt(DAY, r + 22);
+  el("text", { x: tx + 14, y: ty - 6, class: "lbl on", "text-anchor": "middle" }, "TODAY · NOV 3");
+
+  // centre figure
+  el("text", { x: cx, y: cy - 18, class: "num", "text-anchor": "middle" }, "48");
+  el("text", { x: cx, y: cy + 14, class: "cap", "text-anchor": "middle" }, "DAYS ON MAINNET");
+</script>
+</body></html>
