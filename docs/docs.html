@@ -269,12 +269,16 @@
     platform in the same proportion as a curve fee, a third to the creator; its token side is burned.</p>
 
   <h2 id="noah-burn">The $NOAH buyback &amp; burn</h2>
-  <p>$NOAH was the first coin launched on AnewOne.Fun and the first memecoin on Arc's public mainnet. Starting the
-    week after it graduates, <strong>half of the platform's 1% fee slice</strong> on AnewOne.Fun (see the table above)
-    from every buyback week is used to buy $NOAH in its Uniswap pool and burn it, on the Sunday that closes the week,
-    at 09:00 UTC. Buyback weeks take turns with prize weeks (see <a href="#weekly-prize">the prize race</a>). Its
-    fixed 1B supply can only go down.</p>
+  <p>$NOAH was the first coin launched on AnewOne.Fun and the first memecoin on Arc's public mainnet. In every
+    buyback week, <strong>half of the platform's 1% fee slice</strong> on AnewOne.Fun (see the table above) is used
+    to buy $NOAH on the Sunday that closes the week, after 09:00 UTC. Until $NOAH graduates, it is bought on the
+    bonding curve and held in a public buyback wallet; once it graduates, it is bought in its Uniswap pool and burned,
+    and the held NOAH is burned too. Buyback weeks take turns with prize weeks (see <a href="#weekly-prize">the prize
+    race</a>). Its fixed 1B supply can only go down.</p>
   <ul>
+    <li><strong>Buyback wallet:</strong> <a class="mono" href="https://explorer.arc.io/address/0xA1586eC57C77fDA4b65ec6Be33a15f29F348dF34" target="_blank" rel="noopener">0xA1586eC57C77fDA4b65ec6Be33a15f29F348dF34</a>.
+      It holds every NOAH bought back so far: 5,204,803 NOAH from 3, 18 and 25 Oct and 8 Nov 2026, moved there on
+      8 Nov. It is used for buybacks only.</li>
     <li><strong>Onchain:</strong> each burn is a public transaction on Arc. The tx link is posted on the board, so
       anyone can check the amount against the chain.</li>
     <li><strong>A platform decision, not a contract rule:</strong> the launchpad contract does not run the burn.
