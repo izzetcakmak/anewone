@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /api/ack
 
 Sitemap: https://anewone.xyz/sitemap.xml
