@@ -11,13 +11,15 @@
  *
  *   node monitor/mint-message.mjs <burnTxHash> [--source 6] [--yes]
  *
- * Without --yes it only reports. Needs PRIVATE_KEY + DEPLOYER_ADDRESS in .env and a little
+ * Without --yes it only reports. Sends from the scanner's own wallet (SCANNER_KEY in .env) when
+ * there is one, else from the deployer (PRIVATE_KEY + DEPLOYER_ADDRESS); either needs a little
  * native USDC on Arc for gas. Source domain defaults to 6 (Base).
  */
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { signer } from "./migrate.mjs";
 
 const MON = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.dirname(MON);
@@ -63,14 +65,15 @@ if (msg.status !== "complete" || !msg.attestation || msg.attestation === "PENDIN
 }
 const used = await rpc("eth_call", [{ to: MESSAGE_TRANSMITTER_V2, data: "0xfeb61724" + msg.eventNonce.slice(2) }, "latest"]);
 if (BigInt(used) === 1n) { console.log("already minted on Arc (nonce used) — nothing to do"); process.exit(0); }
-const gas = BigInt(await rpc("eth_getBalance", [env.DEPLOYER_ADDRESS, "latest"]));
-console.log(`nonce unused on Arc; deployer gas on Arc: ${(Number(gas) / 1e18).toFixed(4)} USDC`);
-if (gas === 0n) { console.error("deployer has no USDC on Arc for gas"); process.exit(1); }
-if (!yes) { console.log(`would send receiveMessage from ${env.DEPLOYER_ADDRESS}; add --yes to send`); process.exit(0); }
-if (!env.PRIVATE_KEY) { console.error("PRIVATE_KEY missing in .env"); process.exit(1); }
+const who = signer(env); // the scanner's own wallet when .env has SCANNER_KEY, else the deployer
+if (!who.key || !who.address) { console.error(who.bad ? "SCANNER_KEY in .env is not a private key" : "no key in .env: set SCANNER_KEY (or PRIVATE_KEY + DEPLOYER_ADDRESS)"); process.exit(1); }
+const gas = BigInt(await rpc("eth_getBalance", [who.address, "latest"]));
+console.log(`nonce unused on Arc; ${who.address} has ${(Number(gas) / 1e18).toFixed(4)} USDC on Arc for gas`);
+if (gas === 0n) { console.error("the sending wallet has no USDC on Arc for gas"); process.exit(1); }
+if (!yes) { console.log(`would send receiveMessage from ${who.address}; add --yes to send`); process.exit(0); }
 
 const res = spawnSync(CAST, ["send", MESSAGE_TRANSMITTER_V2, "receiveMessage(bytes,bytes)", msg.message, msg.attestation,
-  "--rpc-url", rpcArc, "--private-key", env.PRIVATE_KEY, "--timeout", "120", "--json"], { encoding: "utf8", timeout: 180_000 });
+  "--rpc-url", rpcArc, "--private-key", who.key, "--timeout", "120", "--json"], { encoding: "utf8", timeout: 180_000 });
 const out = (res.stdout || "") + (res.stderr || "");
 const m = (res.stdout || "").match(/\{[\s\S]*\}/);
 if (!m) { console.error("cast did not return a receipt:\n" + out.slice(-800)); process.exit(1); }

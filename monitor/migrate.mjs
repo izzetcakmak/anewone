@@ -19,6 +19,7 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { Wallet } from "ethers";
 
 const CAST = "C:/Users/Monster/.foundry/bin/cast.exe";
 
@@ -122,10 +123,28 @@ function dryRun(rpc, platform, token, from) {
   return { ok: false, reason: (m && m[1].trim()) || out.split("\n").pop().slice(0, 160) || "unknown" };
 }
 
-/** A transaction from the deployer. The key only ever goes to cast, never to a log. */
-function sendTx(env, rpc, to, sig, args) {
+/**
+ * Who signs and pays for what the scanner sends: its own wallet (SCANNER_KEY in ../.env) when there
+ * is one, else the deployer as before. migrate() and CCTP's receiveMessage() are open to anyone, so
+ * the wallet that sends them needs nothing but a little USDC on Arc for gas. The deployer's key is
+ * the platform's admin, which the contract fixes for good, and the wallet the fees land in: a script
+ * that runs every minute should not hold it. `own` says the scanner's wallet is in use, which is not
+ * the admin and so cannot open migrations; `bad` that SCANNER_KEY is set but is not a private key,
+ * in which case nothing is sent rather than falling back to the deployer's key unasked.
+ */
+export function signer(env) {
+  const own = String(env.SCANNER_KEY || "").trim();
+  if (own) {
+    try { return { key: own, address: new Wallet(own).address, own: true }; }
+    catch { return { key: null, address: null, own: true, bad: true }; }
+  }
+  return { key: env.PRIVATE_KEY || null, address: env.DEPLOYER_ADDRESS || null, own: false };
+}
+
+/** A transaction from the signer's wallet. The key only ever goes to cast, never to a log. */
+function sendTx(key, rpc, to, sig, args) {
   const res = spawnSync(CAST, ["send", to, sig, ...args, "--rpc-url", rpc,
-    "--private-key", env.PRIVATE_KEY, "--timeout", "120", "--json"], { encoding: "utf8", timeout: 150_000 });
+    "--private-key", key, "--timeout", "120", "--json"], { encoding: "utf8", timeout: 150_000 });
   const m = (res.stdout || "").match(/\{[\s\S]*\}/);
   if (!m) return { ok: false, out: ((res.stderr || "") + (res.stdout || "")).trim().slice(-300) };
   try {
@@ -169,9 +188,9 @@ async function checkUniswap(rpc, platform) {
   return { ok: true, factory, pm };
 }
 
-/** Opens migrations from the deployer, an owner, once Uniswap v3 checks out. */
-async function autoOpen(ctx, flag, save, st) {
-  const { env, rpc, platform, log, notify } = ctx;
+/** Opens migrations from the deployer, the admin, once Uniswap v3 checks out. */
+async function autoOpen(ctx, flag, save, st, who) {
+  const { rpc, platform, log, notify } = ctx;
   let check;
   try {
     check = await checkUniswap(rpc, platform);
@@ -184,14 +203,21 @@ async function autoOpen(ctx, flag, save, st) {
       `⏸ Migrations stay closed: ${check.reason}. They open by themselves once this checks out, or from the owner console.`);
     return false;
   }
-  const gas = BigInt(await rpcCall(rpc, "eth_getBalance", [env.DEPLOYER_ADDRESS, "latest"]));
+  // only the admin can open them, and the scanner's own wallet is not the admin
+  if (who.own) {
+    await flag("autoopen:admin",
+      `⏸ Uniswap v3 checks out on Arc, but migrations are closed and only the admin can open them: ` +
+      `the scanner signs with its own wallet now. Open them from the owner console.`);
+    return false;
+  }
+  const gas = BigInt(await rpcCall(rpc, "eth_getBalance", [who.address, "latest"]));
   if (gas < MIN_OPEN_GAS_WEI) {
     await flag("autoopen:gas",
       `⛽ Uniswap v3 checks out on Arc, but the deployer has only ${usdc(gas)} USDC for the gas to open migrations. ` +
       `Top it up, or open them from the owner console.`);
     return false;
   }
-  const r = sendTx(env, rpc, platform, "setMigrationsOpen(bool)", ["true"]);
+  const r = sendTx(who.key, rpc, platform, "setMigrationsOpen(bool)", ["true"]);
   if (!r.ok) {
     log(`migrate: opening migrations failed: ${r.out}`);
     await flag("autoopen:send", `❌ Opening migrations failed: ${r.out}. The scanner retries every minute; the owner console can open them too.`);
@@ -211,7 +237,9 @@ async function autoOpen(ctx, flag, save, st) {
  */
 export async function migrateStep(ctx) {
   const { env, state, saveState, log, notify, rpc, platform } = ctx;
-  if (!rpc || !platform || !env.DEPLOYER_ADDRESS || !env.PRIVATE_KEY) return;
+  if (!rpc || !platform) return;
+  const who = signer(env);
+  if (!who.bad && (!who.key || !who.address)) return;
   const st = (state.migrate ??= { addrs: [], cursor: 0, pending: [], done: {}, flags: {} });
   const save = () => { state.migrate = st; saveState(state); };
   // a problem is told once, then at most every REMIND_MS while it lasts
@@ -221,6 +249,11 @@ export async function migrateStep(ctx) {
     save();
     await notify(text);
   };
+  if (who.bad) {
+    await flag("scannerkey", `❌ SCANNER_KEY in .env is not a private key (0x and 64 hex characters), so the scanner ` +
+      `sends no migrations. Fix the line, or take it out to go back to the deployer's key.`);
+    return;
+  }
 
   if (!(await readBool(rpc, platform, SEL.migrationsOpen))) {
     // Closed again after having been open: an owner decided that, and the scanner does not
@@ -235,7 +268,7 @@ export async function migrateStep(ctx) {
       return;
     }
     // never opened yet: open them as soon as Uniswap v3 on Arc checks out
-    if (!(await autoOpen(ctx, flag, save, st))) return;
+    if (!(await autoOpen(ctx, flag, save, st, who))) return;
   }
   st.flags.everOpen = 1;
   st.flags.heldNotified = 0;
@@ -280,7 +313,7 @@ export async function migrateStep(ctx) {
     if ((await readInfo(rpc, platform, token)).raised < grad) continue;
 
     const sym = await readSymbol(rpc, token);
-    const dry = dryRun(rpc, platform, token, env.DEPLOYER_ADDRESS);
+    const dry = dryRun(rpc, platform, token, who.address);
     if (!dry.ok) {
       log(`migrate: dry run for ${token} reverts: ${dry.reason}`);
       await flag(`dry:${token}:${dry.reason}`,
@@ -288,16 +321,16 @@ export async function migrateStep(ctx) {
         `Nothing was sent; the scanner retries every minute.`);
       continue;
     }
-    const gas = BigInt(await rpcCall(rpc, "eth_getBalance", [env.DEPLOYER_ADDRESS, "latest"]));
+    const gas = BigInt(await rpcCall(rpc, "eth_getBalance", [who.address, "latest"]));
     if (gas < MIN_GAS_WEI) {
       await flag("gas",
-        `⛽ $${sym} is ready to move into Uniswap, but the deployer ${env.DEPLOYER_ADDRESS} has only ` +
+        `⛽ $${sym} is ready to move into Uniswap, but ${who.own ? "the scanner's wallet" : "the deployer"} ${who.address} has only ` +
         `${usdc(gas)} USDC on Arc for gas. Top it up and the scanner carries on by itself.`);
       return;
     }
 
     sends++;
-    const r = sendTx(env, rpc, platform, "migrate(address)", [token]);
+    const r = sendTx(who.key, rpc, platform, "migrate(address)", [token]);
     if (!r.ok) {
       log(`migrate: send for ${token} failed: ${r.out}`);
       await flag(`send:${token}`, `❌ Sending the migration of $${sym} failed: ${r.out}. The scanner retries every minute.`);

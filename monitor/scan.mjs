@@ -574,7 +574,8 @@ async function main() {
 
   try {
     const env = loadEnv();
-    SECRETS = [env.PRIVATE_KEY, (env.PRIVATE_KEY || "").replace(/^0x/i, ""), env.TELEGRAM_BOT_TOKEN,
+    SECRETS = [env.PRIVATE_KEY, (env.PRIVATE_KEY || "").replace(/^0x/i, ""),
+      env.SCANNER_KEY, (env.SCANNER_KEY || "").replace(/^0x/i, ""), env.TELEGRAM_BOT_TOKEN,
       ...ownRpcSecrets(env)]
       .map((s) => (s || "").trim()).filter((s) => s.length >= 8);
     const state = loadState();
