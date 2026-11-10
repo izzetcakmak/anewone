@@ -1242,8 +1242,8 @@ Time: ${new Date().toISOString()}`;
         <div class="head"><div><div class="pair">${esc(col)} <span class="arrow">→</span> ${esc(debt)}</div>
           <div class="curator">Morpho · loan ${esc(l.loanId.slice(0, 10))}… ${l.dataStatus === "PENDING" ? "· updating" : ""}</div></div>${repaid ? `<span class="tag warn">debt repaid</span>` : hfBand(l.healthFactorBand)}</div>
         <div class="apy">${l.healthFactor == null ? "—" : fmt(l.healthFactor, 2)}<small>HEALTH FACTOR</small></div>
-        <div class="stats"><div>${amt(l.borrowed)}<span>Debt</span></div><div>${amt(l.collateral, 6)}<span>Collateral</span></div><div>${l.liquidationPrice ? money(l.liquidationPrice.amount) : "—"}<span>Liq. price</span></div></div>
-        <div class="curator">${pct(l.borrowApy)} borrow APY · LTV ${l.ltv == null ? "—" : fmt(l.ltv * 100, 1) + "%"} · interest ${amt(l.accruedInterest, 4)}</div>
+        <div class="stats"><div>${esc(amt(l.borrowed))}<span>Debt</span></div><div>${esc(amt(l.collateral, 6))}<span>Collateral</span></div><div>${l.liquidationPrice ? money(l.liquidationPrice.amount) : "—"}<span>Liq. price</span></div></div>
+        <div class="curator">${pct(l.borrowApy)} borrow APY · LTV ${l.ltv == null ? "—" : fmt(l.ltv * 100, 1) + "%"} · interest ${esc(amt(l.accruedInterest, 4))}</div>
         ${repaid ? `<div class="pos show">Your ${esc(amt(l.collateral, 6))} is still in the market. Withdraw it, or borrow against it again.</div>
         <div class="loanacts">
           <button class="btn primary" data-loan="${i}" data-mode="withdraw">Withdraw collateral</button>

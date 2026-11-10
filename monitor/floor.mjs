@@ -279,8 +279,12 @@ async function tokenArtwork(t) {
     if (meta.startsWith("{")) {
       const j = JSON.parse(meta);
       if (j.i) return fromDataUri(j.i) || (/^https:\/\//.test(j.i) ? { url: j.i } : null);
-    } else if (/^https:\/\//.test(meta)) {
-      const j = await (await fetch(meta)).json();
+    } else if (meta.startsWith(SITE + "/")) {
+      // Only a document this site hosts is fetched, as on the page itself. metadataURI is typed by
+      // whoever launched the coin: following it anywhere else had this machine call a stranger's
+      // server on every run (and, through a redirect, anything on the local network), and wait
+      // on it for as long as that server cared to hold the connection, with the scan lock held.
+      const j = await (await fetch(meta, { redirect: "error", signal: AbortSignal.timeout(8000) })).json();
       // X renders JPG, PNG, WEBP and GIF on a card — never SVG, which would
       // silently come back blank, so vector art falls through to the site icon
       // unless a raster card has already been placed next to the page.

@@ -1118,7 +1118,7 @@
   function sendCoinsKnown() {
     if (sendAccount) sendLoadHeld();
     // the swap picker lists the floor's coins too, once the floor has been read
-    if (typeof swAddTok === "function") { for (const [a, m] of Object.entries(coinMeta)) swAddTok({ address: a, symbol: m.symbol, name: m.name, decimals: 18, src: "floor", logo: swFloorCached(a) || (swT[ethers.getAddress(a)] || {}).logo }); swRenderList(); }
+    if (typeof swAddTok === "function") { for (const [a, m] of Object.entries(coinMeta)) swAddTok({ address: a, symbol: m.symbol, name: m.name, decimals: 18, src: "floor", logo: swFloorCached(a) || (swT[ethers.getAddress(a)] || {}).logo }); swRenderList(); swPaintTokens(); }
   }
 
   // The chain cannot list what a wallet holds: every token is its own contract and only
@@ -1354,10 +1354,13 @@
   // Logos for the Arc mainnet tokens LI.FI lists without one live in ../token-logos.js, shared
   // with the home page's swap card. LI.FI's own logo wins whenever it has one.
   const SW_LOGOS = net !== "mainnet" ? {} : (window.ANEWONE_TOKEN_LOGOS || {});
-  // ?only=0x…:SYM:decimals,… (from Earn's Borrow window): the "to" picker offers just these
-  // tokens, and a token LI.FI's list does not carry is added from the triple so it still shows
-  const swOnlyMeta = (() => { const v = new URLSearchParams(location.search).get("only"); if (!v) return []; return v.split(",").map((x) => { const [a, sym, d] = x.split(":"); return ethers.isAddress(a) ? { address: ethers.getAddress(a), symbol: sym || "?", decimals: d ? Number(d) : 18 } : null; }).filter(Boolean); })();
-  const swOnly = swOnlyMeta.length ? new Set(swOnlyMeta.map((t) => t.address)) : null;
+  // ?only=0x…,0x… (from Earn's Borrow window): the "to" picker offers just these tokens. Only the
+  // addresses are read. An entry may still end in :SYM:decimals, as Earn used to send it, and that tail
+  // is ignored: a symbol or decimals taken from a link let anyone show a token of their own as "USDC",
+  // at an amount of their choosing, on this page. A token no list carries is read from its own
+  // contract once the lists are in (swResolve), and shown as unlisted.
+  const swOnlyAddrs = (() => { const v = new URLSearchParams(location.search).get("only"); if (!v) return []; return [...new Set(v.split(",").map((x) => x.split(":")[0]).filter((a) => ethers.isAddress(a)).map((a) => ethers.getAddress(a)))].slice(0, 30); })();
+  const swOnly = swOnlyAddrs.length ? new Set(swOnlyAddrs) : null;
   if (new URLSearchParams(location.search).get("embed") === "1") document.body.classList.add("embed");
   let swFrom = null, swTo = null, swQuote = null, swBusy = false, swPickSide = null, swQuoteTimer = null, swQuoteRun = 0;
   // Max slippage in percent. Thin pools on a young chain move more than a fixed 3% under a
@@ -1372,9 +1375,13 @@
   SW("swSlipBtns").addEventListener("click", (e) => { const b = e.target.closest("button[data-s]"); if (b) swSetSlip(Number(b.dataset.s)); });
   SW("swSlipCustom").addEventListener("change", () => { const v = Number(SW("swSlipCustom").value); if (v > 0 && v <= 50) swSetSlip(v); else swPaintSlip(); });
   const swEsc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const swAddTok = (t) => { const a = ethers.getAddress(t.address); const cur = swT[a] || {}; swT[a] = { ...cur, ...t, address: a, decimals: Number(t.decimals ?? cur.decimals ?? 18) }; return swT[a]; };
+  // One object per token for the page's life, updated in place: swFrom and swTo point at these, so what a
+  // later list says about a token (the floor's coins arrive after LI.FI's) reaches the card as well.
+  const swAddTok = (t) => { const a = ethers.getAddress(t.address); const cur = swT[a] || (swT[a] = {}); const decimals = Number(t.decimals ?? cur.decimals ?? 18); return Object.assign(cur, t, { address: a, decimals }); };
   swAddTok({ address: USDC_ARC, symbol: "USDC", name: "USD Coin", decimals: 6, src: "arc" });
-  for (const t of swOnlyMeta) if (t.address !== USDC_ARC) swAddTok({ ...t, name: t.symbol, src: "link" });
+  // on nobody's list: read from its own contract (a link or a pasted address) or merely held by the wallet
+  const swUnlisted = (t) => !!t && (t.src === "paste" || t.src === "wallet");
+  const swShort = (a) => a.slice(0, 6) + "…" + a.slice(-4);
   swFrom = swT[USDC_ARC];
   const lifiBase = () => (lifiApi || "https://li.quest/v1");
   const swIsFloor = (a) => !!(a && coinMeta[a]);
@@ -1478,8 +1485,8 @@
     SW("swList").innerHTML = rows.slice(0, 80).map((t) => `
       <button type="button" class="sw-it" data-a="${t.address}">
         <span class="av">${t.logo ? `<img src="${swEsc(t.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-l="${swEsc((t.symbol || "?")[0])}" onerror="this.replaceWith(this.dataset.l)">` : swEsc((t.symbol || "?")[0])}</span>
-        <span class="nm"><b>${swEsc(t.symbol)}</b><span>${swEsc(t.name || t.address.slice(0, 6) + "…" + t.address.slice(-4))}</span></span>
-        ${t.src === "floor" ? `<span class="tag">A NEW ONE</span>` : ""}
+        <span class="nm"><b>${swEsc(t.symbol)}</b><span>${swEsc(swUnlisted(t) ? swShort(t.address) : t.name || swShort(t.address))}</span></span>
+        ${t.src === "floor" ? `<span class="tag">A NEW ONE</span>` : swUnlisted(t) ? `<span class="tag" style="color:var(--red);border-color:var(--red);background:none">UNLISTED</span>` : ""}
         <span class="bal">${swBal[t.address] > 0n ? swEsc(swFmt(swBal[t.address], t.decimals)) : ""}</span>
       </button>`).join("") || `<div class="hint">Nothing matches. Paste the token's contract address.</div>`;
   }
@@ -1515,8 +1522,10 @@
     }, 300);
   });
   function swPaintTokens() {
-    SW("swFromBtn").textContent = swFrom ? swFrom.symbol : "Select token"; SW("swFromBtn").classList.toggle("empty", !swFrom);
-    SW("swToBtn").textContent = swTo ? swTo.symbol : "Select token"; SW("swToBtn").classList.toggle("empty", !swTo);
+    for (const [id, t] of [["swFromBtn", swFrom], ["swToBtn", swTo]]) {
+      SW(id).textContent = t ? t.symbol + (swUnlisted(t) ? " ⚠" : "") : "Select token"; SW(id).classList.toggle("empty", !t);
+      SW(id).title = swUnlisted(t) ? "Unlisted token " + t.address : "";
+    }
   }
   SW("swFlip").onclick = () => { [swFrom, swTo] = [swTo, swFrom]; SW("swAmt").value = SW("swOut").value && swFrom ? SW("swOut").value : ""; SW("swOut").value = ""; swPaintTokens(); swRefreshBalances(); swRequote(); };
   SW("swMax").onclick = () => { if (!swFrom || swBal[swFrom.address] == null) return; let v = swBal[swFrom.address]; if (swFrom.address === USDC_ARC) v = v > 50000n ? v - 50000n : 0n; SW("swAmt").value = ethers.formatUnits(v, swFrom.decimals); swRequote(); };
@@ -1617,8 +1626,14 @@
     if (!swBusy) swSayS(p && !/^(Pick|Enter)/.test(p) ? p : "", p && !/^(Pick|Enter)/.test(p) ? "bad" : "");
     // USDC on Arc is a system contract; a wallet that simulates the approval on a fork of
     // its own (Rabby does) reports a failure it cannot run. Said here, before the dialog.
-    if (!swBusy && !p && swFrom.address === USDC_ARC && swQuote && swQuote.kind === "lifi")
-      swSayS("Two signatures: an approval of USDC, then the swap. A wallet may flag the approval as a failed simulation; USDC on Arc is a system contract wallets cannot simulate, and the approval goes through on chain.");
+    // And a token that is on neither LI.FI's list nor the floor carries whatever name and symbol its
+    // deployer wrote, "USDC" included: its address is said in full before the button can be pressed.
+    if (!swBusy && !p) {
+      const notes = [], un = [swFrom, swTo].find(swUnlisted);
+      if (un) notes.push(un.symbol + " here is the token at " + un.address + ". It is on neither LI.FI's list nor the floor, so its name and symbol are whatever its deployer wrote. Check the address before you swap.");
+      if (swFrom.address === USDC_ARC && swQuote && swQuote.kind === "lifi") notes.push("Two signatures: an approval of USDC, then the swap. A wallet may flag the approval as a failed simulation; USDC on Arc is a system contract wallets cannot simulate, and the approval goes through on chain.");
+      if (notes.length) swSayS(notes.join(" "), un ? "bad" : "");
+    }
   }
   const swSaySw = (t) => swSayS(t);
   function swSayS(t, cls) { SW("swHint").textContent = t; SW("swHint").className = "hint" + (cls ? " " + cls : ""); }
@@ -1682,9 +1697,12 @@
   };
   if (wallet() && wallet().on) wallet().on("accountsChanged", () => setTimeout(() => { swLoadHeld(); swValidate(); }, 100));
   swPaintTokens(); swPaintSlip();
-  lifiReady.then(() => swLoadTokens()).then(() => {
+  lifiReady.then(() => swLoadTokens()).then(async () => {
+    // the tokens ?only= names that no list carries, each read from its own contract
+    if (swOnlyAddrs.length) { await Promise.all(swOnlyAddrs.filter((a) => !swT[a]).map((a) => swResolve(a).catch(() => null))); swRenderList(); }
     // Earn's Borrow window sends people here for collateral they do not hold yet:
-    // ?tab=swap&to=0x…&symbol=cirBTC&decimals=8 lands on the swap card with that token to buy.
+    // ?tab=swap&to=0x… lands on the swap card with that token to buy. Its symbol and decimals come
+    // from the lists or, failing those, from the token's own contract, never from the link.
     // The home page's swap card and its top-volume list add from=0x… (a token this list knows)
     // and amount=… the same way; without from, USDC is sold.
     const q = new URLSearchParams(location.search);
@@ -1693,8 +1711,7 @@
       const from = q.get("from"), to = q.get("to"), amt = q.get("amount");
       if (from && ethers.isAddress(from) && swT[ethers.getAddress(from)]) swFrom = swT[ethers.getAddress(from)];
       if (to && ethers.isAddress(to) && ethers.getAddress(to) !== swFrom.address) {
-        const cur = swT[ethers.getAddress(to)] || {};
-        swTo = swAddTok({ address: to, symbol: q.get("symbol") || cur.symbol || "?", name: cur.name || q.get("symbol") || "", decimals: q.get("decimals") ? Number(q.get("decimals")) : cur.decimals ?? 18, src: cur.src || "link" });
+        try { swTo = await swResolve(to); } catch (e) { swSayS("Could not read the token this link names (" + swShort(ethers.getAddress(to)) + "): " + (e.shortMessage || e.message), "bad"); }
       }
       if (amt && /^\d*\.?\d+$/.test(amt)) SW("swAmt").value = amt;
       if (from || to || amt) { swPaintTokens(); swRefreshBalances(); swRequote(); }

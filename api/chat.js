@@ -122,6 +122,15 @@ const SITE_MODEL = process.env.LLM_MODEL_SITE || LLM_MODEL;            // the si
 const FLOOR_Q = /(coin|price|floor|graduat|noah|fdv|market cap|volume|holder|memecoin|[$][a-z]{2,12})/;   // only these questions get the floor attached
 const compactFloor = (text, n) => { const l = text.split("\n"); return [l[0], ...l.slice(1, 1 + n)].join("\n"); };
 const SITE_CHIPS = new Set(["what is a new one", "do you hold my funds", "which funds are live on arc", "how do i get usdc onto arc", "when can i trade stocks"]);
+// A cached answer is served to everyone who asks the same thing, and the cache key is the question with
+// everything but a-z, 0-9 and spaces dropped. So only a question written in plain ASCII may be cached: the
+// model reads the whole message, and text in another script (or full-width letters) would ride along unseen
+// by the key, letting one visitor write the answer the next hundred get for "What is A NEW ONE?".
+const CACHEABLE_Q = /^[\x20-\x7e\t\r\n]+$/;
+// The full chat (the /chat/ page) draws on the same daily ceilings as the site assistant. A signed-in wallet
+// gets a larger allowance of its own, but not an unlimited one: a signature costs nothing to make.
+const CHAT_DAY_WALLET = Number(process.env.CHAT_DAY_WALLET) || 200;   // turns a day from one network, signed in
+const DAILY_MSG = "The deck hand has answered a lot of questions today. Ask again tomorrow.";
 const siteMemo = new Map();                                            // per-instance cache when Redis is not there
 const norm = (t) => t.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
 async function cacheGet(key) {
@@ -158,7 +167,7 @@ async function siteChat(req, res, body) {
   // a suggested question as the first thing said: the same answer for everyone, so ask the model once per half hour
   const q = norm(last);
   const wantsFloor = FLOOR_Q.test(q);
-  const key = history.length === 1 && !wantsFloor && q.length > 3 && q.length <= 200 ? "deck:site:" + createHash("sha1").update(q).digest("hex") : null;
+  const key = history.length === 1 && !wantsFloor && CACHEABLE_Q.test(last) && q.length > 3 && q.length <= 200 ? "deck:site:" + createHash("sha1").update(q).digest("hex") : null;
   const keyTtl = SITE_CHIPS.has(q) ? SITE_TTL : SITE_TTL_OPEN;
   if (key) { const hit = await cacheGet(key); if (hit) return res.status(200).json({ reply: hit, mode: "site", cached: true }); }
 
@@ -250,6 +259,13 @@ export default async function handler(req, res) {
     .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_CHARS) }));
   const last = history.length && history[history.length - 1].role === "user" ? history[history.length - 1].content : null;
   if (!last) return res.status(400).json({ error: "the last message must be from the user" });
+
+  // The day's ceilings, as in site mode: without them this path answered anyone, signed in or not, twenty
+  // times a minute for as long as they kept asking, on the larger prompt.
+  const overDay = user
+    ? await limited("chat-day", clientIp(req), CHAT_DAY_WALLET, 86400)
+    : await limited("chat-site-day", clientIp(req), SITE_DAY_IP, 86400);
+  if (overDay || (await limited("chat-site-all", "all", SITE_DAY_ALL, 86400))) return res.status(429).json({ error: DAILY_MSG, code: "daily" });
 
   // 1. Recall (Walrus) and the floor (Arc), side by side.
   const memoryNote = { on: !!mw, recalled: [], saved: [], error: null };
